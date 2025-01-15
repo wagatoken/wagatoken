@@ -8,20 +8,21 @@ The Coffee Tokenization Platform aims to tokenize the coffee supply chain, enabl
 
 ## Key Components
 
-### 1. **Governance Token (WAGA)**
-   - The **WAGA** token acts as the platform's governance token, enabling holders to vote on key decisions and protocol upgrades.
+### 1. **Utility Token (WAGA)**
+   - The platform's native utility token used for fees, financing ecosystem growth and development, staking, rewards, and governance. 
   
 ### 2. **Proof of Reserve (PoGR)**
    - **PoGR** ensures that all coffee tokenized assets are backed by real, physical coffee, providing transparency and trust in the tokenization process.
   
 ### 3. **Tokenization Engine**
-   - A powerful system that facilitates the creation and management of tokenized coffee assets, ensuring accurate and secure transactions.
+   - Implements the creation and management of tokenized coffee assets, ensuring accurate and secure transactions.
 
-### 4. **cUSD Stablecoin**
+### 4. **cUSD Stablecoin/DeFi Liquidity Pools**
    - The **cUSD** stablecoin provides a stable currency for transactions within the ecosystem, pegged to the US dollar to mitigate volatility.
+   - DeFi Liquidity Pools facilitate short-term collateralised lending and Trade Finance
 
 ### 5. **Marketplace Integration**
-   - A fully integrated marketplace that allows for seamless buying and selling of tokenized coffee products.
+   - A Marketplace that seamlessly integrates traceability services with streamlined buying and selling of tokenized coffee assets.
 
 
 ## Getting Started
