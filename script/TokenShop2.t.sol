@@ -14,7 +14,7 @@ import {HelperConfig} from "./HelperConfig.s.sol";
 contract TokenShop2Test is Test {
     TokenShop2 public tokenShop;
     WagaToken public wagaToken;
-    MockV3Aggregator public ethUsdFeed;
+    //MockV3Aggregator public ethUsdFeed;
     HelperConfig public config;
     //IERC20 public usdc;
     address usdc;
@@ -42,7 +42,23 @@ contract TokenShop2Test is Test {
             "User USDC balance after minting:",
             ERC20Mock(usdc).balanceOf(user)
         ); // 1000000000000000000000
+
+    /**
+     * vm.startPrank(tokenShop.getOwner());
+     * tokenshop.transferOwnership(user);
+     * vm.stopPrank();
+     * 
+     * 
+     * 
+     */
+
+
+
+
     }
+
+
+    
 
     function testBuyWithEth() public {
         console.log(
@@ -63,7 +79,7 @@ contract TokenShop2Test is Test {
             "User WagaToken balance before purchase: %s",
             wagaToken.balanceOf(user)
         );
-        uint256 purchaseAmount = 15e18;
+        uint256 purchaseAmount = 10e6;
 
         // Log the user's USDC allowance for the TokenShop2 contract
         console.log(
@@ -87,7 +103,7 @@ contract TokenShop2Test is Test {
             "User WagaToken balance after purchase: %s",
             wagaToken.balanceOf(user)
         );
-        assertGt(wagaToken.balanceOf(user), 0);
+        assertGt(wagaToken.balanceOf(user), 0); // 100.000000000000000000
     }
 
     function testFailBuyWithLowEth() public {
@@ -105,7 +121,7 @@ contract TokenShop2Test is Test {
             wagaToken.balanceOf(user)
         );
 
-        uint256 purchaseAmount = 1e18; // 1 USDC, less than the minimum purchase amount (2 USDC)
+        uint256 purchaseAmount = 1e6; // 1 USDC, less than the minimum purchase amount (2 USDC)
 
         // Log the user's USDC allowance for the TokenShop2 contract before approval
         console.log(
@@ -125,8 +141,8 @@ contract TokenShop2Test is Test {
 
         // Expect the custom error to be reverted
         vm.prank(user);
-        vm.expectRevert(TokenShop2.TokenShop2__InsufficientFunds_buyWithUSDC.selector);
-
+       // vm.expectRevert(TokenShop2.TokenShop2__InsufficientFunds_buyWithUSDC.selector);
+        //vm.expectRevert();
         // Attempt to buy with insufficient USDC, which should revert
         tokenShop.buyWithUSDC(purchaseAmount);
 

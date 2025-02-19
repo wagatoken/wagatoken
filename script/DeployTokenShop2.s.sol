@@ -7,8 +7,10 @@ import {TokenShop2} from "src/TokenShop2.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract DeployTokenShop2 is Script {
+    HelperConfig public helperConfig;
+
     function run() external returns (WagaToken, TokenShop2, HelperConfig) {
-        HelperConfig helperConfig = new HelperConfig();
+        helperConfig = new HelperConfig();
         (
             address ethUsdPriceFeed,
             address usdcAddress,

@@ -34,6 +34,7 @@ contract TokenShop2 is Ownable, AccessControl {
     AggregatorV3Interface internal priceFeed;
     IERC20 public usdc;
     uint256 private constant USDC_PRECISION = 1e12; // USDC has 6 decimals, so we use 1e12 for conversion (i.e usdcPrice * 1e12)
+    address private immutable i_owner;
 
     uint256 public tokenPriceUsd = 1e17; // 0.1 USD
     uint256 public minPurchaseUsd = 2e18;
@@ -64,6 +65,7 @@ contract TokenShop2 is Ownable, AccessControl {
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(OWNER_ROLE, msg.sender);
+        i_owner = msg.sender;
     }
 
     modifier onlyAdmin() {
@@ -113,7 +115,8 @@ contract TokenShop2 is Ownable, AccessControl {
         if (usdcAmount <= 0) {
             revert TokenShop2__NoUSDCsent_buyWithUSDC();
         }
-        if (usdcAmount /* * USDC_PRECISION */ < minPurchaseUsd) { // Commented out USDC_PRECISION
+        if (usdcAmount * USDC_PRECISION < minPurchaseUsd) {
+            // Commented out USDC_PRECISION
             revert TokenShop2__InsufficientFunds_buyWithUSDC();
         }
 
@@ -127,7 +130,7 @@ contract TokenShop2 is Ownable, AccessControl {
         senderToUSDCSpent[msg.sender] += usdcAmount;
 
         // Calculate tokens to mint
-        uint256 tokensToMint = _usdToTokens(usdcAmount /* * USDC_PRECISION */); // Commented out USDC_PRECISION
+        uint256 tokensToMint = _usdToTokens(usdcAmount * USDC_PRECISION); // Commented out USDC_PRECISION
         if (tokensToMint <= 0) {
             revert TokenShop2__InsufficientUSDC_buyWithUSDC();
         }
@@ -217,9 +220,12 @@ contract TokenShop2 is Ownable, AccessControl {
     function getEthSpent(address sender) external view returns (uint256) {
         return senderToEthSpent[sender];
     }
+
     function getUSDCSpent(address sender) external view returns (uint256) {
         return senderToUSDCSpent[sender];
     }
+
+    function getOwner() external view returns (address) {
+        return i_owner;
+    }
 }
-
-
