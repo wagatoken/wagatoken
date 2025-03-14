@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.18;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -182,7 +182,6 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         }
 
         // Create array of redemption IDs
-        // @audit: Gas optimization: Use a dynamic array instead of a fixed-size array ?
         uint256[] memory result = new uint256[](count);
         uint256 index = 0;
 
@@ -211,3 +210,4 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         return super.supportsInterface(interfaceId);
     }
 }
+

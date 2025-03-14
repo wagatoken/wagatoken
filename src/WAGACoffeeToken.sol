@@ -13,7 +13,7 @@ import {WAGAProofOfReserve} from "./WAGAProofOfReserve.sol";
  * @dev ERC1155 token contract for WAGA Coffee that implements a batch-based coffee token system
  * with role-based access control, supply tracking, and URI storage capabilities.
  * 
- * This contract manages coffee batches as ERC1155 tokens, where each token ID represents a unique batch
+ * This contract manages coffee batches as ERC1155 tokens, where each token ID () represents a unique batch
  * of coffee with its own metadata, production details, and verification status.
  */
 contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URIStorage {
@@ -50,11 +50,15 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * @param isVerified Whether the batch has been verified by the inventory manager
      * @param currentQuantity Current available quantity of tokens for this batch
      */
+    // @review: Should we add the price info here ?
     struct BatchInfo {
         uint256 productionDate;
         uint256 expiryDate;
         bool isVerified;
-        uint256 currentQuantity;
+        uint256 currentQuantity; 
+        /* @review: Add price info */
+        /*Pakaging info*/ 
+
     }
    
     /**
@@ -96,12 +100,15 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * Requirements:
      * - Caller must have ADMIN_ROLE
      * - New address cannot be zero address
+     * - checks if there is an existing inventory manager
+     * - if there is, revokes the role
+     * - sets the new _inventory manager and grants the role
      */
     function setInventoryManager(address _inventoryManager) external onlyRole(ADMIN_ROLE) {
-        require(_inventoryManager != address(0), "Invalid address");
+        require(_inventoryManager != address(0), "Invalid address"); // check if address is not zero
         if (inventoryManager != address(0)) {
             _revokeRole(INVENTORY_MANAGER_ROLE, inventoryManager);
-        }
+        } // check if there is an existing inventory manager
         inventoryManager = _inventoryManager;
         _grantRole(INVENTORY_MANAGER_ROLE, _inventoryManager);
     }
@@ -112,6 +119,9 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * Requirements:
      * - Caller must have ADMIN_ROLE
      * - New address cannot be zero address
+     * - checks if there is an existing redemption contract
+     * - if there is, revokes the role
+     * - sets the new _redemption contract and grants the role
      */
     function setRedemptionContract(address _redemptionContract) external onlyRole(ADMIN_ROLE) {
         require(_redemptionContract != address(0), "Invalid address");
@@ -137,6 +147,7 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
         string memory ipfsUri,
         uint256 productionDate,
         uint256 expiryDate
+        /* @review: Add price info */
     ) external onlyRole(ADMIN_ROLE) returns (uint256) {
         uint256 batchId = _nextBatchId++;
         require(bytes(ipfsUri).length > 0, "IPFS URI cannot be empty");
@@ -147,6 +158,7 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
             expiryDate: expiryDate,
             isVerified: false,
             currentQuantity: 0
+            /* @review: Add price info */
         });
        
         // Set URI for the batch that points to IPFS metadata
@@ -239,6 +251,8 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * - Batch must exist and be verified
      * Note: Updates the current quantity of the batch
      */
+    // @verif: What amount for how many tokens ?
+    // @verif: Should check that the amount is less than or equal to the current quantity
     function mintBatch(address to, uint256 batchId, uint256 amount) external onlyRole(MINTER_ROLE) {
         require(batchInfo[batchId].productionDate != 0, "Batch does not exist");
         require(batchInfo[batchId].isVerified, "Batch is not verified");
@@ -256,7 +270,7 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * Note: Updates the current quantity of the batch
      */
     function burnForRedemption(address account, uint256 batchId, uint256 amount) external onlyRole(REDEMPTION_ROLE) {
-        _burn(account, batchId, amount);
+        _burn(account, batchId, amount); // send to zero address
         batchInfo[batchId].currentQuantity -= amount;
     }
 
@@ -275,7 +289,7 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * @return string URI containing the token's metadata
      * Note: Overrides both ERC1155 and ERC1155URIStorage implementations
      */
-    function uri(uint256 tokenId) public view override(ERC1155, ERC1155URIStorage) returns (string memory) {
+    function uri(uint256 tokenId /*batchID*/) public view override(ERC1155, ERC1155URIStorage) returns (string memory) {
         return ERC1155URIStorage.uri(tokenId);
     }
 
