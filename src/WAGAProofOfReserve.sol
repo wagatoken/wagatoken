@@ -1,26 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {FunctionsClient} from "@chainlink/contracts/src/v0.8/functions/v1_3_0/FunctionsClient.sol";
-import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
-import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
+import {WAGAChainlinkFunctionsBase} from "./WAGAChainlinkFunctionsBase.sol";
+import {WAGACoffeeToken} from "./WAGACoffeeToken.sol";
 
 /**
  * @title WAGAProofOfReserve
  * @dev Contract for verifying coffee reserves using Chainlink Functions before minting tokens
  */
-contract WAGAProofOfReserve is AccessControl, FunctionsClient, ConfirmedOwner {
+contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase {
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
 
-    IWAGACoffeeToken public coffeeToken;
-
-    // Chainlink Functions variables
-    bytes32 public latestRequestId;
-    bytes public latestResponse;
-    bytes public latestError;
-    uint64 public subscriptionId;
-    bytes32 public donId;
+    WAGACoffeeToken public coffeeToken;
 
     // Reserve verification request structure
     struct VerificationRequest {
@@ -51,13 +42,9 @@ contract WAGAProofOfReserve is AccessControl, FunctionsClient, ConfirmedOwner {
         address router,
         uint64 _subscriptionId,
         bytes32 _donId
-    ) FunctionsClient(router) ConfirmedOwner(msg.sender) {
-        coffeeToken = IWAGACoffeeToken(coffeeTokenAddress);
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    ) WAGAChainlinkFunctionsBase(router, _subscriptionId, _donId) {
+        coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
         _grantRole(VERIFIER_ROLE, msg.sender);
-
-        subscriptionId = _subscriptionId;
-        donId = _donId;
     }
 
     /**
@@ -123,6 +110,9 @@ contract WAGAProofOfReserve is AccessControl, FunctionsClient, ConfirmedOwner {
         if (verifiedQuantity >= request.quantity) {
             request.verified = true;
 
+            // Update the batch status in the coffee token contract before minting
+            coffeeToken.updateBatchStatus(request.batchId, true);
+
             // Mint tokens in the coffee token contract
             coffeeToken.mintBatch(
                 request.recipient,
@@ -136,47 +126,6 @@ contract WAGAProofOfReserve is AccessControl, FunctionsClient, ConfirmedOwner {
             request.batchId,
             request.verified
         );
-    }
-
-    /**
-     * @dev Parses the response from Chainlink Functions
-     * @param response Response from Chainlink Functions
-     * @return uint256 Parsed quantity
-     */
-    function _parseResponse(
-        bytes memory response
-    ) internal pure returns (uint256) {
-        // This is a simplified implementation
-        // In a real-world scenario, you would parse the JSON response
-        if (response.length == 0) {
-            return 0;
-        }
-
-        // Convert bytes to uint256
-        uint256 result;
-        assembly {
-            result := mload(add(response, 32))
-        }
-
-        return result;
-    }
-
-    /**
-     * @dev Updates the Chainlink subscription ID
-     * @param _subscriptionId New subscription ID
-     */
-    function updateSubscriptionId(
-        uint64 _subscriptionId
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        subscriptionId = _subscriptionId;
-    }
-
-    /**
-     * @dev Updates the Chainlink DON ID
-     * @param _donId New DON ID
-     */
-    function updateDonId(bytes32 _donId) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        donId = _donId;
     }
 }
 
