@@ -58,7 +58,7 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase {
         uint256 batchId,
         uint256 quantity,
         address recipient,
-        string calldata source
+        string calldata source // @audit: Should be bytes calldata
     ) external onlyRole(VERIFIER_ROLE) returns (bytes32 requestId) {
         require(coffeeToken.isBatchCreated(batchId), "Batch does not exist");
 
@@ -97,7 +97,7 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase {
     ) internal override {
         latestResponse = response;
         latestError = err;
-
+    // @audit: Is this not gas inefficient?
         VerificationRequest storage request = verificationRequests[requestId];
         require(!request.completed, "Request already completed");
 

@@ -148,6 +148,7 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
         uint256 productionDate,
         uint256 expiryDate
         /* @review: Add price info */
+        /* @review: Add packaging info */
     ) external onlyRole(ADMIN_ROLE) returns (uint256) {
         uint256 batchId = _nextBatchId++;
         require(bytes(ipfsUri).length > 0, "IPFS URI cannot be empty");
@@ -157,7 +158,7 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
             productionDate: productionDate,
             expiryDate: expiryDate,
             isVerified: false,
-            currentQuantity: 0
+            currentQuantity: 0 // do we input the volume in kg or the number of bags
             /* @review: Add price info */
         });
        
@@ -273,6 +274,8 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
         _burn(account, batchId, amount); // send to zero address
         batchInfo[batchId].currentQuantity -= amount;
     }
+
+    // need to add a `burnForExpiry` function
 
     /**
      * @dev Checks if a batch has been created

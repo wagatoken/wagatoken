@@ -9,10 +9,10 @@ import {WAGACoffeeToken} from "./WAGACoffeeToken.sol";
 contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     bytes32 public constant FULFILLER_ROLE = keccak256("FULFILLER_ROLE");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-
     WAGACoffeeToken public coffeeToken;
 
     // Redemption status enum
+    // @audit: Need to map to states on the UI
     enum RedemptionStatus {
         Requested,
         Processing,
@@ -32,7 +32,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     }
 
     // Mapping from redemption ID to redemption request
-    mapping(uint256 => RedemptionRequest) public redemptions;
+    mapping(uint256 => RedemptionRequest) public redemptions; // redemptions[] = RedemptionRequest{()}
     uint256 public nextRedemptionId;
 
     // Events
@@ -175,6 +175,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         uint256 count = 0;
 
         // Count redemptions for the consumer
+        // @audit: Is this efficient?
         for (uint256 i = 1; i < nextRedemptionId; i++) {
             if (redemptions[i].consumer == consumer) {
                 count++;
