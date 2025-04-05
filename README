@@ -1,73 +1,68 @@
-
+# WAGA Protocol Web Application
 
 ## Overview
 
-The WAGA Protocol is a blockchain-powered platform designed to bring transparency, traceability, and financial empowerment to the coffee supply chain. This repository contains the source code for the WAGA Protocol's web application, which includes features for community engagement, administrative management, and blockchain integration.
+The **WAGA Protocol** is a blockchain-powered platform designed to bring transparency, traceability, and financial empowerment to the coffee supply chain. This repository contains the source code for the WAGA Protocol's web application, which includes features for community engagement, administrative management, and blockchain integration.
 
 ## Features
 
 ### Community Features
-- **Dashboard**: Provides an overview of community activities, events, and resources.
-- **Events**: Allows users to view and register for webinars, conferences, and other events.
-- **Forums**: A space for community discussions and knowledge sharing.
-- **Resources**: A repository for guides, whitepapers, videos, and other educational materials.
-- **Members**: Displays a list of community members and their contributions.
+- **Dashboard**: Overview of community activities, events, and resources.
+- **Events**: Register for webinars, conferences, and other events.
+- **Forums**: Community discussions and knowledge sharing.
+- **Resources**: Guides, whitepapers, videos, and educational materials.
+- **Members**: View community members and their contributions.
 
 ### Administrative Features
-- **Dashboard**: Administrative overview of platform activities and metrics.
+- **Dashboard**: Overview of platform activities and metrics.
 - **Users Management**: Manage user accounts, roles, and statuses.
-- **Content Management**: Create, edit, and manage articles, videos, and other content.
-- **Reports**: View and resolve user and content reports.
-- **Settings**: Configure platform settings, including security, notifications, and blockchain integration.
+- **Content Management**: Manage articles, videos, and other content.
+- **Reports**: View and resolve user/content reports.
+- **Settings**: Platform configuration (security, notifications, blockchain).
 
 ### Blockchain Integration
-- **Token Pre-Sale**: A dedicated page for managing and showcasing the token pre-sale.
-- **Blockchain Features**: Includes components like blockchain cubes and grids to visualize blockchain data.
+- **Token Pre-Sale**: Manage and display the token pre-sale.
+- **Blockchain Visuals**: Components like blockchain cubes and grids.
 
 ## Project Structure
 
-### app
-Contains the main application pages and layouts.
+### `app/`
+Main application pages and layouts:
+- `globals.css` — Global styles.
+- `layout.tsx` — Root layout.
+- `page.tsx` — Home page.
+- `admin/` — Admin pages (dashboard, users, etc.).
+- `community/` — Community pages (events, forums, etc.).
+- `explore/` — Feature showcase.
+- `token-pre-sale/` — Token pre-sale interface.
 
-- **`globals.css`**: Global styles for the application.
-- **`layout.tsx`**: Root layout for the application.
-- **`page.tsx`**: Home page of the application.
-- **`admin/`**: Administrative pages (e.g., dashboard, users, content, reports, settings).
-- **`community/`**: Community pages (e.g., dashboard, events, forums, resources).
-- **`explore/`**: Explore page for showcasing features and demos.
-- **`token-pre-sale/`**: Token pre-sale page.
+### `components/`
+Reusable UI components and widgets:
+- **Admin**: `admin-navbar.tsx`, etc.
+- **Community**: `community-navbar.tsx`, `dashboard-header.tsx`, etc.
+- **UI**: Buttons, inputs, tables, dropdowns.
+- **Blockchain**: `blockchain-box-grid.tsx`, `blockchain-cube.tsx`.
+- **Misc**: `footer.tsx`, `navbar.tsx`, `particle-background.tsx`.
 
-### components
-Reusable UI components and widgets.
+### `context/`
+Context providers:
+- `community-context.tsx` — Community state.
+- `wallet-context.tsx` — Wallet connection state.
 
-- **Admin Components**: admin-navbar.tsx, etc.
-- **Community Components**: community-navbar.tsx, `dashboard-header.tsx`, etc.
-- **UI Components**: Buttons, inputs, tables, dropdown menus, etc.
-- **Blockchain Components**: `blockchain-box-grid.tsx`, `blockchain-cube.tsx`, etc.
-- **Other Components**: footer.tsx, `navbar.tsx`, `particle-background.tsx`, etc.
+### `hooks/`
+Custom React hooks:
+- `use-scroll-top.ts` — Scroll behavior.
+- `use-toast.ts` — Toast notification handling.
 
-### context
-Context providers for managing global state.
+### `lib/`
+Utilities and helpers:
+- `utils.ts` — Functions for class names, formatting, etc.
 
-- **`community-context.tsx`**: Manages state for community-related features.
-- **`wallet-context.tsx`**: Manages state for wallet connections.
+### `public/`
+Static assets (images, icons, etc.).
 
-### hooks
-Custom React hooks for reusable logic.
-
-- **`use-scroll-top.ts`**: Handles scroll-to-top functionality.
-- **`use-toast.ts`**: Manages toast notifications.
-
-### lib
-Utility functions and helpers.
-
-- **`utils.ts`**: Contains utility functions for class names, formatting, etc.
-
-### public
-Static assets such as images, icons, and placeholders.
-
-### styles
-Additional CSS files for styling.
+### `styles/`
+Additional CSS styling.
 
 ## Key Technologies
 
@@ -75,9 +70,9 @@ Additional CSS files for styling.
 - **Styling**: Tailwind CSS
 - **Icons**: Lucide React
 - **Animations**: Framer Motion
-- **Blockchain**: Web3.js (or similar, depending on integration)
+- **Blockchain**: Web3.js (or similar)
 - **State Management**: React Context API
-- **UI Components**: Custom-built components and Radix UI
+- **UI Components**: Custom components and Radix UI
 
 ## Getting Started
 
@@ -86,6 +81,7 @@ Additional CSS files for styling.
 - npm or yarn
 
 ### Installation
+
 1. Clone the repository:
    ```bash
    git clone https://github.com/your-repo/waga-corp-protocol3.git
@@ -102,36 +98,36 @@ Additional CSS files for styling.
    npm run dev
    ```
 
-4. Open the application in your browser:
+4. Open the app in your browser:
    ```
    http://localhost:3000
    ```
 
 ### Build for Production
-To build the application for production:
 ```bash
 npm run build
 ```
 
 ### Run Production Server
-After building, start the production server:
 ```bash
 npm start
 ```
 
 ## Contributing
 
-Contributions are welcome! Please follow these steps:
+Contributions are welcome!
 
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix.
-3. Commit your changes and push the branch.
+1. Fork the repo.
+2. Create a new branch.
+3. Commit your changes and push.
 4. Open a pull request.
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+Licensed under the **MIT License**. See the `LICENSE` file for details.
 
 ## Contact
 
-For questions or support, please contact the WAGA Protocol team at [devs@wagatoken.io](mailto:devs@wagatoken.io)
+For questions or support, contact the WAGA Protocol team:  
+📧 [devs@wagatoken.io](mailto:devs@wagatoken.io)
+
