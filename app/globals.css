@@ -1,0 +1,2129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Define gradient text styles outside of layers for higher specificity */
+.hero-gradient-text {
+  color: transparent !important;
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 1), rgba(147, 51, 234, 1)) !important;
+}
+
+.web3-dual-gradient-text-glow {
+  color: transparent !important;
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
+  background-image: linear-gradient(
+    to right,
+    rgba(16, 185, 129, 1),
+    rgba(52, 211, 153, 1),
+    rgba(147, 51, 234, 1),
+    rgba(168, 85, 247, 1),
+    rgba(16, 185, 129, 1)
+  ) !important;
+  background-size: 300% auto !important;
+  animation: gradientShift 8s linear infinite, dualTextGlow 4s ease-in-out infinite !important;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% center;
+  }
+  50% {
+    background-position: 100% center;
+  }
+  100% {
+    background-position: 0% center;
+  }
+}
+
+@keyframes dualTextGlow {
+  0% {
+    text-shadow: 0 0 5px rgba(16, 185, 129, 0.3);
+  }
+  25% {
+    text-shadow: 0 0 10px rgba(82, 51, 234, 0.4);
+  }
+  50% {
+    text-shadow: 0 0 15px rgba(147, 51, 234, 0.5);
+  }
+  75% {
+    text-shadow: 0 0 10px rgba(82, 51, 234, 0.4);
+  }
+  100% {
+    text-shadow: 0 0 5px rgba(16, 185, 129, 0.3);
+  }
+}
+
+.web3-gradient-text-consistent {
+  color: transparent !important;
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 1), rgba(245, 158, 11, 0.9)) !important;
+  background-size: 200% auto !important;
+  transition: all 0.5s ease !important;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Add these new CSS variables for purple colors and gradients */
+    /* Purple color variables */
+    --purple-primary: rgba(147, 51, 234, 1);
+    --purple-secondary: rgba(126, 34, 206, 1);
+    --purple-accent: rgba(168, 85, 247, 0.8);
+
+    /* Gradient combinations */
+    --emerald-purple-gradient: linear-gradient(135deg, rgba(16, 185, 129, 1), rgba(147, 51, 234, 1));
+    --purple-emerald-gradient: linear-gradient(135deg, rgba(147, 51, 234, 1), rgba(16, 185, 129, 1));
+    --emerald-purple-soft-gradient: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(147, 51, 234, 0.8));
+    --purple-emerald-text-gradient: linear-gradient(90deg, rgba(147, 51, 234, 1), rgba(16, 185, 129, 1));
+
+    /* Glow combinations */
+    --emerald-glow: 0 0 15px rgba(16, 185, 129, 0.4);
+    --purple-glow: 0 0 15px rgba(147, 51, 234, 0.4);
+    --dual-glow: 0 0 15px rgba(16, 185, 129, 0.4), 0 0 15px rgba(147, 51, 234, 0.3);
+  }
+
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    background-image: radial-gradient(
+      circle at center,
+      hsl(160 70% 15% / 0.8) 0%,
+      hsl(160 70% 10% / 0.9) 50%,
+      hsl(160 70% 8% / 1) 100%
+    );
+    background-attachment: fixed;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  h1 {
+    @apply text-2xl font-bold md:text-3xl lg:text-4xl;
+  }
+  h2 {
+    @apply text-xl font-bold md:text-2xl lg:text-3xl;
+  }
+  h3 {
+    @apply text-lg font-bold md:text-xl lg:text-2xl;
+  }
+}
+
+/* Add this new class for the web3 gradient text with glow effect */
+.web3-gradient-text-glow {
+  @apply text-transparent bg-clip-text;
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 1), rgba(20, 184, 166, 0.9));
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.3), 0 0 20px rgba(16, 185, 129, 0.1);
+  display: inline-block;
+}
+
+/* Add these utility classes for gradient animations */
+.bg-size-200 {
+  background-size: 200% 200%;
+}
+
+.animate-gradient-x {
+  animation: gradient-x 4s ease infinite;
+}
+
+@keyframes gradient-x {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Add these gradient text styles to your globals.css */
+
+/* Original gradient text */
+.gradient-text {
+  background: linear-gradient(to right, #10b981, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+/* New web3 gradient styles */
+.web3-gradient-text {
+  @apply text-transparent bg-clip-text;
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 0.9), rgba(52, 211, 153, 0.85), rgba(5, 150, 105, 0.9));
+  background-size: 200% auto;
+  transition: all 0.5s ease;
+}
+
+.web3-gradient-text:hover {
+  background-position: right center;
+}
+
+.web3-gradient-text-gold {
+  @apply text-transparent bg-clip-text;
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 1), rgba(245, 158, 11, 1));
+  background-size: 200% auto;
+  animation: gradientShift 8s ease infinite alternate;
+}
+
+.web3-gradient-text-purple {
+  @apply text-transparent bg-clip-text;
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 1), rgba(139, 92, 246, 1));
+  background-size: 200% auto;
+  animation: gradientShift 8s ease infinite alternate;
+}
+
+.web3-gradient-text-animated {
+  @apply text-transparent bg-clip-text;
+  background-image: linear-gradient(
+    to right,
+    rgba(16, 185, 129, 1),
+    rgba(52, 211, 153, 1),
+    rgba(5, 150, 105, 1),
+    rgba(16, 185, 129, 1)
+  );
+  background-size: 300% auto;
+  animation: gradientShift 8s linear infinite;
+}
+
+.web3-gradient-text-purple-animated {
+  @apply text-transparent bg-clip-text;
+  background-image: linear-gradient(
+    to right,
+    rgba(16, 185, 129, 1),
+    rgba(139, 92, 246, 0.9),
+    rgba(16, 185, 129, 0.9),
+    rgba(139, 92, 246, 0.8)
+  );
+  background-size: 300% auto;
+  animation: gradientShift 8s linear infinite;
+}
+
+.web3-gradient-text-emerald-purple {
+  background: linear-gradient(to right, #10b981, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.web3-gradient-text-emerald-purple:hover {
+  background-position: right center;
+}
+
+/* Add this new indigo gradient class after the existing gradient classes */
+.web3-gradient-text-indigo {
+  background: linear-gradient(to right, #10b981, #4f46e5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.web3-gradient-text-indigo-animated {
+  @apply text-transparent bg-clip-text;
+  background-image: linear-gradient(
+    to right,
+    rgba(16, 185, 129, 1),
+    rgba(79, 70, 229, 0.9),
+    rgba(16, 185, 129, 0.9),
+    rgba(79, 70, 229, 0.8)
+  );
+  background-size: 300% auto;
+  animation: gradientShift 8s linear infinite;
+}
+
+.web3-gradient-text-emerald-indigo {
+  @apply text-transparent bg-clip-text;
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 1), rgba(52, 211, 153, 0.9), rgba(79, 70, 229, 0.8));
+  background-size: 200% auto;
+  transition: all 0.5s ease;
+}
+
+.web3-gradient-text-emerald-indigo:hover {
+  background-position: right center;
+}
+
+/* Add this new consistent emerald-to-indigo gradient class */
+.web3-gradient-text-consistent {
+  @apply text-transparent bg-clip-text;
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 1), rgba(79, 70, 229, 0.9));
+  background-size: 200% auto;
+  transition: all 0.5s ease;
+}
+
+.web3-gradient-text-consistent:hover {
+  background-position: right center;
+}
+
+/* Add these new gradient text classes to your globals.css file */
+
+.emerald-gold-gradient-text {
+  background: linear-gradient(to right, #10b981, #f59e0b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}
+
+.emerald-gold-gradient-text-animated {
+  background: linear-gradient(to right, #10b981, #f59e0b, #d97706, #10b981);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+  animation: shine 4s linear infinite;
+}
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* Add these new gradient text classes for purple-emerald combinations */
+.web3-gradient-text-purple-emerald {
+  background: linear-gradient(to right, #8b5cf6, #10b981);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.heading-text {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.glow-text {
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+.hero-gradient {
+  background: radial-gradient(
+    circle at center,
+    rgba(16, 185, 129, 0.3) 0%,
+    rgba(5, 150, 105, 0.1) 40%,
+    rgba(0, 0, 0, 0) 70%
+  );
+}
+
+/*
+Adjust the hero gradient classes to dim purple and enhance emerald
+
+Find the hero-gradient-purple class and add a new hero-gradient-emerald class
+Add this after the existing hero-gradient class:
+*/
+
+/* Add this new class for hero section headers with emerald-to-purple gradient */
+.hero-gradient-text {
+  background: linear-gradient(to right, #10b981, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}
+
+/* Add this new, more subtle gradient class after the existing hero-gradient classes */
+
+/* Hero gradient with very subtle emerald and purple */
+.hero-gradient-subtle {
+  background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 70%),
+    radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 70%);
+}
+
+/* Also update the existing hero-gradient-emerald to be more subtle for other places it might be used */
+.hero-gradient-emerald {
+  background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+}
+
+/* And update the hero-gradient-purple to match */
+.hero-gradient-purple {
+  background: radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+}
+
+.feature-card {
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(16, 185, 129, 0.1);
+  transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+  border-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
+}
+
+.glow {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.roadmap-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  background: linear-gradient(to bottom, rgba(16, 185, 129, 0.3), rgba(139, 92, 246, 0.3));
+  transform: translateX(-50%);
+}
+
+.roadmap-item {
+  position: relative;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  background: rgba(17, 24, 39, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(31, 41, 55, 0.7);
+  transition: all 0.3s ease;
+}
+
+.roadmap-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.roadmap-dot {
+  position: absolute;
+  top: 1.5rem;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: linear-gradient(to right, #10b981, #8b5cf6);
+  transform: translateX(-50%);
+  left: 0;
+  margin-left: -1.5rem;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.35);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.35);
+  }
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes glowRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes glowRotateSlow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Dynamic Animation Classes */
+
+.animate-float-slow {
+  animation: float 8s ease-in-out infinite;
+}
+
+.animate-float-fast {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-pulse-on-hover:hover {
+  animation: pulse 1.5s ease-in-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0) 0%, rgba(16, 185, 129, 0.1) 50%, rgba(16, 185, 129, 0) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s infinite;
+}
+
+.animation-delay-100 {
+  animation-delay: 100ms;
+}
+
+.animation-delay-200 {
+  animation-delay: 200ms;
+}
+
+.animation-delay-300 {
+  animation-delay: 300ms;
+}
+
+.animation-delay-400 {
+  animation-delay: 400ms;
+}
+
+.animation-delay-500 {
+  animation-delay: 500ms;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.glass-card {
+  @apply bg-black/40 border-emerald-500/20 backdrop-blur;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  transform: translateY(-2px);
+}
+
+.primary-gradient {
+  @apply bg-gradient-to-r from-emerald-600 to-emerald-500;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+  transition: all 0.3s ease;
+}
+
+.primary-gradient:hover {
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.7);
+}
+
+.secondary-gradient {
+  @apply bg-gradient-to-r from-emerald-700 to-emerald-600;
+  transition: all 0.3s ease;
+}
+
+.secondary-gradient:hover {
+  filter: brightness(1.1);
+}
+
+.container {
+  @apply w-full px-4 sm:px-6 md:px-8 lg:max-w-5xl lg:mx-auto;
+}
+
+.grid-cols-responsive {
+  @apply grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4;
+}
+
+.web3-card {
+  @apply border border-emerald-500/20 bg-card/80 backdrop-blur;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+  transition: all 0.3s ease;
+}
+
+.web3-card:hover {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
+  border-color: rgba(16, 185, 129, 0.4);
+  transform: translateY(-3px);
+}
+
+/* Add these new card style variations after the existing .web3-card styles */
+.web3-card-purple {
+  @apply border border-emerald-500/30 bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 backdrop-blur;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+  transition: all 0.3s ease;
+}
+
+.web3-card-purple:hover {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.5);
+  transform: translateY(-3px);
+}
+
+.web3-card-blue {
+  @apply border border-emerald-500/30 bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 backdrop-blur;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+  transition: all 0.3s ease;
+}
+
+.web3-card-blue:hover {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.5);
+  transform: translateY(-3px);
+}
+
+.web3-card-teal {
+  @apply border border-emerald-500/30 bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 backdrop-blur;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+  transition: all 0.3s ease;
+}
+
+.web3-card-teal:hover {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.5);
+  transform: translateY(-3px);
+}
+
+.web3-card-pink {
+  @apply border border-emerald-500/30 bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 backdrop-blur;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+  transition: all 0.3s ease;
+}
+
+.web3-card-pink:hover {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.5);
+  transform: translateY(-3px);
+}
+
+.web3-card-amber {
+  @apply border border-emerald-500/30 bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 backdrop-blur;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+  transition: all 0.3s ease;
+}
+
+.web3-card-amber:hover {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.5);
+  transform: translateY(-3px);
+}
+
+.web3-card-emerald {
+  @apply border border-emerald-500/30 bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 backdrop-blur;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+  transition: all 0.3s ease;
+}
+
+.web3-card-emerald:hover {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.5);
+  transform: translateY(-3px);
+}
+
+.web3-card-featured {
+  @apply border border-emerald-500/30 bg-gradient-to-br from-emerald-900/40 via-emerald-800/30 to-emerald-900/20 backdrop-blur;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+  transition: all 0.3s ease;
+}
+
+.web3-card-featured:hover {
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.4);
+  border-color: rgba(16, 185, 129, 0.6);
+  transform: translateY(-3px);
+}
+
+/* Dual color card */
+.web3-card-dual {
+  border: 1px solid;
+  border-image-slice: 1;
+  border-image-source: linear-gradient(to right, rgba(16, 185, 129, 0.3), rgba(147, 51, 234, 0.3));
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(147, 51, 234, 0.1));
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.1), 0 0 15px rgba(147, 51, 234, 0.1);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+}
+
+.web3-card-dual:hover {
+  border-image-source: linear-gradient(to right, rgba(16, 185, 129, 0.5), rgba(147, 51, 234, 0.5));
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2), 0 0 20px rgba(147, 51, 234, 0.2);
+  transform: translateY(-3px);
+}
+
+/* Add these CSS rules after the existing .web3-card-* styles to ensure proper text contrast in light mode */
+.light .web3-card,
+.light .web3-card-purple,
+.light .web3-card-blue,
+.light .web3-card-teal,
+.light .web3-card-pink,
+.light .web3-card-amber,
+.light .web3-card-emerald,
+.light .web3-card-featured {
+  color: hsl(var(--foreground));
+}
+
+.light .web3-card .text-muted-foreground,
+.light .web3-card-purple .text-muted-foreground,
+.light .web3-card-blue .text-muted-foreground,
+.light .web3-card-teal .text-muted-foreground,
+.light .web3-card-pink .text-muted-foreground,
+.light .web3-card-amber .text-muted-foreground,
+.light .web3-card-emerald .text-muted-foreground,
+.light .web3-card-featured .text-muted-foreground {
+  color: hsl(215.4 16.3% 40%);
+}
+
+.light .web3-card-emerald .text-muted-foreground,
+.light .web3-card-featured .text-muted-foreground {
+  color: hsl(215.4 16.3% 40%);
+}
+
+.light .web3-card .text-gray-400,
+.light .web3-card-purple .text-gray-400,
+.light .web3-card-blue .text-gray-400,
+.light .web3-card-teal .text-gray-400,
+.light .web3-card-pink .text-gray-400,
+.light .web3-card-amber .text-gray-400,
+.light .web3-card-emerald .text-gray-400,
+.light .web3-card-featured .text-gray-400 {
+  color: hsl(215.4 16.3% 40%);
+}
+
+/* Ensure card backgrounds have proper contrast in light mode */
+.light .web3-card-purple,
+.light .web3-card-blue,
+.light .web3-card-teal,
+.light .web3-card-pink,
+.light .web3-card-amber,
+.light .web3-card-emerald {
+  background: linear-gradient(to bottom right, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.05));
+}
+
+.light .web3-card-featured {
+  background: linear-gradient(to bottom right, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.1), rgba(4, 120, 87, 0.05));
+}
+
+/* Add these styles to fix FAQ text visibility in light mode */
+.light .web3-card-purple .web3-gradient-text {
+  background-image: linear-gradient(to right, rgba(5, 150, 105, 1), rgba(16, 185, 129, 1), rgba(52, 211, 153, 1));
+}
+
+.light .accordion-content {
+  color: hsl(var(--foreground));
+}
+
+/* Fix accordion trigger and content text in light mode */
+.light .accordion-trigger,
+.light [data-state="open"] .accordion-trigger,
+.light .accordion-content {
+  color: hsl(var(--foreground));
+}
+
+/* Ensure accordion items have proper background in light mode */
+.light .web3-card-purple[data-state="open"] {
+  background: linear-gradient(to bottom right, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.05));
+}
+
+.web3-card-glow {
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.1), 0 0 10px rgba(139, 92, 246, 0.1);
+}
+
+.glow-effect {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+  transition: all 0.3s ease;
+}
+
+.glow-effect:hover {
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.7);
+}
+
+.web3-bg {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.8) 0%, rgba(17, 24, 39, 0.9) 100%);
+}
+
+.web3-gradient-text {
+  @apply text-transparent bg-clip-text;
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 0.9), rgba(52, 211, 153, 0.85), rgba(5, 150, 105, 0.9));
+  background-size: 200% auto;
+  transition: all 0.5s ease;
+}
+
+.web3-gradient-text:hover {
+  background-position: right center;
+}
+
+.web3-gradient-text-vibrant {
+  @apply text-transparent bg-clip-text;
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 1), rgba(52, 211, 153, 1), rgba(5, 150, 105, 1));
+  background-size: 200% auto;
+  animation: gradientShift 5s ease infinite;
+}
+
+.web3-gradient-text-animated {
+  @apply text-transparent bg-clip-text;
+  background-image: linear-gradient(
+    to right,
+    rgba(16, 185, 129, 1),
+    rgba(52, 211, 153, 1),
+    rgba(5, 150, 105, 1),
+    rgba(16, 185, 129, 1)
+  );
+  background-size: 300% auto;
+  animation: gradientShift 8s linear infinite;
+}
+
+.web3-border {
+  border: 1px solid;
+  border-image-slice: 1;
+  border-image-source: linear-gradient(to right, rgba(16, 185, 129, 0.5), rgba(5, 150, 105, 0.5));
+  transition: all 0.3s ease;
+}
+
+.web3-border:hover {
+  border-image-source: linear-gradient(to right, rgba(16, 185, 129, 0.8), rgba(5, 150, 105, 0.8));
+}
+
+.web3-button {
+  @apply bg-gradient-to-r from-emerald-600 to-emerald-500 text-white;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.35);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.web3-button:hover {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.55);
+  transform: translateY(-1px);
+}
+
+.web3-button:active {
+  transform: scale(0.98);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+}
+
+.web3-button::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%);
+  transform-origin: 50% 50%;
+}
+
+.web3-button:active::after {
+  animation: ripple 0.6s ease-out;
+}
+
+.web3-input {
+  @apply bg-black/30 border-emerald-500/30;
+  transition: all 0.3s ease;
+}
+
+.web3-input:focus {
+  @apply border-emerald-500/70;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+  transform: translateY(-1px);
+}
+
+.web3-grid-bg {
+  background-size: 50px 50px;
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16, 185, 129, 0.05) 1px, transparent 1px);
+  position: relative;
+  overflow: hidden;
+}
+
+.web3-grid-bg::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+
+.web3-grid-bg:hover::after {
+  opacity: 1;
+}
+
+.web3-glow {
+  position: relative;
+}
+
+.web3-glow::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.web3-glow:hover::after {
+  opacity: 1;
+}
+
+.shadow-glow {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+  transition: all 0.3s ease;
+}
+
+.shadow-glow:hover {
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.7);
+}
+
+/* Improved select component styling */
+.web3-select-content {
+  @apply bg-black/90 border-emerald-500/30 backdrop-blur;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+  transition: all 0.3s ease;
+}
+
+.web3-select-item {
+  @apply text-white hover:bg-emerald-500/20 focus:bg-emerald-500/30;
+  transition: all 0.2s ease;
+}
+
+.web3-select-trigger {
+  @apply bg-black/50 border-emerald-500/30;
+  transition: all 0.3s ease;
+}
+
+.web3-select-trigger:focus {
+  @apply border-emerald-500/70;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+/* Add these styles to fix the header text in Why Volunteer cards */
+.light .web3-card-purple .card-title,
+.light .web3-card-blue .card-title,
+.light .web3-card-teal .card-title,
+.light .web3-card-pink .card-title,
+.light .web3-card-amber .card-title,
+.light .web3-card-emerald .card-title {
+  color: hsl(var(--foreground));
+}
+
+/* Fix for specific card titles in light mode */
+.light .web3-card-purple h3,
+.light .web3-card-blue h3,
+.light .web3-card-teal h3,
+.light .web3-card-pink h3,
+.light .web3-card-amber h3,
+.light .web3-card-emerald h3 {
+  color: hsl(var(--foreground));
+}
+
+/* Target all text in cards for light mode */
+.light
+  .web3-card-purple
+  *:not(.text-emerald-400):not(.text-muted-foreground):not(.web3-gradient-text):not(button):not(a),
+.light .web3-card-blue *:not(.text-emerald-400):not(.text-muted-foreground):not(.web3-gradient-text):not(button):not(a),
+.light .web3-card-teal *:not(.text-emerald-400):not(.text-muted-foreground):not(.web3-gradient-text):not(button):not(a),
+.light .web3-card-pink *:not(.text-emerald-400):not(.text-muted-foreground):not(.web3-gradient-text):not(button):not(a),
+.light
+  .web3-card-amber
+  *:not(.text-emerald-400):not(.text-muted-foreground):not(.web3-gradient-text):not(button):not(a),
+.light
+  .web3-card-emerald
+  *:not(.text-emerald-400):not(.text-muted-foreground):not(.web3-gradient-text):not(button):not(a) {
+  color: hsl(var(--foreground));
+}
+
+/* Enhance light mode text visibility in all cards */
+.light .web3-card p,
+.light .web3-card-purple p,
+.light .web3-card-blue p,
+.light .web3-card-teal p,
+.light .web3-card-pink p,
+.light .web3-card-amber p,
+.light .web3-card-emerald p,
+.light .web3-card-featured p,
+.light .web3-card div,
+.light .web3-card-purple div,
+.light .web3-card-blue div,
+.light .web3-card-teal div,
+.light .web3-card-pink div,
+.light .web3-card-amber div,
+.light .web3-card-emerald div,
+.light .web3-card-featured div,
+.light
+  .web3-card
+  span:not(.text-emerald-300):not(.text-emerald-400):not(.text-emerald-500):not(.text-emerald-600):not(
+    .text-emerald-700
+  ):not(.text-emerald-800),
+.light
+  .web3-card-purple
+  span:not(.text-emerald-300):not(.text-emerald-400):not(.text-emerald-500):not(.text-emerald-600):not(
+    .text-emerald-700
+  ):not(.text-emerald-800),
+.light
+  .web3-card-blue
+  span:not(.text-emerald-300):not(.text-emerald-400):not(.text-emerald-500):not(.text-emerald-600):not(
+    .text-emerald-700
+  ):not(.text-emerald-800),
+.light
+  .web3-card-teal
+  span:not(.text-emerald-300):not(.text-emerald-400):not(.text-emerald-500):not(.text-emerald-600):not(
+    .text-emerald-700
+  ):not(.text-emerald-800),
+.light
+  .web3-card-pink
+  span:not(.text-emerald-300):not(.text-emerald-400):not(.text-emerald-500):not(.text-emerald-600):not(
+    .text-emerald-700
+  ):not(.text-emerald-800),
+.light
+  .web3-card-amber
+  span:not(.text-emerald-300):not(.text-emerald-400):not(.text-emerald-500):not(.text-emerald-600):not(
+    .text-emerald-700
+  ):not(.text-emerald-800),
+.light
+  .web3-card-emerald
+  span:not(.text-emerald-300):not(.text-emerald-400):not(.text-emerald-500):not(.text-emerald-600):not(
+    .text-emerald-700
+  ):not(.text-emerald-800),
+.light
+  .web3-card-featured
+  span:not(.text-emerald-300):not(.text-emerald-400):not(.text-emerald-500):not(.text-emerald-600):not(
+    .text-emerald-700
+  ):not(.text-emerald-800) {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Ensure text-white is overridden in light mode */
+.light .web3-card .text-white,
+.light .web3-card-purple .text-white,
+.light .web3-card-blue .text-white,
+.light .web3-card-teal .text-white,
+.light .web3-card-pink .text-white,
+.light .web3-card-amber .text-white,
+.light .web3-card-emerald .text-white,
+.light .web3-card-featured .text-white {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Ensure all card descriptions are readable */
+.light .web3-card .card-description,
+.light .web3-card-purple .card-description,
+.light .web3-card-blue .card-description,
+.light .web3-card-teal .card-description,
+.light .web3-card-pink .card-description,
+.light .web3-card-amber .card-description,
+.light .web3-card-emerald .card-description,
+.light .web3-card-featured .card-description,
+.light .web3-card .card-description {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Ensure all paragraphs in cards are readable */
+.light .web3-card p:not(.text-muted-foreground),
+.light .web3-card-purple p:not(.text-muted-foreground),
+.light .web3-card-blue p:not(.text-muted-foreground),
+.light .web3-card-teal p:not(.text-muted-foreground),
+.light .web3-card-pink p:not(.text-muted-foreground),
+.light .web3-card-amber p:not(.text-muted-foreground),
+.light .web3-card-emerald p:not(.text-muted-foreground),
+.light .web3-card-featured p:not(.text-muted-foreground) {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Ensure all list items in cards are readable */
+.light .web3-card li:not(.text-muted-foreground),
+.light .web3-card-purple li:not(.text-muted-foreground),
+.light .web3-card-blue li:not(.text-muted-foreground),
+.light .web3-card-teal li:not(.text-muted-foreground),
+.light .web3-card-pink li:not(.text-muted-foreground),
+.light .web3-card-amber li:not(.text-muted-foreground),
+.light .web3-card-emerald li:not(.text-muted-foreground),
+.light .web3-card-featured li:not(.text-muted-foreground) {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Add these comprehensive fixes for text visibility in light mode */
+
+/* Force dark text on all card content in light mode */
+.light
+  .web3-card-purple
+  *:not(svg):not(button):not(.web3-gradient-text):not(.text-emerald-400):not(.text-emerald-500):not(
+    .text-emerald-600
+  ):not(.text-emerald-700):not(.text-emerald-800):not(.text-emerald-900),
+.light
+  .web3-card-blue
+  *:not(svg):not(button):not(.web3-gradient-text):not(.text-emerald-400):not(.text-emerald-500):not(
+    .text-emerald-600
+  ):not(.text-emerald-700):not(.text-emerald-800):not(.text-emerald-900),
+.light
+  .web3-card-teal
+  *:not(svg):not(button):not(.web3-gradient-text):not(.text-emerald-400):not(.text-emerald-500):not(
+    .text-emerald-600
+  ):not(.text-emerald-700):not(.text-emerald-800):not(.text-emerald-900),
+.light
+  .web3-card-pink
+  *:not(svg):not(button):not(.web3-gradient-text):not(.text-emerald-400):not(.text-emerald-500):not(
+    .text-emerald-600
+  ):not(.text-emerald-700):not(.text-emerald-800):not(.text-emerald-900),
+.light
+  .web3-card-amber
+  *:not(svg):not(button):not(.web3-gradient-text):not(.text-emerald-400):not(.text-emerald-500):not(
+    .text-emerald-600
+  ):not(.text-emerald-700):not(.text-emerald-800):not(.text-emerald-900),
+.light
+  .web3-card-emerald
+  *:not(svg):not(button):not(.web3-gradient-text):not(.text-emerald-400):not(.text-emerald-500):not(
+    .text-emerald-600
+  ):not(.text-emerald-700):not(.text-emerald-800):not(.text-emerald-900),
+.light
+  .web3-card-featured
+  *:not(svg):not(button):not(.web3-gradient-text):not(.text-emerald-400):not(.text-emerald-500):not(
+    .text-emerald-600
+  ):not(.text-emerald-700):not(.text-emerald-800):not(.text-emerald-900),
+.light
+  .web3-card
+  *:not(svg):not(button):not(.web3-gradient-text):not(.text-emerald-400):not(.text-emerald-500):not(
+    .text-emerald-600
+  ):not(.text-emerald-700):not(.text-emerald-800):not(.text-emerald-900) {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Specifically target card titles and descriptions */
+.light .web3-card-purple h3,
+.light .web3-card-blue h3,
+.light .web3-card-teal h3,
+.light .web3-card-pink h3,
+.light .web3-card-amber h3,
+.light .web3-card-emerald h3,
+.light .web3-card-featured h3,
+.light .web3-card h3,
+.light .web3-card-purple .card-title,
+.light .web3-card-blue .card-title,
+.light .web3-card-teal .card-title,
+.light .web3-card-pink .card-title,
+.light .web3-card-amber .card-title,
+.light .web3-card-emerald .card-title,
+.light .web3-card-featured .card-title,
+.light .web3-card .card-title {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Ensure paragraphs in cards are readable */
+.light .web3-card-purple p:not(.text-muted-foreground),
+.light .web3-card-blue p:not(.text-muted-foreground),
+.light .web3-card-teal p:not(.text-muted-foreground),
+.light .web3-card-pink p:not(.text-muted-foreground),
+.light .web3-card-amber p:not(.text-muted-foreground),
+.light .web3-card-emerald p:not(.text-muted-foreground),
+.light .web3-card-featured p:not(.text-muted-foreground),
+.light .web3-card p:not(.text-muted-foreground) {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Ensure card descriptions are readable */
+.light .web3-card-purple .card-description,
+.light .web3-card-blue .card-description,
+.light .web3-card-teal .card-description,
+.light .web3-card-pink .card-description,
+.light .web3-card-amber .card-description,
+.light .web3-card-emerald .card-description,
+.light .web3-card-featured .card-description,
+.light .web3-card .card-description {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Override any text-white classes in light mode */
+.light .text-white {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Make card backgrounds more opaque in light mode for better contrast */
+.light .web3-card-purple,
+.light .web3-card-blue,
+.light .web3-card-teal,
+.light .web3-card-pink,
+.light .web3-card-amber,
+.light .web3-card-emerald,
+.light .web3-card-featured,
+.light .web3-card {
+  background-color: rgba(255, 255, 255, 0.7);
+}
+
+/* Add light mode specific button styling */
+.light .web3-button {
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 0.8), rgba(5, 150, 105, 0.8));
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+}
+
+.light .web3-button:hover {
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.9));
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.35);
+}
+
+.light .primary-gradient {
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 0.8), rgba(5, 150, 105, 0.8));
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+}
+
+.light .primary-gradient:hover {
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.9));
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.35);
+}
+
+/* 3D Cube Styles */
+.perspective-500 {
+  perspective: 500px;
+}
+
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+.cube-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+}
+
+/* Hexagon Grid Pattern */
+.hexagon-pattern {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.1;
+  background-image: repeating-linear-gradient(
+      60deg,
+      rgba(16, 185, 129, 0.1) 0,
+      rgba(16, 185, 129, 0.1) 1px,
+      transparent 0,
+      transparent 10px
+    ),
+    repeating-linear-gradient(
+      120deg,
+      rgba(16, 185, 129, 0.1) 0,
+      rgba(16, 185, 129, 0.1) 1px,
+      transparent 0,
+      transparent 10px
+    );
+  background-size: 20px 35px;
+}
+
+/* Animated Glow Effect */
+.animated-glow {
+  position: relative;
+}
+
+.animated-glow::after {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0) 70%);
+  z-index: -1;
+  opacity: 0;
+  animation: pulse 3s infinite;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(20);
+    opacity: 0;
+  }
+}
+
+/* Web3 Button Styles */
+.clip-path-polygon {
+  clip-path: polygon(0 10%, 10% 0, 90% 0, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0 90%);
+}
+
+/* Digital scan line effect */
+.digital-scan {
+  position: relative;
+  overflow: hidden;
+}
+
+.digital-scan::before {
+  content: "";
+  position: absolute;
+  top: -100%;
+  left: 0;
+  width: 100%;
+  height: 10px;
+  background: linear-gradient(
+    to bottom,
+    rgba(16, 185, 129, 0) 0%,
+    rgba(16, 185, 129, 0.5) 50%,
+    rgba(16, 185, 129, 0) 100%
+  );
+  animation: scan 2s linear infinite;
+  z-index: 1;
+  opacity: 0.3;
+}
+
+@keyframes scan {
+  0% {
+    top: -10px;
+  }
+  100% {
+    top: 100%;
+  }
+}
+
+/* Data flow animation */
+.data-flow {
+  position: relative;
+  overflow: hidden;
+}
+
+.data-flow::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.2), transparent);
+  animation: data-flow 2s infinite linear;
+}
+
+@keyframes data-flow {
+  0% {
+    left: -50%;
+  }
+  100% {
+    left: 150%;
+  }
+}
+
+/* Web3 Button Styles */
+.web3-button-gradient {
+  background: linear-gradient(135deg, #065f46 0%, #059669 50%, #10b981 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease infinite;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+}
+
+.web3-button-cyber {
+  background: linear-gradient(135deg, #065f46 0%, #059669 50%, #10b981 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease infinite;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+  clip-path: polygon(0 10%, 10% 0, 90% 0, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0 90%);
+}
+
+.shadow-glow-sm {
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+@keyframes floatParticle {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateY(-10px) scale(1.5);
+    opacity: 0.7;
+  }
+}
+
+@keyframes scan {
+  0% {
+    transform: translateY(100%);
+  }
+  100% {
+    transform: translateY(-100%);
+  }
+}
+
+@keyframes dataflow {
+  0% {
+    width: 0;
+    left: 0;
+    opacity: 1;
+  }
+  50% {
+    width: 100%;
+    left: 0;
+    opacity: 1;
+  }
+  51% {
+    width: 100%;
+    right: 0;
+    left: auto;
+    opacity: 1;
+  }
+  100% {
+    width: 0;
+    right: 0;
+    left: auto;
+    opacity: 0;
+  }
+}
+
+.group-hover\:animate-scan:hover {
+  animation: scan 2s linear infinite;
+}
+
+.group-hover\:animate-dataflow:hover {
+  animation: dataflow 3s linear infinite;
+}
+
+/* Add these new emerald glow classes to the end of your globals.css file */
+
+/* Subtle emerald glow for cards and containers */
+.emerald-glow {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15), 0 0 5px rgba(16, 185, 129, 0.05);
+  transition: box-shadow 0.3s ease;
+}
+
+.emerald-glow:hover {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.25), 0 0 8px rgba(16, 185, 129, 0.1);
+}
+
+/* Text glow that maintains readability */
+.text-emerald-glow {
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+}
+
+/* Stronger glow for headings */
+.heading-emerald-glow {
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.4), 0 0 20px rgba(16, 185, 129, 0.2);
+}
+
+/* Border glow for containers */
+.border-emerald-glow {
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.border-emerald-glow:hover {
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.25);
+}
+
+/* Pulsing glow for important elements */
+.pulse-emerald-glow {
+  animation: pulseEmeraldGlow 3s infinite alternate;
+}
+
+@keyframes pulseEmeraldGlow {
+  0% {
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2);
+  }
+}
+
+/* Subtle glow for inputs and interactive elements */
+.input-emerald-glow {
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.input-emerald-glow:focus {
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+  outline: none;
+}
+
+/* Enhance web3-card with emerald glow */
+.web3-card {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.web3-card:hover {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2), 0 0 30px rgba(16, 185, 129, 0.1);
+}
+
+/* Enhanced glow for featured cards */
+.web3-card-featured {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2), 0 0 10px rgba(16, 185, 129, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.web3-card-featured:hover {
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.3), 0 0 15px rgba(16, 185, 129, 0.15);
+}
+
+/* Add these new gradient text classes for the emerald-gold gradients */
+.emerald-gold-gradient-text {
+  background: linear-gradient(to right, #10b981, #f59e0b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}
+
+.emerald-gold-gradient-text-animated {
+  background: linear-gradient(to right, #10b981, #f59e0b, #d97706, #10b981);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+  animation: shine 4s linear infinite;
+}
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* Add this animation for the footer social icons */
+@keyframes borderGlow {
+  0%,
+  100% {
+    border-color: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 5px rgba(16, 185, 129, 0.1);
+  }
+  50% {
+    border-color: rgba(16, 185, 129, 0.6);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+  }
+}
+
+.animate-border-glow {
+  animation: borderGlow 3s ease-in-out infinite;
+}
+
+.dual-border-gradient {
+  position: relative;
+}
+
+.dual-border-gradient::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right, rgba(16, 185, 129, 0.5), rgba(147, 51, 234, 0.5), rgba(16, 185, 129, 0.5));
+}
+
+.animate-dual-border-glow {
+  animation: dualBorderGlow 3s ease-in-out infinite;
+}
+
+@keyframes dualBorderGlow {
+  0%,
+  100% {
+    border-color: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 5px rgba(16, 185, 129, 0.1);
+  }
+  50% {
+    border-color: rgba(147, 51, 234, 0.6);
+    box-shadow: 0 0 10px rgba(147, 51, 234, 0.3);
+  }
+}
+
+.purple-glow {
+  text-shadow: 0 0 10px rgba(147, 51, 234, 0.5);
+}
+
+.purple-icon-container {
+  @apply bg-purple-950/50 border border-purple-500/30;
+  transition: all 0.3s ease;
+}
+
+.purple-icon-container:hover {
+  @apply border-purple-500/60 bg-purple-500/10;
+  box-shadow: 0 0 15px rgba(147, 51, 234, 0.3);
+}
+
+.emerald-purple-icon-container {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(147, 51, 234, 0.2));
+  border: 1px solid;
+  border-image-slice: 1;
+  border-image-source: linear-gradient(to right, rgba(16, 185, 129, 0.3), rgba(147, 51, 234, 0.3));
+  transition: all 0.3s ease;
+}
+
+.emerald-purple-icon-container:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(147, 51, 234, 0.3));
+  border-image-source: linear-gradient(to right, rgba(16, 185, 129, 0.6), rgba(147, 51, 234, 0.6));
+  box-shadow: var(--dual-glow);
+}
+
+/* Purple button styles */
+.web3-button-purple {
+  background: linear-gradient(135deg, #7e22ce 0%, #9333ea 50%, #a855f7 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease infinite;
+  border: 1px solid rgba(147, 51, 234, 0.5);
+  box-shadow: 0 0 15px rgba(147, 51, 234, 0.3);
+}
+
+.web3-button-dual-gradient {
+  background: linear-gradient(135deg, #065f46 0%, #7e22ce 50%, #10b981 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease infinite;
+  border: 1px solid;
+  border-image-slice: 1;
+  border-image-source: linear-gradient(to right, rgba(16, 185, 129, 0.5), rgba(147, 51, 234, 0.5));
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2), 0 0 15px rgba(147, 51, 234, 0.2);
+}
+
+.shadow-purple-glow-sm {
+  box-shadow: 0 0 10px rgba(147, 51, 234, 0.4);
+}
+
+.shadow-dual-glow-sm {
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3), 0 0 10px rgba(147, 51, 234, 0.3);
+}
+
+/* Add this new class for the border gradient in the navbar */
+.navbar-border-gradient {
+  position: relative;
+}
+
+.navbar-border-gradient::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right, rgba(16, 185, 129, 0.1), rgba(147, 51, 234, 0.1), rgba(16, 185, 129, 0.1));
+}
+
+/* Add this class for the active nav item indicator */
+.nav-indicator {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(to right, rgba(16, 185, 129, 0.7), rgba(147, 51, 234, 0.7));
+  border-radius: 1px;
+}
+
+/* Add these new dynamic card effect styles */
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes floatGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.5);
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes dualFloatGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+    transform: translateY(0);
+  }
+  25% {
+    box-shadow: 0 0 20px rgba(147, 51, 234, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.5);
+    transform: translateY(-5px);
+  }
+  75% {
+    box-shadow: 0 0 20px rgba(147, 51, 234, 0.4);
+  }
+}
+
+.dynamic-card-glow {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.dynamic-card-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(16, 185, 129, 0.4) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.dynamic-card-glow:hover::before {
+  opacity: 1;
+}
+
+.dynamic-card-emerald {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+  animation: floatGlow 4s ease-in-out infinite;
+}
+
+.dynamic-card-purple {
+  box-shadow: 0 0 15px rgba(147, 51, 234, 0.2);
+  animation: floatGlow 4s ease-in-out infinite;
+}
+
+.dynamic-card-dual {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2), 0 0 15px rgba(147, 51, 234, 0.2);
+  animation: dualFloatGlow 6s ease-in-out infinite;
+}
+
+.dynamic-border-glow {
+  position: relative;
+}
+
+.dynamic-border-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(to right, rgba(16, 185, 129, 0.7), rgba(147, 51, 234, 0.7), rgba(16, 185, 129, 0.7));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.dynamic-border-glow:hover::after {
+  opacity: 1;
+}
+
+/* Add these new navbar styles to the end of your globals.css file */
+.emerald-navbar {
+  background: linear-gradient(to right, rgba(6, 95, 70, 0.9), rgba(5, 150, 105, 0.9));
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.15);
+  transition: all 0.3s ease;
+}
+
+.transparent-navbar {
+  background: transparent;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.1);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+  transition: all 0.3s ease;
+}
+
+.navbar-button {
+  background: rgba(5, 150, 105, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+  transition: all 0.3s ease;
+}
+
+.navbar-button:hover {
+  background: rgba(5, 150, 105, 0.3);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.2);
+}
+
+/* Add a subtle glow effect to navbar links */
+.navbar-link {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.navbar-link:after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(to right, rgba(16, 185, 129, 0.7), rgba(147, 51, 234, 0.7));
+  transition: width 0.3s ease;
+}
+
+.navbar-link:hover:after {
+  width: 100%;
+}
+
+.navbar-link.active:after {
+  width: 100%;
+}
+
+/* Enhanced navbar styles for web3 aesthetic */
+.navbar-link-active {
+  position: relative;
+  overflow: hidden;
+}
+
+.navbar-link-active::before {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(to right, rgba(16, 185, 129, 0.7), rgba(147, 51, 234, 0.7));
+  border-radius: 1px;
+}
+
+.navbar-link-hover {
+  position: relative;
+  overflow: hidden;
+}
+
+.navbar-link-hover::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(to right, rgba(16, 185, 129, 0.7), rgba(147, 51, 234, 0.7));
+  transition: width 0.3s ease;
+  border-radius: 1px;
+}
+
+.navbar-link-hover:hover::after {
+  width: 100%;
+}
+
+.navbar-glow {
+  box-shadow: 0 5px 20px -5px rgba(16, 185, 129, 0.2), 0 5px 20px -5px rgba(147, 51, 234, 0.2);
+}
+
+.navbar-backdrop {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.navbar-gradient-bg {
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.03), rgba(147, 51, 234, 0.03), rgba(16, 185, 129, 0.03));
+  background-size: 200% 100%;
+  animation: gradientShift 15s linear infinite;
+}
+
+/* Add web3-card-glow-border class for the hero card */
+.web3-card-glow-border {
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.3), inset 0 0 15px rgba(16, 185, 129, 0.3);
+  animation: borderGlow 4s ease-in-out infinite;
+}
+
+@keyframes borderGlow {
+  0%,
+  100% {
+    border-color: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3), inset 0 0 15px rgba(16, 185, 129, 0.3);
+  }
+  50% {
+    border-color: rgba(147, 51, 234, 0.3);
+    box-shadow: 0 0 15px rgba(147, 51, 234, 0.3), inset 0 0 15px rgba(147, 51, 234, 0.3);
+  }
+}
+
+/* Add web3-grid-bg-animated class for the background grid */
+.web3-grid-bg-animated {
+  background-size: 50px 50px;
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16, 185, 129, 0.05) 1px, transparent 1px);
+  animation: gridMove 20s linear infinite;
+}
+
+@keyframes gridMove {
+  0% {
+    background-position: 0px 0px;
+  }
+  100% {
+    background-position: 50px 50px;
+  }
+}
+
+/* Add blob animation classes */
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+/* Token Pre-Sale Page Specific Styles */
+@keyframes floatingToken {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-20px) rotate(5deg);
+  }
+}
+
+.hero-gradient-subtle {
+  background: radial-gradient(
+    circle at center,
+    rgba(16, 185, 129, 0.15) 0%,
+    rgba(147, 51, 234, 0.15) 50%,
+    rgba(0, 0, 0, 0) 70%
+  );
+}
+
+.token-float {
+  animation: floatingToken 6s ease-in-out infinite;
+}
+
+.token-glow {
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6));
+}
+
+.purple-glow {
+  text-shadow: 0 0 10px rgba(147, 51, 234, 0.5);
+}
+
+.token-card {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.token-grid {
+  background-size: 20px 20px;
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16, 185, 129, 0.1) 1px, transparent 1px);
+}
+
+.token-stats-card {
+  transition: all 0.3s ease;
+}
+
+.token-stats-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.3);
+}
+
+/* Add these responsive utility classes to the end of the file */
+
+@media (max-width: 640px) {
+  .web3-dual-gradient-text-glow {
+    text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+  }
+
+  .web3-card-glow-border {
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+  }
+
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite;
+  }
+
+  @keyframes glow {
+    0%,
+    100% {
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+    }
+  }
+}
+
+/* Fix for mobile overflow issues */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
