@@ -1,3 +1,6 @@
+# WAGAInventoryManager.sol
+
+```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
@@ -274,3 +277,4 @@ contract WAGAInventoryManager is AccessControl, WAGAChainlinkFunctionsBase, Auto
 
 
 }
+```
