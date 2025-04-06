@@ -34,9 +34,22 @@ export default function Navbar() {
 
   const isAdminPage = pathname?.startsWith("/admin")
   const isCommunityPage = pathname?.startsWith("/community")
+  const shouldDisplay = !isAdminPage && !isCommunityPage
+
+  // Add padding to body to account for fixed navbar, but only when this navbar is displayed
+  useEffect(() => {
+    if (shouldDisplay) {
+      document.body.style.paddingTop = "64px" // 4rem or 64px to match h-16
+    }
+    return () => {
+      if (shouldDisplay) {
+        document.body.style.paddingTop = "0px"
+      }
+    }
+  }, [shouldDisplay])
 
   // Don't show navbar on admin or community pages as they have their own navbars
-  if (isAdminPage || isCommunityPage) {
+  if (!shouldDisplay) {
     return null
   }
 
@@ -44,7 +57,7 @@ export default function Navbar() {
     <>
       <header
         className={cn(
-          "sticky top-0 z-40 w-full border-b border-emerald-500/20 bg-emerald-950/80 backdrop-blur supports-[backdrop-filter]:bg-emerald-950/60",
+          "fixed top-0 left-0 right-0 z-50 w-full border-b border-emerald-500/20 bg-emerald-950/80 backdrop-blur supports-[backdrop-filter]:bg-emerald-950/60 transition-all duration-300",
           scrolled ? "shadow-[0_4px_20px_-12px_rgba(16,185,129,0.3)]" : "",
         )}
       >

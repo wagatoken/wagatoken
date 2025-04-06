@@ -6,7 +6,6 @@ import { ArrowLeft, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import DynamicGlowCard from "@/components/dynamic-glow-card"
-import { DemoProvider } from "@/context/demo-context"
 import DemoStepNavigator from "@/components/demo/demo-step-navigator"
 import DemoIntroduction from "@/components/demo/steps/demo-introduction"
 import BatchCreationStep from "@/components/demo/steps/batch-creation-step"
@@ -37,51 +36,49 @@ export default function ExplorePage() {
   }
 
   return (
-    <DemoProvider>
-      <div className="min-h-screen bg-gradient-to-b from-emerald-950/40 to-purple-950/30 pt-24 pb-16">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div initial="hidden" animate="visible" variants={fadeIn}>
-            <div className="mb-6">
-              <Link href="/">
-                <Button variant="ghost" className="text-emerald-400 hover:text-emerald-300 p-0">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Home
-                </Button>
-              </Link>
-            </div>
+    <div className="min-h-screen bg-gradient-to-b from-emerald-950/40 to-purple-950/30 pt-24 pb-16">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div initial="hidden" animate="visible" variants={fadeIn}>
+          <div className="mb-6">
+            <Link href="/">
+              <Button variant="ghost" className="text-emerald-400 hover:text-emerald-300 p-0">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Home
+              </Button>
+            </Link>
+          </div>
 
-            <DynamicGlowCard variant="dual" className="p-6 mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <h1 className="text-2xl md:text-3xl font-bold">
-                  <span className="web3-dual-gradient-text-glow">WAGA Coffee Tokenization Demo</span>
-                </h1>
-                <div className="bg-emerald-900/30 text-emerald-300 px-3 py-1 rounded-full text-sm border border-emerald-500/30">
-                  Interactive Demo
-                </div>
+          <DynamicGlowCard variant="dual" className="p-6 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-2xl md:text-3xl font-bold">
+                <span className="web3-dual-gradient-text-glow">WAGA Coffee Tokenization Demo</span>
+              </h1>
+              <div className="bg-emerald-900/30 text-emerald-300 px-3 py-1 rounded-full text-sm border border-emerald-500/30">
+                Interactive Demo
               </div>
-              <p className="text-gray-300 mb-2">
-                Experience the WAGA Coffee Tokenization workflow through this interactive demonstration. This proof of
-                concept illustrates how our blockchain technology transforms the coffee supply chain, focusing on retail
-                coffee bags with community-driven distribution and 3PL integration.
-              </p>
-              <p className="text-sm text-gray-400">
-                Note: This is a simulated environment using dummy data to demonstrate the platform's functionality.
-              </p>
-            </DynamicGlowCard>
-
-            <div className="mb-8">
-              <DemoStepNavigator />
             </div>
+            <p className="text-gray-300 mb-2">
+              Experience the WAGA Coffee Tokenization workflow through this interactive demonstration. This proof of
+              concept illustrates how our blockchain technology transforms the coffee supply chain, focusing on retail
+              coffee bags with community-driven distribution and 3PL integration.
+            </p>
+            <p className="text-sm text-gray-400">
+              Note: This is a simulated environment using dummy data to demonstrate the platform's functionality.
+            </p>
+          </DynamicGlowCard>
 
-            <DemoStepContent />
+          <div className="mb-8">
+            <DemoStepNavigator />
+          </div>
 
-            <div className="mt-8 flex justify-between">
-              <NavigationButtons />
-            </div>
-          </motion.div>
-        </div>
+          <DemoStepContent />
+
+          <div className="mt-8 flex justify-between">
+            <NavigationButtons />
+          </div>
+        </motion.div>
       </div>
-    </DemoProvider>
+    </div>
   )
 }
 

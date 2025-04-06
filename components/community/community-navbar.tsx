@@ -43,11 +43,19 @@ export function CommunityNavbar() {
     }
   }, [isMenuOpen])
 
+  // Add padding to body to account for fixed navbar
+  useEffect(() => {
+    document.body.style.paddingTop = "64px" // 4rem or 64px to match h-16
+    return () => {
+      document.body.style.paddingTop = "0px"
+    }
+  }, [])
+
   return (
     <>
       <nav
         className={cn(
-          "sticky top-0 z-40 w-full border-b border-emerald-500/20 bg-emerald-950/80 backdrop-blur supports-[backdrop-filter]:bg-emerald-950/60",
+          "fixed top-0 left-0 right-0 z-50 w-full border-b border-emerald-500/20 bg-emerald-950/80 backdrop-blur supports-[backdrop-filter]:bg-emerald-950/60 transition-all duration-300",
           scrolled ? "shadow-[0_4px_20px_-12px_rgba(16,185,129,0.3)]" : "",
         )}
       >

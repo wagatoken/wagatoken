@@ -7,6 +7,8 @@ import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import { WalletProvider } from "@/context/wallet-context"
 import { WalletConnectionModal } from "@/components/wallet-connection-modal"
+import { DemoProvider } from "@/context/demo-context"
+import { CommunityProvider } from "@/context/community-context"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -27,22 +29,22 @@ export default function RootLayout({
       <body className={`${inter.className} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <WalletProvider>
-            <div className="flex min-h-screen flex-col">
-              <Navbar />
-              <main className="flex-1">{children}</main>
-              <Footer />
-            </div>
-            <WalletConnectionModal />
+            <DemoProvider>
+              <CommunityProvider>
+                <div className="flex min-h-screen flex-col">
+                  <Navbar />
+                  <main className="flex-1">{children}</main>
+                  <Footer />
+                </div>
+                <WalletConnectionModal />
+              </CommunityProvider>
+            </DemoProvider>
           </WalletProvider>
         </ThemeProvider>
       </body>
     </html>
   )
 }
-
-import "./globals.css"
-
-import "./globals.css"
 
 
 

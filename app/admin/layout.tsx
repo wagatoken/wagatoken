@@ -13,7 +13,9 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col pt-16">
+      {" "}
+      {/* Added pt-16 for navbar spacing */}
       <AdminNavbar />
       <main className="flex-1 bg-gradient-to-b from-emerald-950/40 to-purple-950/30">{children}</main>
       {/* Footer removed from here - it's already in the root layout */}

@@ -46,7 +46,7 @@ export default function TokenRedemptionStep() {
             <ShoppingBag className="h-6 w-6 text-purple-300" />
           </div>
           <h2 className="text-2xl font-bold">
-            <span className="hero-gradient-text">Step 5: Token Redemption</span>
+            <span className="hero-gradient-text">Step 7: Token Redemption</span>
           </h2>
         </div>
 

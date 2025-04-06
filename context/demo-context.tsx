@@ -110,6 +110,8 @@ type DemoContextType = {
   goToNextStep: () => void
   goToPreviousStep: () => void
   goToStep: (step: number) => void
+  isStepComplete: (step: number) => boolean // Added this function
+  markStepComplete: (step: number) => void // Added this function
   createBatch: (batchData: Partial<CoffeeBatch>) => Promise<CoffeeBatch>
   verifyBatch: (batchId: string) => Promise<VerificationRequest>
   mintTokens: (batchId: string, quantity: number) => Promise<MintedToken>
@@ -133,6 +135,7 @@ const DemoContext = createContext<DemoContextType | undefined>(undefined)
 export function DemoProvider({ children }: { children: ReactNode }) {
   const [currentStep, setCurrentStep] = useState(0)
   const totalSteps = 8 // Updated total number of steps in our demo
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set()) // Added this state
 
   // Demo state
   const [batches, setBatches] = useState<CoffeeBatch[]>([])
@@ -168,6 +171,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   // Navigation functions
   const goToNextStep = useCallback(() => {
     if (currentStep < totalSteps - 1) {
+      markStepComplete(currentStep) // Mark current step as complete
       setCurrentStep(currentStep + 1)
     }
   }, [currentStep, totalSteps])
@@ -186,6 +190,22 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     },
     [totalSteps],
   )
+
+  // Step completion functions
+  const isStepComplete = useCallback(
+    (step: number) => {
+      return completedSteps.has(step)
+    },
+    [completedSteps],
+  )
+
+  const markStepComplete = useCallback((step: number) => {
+    setCompletedSteps((prev) => {
+      const newSet = new Set(prev)
+      newSet.add(step)
+      return newSet
+    })
+  }, [])
 
   // Simulate blockchain transaction
   const simulateBlockchainTransaction = useCallback(() => {
@@ -229,9 +249,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       }
 
       setBatches((prev) => [...prev, newBatch])
+      markStepComplete(1) // Mark batch creation step as complete
       return newBatch
     },
-    [simulateBlockchainTransaction, generateQRCodeUrl],
+    [simulateBlockchainTransaction, generateQRCodeUrl, markStepComplete],
   )
 
   const verifyBatch = useCallback(
@@ -278,11 +299,13 @@ export function DemoProvider({ children }: { children: ReactNode }) {
               : batch,
           ),
         )
+
+        markStepComplete(2) // Mark verification step as complete
       }, 5000)
 
       return newVerification
     },
-    [simulateBlockchainTransaction],
+    [simulateBlockchainTransaction, markStepComplete],
   )
 
   const mintTokens = useCallback(
@@ -313,9 +336,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         ),
       )
 
+      markStepComplete(3) // Mark token minting step as complete
       return newToken
     },
-    [simulateBlockchainTransaction],
+    [simulateBlockchainTransaction, markStepComplete],
   )
 
   const redeemTokens = useCallback(
@@ -390,11 +414,13 @@ export function DemoProvider({ children }: { children: ReactNode }) {
             )
           }
         }
+
+        markStepComplete(6) // Mark token redemption step as complete
       }, 3000)
 
       return newRedemption
     },
-    [logisticsProviders, mintedTokens, simulateBlockchainTransaction],
+    [logisticsProviders, mintedTokens, simulateBlockchainTransaction, markStepComplete],
   )
 
   // New functions for community distribution
@@ -431,9 +457,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         }, 3000)
       }
 
+      markStepComplete(4) // Mark community distribution step as complete
       return newDistributor
     },
-    [simulateBlockchainTransaction],
+    [simulateBlockchainTransaction, markStepComplete],
   )
 
   const stakeTokens = useCallback(
@@ -522,9 +549,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         updateOrderStatus(newOrder.id, "processing")
       }, 2000)
 
+      markStepComplete(5) // Mark inventory management step as complete
       return newOrder
     },
-    [simulateBlockchainTransaction],
+    [simulateBlockchainTransaction, markStepComplete],
   )
 
   const updateOrderStatus = useCallback(
@@ -590,6 +618,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       // Get token data
       const token = mintedTokens.find((t) => t.batchId === batch.id)
 
+      markStepComplete(7) // Mark QR traceability step as complete
       return {
         batch,
         verification,
@@ -598,7 +627,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         blockchainVerified: true,
       }
     },
-    [batches, mintedTokens, verificationRequests],
+    [batches, mintedTokens, verificationRequests, markStepComplete],
   )
 
   const value = {
@@ -614,6 +643,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     goToNextStep,
     goToPreviousStep,
     goToStep,
+    isStepComplete, // Added this function
+    markStepComplete, // Added this function
     createBatch,
     verifyBatch,
     mintTokens,
