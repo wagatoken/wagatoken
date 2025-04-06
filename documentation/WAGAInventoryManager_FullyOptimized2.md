@@ -1,3 +1,5 @@
+
+```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
@@ -5,44 +7,28 @@ import {WAGAChainlinkFunctionsBase} from "./WAGAChainlinkFunctionsBase.sol";
 import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/interfaces/AutomationCompatibleInterface.sol";
 import {WAGACoffeeToken} from "./WAGACoffeeToken.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {WAGAUpkeepLib} from "./Libraries/WAGAUpkeepLib.sol";
+import {WAGAUpkeepLib} from "src/Libraries/WAGAUpkeepLib.sol";
 
 /**
- * @title WAGAInventoryManager
- * @dev Manages coffee inventory with Chainlink Functions for verification and Chainlink Automation for upkeep tasks
+ * @title WAGAInventoryManager (Fully Optimized)
+ * @dev Manages coffee inventory with Chainlink Functions and Automation
  */
-contract WAGAInventoryManager is AccessControl, WAGAChainlinkFunctionsBase, AutomationCompatibleInterface {
+contract WAGAInventoryManager2 is
+    AccessControl,
+    WAGAChainlinkFunctionsBase,
+    AutomationCompatibleInterface
+{
     using WAGAUpkeepLib for uint8;
 
     bytes32 public constant INVENTORY_MANAGER_ROLE = keccak256("INVENTORY_MANAGER_ROLE");
 
     WAGACoffeeToken public coffeeToken;
 
-    struct VerificationRequest {
-        uint256 batchId;
-        uint256 expectedQuantity;
-        uint256 expectedPrice;
-        string expectedPackaging;
-        string expectedMetadataHash;
-        bool completed;
-        bool verified;
-    }
-
-    mapping(bytes32 => VerificationRequest) public verificationRequests;
-    mapping(uint256 => uint256) public lastBatchAuditTime;
-
-    uint256 public batchAuditInterval = 7 days;
-    uint256 public expiryWarningThreshold = 30 days;
-    uint256 public lowInventoryThreshold = 10;
-    uint256 public longStorageThreshold = 180 days;
-
     uint256 public immutable intervalSeconds;
     uint256 public lastTimeStamp;
 
-    event VerificationRequested(bytes32 indexed requestId, uint256 indexed batchId, uint256 expectedQuantity);
-    event VerificationCompleted(bytes32 indexed requestId, uint256 indexed batchId, bool verified);
-    event InventorySynced(uint256 indexed batchId, uint256 actualQuantity);
-    event BatchMetadataMismatch(uint256 indexed batchId);
+    mapping(uint256 => uint256) public lastBatchAuditTime;
+
     event UpkeepPerformed(uint8 upkeepType, uint256[] batchIds);
     event LowInventoryWarning(uint256 indexed batchId, uint256 currentQuantity);
     event LongStorageWarning(uint256 indexed batchId, uint256 daysInStorage);
@@ -56,74 +42,15 @@ contract WAGAInventoryManager is AccessControl, WAGAChainlinkFunctionsBase, Auto
     ) WAGAChainlinkFunctionsBase(router, subscriptionId, donId) {
         coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
         _grantRole(INVENTORY_MANAGER_ROLE, msg.sender);
-        coffeeToken.setInventoryManager(address(this));
 
         intervalSeconds = _intervalSeconds;
         lastTimeStamp = block.timestamp;
     }
 
     /**
-     * @dev Requests inventory verification using Chainlink Functions
-     */
-    function requestInventoryVerification(
-        uint256 batchId,
-        uint256 expectedQuantity,
-        uint256 expectedPrice,
-        string calldata expectedPackaging,
-        string calldata expectedMetadataHash,
-        string calldata source
-    ) public onlyRole(INVENTORY_MANAGER_ROLE) returns (bytes32 requestId) {
-        bytes memory sourceBytes = bytes(source);
-        requestId = _sendRequest(sourceBytes, subscriptionId, 300000, donId);
-        verificationRequests[requestId] = VerificationRequest({
-            batchId: batchId,
-            expectedQuantity: expectedQuantity,
-            expectedPrice: expectedPrice,
-            expectedPackaging: expectedPackaging,
-            expectedMetadataHash: expectedMetadataHash,
-            completed: false,
-            verified: false
-        });
-        emit VerificationRequested(requestId, batchId, expectedQuantity);
-        return requestId;
-    }
-
-    /**
-     * @dev Handles responses from Chainlink Functions
-     */
-    function _fulfillRequest(bytes32 requestId, bytes memory response, bytes memory /* err */) internal override {
-        VerificationRequest storage request = verificationRequests[requestId];
-        require(!request.completed, "Request already completed");
-        request.completed = true;
-
-        uint256 actualQuantity = _parseResponse(response);
-
-        if (actualQuantity >= request.expectedQuantity) {
-            request.verified = true;
-            coffeeToken.updateBatchStatus(request.batchId, true);
-        }
-
-        coffeeToken.updateInventory(request.batchId, actualQuantity);
-        lastBatchAuditTime[request.batchId] = block.timestamp;
-
-        emit VerificationCompleted(requestId, request.batchId, request.verified);
-        emit InventorySynced(request.batchId, actualQuantity);
-
-        // Perform metadata verification
-        try coffeeToken.verifyBatchMetadata(
-            request.batchId,
-            request.expectedPrice,
-            request.expectedPackaging,
-            request.expectedMetadataHash
-        ) {
-            // Metadata verified successfully
-        } catch {
-            emit BatchMetadataMismatch(request.batchId);
-        }
-    }
-
-    /**
      * @dev Chainlink Automation check function
+     * @return upkeepNeeded Boolean indicating if upkeep is needed
+     * @return performData Encoded data for performUpkeep to use
      */
     function checkUpkeep(
         bytes calldata /* checkData */
@@ -157,14 +84,15 @@ contract WAGAInventoryManager is AccessControl, WAGAChainlinkFunctionsBase, Auto
             assembly {
                 mstore(criticalBatchIds, criticalCount)
             }
-            return (true, abi.encode(WAGAUpkeepLib.UPKEEP_VERIFICATION_CHECK, criticalBatchIds));
+            return (true, abi.encode(WAGAUpkeepLib.UPKEEP_EXPIRY_CHECK, criticalBatchIds));
         }
 
         return (false, "");
     }
 
     /**
-     * @dev Chainlink Automation perform function
+     * @dev Chainlink Automation function for performing regular maintenance
+     * @param performData Data from checkUpkeep specifying what to perform
      */
     function performUpkeep(bytes calldata performData) external override {
         lastTimeStamp = block.timestamp;
@@ -178,9 +106,7 @@ contract WAGAInventoryManager is AccessControl, WAGAChainlinkFunctionsBase, Auto
         if (upkeepType == WAGAUpkeepLib.UPKEEP_EXPIRY_CHECK) {
             performExpiryCheck(batchIds);
         } else if (upkeepType == WAGAUpkeepLib.UPKEEP_VERIFICATION_CHECK) {
-            for (uint256 i = 0; i < batchIds.length; i++) {
-                this.requestInventoryVerification(batchIds[i], 0, 0, "", "", "");
-            }
+            performVerificationCheck(batchIds);
         } else if (upkeepType == WAGAUpkeepLib.UPKEEP_LOW_INVENTORY_CHECK) {
             performLowInventoryCheck(batchIds);
         } else if (upkeepType == WAGAUpkeepLib.UPKEEP_LONG_STORAGE_CHECK) {
@@ -193,9 +119,6 @@ contract WAGAInventoryManager is AccessControl, WAGAChainlinkFunctionsBase, Auto
 
         emit UpkeepPerformed(upkeepType, batchIds);
     }
-
-    // Additional functions like performExpiryCheck, performLowInventoryCheck, performLongStorageCheck, and performBatchAudit remain unchanged
-
 
     /**
      * @dev Performs expiry checks on specific batches
@@ -271,6 +194,6 @@ contract WAGAInventoryManager is AccessControl, WAGAChainlinkFunctionsBase, Auto
             lastBatchAuditTime[batchIds[i]] = block.timestamp;
         }
     }
-
-
 }
+
+```

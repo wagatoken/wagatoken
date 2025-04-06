@@ -1,3 +1,6 @@
+# WAGACoffeeToken.sol
+
+```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
@@ -340,3 +343,5 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
         return _nextBatchId;
     }
 }
+
+```

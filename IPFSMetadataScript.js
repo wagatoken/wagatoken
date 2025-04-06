@@ -32,7 +32,9 @@ const batchMetadata = {
     roastDate: "2025-02-20",
     certifications: ["Organic", "Fair Trade", "Rainforest Alliance"],
     cupping_notes: ["Blueberry", "Chocolate", "Citrus"],
-    batchSize: 100, // Number of 250g bags in this batch
+    batchSize: 100, // Number of bags
+    packagingInfo: "250g", // Must match on-chain value
+    pricePerUnit: 45000000000000000 // e.g., 0.045 ETH in wei or stable equivalent
   },
 }
 
@@ -50,8 +52,11 @@ async function uploadMetadataToIPFS() {
     console.log("Metadata uploaded to IPFS")
     console.log("IPFS URI:", ipfsUri)
 
-    // This URI would be passed to the createBatch function
-    return ipfsUri
+    // This URI and hash would be passed to createBatch()
+    return {
+      uri: ipfsUri,
+      metadataHash: ipfsHash, // Can also compute SHA-256 for zk-verification
+    }
   } catch (error) {
     console.error("Error uploading to IPFS:", error)
     throw error
@@ -60,10 +65,11 @@ async function uploadMetadataToIPFS() {
 
 // Execute the upload
 uploadMetadataToIPFS()
-  .then((uri) => {
-    console.log("Ready to call createBatch with URI:", uri)
-    // Next steps would be to call the smart contract's createBatch function
-    // with this URI as the ipfsUri parameter
+  .then(({ uri, metadataHash }) => {
+    console.log("Ready to call createBatch with:")
+    console.log("ipfsUri:", uri)
+    console.log("metadataHash:", metadataHash)
   })
   .catch(console.error)
+
 

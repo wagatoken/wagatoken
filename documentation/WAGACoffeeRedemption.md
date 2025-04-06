@@ -1,3 +1,6 @@
+
+```solidity
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
@@ -218,3 +221,4 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         return super.supportsInterface(interfaceId);
     }
 }
+```
