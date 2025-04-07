@@ -8,27 +8,40 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 import {OracleLib} from "./OracleLib.sol";
 import {WagaToken} from "./WagaToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {console} from "forge-std/console.sol"; // For testing 
+import {console} from "forge-std/console.sol"; // For testing
 
 contract TokenShop2 is Ownable, AccessControl, Pausable {
     using OracleLib for AggregatorV3Interface;
 
-    error TokenShop2__NoEthSent();
-    error TokenShop2__NoUSDCsent();
-    error TokenShop2__InvalidPriceData();
-    error TokenShop2__InsufficientFunds();
-    error TokenShop2__InsufficientUSDC();
-    error TokenShop2__UsdcTransferFailed();
+    error TokenShop2__NoEthSent_ethToUsd();
+    error TokenShop2__NoEthSent_buyWithEth();
+    error TokenShop2__NoUSDCsent_buyWithUSDC();
+    error TokenShop2__InvalidPriceData_setTokenPriceUsd();
+    error TokenShop2__InvalidPrice_setMinPurchaseUsd();
+    error TokenShop2__InvalidPriceData_getEthUsdPrice();
+    error TokenShop2__InsufficientFunds_buyWithUSDC();
+    error TokenShop2__InsufficientFunds_buyWithEth();
+    error TokenShop2__InsufficientUSD_buyWithEth(); // tokens to mint
+    error TokenShop2__InsufficientUSDC_buyWithUSDC(); // tokens to mint
+    error TokenShop2__UsdcTransferFailed_buyWithUSDC();
+    error TokenShop2__InsufficientBalance_withdrawEth();
+    error TokenShop2__WithdrawalFailed_withdrawEth();
+    error TokenShop2__InsufficientBalance_withdrawUsdc();
+    error TokenShop2__WithdrawalFailed_withdrawUsdc();
 
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
     WagaToken public wagaToken;
     AggregatorV3Interface internal priceFeed;
     IERC20 public usdc;
-    uint256 private constant USDC_PRECISION = 1e12; // USDC has 6 decimals, so we use 1e12 for conversion
+    uint256 private constant USDC_PRECISION = 1e12; // USDC has 6 decimals, so we use 1e12 for conversion (i.e usdcPrice * 1e12)
 
     uint256 public tokenPriceUsd = 1e17; // 0.1 USD
     uint256 public minPurchaseUsd = 10e18;
+    mapping(address => uint256) public senderToEthSpent;
+    mapping(address => uint256) public tokensPurchasedWithEth;
+    mapping(address => uint256) public senderToUSDCSpent;
+    mapping(address sender => uint256 amountPurchased) public tokensPurchasedWithUSDC;
 
     event TokensPurchased(
         address indexed buyer,
@@ -63,7 +76,7 @@ contract TokenShop2 is Ownable, AccessControl, Pausable {
         // Check ==> Data Validation
         //require(price > 0, "Invalid price data");
         if (price <= 0) {
-            revert TokenShop2__InvalidPriceData();
+            revert TokenShop2__InvalidPriceData_getEthUsdPrice();
         }
         return uint256(price * 1e10); // USD 8 decimals ==> 18 decimals
     }
@@ -71,11 +84,9 @@ contract TokenShop2 is Ownable, AccessControl, Pausable {
     function ethToUsd(uint256 ethAmount) internal view returns (uint256) {
         // Check ==> Data Validation
         if (ethAmount <= 0) {
-            revert TokenShop2__NoEthSent(); // revert TokenShop2__NotEnoughEth_ethToUSD();
+            revert TokenShop2__NoEthSent_ethToUsd();
         }
-        //uint256 ethUsd = getEthUsdPrice(); // 18 decimals
         return ((ethAmount * getEthUsdPrice()) / 1e18);
-        // return (ethAmount * ethUsd) / 1e18;
     }
 
     function usdToTokens(uint256 usdAmount) internal view returns (uint256) {
@@ -84,25 +95,23 @@ contract TokenShop2 is Ownable, AccessControl, Pausable {
 
     function buyWithEth() public payable whenNotPaused {
         // Check ==> Data Validation
-        // require(msg.value > 0, "Must send ETH"); // Error
-
         if (msg.value <= 0) {
-            revert TokenShop2__NoEthSent();
+            revert TokenShop2__NoEthSent_buyWithEth();
         }
-
+        //Effects: Record the amount of ETH spent by the sender
+        senderToEthSpent[msg.sender] += msg.value;
         uint256 usdValue = ethToUsd(msg.value);
         // Check ==> Data Validation
         if (usdValue <= minPurchaseUsd) {
-            revert TokenShop2__InsufficientFunds();
+            revert TokenShop2__InsufficientFunds_buyWithEth();
         }
-        //  require(usdValue >= minPurchaseUsd, "Min $10 required");
-
+        // @audit: This check may be redundant.
         uint256 tokensToMint = usdToTokens(usdValue);
         if (tokensToMint <= 0) {
-            revert TokenShop2__InsufficientUSDC(); // revert TokenShop2__InsufficientUSDC_tokensToMint();
+            revert TokenShop2__InsufficientUSD_buyWithEth();
         }
-        // require(tokensToMint > 0, "Insufficient ETH for tokens");
-
+        //Effect: Record the amount of Tokens Minted to the sender
+        tokensPurchasedWithEth[msg.sender] += tokensToMint;
         wagaToken.mint(msg.sender, tokensToMint);
         emit TokensPurchased(msg.sender, msg.value, tokensToMint, "ETH");
     }
@@ -114,55 +123,49 @@ contract TokenShop2 is Ownable, AccessControl, Pausable {
     function buyWithUSDC(uint256 usdcAmount) external payable whenNotPaused {
         // Check ==> Data Validation
         if (usdcAmount <= 0) {
-            revert TokenShop2__NoUSDCsent(); // revert TokenShop2__NoUSDCsent();
+            revert TokenShop2__NoUSDCsent_buyWithUSDC();
         }
-        // require(usdcAmount > 0, "Must send USDC");
-
         if (usdcAmount * USDC_PRECISION < minPurchaseUsd) {
-            revert TokenShop2__InsufficientFunds();
-        } // revert TokenShop2__InsufficientFunds_buyWithUSDC();
-        // if (usdcAmount < 10 * 1e6) {
-        //     revert TokenShop2__InsufficientFunds(); // revert TokenShop2__InsufficientFunds_buyWithUSDC();
-        // }
-        // require(usdcAmount >= 10 * 1e6, "Min $10 in USDC");
-        // Effects = Update ==> State
+            revert TokenShop2__InsufficientFunds_buyWithUSDC();
+        }
+
         // approve transfer
         usdc.approve(address(this), usdcAmount);
         bool success = usdc.transferFrom(msg.sender, address(this), usdcAmount);
 
         if (!success) {
-            revert TokenShop2__UsdcTransferFailed(); // revert TokenShop2__InsufficientUSDC_transferFrom();
+            revert TokenShop2__UsdcTransferFailed_buyWithUSDC();
         }
-        // require(success, "Transfer failed");
 
-        uint256 usdAmount = usdcAmount * USDC_PRECISION; // 
-        // require(usdAmount >= minPurchaseUsd, "Min $10 in USDC");
+        uint256 usdAmount = usdcAmount * USDC_PRECISION; //
+        // Effects = Update ==> State
+        senderToUSDCSpent[msg.sender] += usdcAmount;
 
         uint256 tokensToMint = usdToTokens(usdAmount);
         if (tokensToMint <= 0) {
-            revert TokenShop2__InsufficientUSDC(); // revert TokenShop2__InsufficientUSDC_tokensToMint();
+            revert TokenShop2__InsufficientUSDC_buyWithUSDC();
         }
         console.log("tokensToMint", tokensToMint);
-        //require(tokensToMint > 0, "Insufficient USDC for tokens");
-
+        // Effect: Record the amount of Tokens Minted to the sender
+        tokensPurchasedWithUSDC[msg.sender] += tokensToMint;
+        // Interaction: Mint the tokens to the sender
         wagaToken.mint(msg.sender, tokensToMint);
         emit TokensPurchased(msg.sender, usdcAmount, tokensToMint, "USDC");
     }
 
     function setTokenPriceUsd(uint256 newPrice) external onlyAdmin {
         if (newPrice <= 0) {
-            revert TokenShop2__InvalidPriceData(); // revert TokenShop2__InvalidPriceData_setTokenPrinceUsd();
+            revert TokenShop2__InvalidPriceData_setTokenPriceUsd();
         }
-      //  require(newPrice > 0, "Invalid price");
+        //  require(newPrice > 0, "Invalid price");
         tokenPriceUsd = newPrice;
         emit TokenPriceUpdated(newPrice);
     }
 
     function setMinPurchaseUsd(uint256 newMin) external onlyAdmin {
         if (newMin <= 0) {
-            revert TokenShop2__InvalidPriceData(); // revert TokenShop2__InvalidPriceData_setMinPurchaseUsd();
+            revert TokenShop2__InvalidPrice_setMinPurchaseUsd();
         }
-       // require(newMin > 0, "Invalid min");
         minPurchaseUsd = newMin;
         emit MinPurchaseUpdated(newMin);
     }
@@ -177,16 +180,30 @@ contract TokenShop2 is Ownable, AccessControl, Pausable {
 
     function withdrawEth() external onlyAdmin {
         uint256 balance = address(this).balance;
-        require(balance > 0, "No ETH");
-        payable(owner()).transfer(balance);
+        if (balance <= 0) {
+            revert TokenShop2__InsufficientBalance_withdrawEth();
+        }
+        (bool success, ) = payable(owner()).call{value: balance}("");
+        if (!success) {
+            revert TokenShop2__WithdrawalFailed_withdrawEth();
+        }
+        // payable(owner()).transfer(balance);
+
         emit Withdrawn(owner(), address(0), balance);
     }
 
     function withdrawUsdc() external onlyAdmin {
         uint256 balance = usdc.balanceOf(address(this));
-        require(balance > 0, "No USDC");
-        bool success = usdc.transfer(owner(), balance);
-        require(success, "USDC withdraw failed");
+        // require(balance > 0, "No USDC");
+        if (balance <= 0) {
+            revert TokenShop2__InsufficientBalance_withdrawUsdc();
+        }
+        (bool success, ) = payable(owner()).call{value: balance}("");
+        if (!success) {
+            revert TokenShop2__WithdrawalFailed_withdrawUsdc();
+        }
+        // bool success = usdc.transfer(owner(), balance);
+        // require(success, "USDC withdraw failed");
         emit Withdrawn(owner(), address(usdc), balance);
     }
 }
