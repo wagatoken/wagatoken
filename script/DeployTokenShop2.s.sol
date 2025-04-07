@@ -7,10 +7,8 @@ import {TokenShop2} from "src/TokenShop2.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract DeployTokenShop2 is Script {
-    HelperConfig public helperConfig;
-
     function run() external returns (WagaToken, TokenShop2, HelperConfig) {
-        helperConfig = new HelperConfig();
+        HelperConfig helperConfig = new HelperConfig();
         (
             address ethUsdPriceFeed,
             address usdcAddress,
@@ -29,15 +27,9 @@ contract DeployTokenShop2 is Script {
             usdcAddress
         );
 
-        // 3. Unpause TokenShop
-        // tokenShop.unpause();
-        // 4. Grant MINTER_ROLE to TokenShop
+        // 3. Grant MINTER_ROLE to TokenShop
         wagaToken.grantMinterRole(address(tokenShop));
 
-        // 5. Transfer ownership of WagaToken to TokenShop
-        wagaToken.transferOwnership(address(tokenShop));
-        // 6. Grant OWNER_ROLE to TokenShop
-        // tokenShop.grantRole(tokenShop.OWNER_ROLE(), address(tokenShop));
         vm.stopBroadcast();
 
         return (wagaToken, tokenShop, helperConfig);
