@@ -25,3 +25,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Ignore node_modules
+waga-backend/node_modules/
+
+# Ignore environment files
+waga-backend/.env
+
+# Ignore logs
+waga-backend/logs/
+waga-backend/*.log
