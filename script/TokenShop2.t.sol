@@ -14,7 +14,7 @@ contract TokenShop2Test is Test {
     TokenShop2 public tokenShop;
     WagaToken public wagaToken;
     MockV3Aggregator public ethUsdFeed;
-
+    IERC20 public usdc;
     address public user = makeAddr("user");
     address public owner;
 
