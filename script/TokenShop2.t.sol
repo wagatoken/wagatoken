@@ -142,7 +142,7 @@ contract TokenShop2Test is Test {
         // Expect the custom error to be reverted
         vm.prank(user);
        // vm.expectRevert(TokenShop2.TokenShop2__InsufficientFunds_buyWithUSDC.selector);
-        //vm.expectRevert();
+        // vm.expectRevert();
         // Attempt to buy with insufficient USDC, which should revert
         tokenShop.buyWithUSDC(purchaseAmount);
 
