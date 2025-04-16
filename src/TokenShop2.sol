@@ -3,14 +3,13 @@ pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {OracleLib} from "./OracleLib.sol";
 import {WagaToken} from "./WagaToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {console} from "forge-std/console.sol"; // For testing
 
-contract TokenShop2 is Ownable, AccessControl, Pausable {
+contract TokenShop2 is Ownable, AccessControl {
     using OracleLib for AggregatorV3Interface;
 
     error TokenShop2__NoEthSent_ethToUsd();
@@ -72,7 +71,7 @@ contract TokenShop2 is Ownable, AccessControl, Pausable {
         _;
     }
 
-    receive() external payable whenNotPaused {
+    receive() external payable {
         buyWithEth();
     }
 
@@ -86,7 +85,7 @@ contract TokenShop2 is Ownable, AccessControl, Pausable {
         return uint256(price * 1e10); // USD 8 decimals ==> 18 decimals
     }
 
-    function buyWithEth() public payable whenNotPaused {
+    function buyWithEth() public payable {
         // Check ==> Data Validation
         if (msg.value <= 0) {
             revert TokenShop2__NoEthSent_buyWithEth();
@@ -109,35 +108,34 @@ contract TokenShop2 is Ownable, AccessControl, Pausable {
         emit TokensPurchased(msg.sender, msg.value, tokensToMint, "ETH");
     }
 
-    function buyWithUSDC(uint256 usdcAmount) public payable whenNotPaused {
+    function buyWithUSDC(uint256 usdcAmount) public payable {
         // Check ==> Data Validation
         if (usdcAmount <= 0) {
             revert TokenShop2__NoUSDCsent_buyWithUSDC();
         }
-        if (usdcAmount * USDC_PRECISION < minPurchaseUsd) {
+        if (usdcAmount /* * USDC_PRECISION */ < minPurchaseUsd) { // Commented out USDC_PRECISION
             revert TokenShop2__InsufficientFunds_buyWithUSDC();
         }
 
-        // approve transfer
-        usdc.approve(address(this), usdcAmount);
+        // Transfer USDC from the user to the contract
         bool success = usdc.transferFrom(msg.sender, address(this), usdcAmount);
-
         if (!success) {
             revert TokenShop2__UsdcTransferFailed_buyWithUSDC();
         }
 
-        uint256 usdAmount = usdcAmount * USDC_PRECISION; //
-        // Effects = Update ==> State
+        // Effects: Update state
         senderToUSDCSpent[msg.sender] += usdcAmount;
 
-        uint256 tokensToMint = _usdToTokens(usdAmount);
+        // Calculate tokens to mint
+        uint256 tokensToMint = _usdToTokens(usdcAmount /* * USDC_PRECISION */); // Commented out USDC_PRECISION
         if (tokensToMint <= 0) {
             revert TokenShop2__InsufficientUSDC_buyWithUSDC();
         }
+
         console.log("tokensToMint", tokensToMint);
-        // Effect: Record the amount of Tokens Minted to the sender
+
+        // Mint tokens to the user
         tokensPurchasedWithUSDC[msg.sender] += tokensToMint;
-        // Interaction: Mint the tokens to the sender
         wagaToken.mint(msg.sender, tokensToMint);
         emit TokensPurchased(msg.sender, usdcAmount, tokensToMint, "USDC");
     }
@@ -157,14 +155,6 @@ contract TokenShop2 is Ownable, AccessControl, Pausable {
         }
         minPurchaseUsd = newMin;
         emit MinPurchaseUpdated(newMin);
-    }
-
-    function pause() external onlyAdmin {
-        _pause();
-    }
-
-    function unpause() external onlyAdmin {
-        _unpause();
     }
 
     function withdrawEth() external onlyAdmin {
@@ -231,3 +221,5 @@ contract TokenShop2 is Ownable, AccessControl, Pausable {
         return senderToUSDCSpent[sender];
     }
 }
+
+

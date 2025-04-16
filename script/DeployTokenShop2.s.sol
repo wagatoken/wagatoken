@@ -27,9 +27,15 @@ contract DeployTokenShop2 is Script {
             usdcAddress
         );
 
-        // 3. Grant MINTER_ROLE to TokenShop
+        // 3. Unpause TokenShop
+        // tokenShop.unpause();
+        // 4. Grant MINTER_ROLE to TokenShop
         wagaToken.grantMinterRole(address(tokenShop));
 
+        // 5. Transfer ownership of WagaToken to TokenShop
+        wagaToken.transferOwnership(address(tokenShop));
+        // 6. Grant OWNER_ROLE to TokenShop
+        // tokenShop.grantRole(tokenShop.OWNER_ROLE(), address(tokenShop));
         vm.stopBroadcast();
 
         return (wagaToken, tokenShop, helperConfig);

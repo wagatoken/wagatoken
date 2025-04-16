@@ -1,42 +1,92 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {Test} from "forge-std/Test.sol";
-import {TokenShop2} from  "../src/TokenShop2.sol";
-import {WagaToken} from  "src/WagaToken.sol";
+import {Test, console} from "forge-std/Test.sol";
+import {TokenShop2} from "../src/TokenShop2.sol";
+import {WagaToken} from "src/WagaToken.sol";
 import {MockV3Aggregator} from "../test/mocks/MockV3Aggregator.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC20} from  "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
-
+//import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {DeployTokenShop2} from "./DeployTokenShop2.s.sol";
+import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract TokenShop2Test is Test {
     TokenShop2 public tokenShop;
     WagaToken public wagaToken;
     MockV3Aggregator public ethUsdFeed;
-    IERC20 public usdc;
+    HelperConfig public config;
+    //IERC20 public usdc;
+    address usdc;
     address public user = makeAddr("user");
     address public owner;
+    DeployTokenShop2 public deployer;
+    uint256 public constant USDC_PRECISION = 1e12; // USDC has 6 decimals, so we use 1e12 for conversion (i.e usdcPrice * 1e12)
+    uint256 public constant TOKEN_PRICE_USD = 1e17; // 0.1 USD
+    uint256 public constant startingBalance = 30 ether; // 1 ETH
+    uint256 public constant startingBalanceUsdc = 1000e18;
 
     function setUp() public {
-        owner = address(this);
-        wagaToken = new WagaToken();
-        ethUsdFeed = new MockV3Aggregator(8, 3000e8); // 8 decimals and $3000 ETH price
-        tokenShop = new TokenShop2(address(wagaToken), address(ethUsdFeed), owner);
-        
-        // manually set dependencies (assuming setter or constructor omitted for simplicity)
-        vm.prank(owner);
-        tokenShop.grantRole(tokenShop.OWNER_ROLE(), owner);
-        //tokenShop.setWagaToken(address(wagaToken));
-        //tokenShop.setPriceFeed(address(ethUsdFeed));
-        tokenShop.unpause();
-        wagaToken.transferOwnership(address(tokenShop));
+        // Deploy the TokenShop2 contract
+        deployer = new DeployTokenShop2();
+
+        (wagaToken, tokenShop, config) = deployer.run();
+        (, usdc, ) = config.activeNetworkConfig();
+        vm.deal(user, startingBalance);
+
+        // Mint USDC to the user
+        ERC20Mock(usdc).mint(user, startingBalanceUsdc);
+
+        // Log the user's USDC balance
+        console.log(
+            "User USDC balance after minting:",
+            ERC20Mock(usdc).balanceOf(user)
+        ); // 1000000000000000000000
     }
 
     function testBuyWithEth() public {
-        vm.deal(user, 1 ether);
+        console.log(
+            "User WagaToken balance before purchase: %s",
+            wagaToken.balanceOf(user)
+        );
         vm.prank(user);
         tokenShop.buyWithEth{value: 0.01 ether}(); // Should succeed
+        console.log(
+            "User WagaToken balance after purchase: %s",
+            wagaToken.balanceOf(user)
+        );
+        assertGt(wagaToken.balanceOf(user), 0);
+    }
+
+    function testBuyWithUSDC() public {
+        console.log(
+            "User WagaToken balance before purchase: %s",
+            wagaToken.balanceOf(user)
+        );
+        uint256 purchaseAmount = 15e18;
+
+        // Log the user's USDC allowance for the TokenShop2 contract
+        console.log(
+            "User USDC allowance before approval:",
+            ERC20Mock(usdc).allowance(user, address(tokenShop))
+        );
+
+        // Approve the TokenShop to spend USDC on behalf of the user
+        vm.prank(user);
+        ERC20Mock(usdc).approve(address(tokenShop), purchaseAmount);
+
+        // Log the user's USDC allowance after approval
+        console.log(
+            "User USDC allowance after approval:",
+            ERC20Mock(usdc).allowance(user, address(tokenShop))
+        );
+
+        vm.prank(user);
+        tokenShop.buyWithUSDC(purchaseAmount); // Should succeed
+        console.log(
+            "User WagaToken balance after purchase: %s",
+            wagaToken.balanceOf(user)
+        );
         assertGt(wagaToken.balanceOf(user), 0);
     }
 
@@ -46,17 +96,87 @@ contract TokenShop2Test is Test {
         tokenShop.buyWithEth{value: 0.0001 ether}(); // Should revert: not enough ETH to meet min USD
     }
 
-    function testPauseAndUnpause() public {
-        tokenShop.pause();
-        assert(tokenShop.paused());
+    function testFailBuyWithLowUsdc() public {
+        console.log("Starting testFailBuyWithLowUsdc...");
 
-        tokenShop.unpause();
-        assert(!tokenShop.paused());
-    }
+        // Log the user's initial WagaToken balance
+        console.log(
+            "User WagaToken balance before purchase: %s",
+            wagaToken.balanceOf(user)
+        );
 
-    function testOnlyOwnerCanPause() public {
+        uint256 purchaseAmount = 1e18; // 1 USDC, less than the minimum purchase amount (2 USDC)
+
+        // Log the user's USDC allowance for the TokenShop2 contract before approval
+        console.log(
+            "User USDC allowance before approval:",
+            ERC20Mock(usdc).allowance(user, address(tokenShop))
+        );
+
+        // Approve the TokenShop to spend USDC on behalf of the user
         vm.prank(user);
-        vm.expectRevert("AccessControl: account 0x0000000000000000000000000000000000000001 is missing role");
-        tokenShop.pause();
+        ERC20Mock(usdc).approve(address(tokenShop), purchaseAmount);
+
+        // Log the user's USDC allowance after approval
+        console.log(
+            "User USDC allowance after approval:",
+            ERC20Mock(usdc).allowance(user, address(tokenShop))
+        );
+
+        // Expect the custom error to be reverted
+        vm.prank(user);
+        vm.expectRevert(TokenShop2.TokenShop2__InsufficientFunds_buyWithUSDC.selector);
+
+        // Attempt to buy with insufficient USDC, which should revert
+        tokenShop.buyWithUSDC(purchaseAmount);
+
+        // Log the user's WagaToken balance after the failed purchase attempt
+        console.log(
+            "User WagaToken balance after purchase attempt: %s",
+            wagaToken.balanceOf(user)
+        );
+
+        console.log("testFailBuyWithLowUsdc completed.");
     }
 }
+
+//  Purchase Amount 15
+//   minimum purchase 2000000000000000000
+
+
+
+
+    // function testFailBuyWithLowUsdc() public {
+    //     console.log(
+    //         "User WagaToken balance before purchase: %s",
+    //         wagaToken.balanceOf(user)
+    //     );
+    //     uint256 purchaseAmount = 1e18;
+
+    //     // Log the user's USDC allowance for the TokenShop2 contract
+    //     console.log(
+    //         "User USDC allowance before approval:",
+    //         ERC20Mock(usdc).allowance(user, address(tokenShop))
+    //     );
+
+    //     // Approve the TokenShop to spend USDC on behalf of the user
+    //     vm.prank(user);
+    //     ERC20Mock(usdc).approve(address(tokenShop), purchaseAmount);
+
+    //     // Log the user's USDC allowance after approval
+    //     console.log(
+    //         "User USDC allowance after approval:",
+    //         ERC20Mock(usdc).allowance(user, address(tokenShop))
+    //     );
+
+    //     vm.prank(user);
+    //     vm.expectRevert(
+    //         TokenShop2.TokenShop2__InsufficientFunds_buyWithUSDC.selector
+    //     );
+    //     tokenShop.buyWithUSDC(purchaseAmount); // Should revert
+
+    //     console.log(
+    //         "User WagaToken balance after purchase: %s",
+    //         wagaToken.balanceOf(user)
+    //     );
+    // }
