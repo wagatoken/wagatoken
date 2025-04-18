@@ -24,7 +24,7 @@ contract TokenShop2Test is Test {
     uint256 public constant USDC_PRECISION = 1e12; // USDC has 6 decimals, so we use 1e12 for conversion (i.e usdcPrice * 1e12)
     uint256 public constant TOKEN_PRICE_USD = 1e17; // 0.1 USD
     uint256 public constant startingBalance = 30 ether; // 1 ETH
-    uint256 public constant startingBalanceUsdc = 1000e18;
+    uint256 public constant startingBalanceUsdc = 1000e6;
 
     function setUp() public {
         // Deploy the TokenShop2 contract
@@ -42,23 +42,23 @@ contract TokenShop2Test is Test {
             "User USDC balance after minting:",
             ERC20Mock(usdc).balanceOf(user)
         ); // 1000000000000000000000
-
-    /**
-     * vm.startPrank(tokenShop.getOwner());
-     * tokenshop.transferOwnership(user);
-     * vm.stopPrank();
-     * 
-     * 
-     * 
-     */
-
-
-
-
     }
 
+    modifier fundedEth() {
+        vm.prank(user);
+        tokenShop.buyWithEth{value: 0.01 ether}();
 
-    
+        _;
+    }
+
+    modifier fundedUSDC() {
+        uint256 purchaseAmount = 10e6;
+        vm.startPrank(user);
+        ERC20Mock(usdc).approve(address(tokenShop), purchaseAmount);
+        tokenShop.buyWithUSDC(10e6);
+        vm.stopPrank();
+        _;
+    }
 
     function testBuyWithEth() public {
         console.log(
@@ -141,7 +141,7 @@ contract TokenShop2Test is Test {
 
         // Expect the custom error to be reverted
         vm.prank(user);
-       // vm.expectRevert(TokenShop2.TokenShop2__InsufficientFunds_buyWithUSDC.selector);
+        // vm.expectRevert(TokenShop2.TokenShop2__InsufficientFunds_buyWithUSDC.selector);
         // vm.expectRevert();
         // Attempt to buy with insufficient USDC, which should revert
         tokenShop.buyWithUSDC(purchaseAmount);
@@ -154,45 +154,83 @@ contract TokenShop2Test is Test {
 
         console.log("testFailBuyWithLowUsdc completed.");
     }
+
+    function testOwnerCanWithdrawEth() public fundedEth {
+        //Arrange
+        console.log("starting TokenShop Balance", address(tokenShop).balance);
+        uint256 startingTokenShopBalance = address(tokenShop).balance;
+        //console.log("tokenShopOwnerAddress", tokenShop.getOwner());
+        uint256 startingOwnerBalance = address(tokenShop.getOwner()).balance;
+
+        // Act
+        vm.startPrank(tokenShop.getOwner());
+        tokenShop.withdrawEth();
+        vm.stopPrank();
+
+        //Assert
+        uint256 endingTokenShopBalance = address(tokenShop).balance;
+        //console.log("endingTokenShopBalance", endingTokenShopBalance);
+        assert(endingTokenShopBalance == 0);
+        assert(
+            startingTokenShopBalance + startingOwnerBalance ==
+                address(tokenShop.getOwner()).balance
+        );
+    }
+
+    function testOnlyOwnerCanWithdrawEth() public fundedEth {
+        vm.startPrank(user);
+        vm.expectRevert();
+        tokenShop.withdrawEth();
+        vm.stopPrank();
+    }
+
+    function testOwnerCanWithdrawUSDC() public fundedUSDC {
+        //_Arrange
+            console.log("starting TokenShop USDC Balance", ERC20Mock(usdc).balanceOf(address(tokenShop)));
+            uint256 startingOwnerBalance = ERC20Mock(usdc).balanceOf(tokenShop.getOwner());
+            uint256 startingTokenShopBalance = ERC20Mock(usdc).balanceOf(address(tokenShop));
+
+        // Act
+            vm.startPrank(tokenShop.getOwner());
+            //ERC20Mock(usdc).approve(address(tokenShop.getOwner()), startingTokenShopBalance);
+            tokenShop.withdrawUsdc();
+            vm.stopPrank();
+        //Assert
+        uint256 endingTokenShopBalance = ERC20Mock(usdc).balanceOf(
+            address(tokenShop)
+        );
+        console.log("endingTokenShopBalance", endingTokenShopBalance);
+        assert(endingTokenShopBalance == 0);
+        uint256 endingOwnerBalance = ERC20Mock(usdc).balanceOf(
+            tokenShop.getOwner()
+        );
+        assert(
+            startingTokenShopBalance + startingOwnerBalance ==
+                endingOwnerBalance
+        );
+
+    }
+
+    function testOnlyOwnerCanWithdrawUSDC() public fundedUSDC {
+        vm.startPrank(user);
+        vm.expectRevert();
+        tokenShop.withdrawUsdc();
+        vm.stopPrank();
+    }
+
+    function testOnlyOwnerCanSetTokenPrice() public {
+        vm.startPrank(user);
+        vm.expectRevert();
+        tokenShop.setTokenPriceUsd(1e18);
+        vm.stopPrank();
+
+    }
+
+    function testOnlyOwnerCanSetMinPurchase() public {
+        vm.startPrank(user);
+        vm.expectRevert();
+        tokenShop.setMinPurchaseUsd(1e18);
+        vm.stopPrank();
+    }
 }
 
-//  Purchase Amount 15
-//   minimum purchase 2000000000000000000
-
-
-
-
-    // function testFailBuyWithLowUsdc() public {
-    //     console.log(
-    //         "User WagaToken balance before purchase: %s",
-    //         wagaToken.balanceOf(user)
-    //     );
-    //     uint256 purchaseAmount = 1e18;
-
-    //     // Log the user's USDC allowance for the TokenShop2 contract
-    //     console.log(
-    //         "User USDC allowance before approval:",
-    //         ERC20Mock(usdc).allowance(user, address(tokenShop))
-    //     );
-
-    //     // Approve the TokenShop to spend USDC on behalf of the user
-    //     vm.prank(user);
-    //     ERC20Mock(usdc).approve(address(tokenShop), purchaseAmount);
-
-    //     // Log the user's USDC allowance after approval
-    //     console.log(
-    //         "User USDC allowance after approval:",
-    //         ERC20Mock(usdc).allowance(user, address(tokenShop))
-    //     );
-
-    //     vm.prank(user);
-    //     vm.expectRevert(
-    //         TokenShop2.TokenShop2__InsufficientFunds_buyWithUSDC.selector
-    //     );
-    //     tokenShop.buyWithUSDC(purchaseAmount); // Should revert
-
-    //     console.log(
-    //         "User WagaToken balance after purchase: %s",
-    //         wagaToken.balanceOf(user)
-    //     );
-    // }

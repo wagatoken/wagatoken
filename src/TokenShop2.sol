@@ -12,20 +12,20 @@ import {console} from "forge-std/console.sol"; // For testing
 contract TokenShop2 is Ownable, AccessControl {
     using OracleLib for AggregatorV3Interface;
 
-    error TokenShop2__NoEthSent_ethToUsd();
-    error TokenShop2__NoEthSent_buyWithEth();
-    error TokenShop2__NoUSDCsent_buyWithUSDC();
+    error TokenShop2__NoEthSent_ethToUsd();  
+    error TokenShop2__NoEthSent_buyWithEth(); // test
+    error TokenShop2__NoUSDCsent_buyWithUSDC(); // test
     error TokenShop2__InvalidPriceData_setTokenPriceUsd();
     error TokenShop2__InvalidPrice_setMinPurchaseUsd();
     error TokenShop2__InvalidPriceData_getEthUsdPrice();
-    error TokenShop2__InsufficientFunds_buyWithUSDC();
-    error TokenShop2__InsufficientFunds_buyWithEth();
+    error TokenShop2__InsufficientFunds_buyWithUSDC(); // tested
+    error TokenShop2__InsufficientFunds_buyWithEth(); // tested
     error TokenShop2__InsufficientUSD_buyWithEth(); // tokens to mint
     error TokenShop2__InsufficientUSDC_buyWithUSDC(); // tokens to mint
     error TokenShop2__UsdcTransferFailed_buyWithUSDC();
-    error TokenShop2__InsufficientBalance_withdrawEth();
-    error TokenShop2__WithdrawalFailed_withdrawEth();
-    error TokenShop2__InsufficientBalance_withdrawUsdc();
+    error TokenShop2__InsufficientBalance_withdrawEth(); // test 
+    error TokenShop2__WithdrawalFailed_withdrawEth(); 
+    error TokenShop2__InsufficientBalance_withdrawUsdc(); // test
     error TokenShop2__WithdrawalFailed_withdrawUsdc();
 
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
@@ -40,7 +40,7 @@ contract TokenShop2 is Ownable, AccessControl {
     uint256 public minPurchaseUsd = 2e18;
     mapping(address sender => uint256 ethSpent) private senderToEthSpent; // @audit: This is maybe redundant
     mapping(address sender => uint256 tokenAmt) private tokensPurchasedWithEth;
-    mapping(address sender => uint256 usdcSpent) private senderToUSDCSpent; //@audit: This is maybe redundant
+    mapping(address sender => uint256 usdcSpent) private senderToUSDCSpent; // @audit: This is maybe redundant
     mapping(address sender => uint256 amountPurchased)
         public tokensPurchasedWithUSDC;
 
@@ -77,16 +77,6 @@ contract TokenShop2 is Ownable, AccessControl {
         buyWithEth();
     }
 
-    function getEthUsdPrice() public view returns (uint256) {
-        (, int256 price, , , ) = priceFeed.stalePriceCheckLatestRoundData();
-        // Check ==> Data Validation
-        //require(price > 0, "Invalid price data");
-        if (price <= 0) {
-            revert TokenShop2__InvalidPriceData_getEthUsdPrice();
-        }
-        return uint256(price * 1e10); // USD 8 decimals ==> 18 decimals
-    }
-
     function buyWithEth() public payable {
         // Check ==> Data Validation
         if (msg.value <= 0) {
@@ -116,7 +106,6 @@ contract TokenShop2 is Ownable, AccessControl {
             revert TokenShop2__NoUSDCsent_buyWithUSDC();
         }
         if (usdcAmount * USDC_PRECISION < minPurchaseUsd) {
-            // Commented out USDC_PRECISION
             revert TokenShop2__InsufficientFunds_buyWithUSDC();
         }
 
@@ -130,7 +119,7 @@ contract TokenShop2 is Ownable, AccessControl {
         senderToUSDCSpent[msg.sender] += usdcAmount;
 
         // Calculate tokens to mint
-        uint256 tokensToMint = _usdToTokens(usdcAmount * USDC_PRECISION); // Commented out USDC_PRECISION
+        uint256 tokensToMint = _usdToTokens(usdcAmount * USDC_PRECISION);
         if (tokensToMint <= 0) {
             revert TokenShop2__InsufficientUSDC_buyWithUSDC();
         }
@@ -180,12 +169,12 @@ contract TokenShop2 is Ownable, AccessControl {
         if (balance <= 0) {
             revert TokenShop2__InsufficientBalance_withdrawUsdc();
         }
-        (bool success, ) = payable(owner()).call{value: balance}("");
+        // Transfer USDC to the owner
+        bool success = usdc.transfer(owner(), balance);
+        //require(success, "USDC withdraw failed");
         if (!success) {
             revert TokenShop2__WithdrawalFailed_withdrawUsdc();
         }
-        // bool success = usdc.transfer(owner(), balance);
-        // require(success, "USDC withdraw failed");
         emit Withdrawn(owner(), address(usdc), balance);
     }
 
@@ -194,11 +183,21 @@ contract TokenShop2 is Ownable, AccessControl {
         if (ethAmount <= 0) {
             revert TokenShop2__NoEthSent_ethToUsd();
         }
-        return ((ethAmount * getEthUsdPrice()) / 1e18);
+        return ((ethAmount * _getEthUsdPrice()) / 1e18);
     }
 
     function _usdToTokens(uint256 usdAmount) internal view returns (uint256) {
         return ((usdAmount * 1e18) / tokenPriceUsd); //token price = 1e17
+    }
+
+    function _getEthUsdPrice() public view returns (uint256) {
+        (, int256 price, , , ) = priceFeed.stalePriceCheckLatestRoundData();
+        // Check ==> Data Validation
+        //require(price > 0, "Invalid price data");
+        if (price <= 0) {
+            revert TokenShop2__InvalidPriceData_getEthUsdPrice();
+        }
+        return uint256(price * 1e10); // USD 8 decimals ==> 18 decimals
     }
 
     /**
