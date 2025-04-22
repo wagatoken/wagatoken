@@ -109,6 +109,8 @@ contract TokenShop2 is Ownable, AccessControl {
             revert TokenShop2__InsufficientFunds_buyWithUSDC();
         }
 
+        //approve USDC transfer
+        //IERC20(usdc).approve(address(this), usdcAmount);
         // Transfer USDC from the user to the contract
         bool success = usdc.transferFrom(msg.sender, address(this), usdcAmount);
         if (!success) {
