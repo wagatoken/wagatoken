@@ -47,20 +47,6 @@ contract IntegrationsTest is Test {
         ); // 1000000000000000000000
     }
 
-    // modifier fundedEth() {
-    //     vm.prank(user);
-    //     tokenShop.buyWithEth{value: 0.01 ether}();
-
-    //     _;
-    // }
-    // modifier fundedUSDC() {
-    //     uint256 purchaseAmount = 10e6;
-    //     vm.startPrank(user);
-    //     ERC20Mock(usdc).approve(address(tokenShop), purchaseAmount);
-    //     tokenShop.buyWithUSDC(10e6);
-    //     vm.stopPrank();
-    //     _;
-    // }
 
     function testFundTokenShop2() public {
         fundTokenShop.fundTokenShop2(address(tokenShop));
