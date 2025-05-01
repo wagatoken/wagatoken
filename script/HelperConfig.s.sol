@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {MockV3Aggregator} from "../test/mocks/MockV3Aggregator.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 
+
 contract HelperConfig is Script {
     struct NetworkConfig {
         address ethUsdPriceFeed;
@@ -12,6 +13,7 @@ contract HelperConfig is Script {
         uint256 deployerKey;
     }
 
+    mapping(uint256 => NetworkConfig) private networkConfigs;
     NetworkConfig public activeNetworkConfig;
     uint8 public constant DECIMALS = 8;
     int256 public constant ETH_USD_PRICE = 3000e8;
@@ -19,60 +21,28 @@ contract HelperConfig is Script {
         0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
 
     constructor() {
-        if (block.chainid == 11155111) {
-            activeNetworkConfig = getSepoliaEthConfig();
-        } 
-        
-        else if (block.chainid == 1) {
-            activeNetworkConfig = getMainnetEthConfig();
-        } 
-        
-        else if (block.chainid == 324) {
-            activeNetworkConfig = getZksyncMainnetConfig();
-        } 
-        
-        else if (block.chainid == 280) {
-            activeNetworkConfig = getZksyncSepoliaConfig();
-        } 
-        
-        else if (block.chainid == 10) {
-            activeNetworkConfig = getOptimismMainnetConfig();
-        } 
-        
-        else if (block.chainid == 11155420) {
-            activeNetworkConfig = getOptimismSepoliaConfig();
-        } 
-        
-        else if (block.chainid == 42161) {
-            activeNetworkConfig = getArbitrumMainnetConfig();
-        } 
-        
-        else if (block.chainid == 421614) {
-            activeNetworkConfig = getArbitrumSepoliaConfig();
-        } 
-        
-        else if (block.chainid == 137) {
-            activeNetworkConfig = getPolygonMainnetConfig();
-        } 
-        
-        else if (block.chainid == 80002) {
-            activeNetworkConfig = getPolygonAmoyConfig();
-        }
+        // Initialize network configurations
+        networkConfigs[11155111] = getSepoliaEthConfig();
+        networkConfigs[1] = getMainnetEthConfig();
+        networkConfigs[324] = getZksyncMainnetConfig();
+        networkConfigs[300] = getZksyncSepoliaConfig();
+        networkConfigs[10] = getOptimismMainnetConfig();
+        networkConfigs[11155420] = getOptimismSepoliaConfig();
+        networkConfigs[42161] = getArbitrumMainnetConfig();
+        networkConfigs[421614] = getArbitrumSepoliaConfig();
+        networkConfigs[137] = getPolygonMainnetConfig();
+        networkConfigs[80002] = getPolygonAmoyConfig();
+        networkConfigs[8453] = getBaseMainnetConfig();
+        networkConfigs[84532] = getBaseSepoliaConfig();
 
-        else if (block.chainid == 8453) {
-            activeNetworkConfig = getBaseMainnetConfig();
-        } 
-        
-        else if (block.chainid == 84532) {
-            activeNetworkConfig = getBaseSepoliaConfig();
-        } 
- 
-        else {
+        // Set the active network configuration
+        activeNetworkConfig = networkConfigs[block.chainid];
+
+        // If no configuration exists for the current chain, create a default one
+        if (activeNetworkConfig.ethUsdPriceFeed == address(0)) {
             activeNetworkConfig = getOrCreateAnvilConfig();
         }
     }
-
-
 
 
     function getSepoliaEthConfig() public view returns (NetworkConfig memory) {
@@ -88,7 +58,7 @@ contract HelperConfig is Script {
         return
             NetworkConfig({
                 ethUsdPriceFeed: 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419,
-                usdcAddress: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, // ← Replace with actual address
+                usdcAddress: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, // 
                 deployerKey: vm.envUint("PRIVATE_KEY_SEP")
             });
     }
@@ -101,7 +71,7 @@ contract HelperConfig is Script {
         return
             NetworkConfig({
                 ethUsdPriceFeed: 0x6D41d1dc818112880b40e26BD6FD347E41008eDA,
-                usdcAddress: 0x1d17CBcF0D6D143135aE902365D2E5e2A16538D4, // ← Replace with actual address
+                usdcAddress: 0x1d17CBcF0D6D143135aE902365D2E5e2A16538D4, // 
                 deployerKey: vm.envUint("PRIVATE_KEY_SEP")
             });
     }
@@ -244,3 +214,27 @@ contract HelperConfig is Script {
             });
     }
 }
+
+// constructor() {
+//         // Initialize network configurations
+//         networkConfigs[11155111] = getSepoliaEthConfig();
+//         networkConfigs[1] = getMainnetEthConfig();
+//         networkConfigs[324] = getZksyncMainnetConfig();
+//         networkConfigs[300] = getZksyncSepoliaConfig();
+//         networkConfigs[10] = getOptimismMainnetConfig();
+//         networkConfigs[11155420] = getOptimismSepoliaConfig();
+//         networkConfigs[42161] = getArbitrumMainnetConfig();
+//         networkConfigs[421614] = getArbitrumSepoliaConfig();
+//         networkConfigs[137] = getPolygonMainnetConfig();
+//         networkConfigs[80002] = getPolygonAmoyConfig();
+//         networkConfigs[8453] = getBaseMainnetConfig();
+//         networkConfigs[84532] = getBaseSepoliaConfig();
+
+//         // Set the active network configuration
+//         activeNetworkConfig = networkConfigs[block.chainid];
+
+//         // If no configuration exists for the current chain, create a default one
+//         if (activeNetworkConfig.ethUsdPriceFeed == address(0)) {
+//             activeNetworkConfig = getOrCreateAnvilConfig();
+//         }
+//     }

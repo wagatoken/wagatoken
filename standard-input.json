@@ -1,0 +1,19 @@
+{
+    "language": "Solidity",
+    "sources": {
+      "src/WagaToken.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\nimport \"@openzeppelin/contracts/token/ERC20/ERC20.sol\";\nimport \"@openzeppelin/contracts/access/AccessControl.sol\";\n\ncontract WagaToken is ERC20, AccessControl {\n    bytes32 public constant MINTER_ROLE = keccak256(\"MINTER_ROLE\");\n    uint256 public constant MAX_SUPPLY = 1_000_000_000 * 10**18; // 1 billion tokens with 18 decimals\n\n    constructor() ERC20(\"WagaToken\", \"WAGA\") {\n        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); // Admin Role\n        _grantRole(MINTER_ROLE, msg.sender); // Initial minter is deployer\n    }\n\n    function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {\n        require(totalSupply() + amount <= MAX_SUPPLY, \"WagaToken: Max supply exceeded\");\n        _mint(to, amount);\n    }\n\n    function decimals() public pure override returns (uint8) {\n        return 18; // Standard ERC20 decimal count\n    }\n\n    function grantMinterRole(address tokenShop) external onlyRole(DEFAULT_ADMIN_ROLE) {\n        _grantRole(MINTER_ROLE, tokenShop);\n    }\n\n    function transferOwnership(address newOwner) external onlyRole(DEFAULT_ADMIN_ROLE) {\n        _revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);\n        _grantRole(DEFAULT_ADMIN_ROLE, newOwner);\n    }\n}"
+      }
+    },
+    "settings": {
+      "optimizer": {
+        "enabled": false,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "*": ["abi", "evm.bytecode", "evm.deployedBytecode"]
+        }
+      }
+    }
+  }

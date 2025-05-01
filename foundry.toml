@@ -4,7 +4,12 @@ out = "out"
 libs = ["lib"]
 remappings = ['@openzeppelin/contracts=lib/openzeppelin-contracts/contracts', '@chainlink/contracts=lib/chainlink-brownie-contracts/contracts']
 ffi = true
-fs_permissions = [{ access = "read", path = "./broadcast" }]
+fs_permissions = [
+    { access = "read", path = "./broadcast" },
+    { access = "read", path = "./cache" },
+    { access = "read", path = "./flattened" }
+]
+solc_version = "0.8.20"
 
 [invariant]
 runs = 128

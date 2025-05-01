@@ -9,7 +9,7 @@ import {WagaToken} from "./WagaToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {console} from "forge-std/console.sol"; // For testing
 
-contract TokenShop2 is Ownable, AccessControl {
+contract TokenShop2 is Ownable, AccessControl { 
     using OracleLib for AggregatorV3Interface;
 
     error TokenShop2__NoEthSent_ethToUsd();  
@@ -100,7 +100,7 @@ contract TokenShop2 is Ownable, AccessControl {
         emit TokensPurchased(msg.sender, msg.value, tokensToMint, "ETH");
     }
 
-    function buyWithUSDC(uint256 usdcAmount) public payable {
+    function buyWithUSDC(uint256 usdcAmount) public {
         // Check ==> Data Validation
         if (usdcAmount <= 0) {
             revert TokenShop2__NoUSDCsent_buyWithUSDC();
