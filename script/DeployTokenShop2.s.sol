@@ -64,3 +64,13 @@ contract DeployTokenShop2 is Script {
 // 1: contract TokenShop2 0x02BD2582178b467002e945001D327FB13cb8A8c4
 // 2: contract HelperConfig 0xC7f2Cf4845C6db0e1a1e91ED41Bcd0FcC1b0E141
                          
+// == Return == Ethereum Sepolia III
+// 0: contract WagaToken 0x0f9E53dB46EcDA28689f643De470529c5B7F703F
+// 1: contract TokenShop2 0x2435D814B8f1583Dd4a5444fbB9943803f31C03F
+// 2: contract HelperConfig 0xC7f2Cf4845C6db0e1a1e91ED41Bcd0FcC1b0E141 
+
+
+// == Return == Base Sepolia II
+// 0: contract WagaToken 0xC7687295395597CFa014C7f7A47179bC3d2674BD
+// 1: contract TokenShop2 0xFd366a14FbeAa467Ea2179952107a5Ecc90af7fD
+// 2: contract HelperConfig 0xC7f2Cf4845C6db0e1a1e91ED41Bcd0FcC1b0E141
