@@ -10,3 +10,9 @@
 [submodule "lib/foundry-devops"]
 	path = lib/foundry-devops
 	url = https://github.com/cyfrin/foundry-devops
+[submodule "lib/murky"]
+	path = lib/murky
+	url = https://github.com/Cyfrin/murky
+[submodule "lib/mock-era-contracts"]
+	path = lib/mock-era-contracts
+	url = https://github.com/cyfrin/mock-era-contracts

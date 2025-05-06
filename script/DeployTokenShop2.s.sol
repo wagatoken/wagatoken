@@ -5,6 +5,9 @@ import {Script} from "forge-std/Script.sol";
 import {WagaToken} from "../src/WagaToken.sol";
 import {TokenShop2} from "src/TokenShop2.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
+import {TokenVesting} from "src/TokenVesting.sol";
+
+
 
 contract DeployTokenShop2 is Script {
     HelperConfig public helperConfig;
@@ -28,9 +31,7 @@ contract DeployTokenShop2 is Script {
             ethUsdPriceFeed,
             usdcAddress
         );
-
-        // 3. Unpause TokenShop
-        // tokenShop.unpause();
+       
         // 4. Grant MINTER_ROLE to TokenShop
         wagaToken.grantMinterRole(address(tokenShop));
 
