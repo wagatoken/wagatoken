@@ -35,10 +35,8 @@ contract TokenVesting is Ownable {
     error TokenVesting__InsufficientCategoryBalance_distributeTokens();
     error TokenVesting__InvalidBeneficiary_revokeVesting();
     error TokenVesting__VestingAlreadyRevoked_revokeVesting();
-    
-
-
-
+    error TokenVesting__ShouldOnlyBeVestingCategory_createVestingSchedule();
+    error TokenVesting__CategoryDoesntExists_createVestingSchedule();
 
     /*Type Declarations*/
     /**
@@ -46,9 +44,9 @@ contract TokenVesting is Ownable {
      * @param category The category associated with the vesting schedule.
      * @param beneficiaryAllocation Total tokens allocated for the beneficiary.
      * @param released Tokens already released to the beneficiary.
-     * @param start Start time of the vesting schedule.
+     * @param start Start time of the vesting schedule. vesting schedule = start(block.timestamp) + cliffDuration + vestingDuration
      * @param cliff Cliff duration in seconds (tokens are locked until this time).
-     * @param duration Total duration of the vesting schedule in seconds.
+     * @param duration vesting duration in seconds.
      * @param revoked Whether the vesting schedule has been revoked.
      */
     struct VestingSchedule {
@@ -56,8 +54,8 @@ contract TokenVesting is Ownable {
         uint256 beneficiaryAllocation;
         uint256 released;
         uint256 start;
-        uint256 cliff;
-        uint256 duration;
+        uint256 cliff; // start + cliffDuration
+        uint256 duration; // vesting duration
         bool revoked;
     }
 
@@ -83,6 +81,8 @@ contract TokenVesting is Ownable {
     // The WagaToken contract, which supports minting
     IERC20Mintable public immutable i_token;
 
+    // Owner of the contract
+    address private immutable i_contractOwner;
     // Mapping to track categories (both vesting and non-vesting)
     mapping(Category => CategoryBalance) private s_categories;
 
@@ -112,6 +112,7 @@ contract TokenVesting is Ownable {
      */
     constructor(IERC20Mintable _token) Ownable(msg.sender) {
         i_token = _token;
+        i_contractOwner = msg.sender;
     }
 
     /**
@@ -122,22 +123,21 @@ contract TokenVesting is Ownable {
     // tokenVesting.initializeCategory(Category.devFund, 100_000_000 ether);
     function initializeCategory(
         Category category, //Category.devFund
-        uint256 allocation 
+        uint256 allocation
     ) external onlyOwner {
         if (s_categories[category].totalAllocation != 0) {
             revert TokenVesting__CategoryAlreadyInitialized_initializeCategory();
         }
-        if (allocation == 0) { // 100_000_000 ether and not 0 or nothing
+        if (allocation == 0) {
+            // 100_000_000 ether and not 0 or nothing
             revert TokenVesting__AllocationValueIsZero_initializeCategory();
         }
         s_categories[category] = CategoryBalance({
             totalAllocation: allocation,
             remainingBalance: allocation
-          
         });
     }
 
-  
     /**
      * @dev Creates a vesting schedule for a beneficiary.
      * @param beneficiary The address of the beneficiary.
@@ -151,8 +151,8 @@ contract TokenVesting is Ownable {
         address beneficiary,
         Category category, //Category.devTeam
         uint256 beneficiaryAllocation, // 5_000_000 ether
-        uint256 start,
-        uint256 cliffDuration,
+        uint256 start, // start time of the vesting schedule = block.timestamp
+        uint256 cliffDuration, // 1440 seconds * 365 days = 525600 seconds = 1 year
         uint256 vestingDuration
     ) external onlyOwner {
         if (s_vestingSchedules[beneficiary].beneficiaryAllocation != 0) {
@@ -161,13 +161,27 @@ contract TokenVesting is Ownable {
         if (beneficiary == address(0)) {
             revert TokenVesting__InvalidBeneficiary_createVestingSchedule();
         }
-                                             
+        // check that the category exists
+        if (s_categories[category].totalAllocation == 0) {
+            revert TokenVesting__CategoryDoesntExists_createVestingSchedule();
+        }
+
         if (s_categories[category].remainingBalance < beneficiaryAllocation) {
             revert TokenVesting__InsufficientCategoryBalance_createVestingSchedule();
         }
         if (cliffDuration > vestingDuration) {
             revert TokenVesting__CliffExceedsDuration_createVestingSchedule();
         }
+
+        if (
+            category == Category.community ||
+            category == Category.devFund ||
+            category == Category.communityFund)
+        {
+            revert TokenVesting__ShouldOnlyBeVestingCategory_createVestingSchedule();
+        }
+
+
         // require(vestingSchedules[beneficiary].beneficiaryAllocation == 0, "Vesting already exists");
         // require(beneficiary != address(0), "Invalid beneficiary");
         // require(categories[category].remainingBalance >= beneficiaryAllocation, "Insufficient category balance");
@@ -180,15 +194,15 @@ contract TokenVesting is Ownable {
         // @audit: This should come before the minting of tokens
         s_vestingSchedules[beneficiary] = VestingSchedule({
             category: category,
-            beneficiaryAllocation: beneficiaryAllocation,
+            beneficiaryAllocation: beneficiaryAllocation, //
             released: 0,
-            start: start,
-            cliff: start + cliffDuration,
+            start: block.timestamp, // start time of the vesting schedule
+            cliff: start + cliffDuration, // Calculate cliff as start + cliffDuration
             duration: vestingDuration,
-            revoked: false
+            revoked: false 
         });
 
-         // Mint tokens to the contract for vesting
+        // Mint tokens to the contract for vesting
         i_token.mint(address(this), beneficiaryAllocation);
         emit VestingScheduleCreated(
             beneficiary,
@@ -198,7 +212,6 @@ contract TokenVesting is Ownable {
             cliffDuration,
             vestingDuration
         );
-        
     }
 
     /**
@@ -315,15 +328,18 @@ contract TokenVesting is Ownable {
         // Check if the cliff period has been reached
         if (block.timestamp < schedule.cliff) {
             return 0;
-        // Check for full vesting
         } else if (block.timestamp >= schedule.start + schedule.duration) {
+            // Check for full vesting
             return schedule.beneficiaryAllocation;
-        // check for partial vesting
         } else {
-            uint256 timeElapsed = block.timestamp - schedule.start;
+            // Calculate time elapsed since the cliff
+            uint256 timeElapsed = block.timestamp - schedule.cliff;
+            // Adjust vesting duration to exclude the cliff period
+            uint256 vestingDuration = schedule.start + schedule.duration - schedule.cliff;
+            // Calculate the vested amount proportionally
             return
                 (schedule.beneficiaryAllocation * timeElapsed) /
-                schedule.duration;
+                vestingDuration;
         }
     }
 
@@ -347,12 +363,20 @@ contract TokenVesting is Ownable {
     ) external view returns (VestingSchedule memory) {
         return s_vestingSchedules[beneficiary];
     }
+
+    function getOwner() external view returns (address) {
+        return i_contractOwner;
+    }
 }
 
+// } else if (
+//     block.timestamp >= schedule.start + schedule.duration ||
+//     schedule.revoked
+// ) {
+//     return schedule.beneficiaryAllocation;
 
-  
-        // } else if (
-        //     block.timestamp >= schedule.start + schedule.duration ||
-        //     schedule.revoked
-        // ) {
-        //     return schedule.beneficiaryAllocation;
+// vesting schedule = start + cliffDuration + vestingDuration
+// vesting schedule = cliff + vestingDuration
+// cliff = start + cliffDuration
+
+// (100_000_000 ether * 250 0000) / 500 0000 => 100 000 000 ether * (250 0000 / 500 0000) => 50_000_000 ether

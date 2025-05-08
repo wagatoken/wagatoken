@@ -30,7 +30,7 @@ contract TokenShop2Test is Test {
         // Deploy the TokenShop2 contract
         deployer = new DeployTokenShop2();
 
-        (wagaToken, tokenShop, config) = deployer.run();
+        (wagaToken, tokenShop,, config) = deployer.run();
         (, usdc, ) = config.activeNetworkConfig();
         vm.deal(user, startingBalance);
 

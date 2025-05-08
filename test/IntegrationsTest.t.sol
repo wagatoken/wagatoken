@@ -32,7 +32,7 @@ contract IntegrationsTest is Test {
     function setUp() public {
         // Deploy the TokenShop2 contract
         deployer = new DeployTokenShop2();
-        (wagaToken, tokenShop, config) = deployer.run();
+        (wagaToken, tokenShop,, config) = deployer.run();
         (, usdc, ) = config.activeNetworkConfig();
         vm.deal(user, startingBalance);
         vm.deal(address(fundTokenShop), startingBalance);

@@ -2,8 +2,8 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
-import "../src/TokenVesting.sol";
-import "../src/WagaToken.sol";
+import {TokenVesting, IERC20Mintable} from "../src/TokenVesting.sol";
+import {WagaToken} from "../src/WagaToken.sol";
 import {HelperConfigVesting} from "./HelperConfigVesting.s.sol";
 
 

@@ -5,14 +5,14 @@ import {Script} from "forge-std/Script.sol";
 import {WagaToken} from "../src/WagaToken.sol";
 import {TokenShop2} from "src/TokenShop2.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
-import {TokenVesting} from "src/TokenVesting.sol";
+import {TokenVesting, IERC20Mintable} from "src/TokenVesting.sol";
 
 
 
 contract DeployTokenShop2 is Script {
     HelperConfig public helperConfig;
 
-    function run() external returns (WagaToken, TokenShop2, HelperConfig) {
+    function run() external returns (WagaToken, TokenShop2, TokenVesting, HelperConfig) {
         helperConfig = new HelperConfig();
         (
             address ethUsdPriceFeed,
@@ -31,9 +31,15 @@ contract DeployTokenShop2 is Script {
             ethUsdPriceFeed,
             usdcAddress
         );
+
+        // 3. Deploy TokenVesting with WagaToken address
+        TokenVesting tokenVesting = new TokenVesting(
+            IERC20Mintable(address(wagaToken))
+        );
        
-        // 4. Grant MINTER_ROLE to TokenShop
+        // 4. Grant MINTER_ROLE to TokenShop & TokenVesting
         wagaToken.grantMinterRole(address(tokenShop));
+        wagaToken.grantMinterRole(address(tokenVesting));
 
         // 5. Transfer ownership of WagaToken to TokenShop
         //wagaToken.transferOwnership(address(tokenShop));
@@ -41,7 +47,7 @@ contract DeployTokenShop2 is Script {
         // tokenShop.grantRole(tokenShop.OWNER_ROLE(), address(tokenShop));
         vm.stopBroadcast();
 
-        return (wagaToken, tokenShop, helperConfig);
+        return (wagaToken, tokenShop, tokenVesting, helperConfig);
     }
 }
 
