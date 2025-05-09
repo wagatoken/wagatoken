@@ -67,7 +67,6 @@ contract TokenVestingTest is Test {
         TokenVesting.Category category = TokenVesting.Category.devTeam;
         uint256 allocation = beneficiaryAllocation; // 1 million tokens
         uint256 start;
- 
 
         // check if the category is initialized
         uint256 categoryBalance = tokenVesting.getCategoryBalance(category);
@@ -104,8 +103,7 @@ contract TokenVestingTest is Test {
         address beneficiary = user;
         TokenVesting.Category category = TokenVesting.Category.devTeam;
         uint256 allocation = beneficiaryAllocation; // 1 million tokens
-        uint256 start = block.timestamp; // Set start to the current block timestamp
-   
+        uint256 start = 0; // Set start to the current block timestamp
 
         vm.startPrank(owner);
         tokenVesting.createVestingSchedule(
@@ -162,11 +160,16 @@ contract TokenVestingTest is Test {
         tokenVesting.revokeVesting(beneficiary);
         vm.stopPrank();
         // Assert
+        assertEq(tokenVesting.getCategoryBalance(TokenVesting.Category.devTeam), categoryAllocation);
+        
         vm.startPrank(beneficiary);
         vm.expectRevert();
         tokenVesting.releaseTokens(beneficiary);
         vm.stopPrank();
     }
+
+    function testTokensReturnedToCategoryAfterRevoking() public {}
+
 
     function testReleaseTokensAfterCliff()
         public
@@ -186,25 +189,39 @@ contract TokenVestingTest is Test {
         );
         // Assert
         assertEq(
-            tokenVesting.getVestingSchedule(beneficiary).released, (beneficiaryAllocation * timeElapsed) /
-                vestingDuration,
+            tokenVesting.getVestingSchedule(beneficiary).released,
+            (beneficiaryAllocation * timeElapsed) / vestingDuration,
+            "Tokens should be released after the cliff"
+        );
+        assertEq( 
+            tokenVesting.getVestingSchedule(beneficiary).released,
+            wagaToken.balanceOf(beneficiary),
             "Tokens should be released after the cliff"
         );
     }
 
-    function testReleaseTokensAfterVestingDuration() public initializeCategory createVestingSchedule {}
+    function testReleaseTokensAfterVestingDuration()
+        public
+        initializeCategory
+        createVestingSchedule
+    {
+        // Arrange
+        uint256 t_cliffDuration = block.timestamp + cliffDuration; // 1 year cliff
+        vm.warp(t_cliffDuration + vestingDuration + timeElapsed); // Advance time to 60 days after the cliff   // Act
+        vm.startPrank(user);
+        tokenVesting.releaseTokens(user);
+        vm.stopPrank();
+        console.log(
+            "released tokens",
+            tokenVesting.getVestingSchedule(user).released
+        );
+        // Assert
+        assertEq(
+            tokenVesting.getVestingSchedule(user).released,
+            beneficiaryAllocation,
+            "All tokens should be released after vesting duration"
+        );
+    }
 
     function testDistributeTokens() public {}
 }
-
-// 1000000,000000000000000000
-// 1000000,000000000000000000
-// 1000000,000000000000000000
-//  released tokens 164383,561643835616438356
-
-/* 
-n
-
-
-
-*/
