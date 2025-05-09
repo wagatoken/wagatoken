@@ -22,23 +22,23 @@ interface IERC20Mintable is IERC20 {
 contract TokenVesting is Ownable {
     /* Errors */
 
-    error TokenVesting__CategoryAlreadyInitialized_initializeCategory();
-    error TokenVesting__AllocationValueIsZero_initializeCategory();
-    error TokenVesting__VestingAlreadyExists_createVestingSchedule();
-    error TokenVesting__InvalidBeneficiary_createVestingSchedule();
-    error TokenVesting__BeneficiaryAlreadyExists_createVestingSchedule();
-    error TokenVesting__InsufficientCategoryBalance_createVestingSchedule();
-    error TokenVesting__CliffExceedsDuration_createVestingSchedule();
-    error TokenVesting__CliffNotReached_releaseTokens();
-    error TokenVesting__VestingRevoked_releaseTokens();
-    error TokenVesting__NoTokensToRelease_releaseTokens();
-    error TokenVesting__InvalidBeneficiaryAddress_releaseTokens();
-    error TokenVesting__ShouldBeNonVestingCategory_distributeTokens();
-    error TokenVesting__InsufficientCategoryBalance_distributeTokens();
-    error TokenVesting__InvalidBeneficiary_revokeVesting();
-    error TokenVesting__VestingAlreadyRevoked_revokeVesting();
-    error TokenVesting__ShouldOnlyBeVestingCategory_createVestingSchedule();
-    error TokenVesting__CategoryDoesntExists_createVestingSchedule();
+    error TokenVesting__CategoryAlreadyInitialized_initializeCategory(); //
+    error TokenVesting__AllocationValueIsZero_initializeCategory(); //
+    error TokenVesting__VestingAlreadyExists_createVestingSchedule(); //
+    error TokenVesting__ZeroAddress_createVestingSchedule(); //
+    error TokenVesting__InsufficientCategoryBalance_createVestingSchedule(); //
+    //error TokenVesting__CliffExceedsDuration_createVestingSchedule();
+    error TokenVesting__CliffNotReached_releaseTokens(); //
+    error TokenVesting__VestingRevoked_releaseTokens(); //
+    error TokenVesting__NoTokensToRelease_releaseTokens(); //
+    error TokenVesting__InvalidBeneficiaryAddress_releaseTokens(); //
+    error TokenVesting__ShouldBeNonVestingCategory_distributeTokens();//
+    error TokenVesting__InsufficientCategoryBalance_distributeTokens(); //
+    error TokenVesting__ZeroAddress_revokeVesting();//
+    error TokenVesting__VestingAlreadyRevoked_revokeVesting(); //
+    error TokenVesting__ShouldOnlyBeVestingCategory_createVestingSchedule(); //
+    error TokenVesting__CategoryDoesntExists_createVestingSchedule(); //
+    error TokenVesting__ZeroAddress_releaseTokens(); //
 
     /*Type Declarations*/
     /**
@@ -130,7 +130,7 @@ contract TokenVesting is Ownable {
         if (s_categories[category].totalAllocation != 0) {
             revert TokenVesting__CategoryAlreadyInitialized_initializeCategory();
         }
-        if (allocation == 0) {
+        if (allocation <= 0) {
             // 100_000_000 ether and not 0 or nothing
             revert TokenVesting__AllocationValueIsZero_initializeCategory();
         }
@@ -139,7 +139,7 @@ contract TokenVesting is Ownable {
             remainingBalance: allocation
         });
     }
-
+        
     /**
      * @dev Creates a vesting schedule for a beneficiary.
      * @param beneficiary The address of the beneficiary.
@@ -161,7 +161,7 @@ contract TokenVesting is Ownable {
             revert TokenVesting__VestingAlreadyExists_createVestingSchedule();
         }
         if (beneficiary == address(0)) {
-            revert TokenVesting__InvalidBeneficiary_createVestingSchedule();
+            revert TokenVesting__ZeroAddress_createVestingSchedule();
         }
         // check that the category exists
         if (s_categories[category].totalAllocation == 0) {
@@ -171,9 +171,9 @@ contract TokenVesting is Ownable {
         if (s_categories[category].remainingBalance < beneficiaryAllocation) {
             revert TokenVesting__InsufficientCategoryBalance_createVestingSchedule();
         }
-        if (cliffDuration > vestingDuration) {
-            revert TokenVesting__CliffExceedsDuration_createVestingSchedule();
-        }
+        // if (cliffDuration > vestingDuration) {
+        //     revert TokenVesting__CliffExceedsDuration_createVestingSchedule();
+        // }
 
         if (
             category == Category.community ||
@@ -222,7 +222,11 @@ contract TokenVesting is Ownable {
     function releaseTokens(address beneficiary) external {
         // check for zero address
         if (beneficiary == address(0)) {
-            revert TokenVesting__InvalidBeneficiary_createVestingSchedule();
+            revert TokenVesting__ZeroAddress_releaseTokens();
+        }
+        // check if the beneficiary is the caller
+        if (msg.sender != beneficiary) {
+            revert TokenVesting__InvalidBeneficiaryAddress_releaseTokens();
         }
         // retrieve the vesting schedule for the beneficiary
         VestingSchedule storage schedule = s_vestingSchedules[beneficiary];
@@ -299,7 +303,8 @@ contract TokenVesting is Ownable {
     function revokeVesting(address beneficiary) external onlyOwner {
         // Check if the beneficiary is a zero address
         if (beneficiary == address(0)) {
-            revert TokenVesting__InvalidBeneficiary_createVestingSchedule();
+            revert TokenVesting__ZeroAddress_revokeVesting();
+
         }
         VestingSchedule storage schedule = s_vestingSchedules[beneficiary];
         // Check if the vesting schedule has been revoked
