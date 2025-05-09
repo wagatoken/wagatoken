@@ -7,6 +7,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // Import OpenZeppelin utilities for ownership and cryptographic operations
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
+import {console} from "forge-std/console.sol";
+
 // Extend IERC20 to include the mint function, specific to WagaToken
 interface IERC20Mintable is IERC20 {
     function mint(address to, uint256 amount) external;
@@ -176,11 +178,10 @@ contract TokenVesting is Ownable {
         if (
             category == Category.community ||
             category == Category.devFund ||
-            category == Category.communityFund)
-        {
+            category == Category.communityFund
+        ) {
             revert TokenVesting__ShouldOnlyBeVestingCategory_createVestingSchedule();
         }
-
 
         // require(vestingSchedules[beneficiary].beneficiaryAllocation == 0, "Vesting already exists");
         // require(beneficiary != address(0), "Invalid beneficiary");
@@ -198,8 +199,8 @@ contract TokenVesting is Ownable {
             released: 0,
             start: block.timestamp, // start time of the vesting schedule
             cliff: start + cliffDuration, // Calculate cliff as start + cliffDuration
-            duration: vestingDuration,
-            revoked: false 
+            duration: start + cliffDuration + vestingDuration,
+            revoked: false
         });
 
         // Mint tokens to the contract for vesting
@@ -325,18 +326,22 @@ contract TokenVesting is Ownable {
     function _vestedAmount(
         VestingSchedule memory schedule
     ) internal view returns (uint256) {
-        // Check if the cliff period has been reached
+        console.log("block.timestamp", block.timestamp);
+        console.log("schedule.start", schedule.start);
+        console.log("schedule.cliff", schedule.cliff);
+        console.log("schedule.duration", schedule.duration);
+
         if (block.timestamp < schedule.cliff) {
             return 0;
         } else if (block.timestamp >= schedule.start + schedule.duration) {
-            // Check for full vesting
             return schedule.beneficiaryAllocation;
         } else {
-            // Calculate time elapsed since the cliff
             uint256 timeElapsed = block.timestamp - schedule.cliff;
-            // Adjust vesting duration to exclude the cliff period
-            uint256 vestingDuration = schedule.start + schedule.duration - schedule.cliff;
-            // Calculate the vested amount proportionally
+            // uint256 vestingDuration = schedule.duration -
+            //     (schedule.cliff - schedule.start);
+            uint256 vestingDuration = schedule.duration - schedule.cliff;
+            console.log("timeElapsed", timeElapsed);
+            console.log("vestingDuration", vestingDuration);
             return
                 (schedule.beneficiaryAllocation * timeElapsed) /
                 vestingDuration;

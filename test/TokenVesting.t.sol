@@ -7,8 +7,6 @@ import {WagaToken} from "src/WagaToken.sol";
 import {TokenVesting, IERC20Mintable} from "src/TokenVesting.sol";
 
 contract TokenVestingTest is Test {
-
-
     DeployTokenShop2 public deployer;
     WagaToken public wagaToken;
     TokenVesting public tokenVesting;
@@ -17,34 +15,34 @@ contract TokenVestingTest is Test {
     uint256 public categoryAllocation = 100_000_000 ether; // 100 million tokens
     uint256 public beneficiaryAllocation = 1000000e18; // 1 million tokens
 
-
     function setUp() public {
         deployer = new DeployTokenShop2();
         (wagaToken, , tokenVesting, ) = deployer.run();
         owner = tokenVesting.getOwner();
         user = makeAddr("user");
-       
     }
-    
+
     modifier initializeCategory() {
         uint256 allocation = categoryAllocation; // 100 million tokens
         vm.startPrank(owner);
-        tokenVesting.initializeCategory(TokenVesting.Category.devTeam, allocation);
+        tokenVesting.initializeCategory(
+            TokenVesting.Category.devTeam,
+            allocation
+        );
         vm.stopPrank();
         _;
-    } 
+    }
 
     function testInitializeCategory() public initializeCategory {
         // //Arrange
         uint256 allocation = categoryAllocation; // 100 million tokens
-      
+
         //Assert
         assertEq(
             tokenVesting.getCategoryBalance(TokenVesting.Category.devTeam),
             allocation,
             "Category balance should be equal to the allocation"
         );
-
     }
 
     function testOnlyOwnerCanInitializeCategory() public {
@@ -53,10 +51,12 @@ contract TokenVestingTest is Test {
         // Act/Assert
         vm.startPrank(user);
         vm.expectRevert();
-        tokenVesting.initializeCategory(TokenVesting.Category.devFund, allocation);
+        tokenVesting.initializeCategory(
+            TokenVesting.Category.devFund,
+            allocation
+        );
         vm.stopPrank();
     }
-
 
     function testCreateVestingSchedule() public initializeCategory {
         // Arrange
@@ -96,16 +96,15 @@ contract TokenVestingTest is Test {
             allocation,
             "Beneficiary allocation should be equal to the allocation"
         );
-
     }
 
     modifier createVestingSchedule() {
         address beneficiary = user;
         TokenVesting.Category category = TokenVesting.Category.devTeam;
         uint256 allocation = beneficiaryAllocation; // 1 million tokens
-        uint256 start;
+        uint256 start = block.timestamp; // Set start to the current block timestamp
         uint256 cliffDuration = 365 days; // 1 year cliff
-        uint256 vestingDuration = 365 days; // 1 year vesting
+        uint256 vestingDuration = 365 days; // 2 years vesting duration
 
         vm.startPrank(owner);
         tokenVesting.createVestingSchedule(
@@ -120,7 +119,11 @@ contract TokenVestingTest is Test {
         _;
     }
 
-    function testReleaseTokensBeforeCliff() public initializeCategory createVestingSchedule {
+    function testReleaseTokensBeforeCliff()
+        public
+        initializeCategory
+        createVestingSchedule
+    {
         // Arrange
         address beneficiary = user;
         vm.expectRevert();
@@ -129,7 +132,11 @@ contract TokenVestingTest is Test {
         vm.stopPrank();
     }
 
-      function testZeroAddressReverts() public initializeCategory createVestingSchedule {
+    function testZeroAddressReverts()
+        public
+        initializeCategory
+        createVestingSchedule
+    {
         // Arrange
         address beneficiary = user;
         vm.expectRevert();
@@ -138,9 +145,11 @@ contract TokenVestingTest is Test {
         vm.stopPrank();
     }
 
-    
-
-    function testUserCannotReleaseAfterRevoking() public initializeCategory createVestingSchedule {
+    function testUserCannotReleaseAfterRevoking()
+        public
+        initializeCategory
+        createVestingSchedule
+    {
         // Arrange
         address beneficiary = user;
         // advance time to after the cliff
@@ -158,53 +167,36 @@ contract TokenVestingTest is Test {
         vm.stopPrank();
     }
 
-    function testReleaseTokensAfterCliff() public initializeCategory createVestingSchedule{
-          // Arrange
+    function testReleaseTokensAfterCliff()
+        public
+        initializeCategory
+        createVestingSchedule
+    {
+        // Arrange
         address beneficiary = user;
-        vm.warp(block.timestamp + 365 days);
-
-        // Act
+        vm.warp(block.timestamp + 365 days + 60 days); // Advance time to 60 days after the cliff   // Act
         vm.startPrank(beneficiary);
         tokenVesting.releaseTokens(beneficiary);
         vm.stopPrank();
-        console.log("released tokens", tokenVesting.getVestingSchedule(beneficiary).released);
+        console.log(
+            "released tokens",
+            tokenVesting.getVestingSchedule(beneficiary).released
+        );
         // Assert
         assertTrue(
             tokenVesting.getVestingSchedule(beneficiary).released > 0,
             "Tokens should be released after the cliff"
-            
         );
     }
 
     function testReleaseTokensAfterRevoking() public {}
 
-
     function testDistributeTokens() public {}
-        
-    
 }
 
- // 1000000,000000000000000000
- // 1000000 000000000000000000
-    
+// 1000000,000000000000000000
+// 1000000,000000000000000000
+// 1000000,000000000000000000
+//  released tokens 164383,561643835616438356
 
 
-    // What do we need to test
-    /* 
-    1) Test initializing a category
-    2) Test creating a vesting schedule
-    3) Test releasing tokens before and after the cliff
-    4) Test revoking a vesting schedule
-    5) Test releasing tokens after revoking a vesting schedule
-    6) Test distributing tokens to multiple addresses
-   
-    
-    
-    
-    
-    
-    */
-
-
-
-//     TokenShop2 public tokenShop;
