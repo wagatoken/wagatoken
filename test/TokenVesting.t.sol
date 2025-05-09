@@ -14,6 +14,9 @@ contract TokenVestingTest is Test {
     address public owner;
     uint256 public categoryAllocation = 100_000_000 ether; // 100 million tokens
     uint256 public beneficiaryAllocation = 1000000e18; // 1 million tokens
+    uint256 public vestingDuration = 365 days; // 1 year vesting duration
+    uint256 public cliffDuration = 365 days; // 1 year cliff duration
+    uint256 timeElapsed = 60 days;
 
     function setUp() public {
         deployer = new DeployTokenShop2();
@@ -64,8 +67,7 @@ contract TokenVestingTest is Test {
         TokenVesting.Category category = TokenVesting.Category.devTeam;
         uint256 allocation = beneficiaryAllocation; // 1 million tokens
         uint256 start;
-        uint256 cliffDuration = 365 days; // 1 year cliff
-        uint256 vestingDuration = 365 days; // 1 year vesting
+ 
 
         // check if the category is initialized
         uint256 categoryBalance = tokenVesting.getCategoryBalance(category);
@@ -103,8 +105,7 @@ contract TokenVestingTest is Test {
         TokenVesting.Category category = TokenVesting.Category.devTeam;
         uint256 allocation = beneficiaryAllocation; // 1 million tokens
         uint256 start = block.timestamp; // Set start to the current block timestamp
-        uint256 cliffDuration = 365 days; // 1 year cliff
-        uint256 vestingDuration = 365 days; // 2 years vesting duration
+   
 
         vm.startPrank(owner);
         tokenVesting.createVestingSchedule(
@@ -173,8 +174,9 @@ contract TokenVestingTest is Test {
         createVestingSchedule
     {
         // Arrange
+        uint256 t_cliffDuration = block.timestamp + cliffDuration; // 1 year cliff
         address beneficiary = user;
-        vm.warp(block.timestamp + 365 days + 60 days); // Advance time to 60 days after the cliff   // Act
+        vm.warp(t_cliffDuration + timeElapsed); // Advance time to 60 days after the cliff   // Act
         vm.startPrank(beneficiary);
         tokenVesting.releaseTokens(beneficiary);
         vm.stopPrank();
@@ -183,13 +185,14 @@ contract TokenVestingTest is Test {
             tokenVesting.getVestingSchedule(beneficiary).released
         );
         // Assert
-        assertTrue(
-            tokenVesting.getVestingSchedule(beneficiary).released > 0,
+        assertEq(
+            tokenVesting.getVestingSchedule(beneficiary).released, (beneficiaryAllocation * timeElapsed) /
+                vestingDuration,
             "Tokens should be released after the cliff"
         );
     }
 
-    function testReleaseTokensAfterRevoking() public {}
+    function testReleaseTokensAfterVestingDuration() public initializeCategory createVestingSchedule {}
 
     function testDistributeTokens() public {}
 }
@@ -199,4 +202,9 @@ contract TokenVestingTest is Test {
 // 1000000,000000000000000000
 //  released tokens 164383,561643835616438356
 
+/* 
+n
 
+
+
+*/

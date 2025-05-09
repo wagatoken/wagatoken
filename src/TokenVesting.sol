@@ -57,7 +57,7 @@ contract TokenVesting is Ownable {
         uint256 released;
         uint256 start;
         uint256 cliff; // start + cliffDuration
-        uint256 duration; // vesting duration
+        uint256 duration; // = start + cliffDuration + vesting duration
         bool revoked;
     }
 
