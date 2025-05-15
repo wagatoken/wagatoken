@@ -33,6 +33,8 @@ contract TokenVesting is Ownable {
     error TokenVesting__InvalidBeneficiaryAddress_releaseTokens(); //
     error TokenVesting__ShouldBeNonVestingCategory_distributeTokens(); //
     error TokenVesting__InsufficientCategoryBalance_distributeTokens(); //
+    error TokenVesting__ZeroAddress_distributeTokens(); //
+    error TokenVesting__AmountIsZero_distributeTokens(); //
     error TokenVesting__ZeroAddress_revokeVesting(); //
     error TokenVesting__VestingAlreadyRevoked_revokeVesting(); //
     error TokenVesting__ShouldOnlyBeVestingCategory_createVestingSchedule(); //
@@ -116,6 +118,7 @@ contract TokenVesting is Ownable {
         uint256 totalAllocation,
         uint256 remainingBalance
     );
+    event balanceUpdated(Category indexed category, uint256 remainingBalance);
 
     /**
      * @dev Constructor to initialize the contract with the WagaToken address.
@@ -136,13 +139,16 @@ contract TokenVesting is Ownable {
         Category category, //Category.devFund
         uint256 allocation
     ) external onlyOwner {
+        // check if the category is valid
+        // The compile already checks if the category is valid. It wouldn't compile if the category is invalid.
+        // check if the category is already initialized
         if (s_categories[category].totalAllocation != 0) {
             revert TokenVesting__CategoryAlreadyInitialized_initializeCategory();
         }
-        if (allocation <= 0) {
-            // 100_000_000 ether and not 0 or nothing
+        if (_isValueZero(allocation)) {
             revert TokenVesting__AllocationValueIsZero_initializeCategory();
         }
+
         s_categories[category] = CategoryBalance({
             totalAllocation: allocation,
             remainingBalance: allocation
@@ -172,39 +178,37 @@ contract TokenVesting is Ownable {
         uint256 cliffDuration, // 1440 seconds * 365 days = 525600 seconds = 1 year
         uint256 vestingDuration
     ) external onlyOwner {
+        // check for zero address
+        if (_addressIsZero(beneficiary)) {
+            revert TokenVesting__ZeroAddress_createVestingSchedule();
+        }
+        // Check if beneficiaryAllocation is greater than 0
+        if (_isValueZero(beneficiaryAllocation)) {
+            revert TokenVesting__AllocationValueIsZero_createVestingSchedule();
+        }
+        // Check if the category is a vesting category
+        if (!_isVestingCategory(category)) {
+            revert TokenVesting__ShouldOnlyBeVestingCategory_createVestingSchedule();
+        }
+        // Check if the cliff duration is valid
+        if (!_isValidDuration(cliffDuration)) {
+            revert TokenVesting__CliffDurationOutofRange_createVestingSchedule();
+        }
+        // Check if the vesting duration is valid
+        if (!_isValidDuration(vestingDuration)) {
+            revert TokenVesting__VestingDurationOutofRange_createVestingSchedule();
+        }
+        // check if the vesting schedule already exists for the beneficiary
         if (s_vestingSchedules[beneficiary].beneficiaryAllocation != 0) {
             revert TokenVesting__VestingAlreadyExists_createVestingSchedule();
-        }
-        if (beneficiary == address(0)) {
-            revert TokenVesting__ZeroAddress_createVestingSchedule();
         }
         // check that the category exists
         if (s_categories[category].totalAllocation == 0) {
             revert TokenVesting__CategoryDoesntExists_createVestingSchedule();
         }
-
-        // Check if beneficiaryAllocation is greater than 0
-        if (beneficiaryAllocation <= 0) {
-            revert TokenVesting__AllocationValueIsZero_createVestingSchedule();
-        }
         // Check if the category has enough remaining balance
         if (s_categories[category].remainingBalance < beneficiaryAllocation) {
             revert TokenVesting__InsufficientCategoryBalance_createVestingSchedule();
-        }
-        if (cliffDuration <= 0 || cliffDuration >= 1460 days) {
-            revert TokenVesting__CliffDurationOutofRange_createVestingSchedule();
-        }
-
-        if (vestingDuration <= 0 || vestingDuration >= 1460 days) {
-            revert TokenVesting__VestingDurationOutofRange_createVestingSchedule();
-        }
-
-        if (
-            category == Category.community ||
-            category == Category.devFund ||
-            category == Category.communityFund
-        ) {
-            revert TokenVesting__ShouldOnlyBeVestingCategory_createVestingSchedule();
         }
 
         s_categories[category].remainingBalance -= beneficiaryAllocation;
@@ -216,7 +220,7 @@ contract TokenVesting is Ownable {
             "remainingBalance",
             s_categories[category].remainingBalance
         );
-        console.log("beneficiaryAllocation", beneficiaryAllocation);
+
         // Create the vesting schedule
         // @audit: This should come before the minting of tokens
         s_vestingSchedules[beneficiary] = VestingSchedule({
@@ -249,7 +253,7 @@ contract TokenVesting is Ownable {
      */
     function releaseTokens(address beneficiary) external {
         // check for zero address
-        if (beneficiary == address(0)) {
+        if (_addressIsZero(beneficiary)) {
             revert TokenVesting__ZeroAddress_releaseTokens();
         }
         // check if the beneficiary is the caller
@@ -263,7 +267,6 @@ contract TokenVesting is Ownable {
             revert TokenVesting__CliffNotReached_releaseTokens();
         }
         // Check if the vesting schedule has been revoked
-        //require(!schedule.revoked, "Vesting revoked"); //schedule.revoked = true; ==> !schedule.revoked = false => require should fail beacause schedule is revoked
         if (schedule.revoked) {
             revert TokenVesting__VestingRevoked_releaseTokens();
         }
@@ -272,7 +275,7 @@ contract TokenVesting is Ownable {
         uint256 releasable = vestedAmount - schedule.released;
         // Total Allocation = 120
         // June: VestedAmount = 60
-        // Schedule Released = 30
+        // Schedule Released in March = 30
         // June: Releasable = 60 - 30 = 30
         // Balance = 120 - 30 - 30 = 60
 
@@ -298,12 +301,16 @@ contract TokenVesting is Ownable {
         address beneficiary,
         uint256 amount
     ) external onlyOwner {
-        // Check if the category is a vesting category
-        if (
-            category == Category.privateSale ||
-            category == Category.foundingTeam ||
-            category == Category.devTeam
-        ) {
+        // Check if the beneficiary is a zero address
+        if (_addressIsZero(beneficiary)) {
+            revert TokenVesting__ZeroAddress_distributeTokens();
+        }
+        // Check if the amount is greater than 0
+        if (amount <= 0) {
+            revert TokenVesting__AmountIsZero_distributeTokens();
+        }
+        // Check if the category is a nonVesting category
+        if (_isVestingCategory(category)) {
             revert TokenVesting__ShouldBeNonVestingCategory_distributeTokens();
         }
         // Check the category's remaining balance
@@ -324,7 +331,7 @@ contract TokenVesting is Ownable {
      */
     function revokeVesting(address beneficiary) external onlyOwner {
         // Check if the beneficiary is a zero address
-        if (beneficiary == address(0)) {
+        if (_addressIsZero(beneficiary)) {
             revert TokenVesting__ZeroAddress_revokeVesting();
         }
         VestingSchedule storage schedule = s_vestingSchedules[beneficiary];
@@ -339,7 +346,11 @@ contract TokenVesting is Ownable {
         // Return the unreleased tokens to the category's remaining balance
         // @audit: Shouldn't we be emitting an event here after updating the remaining balance?
         s_categories[schedule.category].remainingBalance += unreleased;
-
+        // emit remaining balance event
+        emit balanceUpdated(
+            schedule.category,
+            s_categories[schedule.category].remainingBalance
+        );
         emit VestingRevoked(beneficiary, unreleased);
 
         // Transfer the unreleased tokens back to the contract
@@ -350,7 +361,6 @@ contract TokenVesting is Ownable {
         if (!success) {
             revert TokenVesting__TransferFailed_revokeVesting();
         }
-      
     }
 
     /**
@@ -361,11 +371,6 @@ contract TokenVesting is Ownable {
     function _vestedAmount(
         VestingSchedule memory schedule
     ) internal view returns (uint256) {
-        console.log("block.timestamp", block.timestamp);
-        console.log("schedule.start", schedule.start);
-        console.log("schedule.cliff", schedule.cliff);
-        console.log("schedule.duration", schedule.duration);
-
         if (block.timestamp < schedule.cliff) {
             return 0;
         } else if (block.timestamp >= schedule.start + schedule.duration) {
@@ -381,6 +386,51 @@ contract TokenVesting is Ownable {
                 (schedule.beneficiaryAllocation * timeElapsed) /
                 vestingDuration;
         }
+    }
+
+    /**
+     * @dev Checks if the given category is a vesting category.
+     * @param _category The category to check.
+     * @return True if the category is a vesting category, false otherwise.
+     */
+
+    function _isVestingCategory(
+        Category _category
+    ) internal pure returns (bool) {
+        return
+            _category == Category.privateSale ||
+            _category == Category.foundingTeam ||
+            _category == Category.devTeam;
+    }
+
+    /**
+     * @dev Checks if the given duration is valid.
+     * @param _duration The duration to check.
+     * @return True if the duration is valid, false otherwise.
+     */
+
+    function _isValidDuration(uint256 _duration) internal pure returns (bool) {
+        return (_duration > 0 && _duration < 1460 days);
+    }
+
+    /**
+     * @dev Checks if the provided address is zero.
+     * @param _address The category to check.
+     * @return True if the address is zero, false otherwise.
+     */
+
+    function _addressIsZero(address _address) internal pure returns (bool) {
+        return (_address == address(0));
+    }
+
+    /**
+     * @dev Checks if the value provided is zero.
+     * @param _value The category to check.
+     * @return True if the address is zero, false otherwise.
+     */
+
+    function _isValueZero(uint256 _value) internal pure returns (bool) {
+        return (_value <= 0);
     }
 
     /* Getters */
@@ -409,14 +459,13 @@ contract TokenVesting is Ownable {
     }
 }
 
-// } else if (
-//     block.timestamp >= schedule.start + schedule.duration ||
-//     schedule.revoked
-// ) {
-//     return schedule.beneficiaryAllocation;
-
 // vesting schedule = start + cliffDuration + vestingDuration
 // vesting schedule = cliff + vestingDuration
 // cliff = start + cliffDuration
 
 // (100_000_000 ether * 250 0000) / 500 0000 => 100 000 000 ether * (250 0000 / 500 0000) => 50_000_000 ether
+
+/* 
+function _isValidDuration(_duration) internal pure returns (bool) {
+    return (_duration > 0 && _duration < 1460 days);
+} */
