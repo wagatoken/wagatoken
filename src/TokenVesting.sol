@@ -27,7 +27,6 @@ contract TokenVesting is Ownable {
     error TokenVesting__VestingAlreadyExists_createVestingSchedule(); //
     error TokenVesting__ZeroAddress_createVestingSchedule(); //
     error TokenVesting__InsufficientCategoryBalance_createVestingSchedule(); //
-    //error TokenVesting__CliffExceedsDuration_createVestingSchedule();
     error TokenVesting__CliffNotReached_releaseTokens(); //
     error TokenVesting__VestingRevoked_releaseTokens(); //
     error TokenVesting__NoTokensToRelease_releaseTokens(); //
@@ -39,9 +38,11 @@ contract TokenVesting is Ownable {
     error TokenVesting__ShouldOnlyBeVestingCategory_createVestingSchedule(); //
     error TokenVesting__CategoryDoesntExists_createVestingSchedule(); //
     error TokenVesting__ZeroAddress_releaseTokens(); //
-    error TokenVesting__AllocationValueIsZero_createVestingSchedule();
-    error TokenVesting__CliffDurationOutofRange_createVestingSchedule();
-    error TokenVesting__VestingDurationOutofRange_createVestingSchedule();
+    error TokenVesting__AllocationValueIsZero_createVestingSchedule(); //
+    error TokenVesting__CliffDurationOutofRange_createVestingSchedule(); //
+    error TokenVesting__VestingDurationOutofRange_createVestingSchedule(); //
+    error TokenVesting__TransferFailed_releaseTokens(); //
+    error TokenVesting__TransferFailed_revokeVesting(); //
 
     /*Type Declarations*/
     /**
@@ -110,6 +111,11 @@ contract TokenVesting is Ownable {
         address indexed beneficiary,
         uint256 amount
     );
+    event CategoryInitialized(
+        Category indexed category,
+        uint256 totalAllocation,
+        uint256 remainingBalance
+    );
 
     /**
      * @dev Constructor to initialize the contract with the WagaToken address.
@@ -141,6 +147,12 @@ contract TokenVesting is Ownable {
             totalAllocation: allocation,
             remainingBalance: allocation
         });
+        // emit event
+        emit CategoryInitialized(
+            category,
+            allocation,
+            s_categories[category].remainingBalance
+        );
     }
 
     /**
@@ -156,7 +168,7 @@ contract TokenVesting is Ownable {
         address beneficiary,
         Category category, //Category.devTeam
         uint256 beneficiaryAllocation, // 5_000_000 ether
-        uint256 start, // block.timestamp + 90 days
+        uint256 start, // 90 days
         uint256 cliffDuration, // 1440 seconds * 365 days = 525600 seconds = 1 year
         uint256 vestingDuration
     ) external onlyOwner {
@@ -196,9 +208,15 @@ contract TokenVesting is Ownable {
         }
 
         s_categories[category].remainingBalance -= beneficiaryAllocation;
-        start += block.timestamp;
+        start += block.timestamp; // start = start + block.timestamp
         // uint256 cliff = start + cliffDuration;
-
+        // print the category and the remaining balance
+        console.log("category", uint256(category));
+        console.log(
+            "remainingBalance",
+            s_categories[category].remainingBalance
+        );
+        console.log("beneficiaryAllocation", beneficiaryAllocation);
         // Create the vesting schedule
         // @audit: This should come before the minting of tokens
         s_vestingSchedules[beneficiary] = VestingSchedule({
@@ -211,9 +229,8 @@ contract TokenVesting is Ownable {
             duration: start + cliffDuration + vestingDuration,
             revoked: false
         });
+        // emit Schedule Created  Event
 
-        // Mint tokens to the contract for vesting
-        i_token.mint(address(this), beneficiaryAllocation);
         emit VestingScheduleCreated(
             beneficiary,
             category,
@@ -222,6 +239,8 @@ contract TokenVesting is Ownable {
             cliffDuration,
             vestingDuration
         );
+        // Mint tokens to the contract for vesting
+        i_token.mint(address(this), beneficiaryAllocation);
     }
 
     /**
@@ -260,12 +279,12 @@ contract TokenVesting is Ownable {
         if (releasable <= 0) {
             revert TokenVesting__NoTokensToRelease_releaseTokens();
         }
-        //require(releasable > 0, "No tokens to release");
-
         schedule.released += releasable;
-        i_token.transfer(beneficiary, releasable);
-
         emit TokensReleased(beneficiary, releasable);
+        bool success = i_token.transfer(beneficiary, releasable); // if ETh, we use (bool success,) = beneficiary.call{value: releasable}("");
+        if (!success) {
+            revert TokenVesting__TransferFailed_releaseTokens();
+        }
     }
 
     /**
@@ -291,18 +310,12 @@ contract TokenVesting is Ownable {
         if (s_categories[category].remainingBalance < amount) {
             revert TokenVesting__InsufficientCategoryBalance_distributeTokens();
         }
-        // require(
-        //     s_categories[category].remainingBalance >= amount,
-        //     "Insufficient category balance"
-        // );
-
         // Deduct the amount from the category's remaining balance
         s_categories[category].remainingBalance -= amount;
-
+        // Emit the TokensDistributed event
+        emit TokensDistributed(category, beneficiary, amount);
         // Transfer tokens to the beneficiary
         i_token.mint(beneficiary, amount);
-
-        emit TokensDistributed(category, beneficiary, amount);
     }
 
     /**
@@ -324,11 +337,20 @@ contract TokenVesting is Ownable {
         schedule.revoked = true;
 
         // Return the unreleased tokens to the category's remaining balance
+        // @audit: Shouldn't we be emitting an event here after updating the remaining balance?
         s_categories[schedule.category].remainingBalance += unreleased;
 
-        i_token.transfer(address(i_token), unreleased);
-
         emit VestingRevoked(beneficiary, unreleased);
+
+        // Transfer the unreleased tokens back to the contract
+        // @audit: i_token.transfer(beneficiary, unreleased) needs to check for an error.
+        // @audit: fixed
+
+        bool success = i_token.transfer(address(i_token), unreleased);
+        if (!success) {
+            revert TokenVesting__TransferFailed_revokeVesting();
+        }
+      
     }
 
     /**

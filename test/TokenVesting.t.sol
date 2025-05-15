@@ -97,6 +97,7 @@ contract TokenVestingTest is Test {
             allocation,
             "Beneficiary allocation should be equal to the allocation"
         );
+        assertEq(wagaToken.balanceOf(address(tokenVesting)), allocation);
     }
 
     modifier createVestingSchedule() {

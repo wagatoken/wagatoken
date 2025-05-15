@@ -30,9 +30,9 @@ contract TokenShop2 is Ownable, AccessControl {
 
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
-    WagaToken public wagaToken;
-    AggregatorV3Interface internal priceFeed;
-    IERC20 public usdc;
+    WagaToken public immutable i_wagaToken;
+    AggregatorV3Interface internal immutable i_priceFeed;
+    IERC20 public immutable i_usdc;
     uint256 private constant USDC_PRECISION = 1e12; // USDC has 6 decimals, so we use 1e12 for conversion (i.e usdcPrice * 1e12)
     address private immutable i_owner;
 
@@ -59,9 +59,9 @@ contract TokenShop2 is Ownable, AccessControl {
         address _priceFeed,
         address _usdc
     ) Ownable(msg.sender) {
-        wagaToken = WagaToken(_wagaToken);
-        priceFeed = AggregatorV3Interface(_priceFeed);
-        usdc = IERC20(_usdc);
+        i_wagaToken = WagaToken(_wagaToken);
+        i_priceFeed = AggregatorV3Interface(_priceFeed);
+        i_usdc = IERC20(_usdc);
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(OWNER_ROLE, msg.sender);
@@ -94,10 +94,11 @@ contract TokenShop2 is Ownable, AccessControl {
         if (tokensToMint <= 0) {
             revert TokenShop2__InsufficientUSD_buyWithEth();
         }
-        //Effect: Record the amount of Tokens Minted to the sender
-        tokensPurchasedWithEth[msg.sender] += tokensToMint;
-        wagaToken.mint(msg.sender, tokensToMint);
         emit TokensPurchased(msg.sender, msg.value, tokensToMint, "ETH");
+        //Effect: Record the amount of Tokens Minted to the sender
+        tokensPurchasedWithEth[msg.sender] += tokensToMint; // @audit: Do we need this state update/variable?
+        i_wagaToken.mint(msg.sender, tokensToMint);
+      
     }
 
     function buyWithUSDC(uint256 usdcAmount) public {
@@ -109,29 +110,27 @@ contract TokenShop2 is Ownable, AccessControl {
             revert TokenShop2__InsufficientFunds_buyWithUSDC();
         }
 
-        //approve USDC transfer
-        //IERC20(usdc).approve(address(this), usdcAmount);
+         // Effects: Update state
+        senderToUSDCSpent[msg.sender] += usdcAmount; // @audit: updating state after transfer
         // Transfer USDC from the user to the contract
-        bool success = usdc.transferFrom(msg.sender, address(this), usdcAmount);
+        bool success = i_usdc.transferFrom(msg.sender, address(this), usdcAmount);
         if (!success) {
             revert TokenShop2__UsdcTransferFailed_buyWithUSDC();
         }
 
-        // Effects: Update state
-        senderToUSDCSpent[msg.sender] += usdcAmount;
+       
 
         // Calculate tokens to mint
         uint256 tokensToMint = _usdToTokens(usdcAmount * USDC_PRECISION);
         if (tokensToMint <= 0) {
             revert TokenShop2__InsufficientUSDC_buyWithUSDC();
         }
-
         console.log("tokensToMint", tokensToMint);
-
+        emit TokensPurchased(msg.sender, usdcAmount, tokensToMint, "USDC"); // @audit: emit event before minting
         // Mint tokens to the user
-        tokensPurchasedWithUSDC[msg.sender] += tokensToMint;
-        wagaToken.mint(msg.sender, tokensToMint);
-        emit TokensPurchased(msg.sender, usdcAmount, tokensToMint, "USDC");
+        tokensPurchasedWithUSDC[msg.sender] += tokensToMint; // @audit: Do we need this state update/variable?
+        i_wagaToken.mint(msg.sender, tokensToMint);
+        
     }
 
     function setTokenPriceUsd(uint256 newPrice) external onlyAdmin {
@@ -156,28 +155,30 @@ contract TokenShop2 is Ownable, AccessControl {
         if (balance <= 0) {
             revert TokenShop2__InsufficientBalance_withdrawEth();
         }
+        emit Withdrawn(owner(), address(0), balance);
         (bool success, ) = payable(owner()).call{value: balance}("");
         if (!success) {
             revert TokenShop2__WithdrawalFailed_withdrawEth();
         }
         // payable(owner()).transfer(balance);
 
-        emit Withdrawn(owner(), address(0), balance);
+        
     }
 
     function withdrawUsdc() external onlyAdmin {
-        uint256 balance = usdc.balanceOf(address(this));
+        uint256 balance = i_usdc.balanceOf(address(this));
         // require(balance > 0, "No USDC");
         if (balance <= 0) {
             revert TokenShop2__InsufficientBalance_withdrawUsdc();
         }
+        emit Withdrawn(owner(), address(i_usdc), balance);
         // Transfer USDC to the owner
-        bool success = usdc.transfer(owner(), balance);
+        bool success = i_usdc.transfer(owner(), balance);
         //require(success, "USDC withdraw failed");
         if (!success) {
             revert TokenShop2__WithdrawalFailed_withdrawUsdc();
         }
-        emit Withdrawn(owner(), address(usdc), balance);
+        
     }
 
     function _ethToUsd(uint256 ethAmount) internal view returns (uint256) {
@@ -193,7 +194,7 @@ contract TokenShop2 is Ownable, AccessControl {
     }
 
     function _getEthUsdPrice() public view returns (uint256) {
-        (, int256 price, , , ) = priceFeed.stalePriceCheckLatestRoundData();
+        (, int256 price, , , ) = i_priceFeed.stalePriceCheckLatestRoundData();
         // Check ==> Data Validation
         //require(price > 0, "Invalid price data");
         if (price <= 0) {
