@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+//import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {OracleLib} from "./OracleLib.sol";
 import {WagaToken} from "./WagaToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {console} from "forge-std/console.sol"; // For testing
+import {console} from "forge-std/console.sol"; //
 
-contract TokenShop2 is Ownable, AccessControl { 
+contract TokenShop2 is /*Ownable,*/ AccessControl { 
     using OracleLib for AggregatorV3Interface;
 
     error TokenShop2__NoEthSent_ethToUsd();  
@@ -39,10 +39,10 @@ contract TokenShop2 is Ownable, AccessControl {
     uint256 public tokenPriceUsd = 1e17; // 0.1 USD
     uint256 public minPurchaseUsd = 2e18;
     mapping(address sender => uint256 ethSpent) private senderToEthSpent; // @audit: This is maybe redundant
-    mapping(address sender => uint256 tokenAmt) private tokensPurchasedWithEth;
+   // mapping(address sender => uint256 tokenAmt) private tokensPurchasedWithEth; // wagaToken.balanceOf(sender)
     mapping(address sender => uint256 usdcSpent) private senderToUSDCSpent; // @audit: This is maybe redundant
-    mapping(address sender => uint256 amountPurchased)
-        public tokensPurchasedWithUSDC;
+   // mapping(address sender => uint256 amountPurchased)
+     //   public tokensPurchasedWithUSDC;
 
     event TokensPurchased(
         address indexed buyer,
@@ -58,14 +58,14 @@ contract TokenShop2 is Ownable, AccessControl {
         address _wagaToken,
         address _priceFeed,
         address _usdc
-    ) Ownable(msg.sender) {
+    ) /*Ownable(msg.sender)*/ {
         i_wagaToken = WagaToken(_wagaToken);
         i_priceFeed = AggregatorV3Interface(_priceFeed);
         i_usdc = IERC20(_usdc);
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(OWNER_ROLE, msg.sender);
-        i_owner = msg.sender;
+        i_owner = msg.sender; // This is set for testing purposes
     }
 
     modifier onlyAdmin() {
@@ -96,7 +96,7 @@ contract TokenShop2 is Ownable, AccessControl {
         }
         emit TokensPurchased(msg.sender, msg.value, tokensToMint, "ETH");
         //Effect: Record the amount of Tokens Minted to the sender
-        tokensPurchasedWithEth[msg.sender] += tokensToMint; // @audit: Do we need this state update/variable?
+       // tokensPurchasedWithEth[msg.sender] += tokensToMint; // @audit: Do we need this state update/variable?
         i_wagaToken.mint(msg.sender, tokensToMint);
       
     }
@@ -128,7 +128,7 @@ contract TokenShop2 is Ownable, AccessControl {
         console.log("tokensToMint", tokensToMint);
         emit TokensPurchased(msg.sender, usdcAmount, tokensToMint, "USDC"); // @audit: emit event before minting
         // Mint tokens to the user
-        tokensPurchasedWithUSDC[msg.sender] += tokensToMint; // @audit: Do we need this state update/variable?
+       // tokensPurchasedWithUSDC[msg.sender] += tokensToMint; // @audit: Do we need this state update/variable?
         i_wagaToken.mint(msg.sender, tokensToMint);
         
     }
@@ -155,8 +155,8 @@ contract TokenShop2 is Ownable, AccessControl {
         if (balance <= 0) {
             revert TokenShop2__InsufficientBalance_withdrawEth();
         }
-        emit Withdrawn(owner(), address(0), balance);
-        (bool success, ) = payable(owner()).call{value: balance}("");
+        emit Withdrawn(msg.sender, address(0), balance);
+        (bool success, ) = payable(msg.sender).call{value: balance}("");
         if (!success) {
             revert TokenShop2__WithdrawalFailed_withdrawEth();
         }
@@ -171,9 +171,9 @@ contract TokenShop2 is Ownable, AccessControl {
         if (balance <= 0) {
             revert TokenShop2__InsufficientBalance_withdrawUsdc();
         }
-        emit Withdrawn(owner(), address(i_usdc), balance);
+        emit Withdrawn(msg.sender, address(i_usdc), balance);
         // Transfer USDC to the owner
-        bool success = i_usdc.transfer(owner(), balance);
+        bool success = i_usdc.transfer(msg.sender, balance);
         //require(success, "USDC withdraw failed");
         if (!success) {
             revert TokenShop2__WithdrawalFailed_withdrawUsdc();
@@ -207,17 +207,17 @@ contract TokenShop2 is Ownable, AccessControl {
      * getter functions
      */
 
-    function getTokensPurchasedWithEth(
-        address sender
-    ) external view returns (uint256) {
-        return tokensPurchasedWithEth[sender];
-    }
+    // function getTokensPurchasedWithEth(
+    //     address sender
+    // ) external view returns (uint256) {
+    //     return tokensPurchasedWithEth[sender];
+    // }
 
-    function getTokensPurchasedWithUSDC(
-        address sender
-    ) external view returns (uint256) {
-        return tokensPurchasedWithUSDC[sender];
-    }
+    // function getTokensPurchasedWithUSDC(
+    //     address sender
+    // ) external view returns (uint256) {
+    //     return tokensPurchasedWithUSDC[sender];
+    // }
 
     function getEthSpent(address sender) external view returns (uint256) {
         return senderToEthSpent[sender];
@@ -229,5 +229,6 @@ contract TokenShop2 is Ownable, AccessControl {
 
     function getOwner() external view returns (address) {
         return i_owner;
+        
     }
 }

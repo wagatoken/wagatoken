@@ -40,6 +40,8 @@ contract DeployTokenShop2 is Script {
         // 4. Grant MINTER_ROLE to TokenShop & TokenVesting
         wagaToken.grantMinterRole(address(tokenShop));
         wagaToken.grantMinterRole(address(tokenVesting));
+        //tokenShop.grantRole(tokenShop.OWNER_ROLE(), address(tokenShop));
+        
 
         // 5. Transfer ownership of WagaToken to TokenShop
         //wagaToken.transferOwnership(address(tokenShop));

@@ -6,7 +6,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Import OpenZeppelin utilities for ownership and cryptographic operations
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-
 import {console} from "forge-std/console.sol";
 
 // Extend IERC20 to include the mint function, specific to WagaToken
@@ -30,7 +29,7 @@ contract TokenVesting is Ownable {
     error TokenVesting__CliffNotReached_releaseTokens(); //
     error TokenVesting__VestingRevoked_releaseTokens(); //
     error TokenVesting__NoTokensToRelease_releaseTokens(); //
-    error TokenVesting__InvalidBeneficiaryAddress_releaseTokens(); //
+    error TokenVesting__UnauthorisedCaller_releaseTokens(); //
     error TokenVesting__ShouldBeNonVestingCategory_distributeTokens(); //
     error TokenVesting__InsufficientCategoryBalance_distributeTokens(); //
     error TokenVesting__ZeroAddress_distributeTokens(); //
@@ -257,8 +256,8 @@ contract TokenVesting is Ownable {
             revert TokenVesting__ZeroAddress_releaseTokens();
         }
         // check if the beneficiary is the caller
-        if (msg.sender != beneficiary) {
-            revert TokenVesting__InvalidBeneficiaryAddress_releaseTokens();
+        if (msg.sender != beneficiary && msg.sender != owner()) {
+            revert TokenVesting__UnauthorisedCaller_releaseTokens();
         }
         // retrieve the vesting schedule for the beneficiary
         VestingSchedule storage schedule = s_vestingSchedules[beneficiary];
