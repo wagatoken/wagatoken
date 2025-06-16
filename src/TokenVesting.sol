@@ -6,7 +6,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Import OpenZeppelin utilities for ownership and cryptographic operations
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {console} from "forge-std/console.sol";
 
 // Extend IERC20 to include the mint function, specific to WagaToken
 interface IERC20Mintable is IERC20 {
@@ -133,13 +132,10 @@ contract TokenVesting is Ownable {
      * @param category The name of the category.
      * @param allocation The total allocation for the category.
      */
-    // tokenVesting.initializeCategory(Category.devFund, 100_000_000 ether);
     function initializeCategory(
         Category category, //Category.devFund
         uint256 allocation
     ) external onlyOwner {
-        // check if the category is valid
-        // The compile already checks if the category is valid. It wouldn't compile if the category is invalid.
         // check if the category is already initialized
         if (s_categories[category].totalAllocation != 0) {
             revert TokenVesting__CategoryAlreadyInitialized_initializeCategory();
@@ -211,23 +207,14 @@ contract TokenVesting is Ownable {
         }
 
         s_categories[category].remainingBalance -= beneficiaryAllocation;
-        start += block.timestamp; // start = start + block.timestamp
-        // uint256 cliff = start + cliffDuration;
-        // print the category and the remaining balance
-        console.log("category", uint256(category));
-        console.log(
-            "remainingBalance",
-            s_categories[category].remainingBalance
-        );
+        start += block.timestamp; 
 
         // Create the vesting schedule
-        // @audit: This should come before the minting of tokens
         s_vestingSchedules[beneficiary] = VestingSchedule({
             category: category,
             beneficiaryAllocation: beneficiaryAllocation, //
             released: 0,
-            // start: start, // start + block.timestamp
-            start: start, // start + block.timestamp
+            start: start,
             cliff: start + cliffDuration, // Calculate cliff as start + cliffDuration
             duration: start + cliffDuration + vestingDuration,
             revoked: false
@@ -272,11 +259,6 @@ contract TokenVesting is Ownable {
         // Retrieve the amount of tokens to be vested
         uint256 vestedAmount = _vestedAmount(schedule);
         uint256 releasable = vestedAmount - schedule.released;
-        // Total Allocation = 120
-        // June: VestedAmount = 60
-        // Schedule Released in March = 30
-        // June: Releasable = 60 - 30 = 30
-        // Balance = 120 - 30 - 30 = 60
 
         if (releasable <= 0) {
             revert TokenVesting__NoTokensToRelease_releaseTokens();
@@ -343,7 +325,6 @@ contract TokenVesting is Ownable {
         schedule.revoked = true;
 
         // Return the unreleased tokens to the category's remaining balance
-        // @audit: Shouldn't we be emitting an event here after updating the remaining balance?
         s_categories[schedule.category].remainingBalance += unreleased;
         // emit remaining balance event
         emit balanceUpdated(
@@ -353,9 +334,6 @@ contract TokenVesting is Ownable {
         emit VestingRevoked(beneficiary, unreleased);
 
         // Transfer the unreleased tokens back to the contract
-        // @audit: i_token.transfer(beneficiary, unreleased) needs to check for an error.
-        // @audit: fixed
-
         bool success = i_token.transfer(address(i_token), unreleased);
         if (!success) {
             revert TokenVesting__TransferFailed_revokeVesting();
@@ -379,8 +357,7 @@ contract TokenVesting is Ownable {
             // uint256 vestingDuration = schedule.duration -
             //     (schedule.cliff - schedule.start);
             uint256 vestingDuration = schedule.duration - schedule.cliff;
-            console.log("timeElapsed", timeElapsed);
-            console.log("vestingDuration", vestingDuration);
+
             return
                 (schedule.beneficiaryAllocation * timeElapsed) /
                 vestingDuration;
@@ -464,7 +441,3 @@ contract TokenVesting is Ownable {
 
 // (100_000_000 ether * 250 0000) / 500 0000 => 100 000 000 ether * (250 0000 / 500 0000) => 50_000_000 ether
 
-/* 
-function _isValidDuration(_duration) internal pure returns (bool) {
-    return (_duration > 0 && _duration < 1460 days);
-} */

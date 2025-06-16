@@ -18,7 +18,7 @@ library OracleLib {
             uint80 answeredInRound
         ) = priceFeed.latestRoundData();
 
-        if (block.timestamp - updatedAt > TIMEOUT) { // Yohaness to check conversion to seconds
+        if (block.timestamp - updatedAt > TIMEOUT) { 
             revert OracleLib__StalePriceData();
         }
         return (roundId, answer, startedAt, updatedAt, answeredInRound);

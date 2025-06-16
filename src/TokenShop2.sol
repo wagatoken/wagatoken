@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-//import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {OracleLib} from "./OracleLib.sol";
 import {WagaToken} from "./WagaToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {console} from "forge-std/console.sol"; //
 
-contract TokenShop2 is /*Ownable,*/ AccessControl { 
+contract TokenShop2 is AccessControl { 
     using OracleLib for AggregatorV3Interface;
 
     error TokenShop2__NoEthSent_ethToUsd();  
@@ -35,14 +33,11 @@ contract TokenShop2 is /*Ownable,*/ AccessControl {
     IERC20 public immutable i_usdc;
     uint256 private constant USDC_PRECISION = 1e12; // USDC has 6 decimals, so we use 1e12 for conversion (i.e usdcPrice * 1e12)
     address private immutable i_owner;
+    uint256 private tokenPriceUsd = 1e17; // 0.1 USD
+    uint256 private minPurchaseUsd = 2e18;
+    mapping(address sender => uint256 ethSpent) private senderToEthSpent;
+    mapping(address sender => uint256 usdcSpent) private senderToUSDCSpent; 
 
-    uint256 public tokenPriceUsd = 1e17; // 0.1 USD
-    uint256 public minPurchaseUsd = 2e18;
-    mapping(address sender => uint256 ethSpent) private senderToEthSpent; // @audit: This is maybe redundant
-   // mapping(address sender => uint256 tokenAmt) private tokensPurchasedWithEth; // wagaToken.balanceOf(sender)
-    mapping(address sender => uint256 usdcSpent) private senderToUSDCSpent; // @audit: This is maybe redundant
-   // mapping(address sender => uint256 amountPurchased)
-     //   public tokensPurchasedWithUSDC;
 
     event TokensPurchased(
         address indexed buyer,
@@ -58,7 +53,7 @@ contract TokenShop2 is /*Ownable,*/ AccessControl {
         address _wagaToken,
         address _priceFeed,
         address _usdc
-    ) /*Ownable(msg.sender)*/ {
+    ) {
         i_wagaToken = WagaToken(_wagaToken);
         i_priceFeed = AggregatorV3Interface(_priceFeed);
         i_usdc = IERC20(_usdc);
@@ -89,16 +84,12 @@ contract TokenShop2 is /*Ownable,*/ AccessControl {
         if (usdValue <= minPurchaseUsd) {
             revert TokenShop2__InsufficientFunds_buyWithEth();
         }
-        // @audit: This check may be redundant.
         uint256 tokensToMint = _usdToTokens(usdValue);
         if (tokensToMint <= 0) {
             revert TokenShop2__InsufficientUSD_buyWithEth();
         }
         emit TokensPurchased(msg.sender, msg.value, tokensToMint, "ETH");
-        //Effect: Record the amount of Tokens Minted to the sender
-       // tokensPurchasedWithEth[msg.sender] += tokensToMint; // @audit: Do we need this state update/variable?
         i_wagaToken.mint(msg.sender, tokensToMint);
-      
     }
 
     function buyWithUSDC(uint256 usdcAmount) public {
@@ -111,24 +102,20 @@ contract TokenShop2 is /*Ownable,*/ AccessControl {
         }
 
          // Effects: Update state
-        senderToUSDCSpent[msg.sender] += usdcAmount; // @audit: updating state after transfer
+        senderToUSDCSpent[msg.sender] += usdcAmount;
         // Transfer USDC from the user to the contract
         bool success = i_usdc.transferFrom(msg.sender, address(this), usdcAmount);
         if (!success) {
             revert TokenShop2__UsdcTransferFailed_buyWithUSDC();
         }
 
-       
-
         // Calculate tokens to mint
         uint256 tokensToMint = _usdToTokens(usdcAmount * USDC_PRECISION);
         if (tokensToMint <= 0) {
             revert TokenShop2__InsufficientUSDC_buyWithUSDC();
         }
-        console.log("tokensToMint", tokensToMint);
-        emit TokensPurchased(msg.sender, usdcAmount, tokensToMint, "USDC"); // @audit: emit event before minting
+        emit TokensPurchased(msg.sender, usdcAmount, tokensToMint, "USDC");
         // Mint tokens to the user
-       // tokensPurchasedWithUSDC[msg.sender] += tokensToMint; // @audit: Do we need this state update/variable?
         i_wagaToken.mint(msg.sender, tokensToMint);
         
     }
@@ -160,9 +147,6 @@ contract TokenShop2 is /*Ownable,*/ AccessControl {
         if (!success) {
             revert TokenShop2__WithdrawalFailed_withdrawEth();
         }
-        // payable(owner()).transfer(balance);
-
-        
     }
 
     function withdrawUsdc() external onlyAdmin {
@@ -174,7 +158,6 @@ contract TokenShop2 is /*Ownable,*/ AccessControl {
         emit Withdrawn(msg.sender, address(i_usdc), balance);
         // Transfer USDC to the owner
         bool success = i_usdc.transfer(msg.sender, balance);
-        //require(success, "USDC withdraw failed");
         if (!success) {
             revert TokenShop2__WithdrawalFailed_withdrawUsdc();
         }
@@ -193,7 +176,7 @@ contract TokenShop2 is /*Ownable,*/ AccessControl {
         return ((usdAmount * 1e18) / tokenPriceUsd); //token price = 1e17
     }
 
-    function _getEthUsdPrice() public view returns (uint256) {
+    function _getEthUsdPrice() internal view returns (uint256) {
         (, int256 price, , , ) = i_priceFeed.stalePriceCheckLatestRoundData();
         // Check ==> Data Validation
         //require(price > 0, "Invalid price data");
@@ -207,18 +190,6 @@ contract TokenShop2 is /*Ownable,*/ AccessControl {
      * getter functions
      */
 
-    // function getTokensPurchasedWithEth(
-    //     address sender
-    // ) external view returns (uint256) {
-    //     return tokensPurchasedWithEth[sender];
-    // }
-
-    // function getTokensPurchasedWithUSDC(
-    //     address sender
-    // ) external view returns (uint256) {
-    //     return tokensPurchasedWithUSDC[sender];
-    // }
-
     function getEthSpent(address sender) external view returns (uint256) {
         return senderToEthSpent[sender];
     }
@@ -230,5 +201,11 @@ contract TokenShop2 is /*Ownable,*/ AccessControl {
     function getOwner() external view returns (address) {
         return i_owner;
         
+    }
+    function getTokenPriceUsd() external view returns (uint256) {
+        return tokenPriceUsd;
+    }
+    function getMinPurchaseUsd() external view returns (uint256) {
+        return minPurchaseUsd;
     }
 }

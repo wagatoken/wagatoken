@@ -18,9 +18,6 @@ contract WagaToken is ERC20, AccessControl {
         _mint(to, amount);
     }
 
-    // function burn(uint256 amount) external {
-    //     _burn(msg.sender, amount);
-    // }
 
     function decimals() public pure override returns (uint8) {
         return 18; // Standard ERC20 decimal count
