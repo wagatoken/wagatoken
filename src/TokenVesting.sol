@@ -208,7 +208,7 @@ contract TokenVesting is Ownable {
 
         s_categories[category].remainingBalance -= beneficiaryAllocation;
         start += block.timestamp; 
-
+        
         // Create the vesting schedule
         s_vestingSchedules[beneficiary] = VestingSchedule({
             category: category,
@@ -350,7 +350,7 @@ contract TokenVesting is Ownable {
     ) internal view returns (uint256) {
         if (block.timestamp < schedule.cliff) {
             return 0;
-        } else if (block.timestamp >= schedule.start + schedule.duration) {
+        } else if (block.timestamp > schedule.duration) {
             return schedule.beneficiaryAllocation;
         } else {
             uint256 timeElapsed = block.timestamp - schedule.cliff;
