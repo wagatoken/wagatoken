@@ -74,6 +74,13 @@ contract TokenShop2Test is Test {
         assertGt(wagaToken.balanceOf(user), 0);
     }
 
+    function testBuyWithEthRevertsWhensAmountLessThanZero()public{
+        vm.prank(user);
+        vm.expectRevert(TokenShop2.TokenShop2__NoEthSent_buyWithEth.selector);
+        tokenShop.buyWithEth{value: 0}();
+    }
+
+    
     function testBuyWithUSDC() public {
         console.log(
             "User WagaToken balance before purchase: %s",
@@ -155,6 +162,19 @@ contract TokenShop2Test is Test {
 
         console.log("testFailBuyWithLowUsdc completed.");
     }
+    function testBuyWithZeroUsdcFails() public {
+        uint256 purchaseAmount = 0;
+
+        //Approve the TokenShop to spend USDC on behalf of the user
+        vm.prank(user);
+        ERC20Mock(usdc).approve(address(tokenShop), purchaseAmount);
+
+        vm.prank(user);
+        vm.expectRevert(TokenShop2.TokenShop2__NoUSDCsent_buyWithUSDC.selector);
+        tokenShop.buyWithUSDC(purchaseAmount); // Should succeed
+
+    }
+    
 
     function testOwnerCanWithdrawEth() public fundedEth {
         //Arrange
@@ -177,6 +197,14 @@ contract TokenShop2Test is Test {
                 address(tokenShop.getOwner()).balance
         );
     }
+    function testWithdrawFailsWhenNoEth() public {
+        vm.startPrank(tokenShop.getOwner());
+        vm.expectRevert(TokenShop2.TokenShop2__InsufficientBalance_withdrawEth.selector);
+        tokenShop.withdrawEth();
+        vm.stopPrank();
+    }
+
+    
 
     function testOnlyOwnerCanWithdrawEth() public fundedEth {
         vm.startPrank(user);
@@ -211,6 +239,12 @@ contract TokenShop2Test is Test {
         );
 
     }
+    function testWithdrawFailsWhenNoUSDC() public {
+        vm.startPrank(tokenShop.getOwner());
+        vm.expectRevert(TokenShop2.TokenShop2__InsufficientBalance_withdrawUsdc.selector);
+        tokenShop.withdrawUsdc();
+        vm.stopPrank();
+    }
 
     function testOnlyOwnerCanWithdrawUSDC() public fundedUSDC {
         vm.startPrank(user);
@@ -233,5 +267,48 @@ contract TokenShop2Test is Test {
         tokenShop.setMinPurchaseUsd(1e18);
         vm.stopPrank();
     }
+
+    // function testEthToUsdConversion() public view {
+        
+    //     uint256 ethAmount = 1 ether; // 1 ETH
+    //     uint256 expectedUsdValue = (ethAmount * tokenShop._getEthUsdPrice()) / 1e18; 
+
+       
+    //     uint256 usdValue = tokenShop._ethToUsd(ethAmount);
+  
+    //     assertEq(usdValue, expectedUsdValue, "ETH to USD conversion failed");
+    // }
+
+    // function testEthToUsdConversionFailsWhenNoEthSent() public {
+    //     vm.expectRevert(TokenShop2.TokenShop2__NoEthSent_ethToUsd.selector);
+    //     tokenShop._ethToUsd(0); // Should revert: no ETH sent
+    // }
+    function testReceiveFunction() public {
+    uint256 amount = 1 ether;
+    uint256 initialBalance = address(tokenShop).balance;
+
+    // Send ETH directly to the contract (triggers receive())
+    vm.prank(user);
+    (bool sent, ) = address(tokenShop).call{value: amount}("");
+    require(sent, "ETH transfer failed");
+
+    // Assert contract balance increased
+    assertEq(address(tokenShop).balance, initialBalance + amount);
+}
+    // function testSetTokenPriceUsd() public {
+    //     uint256 newPrice = 3e18; 
+    //     vm.startPrank(tokenShop.getOwner());
+    //     tokenShop.setTokenPriceUsd(newPrice);
+    //     vm.stopPrank();
+    //     assertEq(tokenShop.tokenPriceUsd(), newPrice, "Token price should be updated");
+    // }
+    // function testSetMinPurchaseUsd() public {
+    //     uint256 newMinUsd = 3e18;
+    //     vm.startPrank(tokenShop.getOwner());
+    //     tokenShop.setMinPurchaseUsd(newMinUsd);
+    //     vm.stopPrank();
+    //     assertEq(tokenShop.minPurchaseUsd(), newMinUsd);
+    // }
+
 }
 

@@ -61,6 +61,19 @@ contract TokenVestingTest is Test {
         vm.stopPrank();
     }
 
+    function testAllocationIsNotZero() public {
+        // Arrange
+        uint256 allocation = 0; // 100 million tokens
+        // Act/Assert
+        vm.startPrank(owner);
+        vm.expectRevert(TokenVesting.TokenVesting__AllocationValueIsZero_initializeCategory.selector);
+        tokenVesting.initializeCategory(
+            TokenVesting.Category.devTeam,
+            allocation
+        );
+        vm.stopPrank();
+    }
+
     function testCreateVestingSchedule() public initializeCategory {
         // Arrange
         address beneficiary = user;
