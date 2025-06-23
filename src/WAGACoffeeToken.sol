@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
+// review ended at getActiveBatchIds, line 354
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {ERC1155Supply} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
-import {ERC1155URIStorage} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155URIStorage.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {ERC1155Supply} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol"; // Track Supply per Id
+import {ERC1155URIStorage} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155URIStorage.sol"; // Store custom metadata URIs
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol"; // String conversion utilities
 
 /**
  * @title WAGACoffeeToken
@@ -15,24 +16,45 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
  * This contract manages coffee batches as ERC1155 tokens, where each token ID (batchId) represents a unique batch
  * of coffee with its own metadata, production details, and verification status.
  */
-contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URIStorage {
+contract WAGACoffeeToken is
+    ERC1155,
+    AccessControl,
+    ERC1155Supply,
+    ERC1155URIStorage
+{
     using Strings for uint256;
 
+    // Custom Errors
+    error WAGACoffeeToken__InvalidInventoryManagerAddress_setInventoryManager();
+    error WAGACoffeeToken__InvalidredemptionContractAddress_setRedemptionContract();
+    error WAGACoffeeToken__InvalidIPFSUri_createBatch();
+    error WAGACoffeeToken__InvalidPackagingSize_createBatch();
+    error WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+    error WAGACoffeeToken__BatchDoesNotExist_updateInventory();
+    error WAGACoffeeToken__BatchDoesNotExist_setPricePerUint();
+    error WAGACoffeeToken__BatchIsInactive_setPricePerUint(
+        uint256 productionDate,
+        uint256 expiryDate
+    );
+    error WAGACoffeeToken__BatchDoesNotExist_verifyBatchMetadata();
+    error WAGACoffeeToken__MetadataMisMatch_verifyBatchMetaData();
+
     // Role definitions for access control
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE"); // Proof of Reserve Contract
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant INVENTORY_MANAGER_ROLE = keccak256("INVENTORY_MANAGER_ROLE");
+    bytes32 public constant INVENTORY_MANAGER_ROLE =
+        keccak256("INVENTORY_MANAGER_ROLE");
     bytes32 public constant REDEMPTION_ROLE = keccak256("REDEMPTION_ROLE");
 
     // Addresses for inventory manager and redemption contract
-    address public inventoryManager;
-    address public redemptionContract;
+    address private s_inventoryManager;
+    address private s_redemptionManager;
 
     /**
      * @dev Struct containing essential batch information stored on-chain
      * @param productionDate Timestamp when the batch was produced
      * @param expiryDate Timestamp when the batch expires
-     * @param isVerified Whether the batch has been verified by the inventory manager
+     * @param isVerified Whether the batch has been verified by the inventory manager (Proof of Reserve Manager instead - check)
      * @param currentQuantity Current available quantity of tokens for this batch
      * @param pricePerUnit Price per unit (e.g., per bag), in wei or stable unit
      * @param packagingInfo Limited to "250g" or "500g"
@@ -51,8 +73,8 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
     }
 
     // Mappings for batch information and status
-    mapping(uint256 => BatchInfo) public batchInfo;
-    mapping(uint256 => bool) public activeBatches;
+    mapping(uint256 batchId => BatchInfo) public batchInfo;
+    mapping(uint256 batchId => bool) public activeBatches;
 
     // Array to track all batch IDs
     uint256[] public allBatchIds;
@@ -65,15 +87,32 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
     event BatchStatusUpdated(uint256 indexed batchId, bool isVerified);
     event InventoryUpdated(uint256 indexed batchId, uint256 newQuantity);
     event BatchExpired(uint256 indexed batchId);
-    event BatchPriceUpdated(uint256 indexed batchId, uint256 oldPrice, uint256 newPrice);
+    event BatchPriceUpdated(
+        uint256 indexed batchId,
+        uint256 oldPrice,
+        uint256 newPrice
+    );
     event BatchMetadataVerified(uint256 indexed batchId);
+    event InventoryManagerUpdated(
+        address indexed newInventoryManager,
+        address indexed updatedBy
+    );
+    event RedemptionMangerUpdated(
+        address indexed newRedemptionManager,
+        address indexed updatedBy
+    );
 
     /**
      * @dev Initializes the contract with the deployer as the default admin
      */
-    constructor() ERC1155("") {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    constructor(
+        address _inventoryManager,
+        address _redemptionContract
+    ) ERC1155("") {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); // @audit: Do we need two roles for the deployer?
         _grantRole(ADMIN_ROLE, msg.sender);
+        setInventoryManager(_inventoryManager);
+        setRedemptionManager(_redemptionContract);
     }
 
     /**
@@ -83,13 +122,22 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * - Caller must have ADMIN_ROLE
      * - New address cannot be zero address
      */
-    function setInventoryManager(address _inventoryManager) external onlyRole(ADMIN_ROLE) {
-        require(_inventoryManager != address(0), "Invalid address");
-        if (inventoryManager != address(0)) {
-            _revokeRole(INVENTORY_MANAGER_ROLE, inventoryManager);
+    function setInventoryManager(
+        address _inventoryManager
+    ) public onlyRole(ADMIN_ROLE) {
+        // Check if the new address is valid
+        // require(_inventoryManager != address(0), "Invalid address");
+        if (_inventoryManager == address(0)) {
+            revert WAGACoffeeToken__InvalidInventoryManagerAddress_setInventoryManager();
         }
-        inventoryManager = _inventoryManager;
+        // Check if we already have an inventory manager set, if so, revoke their role
+        if (s_inventoryManager != address(0)) {
+            _revokeRole(INVENTORY_MANAGER_ROLE, s_inventoryManager);
+        }
+        // Effect: Set the new inventory manager address
+        s_inventoryManager = _inventoryManager;
         _grantRole(INVENTORY_MANAGER_ROLE, _inventoryManager);
+        emit InventoryManagerUpdated(_inventoryManager, msg.sender); // Emit an event for the update
     }
 
     /**
@@ -99,13 +147,22 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * - Caller must have ADMIN_ROLE
      * - New address cannot be zero address
      */
-    function setRedemptionContract(address _redemptionContract) external onlyRole(ADMIN_ROLE) {
-        require(_redemptionContract != address(0), "Invalid address");
-        if (redemptionContract != address(0)) {
-            _revokeRole(REDEMPTION_ROLE, redemptionContract);
+    function setRedemptionManager(
+        address _redemptionContract
+    ) public onlyRole(ADMIN_ROLE) {
+        // Check if the new address is valid
+        if (_redemptionContract == address(0)) {
+            revert WAGACoffeeToken__InvalidredemptionContractAddress_setRedemptionContract();
         }
-        redemptionContract = _redemptionContract;
+        // require(_redemptionContract != address(0), "Invalid address");
+        // Check if we already have a redemption contract set, if so, revoke their role
+        if (s_redemptionManager != address(0)) {
+            _revokeRole(REDEMPTION_ROLE, s_redemptionManager);
+        }
+        // Effect: Set the new redemption contract address
+        s_redemptionManager = _redemptionContract;
         _grantRole(REDEMPTION_ROLE, _redemptionContract);
+        emit RedemptionMangerUpdated(_redemptionContract, msg.sender); // Emit an event for the update
     }
 
     /**
@@ -131,29 +188,40 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
         string memory metadataHash
     ) external onlyRole(ADMIN_ROLE) returns (uint256) {
         uint256 batchId = _nextBatchId++;
-        require(bytes(ipfsUri).length > 0, "IPFS URI cannot be empty");
-        require(
-            keccak256(bytes(packagingInfo)) == keccak256("250g") ||
-            keccak256(bytes(packagingInfo)) == keccak256("500g"),
-            "Invalid packaging size"
-        );
-
+        // require(bytes(ipfsUri).length > 0, "IPFS URI cannot be empty");
+        // Check if the IPFS URI is valid
+        if (bytes(ipfsUri).length <= 0) {
+            revert WAGACoffeeToken__InvalidIPFSUri_createBatch();
+        }
+        // require(
+        //     keccak256(bytes(packagingInfo)) == keccak256("250g") ||
+        //         keccak256(bytes(packagingInfo)) == keccak256("500g"),
+        //     "Invalid packaging size"
+        // );
+        // Check if the packaging info is valid
+        if (
+            keccak256(bytes(packagingInfo)) != keccak256("250g") ||
+            keccak256(bytes(packagingInfo)) != keccak256("500g")
+        ) {
+            revert WAGACoffeeToken__InvalidPackagingSize_createBatch();
+        }
+        // Effect: Create the batch info struct and store it
         batchInfo[batchId] = BatchInfo({
             productionDate: productionDate,
             expiryDate: expiryDate,
             isVerified: false,
             currentQuantity: 0,
-            pricePerUnit: pricePerUnit,
-            packagingInfo: packagingInfo,
-            metadataHash: metadataHash,
+            pricePerUnit: pricePerUnit, // in wei
+            packagingInfo: packagingInfo, // "250g" or "500g"
+            metadataHash: metadataHash, // IPFS CID
             isMetadataVerified: false
         });
-
+        // Set the URI for the batch token(s)
         _setURI(batchId, ipfsUri);
         emit BatchCreated(batchId, ipfsUri);
-
-        activeBatches[batchId] = true;
-        allBatchIds.push(batchId);
+        // Track the batch as active though it is not verified yet
+        activeBatches[batchId] = true; // @audit: What do we do when the batch is expired or sold out? Check Inventory manager
+        allBatchIds.push(batchId); // @audit: What do we do when the batch is expired or sold out? Can we remove it from the array?
         return batchId;
     }
 
@@ -165,8 +233,16 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * - Caller must have INVENTORY_MANAGER_ROLE
      * - Batch must exist
      */
-    function updateBatchStatus(uint256 batchId, bool isVerified) external onlyRole(INVENTORY_MANAGER_ROLE) {
-        require(batchInfo[batchId].productionDate != 0, "Batch does not exist");
+    function updateBatchStatus(
+        uint256 batchId,
+        bool isVerified
+    ) external onlyRole(INVENTORY_MANAGER_ROLE) {
+        // Check if the batch exists
+        if (batchInfo[batchId].productionDate == 0) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+        }
+        // require(batchInfo[batchId].productionDate != 0, "Batch does not exist");
+        // Update the batch verification status
         batchInfo[batchId].isVerified = isVerified;
         emit BatchStatusUpdated(batchId, isVerified);
     }
@@ -179,9 +255,18 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * - Caller must have INVENTORY_MANAGER_ROLE
      * - Batch must exist
      */
-    function updateInventory(uint256 batchId, uint256 newQuantity) external onlyRole(INVENTORY_MANAGER_ROLE) {
-        require(batchInfo[batchId].productionDate != 0, "Batch does not exist");
+    function updateInventory(
+        uint256 batchId,
+        uint256 newQuantity
+    ) external onlyRole(INVENTORY_MANAGER_ROLE) {
+        // require(batchInfo[batchId].productionDate != 0, "Batch does not exist");
+        // Check if the batch exists
+        if (batchInfo[batchId].productionDate == 0) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateInventory();
+        }
+        // Effect: Update the current quantity for the batch
         batchInfo[batchId].currentQuantity = newQuantity;
+        // Emit an event to notify about the inventory update
         emit InventoryUpdated(batchId, newQuantity);
     }
 
@@ -193,8 +278,22 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * - Caller must have ADMIN_ROLE
      * - Batch must exist
      */
-    function setPricePerUnit(uint256 batchId, uint256 newPrice) external onlyRole(ADMIN_ROLE) {
-        require(batchInfo[batchId].productionDate != 0, "Batch does not exist");
+    function setPricePerUnit(
+        uint256 batchId,
+        uint256 newPrice
+    ) external onlyRole(ADMIN_ROLE) {
+        // require(batchInfo[batchId].productionDate != 0, "Batch does not exist");
+        // Check if the batch exists
+        uint256 productionDate = batchInfo[batchId].productionDate;
+        uint256 expiryDate = batchInfo[batchId].expiryDate;
+
+        if (activeBatches[batchId] == false) {
+            revert WAGACoffeeToken__BatchIsInactive_setPricePerUint(
+                productionDate,
+                expiryDate
+            );
+        }
+        // get the current price and update it
         uint256 oldPrice = batchInfo[batchId].pricePerUnit;
         batchInfo[batchId].pricePerUnit = newPrice;
         emit BatchPriceUpdated(batchId, oldPrice, newPrice);
@@ -210,20 +309,39 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * - Caller must have INVENTORY_MANAGER_ROLE
      * - Batch must exist
      */
+     // @audit: This function should probably not be restricted to the inventory manager but made public for distribution partners
     function verifyBatchMetadata(
         uint256 batchId,
         uint256 expectedPrice,
         string memory expectedPackaging,
         string memory expectedMetadataHash
     ) external onlyRole(INVENTORY_MANAGER_ROLE) {
-        BatchInfo storage info = batchInfo[batchId];
-        require(info.productionDate != 0, "Batch does not exist");
-        require(
-            info.pricePerUnit == expectedPrice &&
-            keccak256(bytes(info.packagingInfo)) == keccak256(bytes(expectedPackaging)) &&
-            keccak256(bytes(info.metadataHash)) == keccak256(bytes(expectedMetadataHash)),
-            "Metadata mismatch"
-        );
+        BatchInfo storage info = batchInfo[batchId]; // @audit could we read from memory here instead ?
+        
+        // Check if the batch exists
+        // require(info.productionDate != 0, "Batch does not exist");
+        if (info.productionDate == 0) {
+            revert WAGACoffeeToken__BatchDoesNotExist_verifyBatchMetadata();
+        }
+        // Verify the metadata against expected values
+        // require(
+        //     info.pricePerUnit == expectedPrice &&
+        //         keccak256(bytes(info.packagingInfo)) ==
+        //         keccak256(bytes(expectedPackaging)) &&
+        //         keccak256(bytes(info.metadataHash)) ==
+        //         keccak256(bytes(expectedMetadataHash)),
+        //     "Metadata mismatch"
+        // );
+        if (
+            info.pricePerUnit != expectedPrice &&
+            keccak256(bytes(info.packagingInfo)) !=
+                keccak256(bytes(expectedPackaging)) &&
+            keccak256(bytes(info.metadataHash)) !=
+                keccak256(bytes(expectedMetadataHash))
+        ) {
+            revert WAGACoffeeToken__MetadataMisMatch_verifyBatchMetaData();
+        }
+        // Effect: Mark the batch metadata verification status
         info.isMetadataVerified = true;
         emit BatchMetadataVerified(batchId);
     }
@@ -232,6 +350,7 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * @dev Retrieves an array of all currently active batch IDs
      * @return uint256[] Array of active batch IDs
      */
+     // @audit: Need to review the utility of this function as it may be gas intensive. Also, why do we have it as external view?
     function getActiveBatchIds() external view returns (uint256[] memory) {
         uint256 activeCount = 0;
         for (uint256 i = 0; i < allBatchIds.length; i++) {
@@ -239,10 +358,11 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
                 activeCount++;
             }
         }
-
-        uint256[] memory activeBatchIds = new uint256[](activeCount);
+        // uint256[] memory activeBatchIds = new uint256[](3);
+        uint256[] memory activeBatchIds = new uint256[](activeCount); // determine size based on active count
+        // Fill the activeBatchIds array with active batch IDs
         uint256 index = 0;
-        for (uint256 i = 0; i < allBatchIds.length; i++) {
+        for (uint256 i = 0; i < allBatchIds.length; i++) { //@audit: should be i < activeCount
             if (activeBatches[allBatchIds[i]]) {
                 activeBatchIds[index] = allBatchIds[i];
                 index++;
@@ -259,7 +379,9 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * - Caller must have INVENTORY_MANAGER_ROLE
      * - Batch must be currently active
      */
-    function markBatchExpired(uint256 batchId) external onlyRole(INVENTORY_MANAGER_ROLE) {
+    function markBatchExpired(
+        uint256 batchId
+    ) external onlyRole(INVENTORY_MANAGER_ROLE) {
         require(activeBatches[batchId], "Batch is not active");
         activeBatches[batchId] = false;
         emit BatchExpired(batchId);
@@ -274,7 +396,11 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * - Caller must have MINTER_ROLE
      * - Batch must exist and be verified
      */
-    function mintBatch(address to, uint256 batchId, uint256 amount) external onlyRole(MINTER_ROLE) {
+    function mintBatch(
+        address to,
+        uint256 batchId,
+        uint256 amount
+    ) external onlyRole(MINTER_ROLE) {
         require(batchInfo[batchId].productionDate != 0, "Batch does not exist");
         require(batchInfo[batchId].isVerified, "Batch is not verified");
         _mint(to, batchId, amount, "");
@@ -289,7 +415,11 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * Requirements:
      * - Caller must have REDEMPTION_ROLE
      */
-    function burnForRedemption(address account, uint256 batchId, uint256 amount) external onlyRole(REDEMPTION_ROLE) {
+    function burnForRedemption(
+        address account,
+        uint256 batchId,
+        uint256 amount
+    ) external onlyRole(REDEMPTION_ROLE) {
         _burn(account, batchId, amount);
         batchInfo[batchId].currentQuantity -= amount;
     }
@@ -308,7 +438,9 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * @param tokenId ID of the token to query
      * @return string URI containing the token's metadata
      */
-    function uri(uint256 tokenId) public view override(ERC1155, ERC1155URIStorage) returns (string memory) {
+    function uri(
+        uint256 tokenId
+    ) public view override(ERC1155, ERC1155URIStorage) returns (string memory) {
         return ERC1155URIStorage.uri(tokenId);
     }
 
@@ -316,10 +448,12 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * @dev Internal function to update token balances
      * Required override to handle both ERC1155 and ERC1155Supply functionality
      */
-    function _update(address from, address to, uint256[] memory ids, uint256[] memory values)
-        internal
-        override(ERC1155, ERC1155Supply)
-    {
+    function _update(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory values
+    ) internal override(ERC1155, ERC1155Supply) {
         super._update(from, to, ids, values);
     }
 
@@ -328,7 +462,9 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      * @param interfaceId Interface identifier to check
      * @return bool True if the interface is supported
      */
-    function supportsInterface(bytes4 interfaceId) public view override(ERC1155, AccessControl) returns (bool) {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(ERC1155, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
@@ -338,5 +474,13 @@ contract WAGACoffeeToken is ERC1155, AccessControl, ERC1155Supply, ERC1155URISto
      */
     function getNextBatchId() external view returns (uint256) {
         return _nextBatchId;
+    }
+
+    // getters
+    function getInventoryManager() external view returns (address) {
+        return s_inventoryManager;
+    }
+    function getRedemptionManager() external view returns (address) {
+        return s_redemptionManager;
     }
 }
