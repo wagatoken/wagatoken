@@ -38,6 +38,8 @@ contract WAGACoffeeToken is
     );
     error WAGACoffeeToken__BatchDoesNotExist_verifyBatchMetadata();
     error WAGACoffeeToken__MetadataMisMatch_verifyBatchMetaData();
+    error WAGACoffeeToken__UnauthorizedCaller_updateBatchStatus(address caller);
+    error WAGACoffeeToken__UnauthorizedCaller_verifyBatchMetadata(address caller);
 
     // Role definitions for access control
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE"); // Proof of Reserve Contract
@@ -45,6 +47,7 @@ contract WAGACoffeeToken is
     bytes32 public constant INVENTORY_MANAGER_ROLE =
         keccak256("INVENTORY_MANAGER_ROLE");
     bytes32 public constant REDEMPTION_ROLE = keccak256("REDEMPTION_ROLE");
+    bytes32 public constant PROOF_OF_RESERVE_ROLE = keccak256("PROOF_OF_RESERVE_ROLE");
 
     // Addresses for inventory manager and redemption contract
     address private s_inventoryManager;
@@ -101,6 +104,13 @@ contract WAGACoffeeToken is
         address indexed newRedemptionManager,
         address indexed updatedBy
     );
+
+    modifier onlyInventoryManagerOrProofOfReserve() {
+        if (!hasRole(INVENTORY_MANAGER_ROLE, msg.sender) && !hasRole(PROOF_OF_RESERVE_ROLE, msg.sender)) {
+            revert WAGACoffeeToken__UnauthorizedCaller_updateBatchStatus(msg.sender);
+        }
+        _;
+    }
 
     /**
      * @dev Initializes the contract with the deployer as the default admin
@@ -236,13 +246,10 @@ contract WAGACoffeeToken is
     function updateBatchStatus(
         uint256 batchId,
         bool isVerified
-    ) external onlyRole(INVENTORY_MANAGER_ROLE) {
-        // Check if the batch exists
+    ) external onlyInventoryManagerOrProofOfReserve {
         if (batchInfo[batchId].productionDate == 0) {
             revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
         }
-        // require(batchInfo[batchId].productionDate != 0, "Batch does not exist");
-        // Update the batch verification status
         batchInfo[batchId].isVerified = isVerified;
         emit BatchStatusUpdated(batchId, isVerified);
     }
@@ -315,33 +322,18 @@ contract WAGACoffeeToken is
         uint256 expectedPrice,
         string memory expectedPackaging,
         string memory expectedMetadataHash
-    ) external onlyRole(INVENTORY_MANAGER_ROLE) {
-        BatchInfo storage info = batchInfo[batchId]; // @audit could we read from memory here instead ?
-        
-        // Check if the batch exists
-        // require(info.productionDate != 0, "Batch does not exist");
+    ) external onlyInventoryManagerOrProofOfReserve {
+        BatchInfo storage info = batchInfo[batchId];
         if (info.productionDate == 0) {
             revert WAGACoffeeToken__BatchDoesNotExist_verifyBatchMetadata();
         }
-        // Verify the metadata against expected values
-        // require(
-        //     info.pricePerUnit == expectedPrice &&
-        //         keccak256(bytes(info.packagingInfo)) ==
-        //         keccak256(bytes(expectedPackaging)) &&
-        //         keccak256(bytes(info.metadataHash)) ==
-        //         keccak256(bytes(expectedMetadataHash)),
-        //     "Metadata mismatch"
-        // );
         if (
             info.pricePerUnit != expectedPrice &&
-            keccak256(bytes(info.packagingInfo)) !=
-                keccak256(bytes(expectedPackaging)) &&
-            keccak256(bytes(info.metadataHash)) !=
-                keccak256(bytes(expectedMetadataHash))
+            keccak256(bytes(info.packagingInfo)) != keccak256(bytes(expectedPackaging)) &&
+            keccak256(bytes(info.metadataHash)) != keccak256(bytes(expectedMetadataHash))
         ) {
             revert WAGACoffeeToken__MetadataMisMatch_verifyBatchMetaData();
         }
-        // Effect: Mark the batch metadata verification status
         info.isMetadataVerified = true;
         emit BatchMetadataVerified(batchId);
     }
