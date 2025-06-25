@@ -332,12 +332,6 @@ contract TokenVesting is Ownable {
             s_categories[schedule.category].remainingBalance
         );
         emit VestingRevoked(beneficiary, unreleased);
-
-        // Transfer the unreleased tokens back to the contract
-        bool success = i_token.transfer(address(i_token), unreleased);
-        if (!success) {
-            revert TokenVesting__TransferFailed_revokeVesting();
-        }
     }
 
     /**
