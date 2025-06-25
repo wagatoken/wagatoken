@@ -10,7 +10,15 @@ import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/Confir
  * @dev Base contract for Chainlink Functions integration in the WAGA Coffee Traceability System
  * This contract provides common functionality for contracts that use Chainlink Functions
  */
-abstract contract WAGAChainlinkFunctionsBase is AccessControl, FunctionsClient, ConfirmedOwner {
+ //@audit - Why do we have confirmed owner here? It is not used in the code.
+abstract contract WAGAChainlinkFunctionsBase is
+    AccessControl,
+    FunctionsClient,
+    ConfirmedOwner
+{
+    error WAGAChainlinkFunctionsBase__OnlyRouterCanFulfill_handleOracleFulfillment();
+    error WAGAChainlinkFunctionsBase__InvalidResponseLength_parseResponse();
+    error WAGAChainlinkFunctionsBase__RequestAlreadyCompleted_fulfillRequest();
     // Chainlink Functions variables
     bytes32 public latestRequestId;
     bytes public latestResponse;
@@ -34,30 +42,29 @@ abstract contract WAGAChainlinkFunctionsBase is AccessControl, FunctionsClient, 
         bytes32 _donId
     ) FunctionsClient(router) ConfirmedOwner(msg.sender) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        
+
         subscriptionId = _subscriptionId;
         donId = _donId;
     }
 
-    /**
+    /*
      * @dev Parses the response from Chainlink Functions
      * @param response Response from Chainlink Functions
-     * @return uint256 Parsed quantity
+     * @return verifiedQuantity, price, packaging, metadataHash
      */
     function _parseResponse(
         bytes memory response
-    ) internal pure returns (uint256) {
+    ) internal pure returns (
+        uint256 verifiedQuantity,
+        uint256 price,
+        string memory packaging,
+        string memory metadataHash
+    ) {
         if (response.length == 0) {
-            return 0;
+            return (0, 0, "", "");
         }
-
-        // Convert bytes to uint256
-        uint256 result;
-        assembly {
-            result := mload(add(response, 32))
-        }
-
-        return result;
+        // Expect ABI-encoded (uint256, uint256, string, string)
+        (verifiedQuantity, price, packaging, metadataHash) = abi.decode(response, (uint256, uint256, string, string));
     }
 
     /**

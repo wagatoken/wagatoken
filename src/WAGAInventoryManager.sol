@@ -35,6 +35,7 @@ contract WAGAInventoryManager is AccessControl, WAGAChainlinkFunctionsBase, Auto
     uint256 public expiryWarningThreshold = 30 days;
     uint256 public lowInventoryThreshold = 10;
     uint256 public longStorageThreshold = 180 days;
+    uint256 public maxBatchesPerUpkeep = 50;
 
     uint256 public immutable intervalSeconds;
     uint256 public lastTimeStamp;
@@ -46,6 +47,13 @@ contract WAGAInventoryManager is AccessControl, WAGAChainlinkFunctionsBase, Auto
     event UpkeepPerformed(uint8 upkeepType, uint256[] batchIds);
     event LowInventoryWarning(uint256 indexed batchId, uint256 currentQuantity);
     event LongStorageWarning(uint256 indexed batchId, uint256 daysInStorage);
+
+    error WAGAInventoryManager__InvalidPerformDataLength_performUpkeep();
+    error WAGAInventoryManager__TooManyBatches_performUpkeep();
+    error WAGAInventoryManager__UnknownUpkeepType_performUpkeep();
+    error WAGAInventoryManager__RequestAlreadyCompleted_fulfillRequest();
+    error WAGAInventoryManager__InvalidThresholdValue_updateThresholds();
+    error WAGAInventoryManager__BatchDoesNotExist_performUpkeep();
 
     constructor(
         address coffeeTokenAddress,
@@ -93,28 +101,29 @@ contract WAGAInventoryManager is AccessControl, WAGAChainlinkFunctionsBase, Auto
      */
     function _fulfillRequest(bytes32 requestId, bytes memory response, bytes memory /* err */) internal override {
         VerificationRequest storage request = verificationRequests[requestId];
-        require(!request.completed, "Request already completed");
+        if (request.completed) {
+            revert WAGAInventoryManager__RequestAlreadyCompleted_fulfillRequest();
+        }
         request.completed = true;
-
-        uint256 actualQuantity = _parseResponse(response);
-
+        (
+            uint256 actualQuantity,
+            uint256 actualPrice,
+            string memory actualPackaging,
+            string memory actualMetadataHash
+        ) = _parseResponse(response);
         if (actualQuantity >= request.expectedQuantity) {
             request.verified = true;
             coffeeToken.updateBatchStatus(request.batchId, true);
         }
-
         coffeeToken.updateInventory(request.batchId, actualQuantity);
         lastBatchAuditTime[request.batchId] = block.timestamp;
-
         emit VerificationCompleted(requestId, request.batchId, request.verified);
         emit InventorySynced(request.batchId, actualQuantity);
-
-        // Perform metadata verification
         try coffeeToken.verifyBatchMetadata(
             request.batchId,
-            request.expectedPrice,
-            request.expectedPackaging,
-            request.expectedMetadataHash
+            actualPrice,
+            actualPackaging,
+            actualMetadataHash
         ) {
             // Metadata verified successfully
         } catch {
@@ -128,38 +137,30 @@ contract WAGAInventoryManager is AccessControl, WAGAChainlinkFunctionsBase, Auto
     function checkUpkeep(
         bytes calldata /* checkData */
     ) external view override returns (bool upkeepNeeded, bytes memory performData) {
-        bool timeUpkeepNeeded = (block.timestamp - lastTimeStamp) > intervalSeconds;
-
-        if (!timeUpkeepNeeded) {
+        if ((block.timestamp - lastTimeStamp) <= intervalSeconds) {
             return (false, "");
         }
-
         uint256[] memory activeBatchIds = coffeeToken.getActiveBatchIds();
         if (activeBatchIds.length == 0) {
             return (false, "");
         }
-
-        uint256[] memory criticalBatchIds = new uint256[](activeBatchIds.length);
+        uint256 limit = activeBatchIds.length > maxBatchesPerUpkeep ? maxBatchesPerUpkeep : activeBatchIds.length;
+        uint256[] memory criticalBatchIds = new uint256[](limit);
         uint256 criticalCount = 0;
-
-        for (uint256 i = 0; i < activeBatchIds.length; i++) {
+        for (uint256 i = 0; i < limit; i++) {
             uint256 batchId = activeBatchIds[i];
-
             (, uint256 expiryDate, bool isVerified, uint256 currentQuantity, , , , ) = coffeeToken.batchInfo(batchId);
-
             if (block.timestamp > expiryDate || (!isVerified && currentQuantity > 0)) {
                 criticalBatchIds[criticalCount] = batchId;
                 criticalCount++;
             }
         }
-
         if (criticalCount > 0) {
             assembly {
                 mstore(criticalBatchIds, criticalCount)
             }
             return (true, abi.encode(WAGAUpkeepLib.UPKEEP_VERIFICATION_CHECK, criticalBatchIds));
         }
-
         return (false, "");
     }
 
@@ -167,14 +168,18 @@ contract WAGAInventoryManager is AccessControl, WAGAChainlinkFunctionsBase, Auto
      * @dev Chainlink Automation perform function
      */
     function performUpkeep(bytes calldata performData) external override {
-        lastTimeStamp = block.timestamp;
-
-        (uint8 upkeepType, uint256[] memory batchIds) = abi.decode(performData, (uint8, uint256[]));
-
-        for (uint256 i = 0; i < batchIds.length; i++) {
-            require(coffeeToken.isBatchCreated(batchIds[i]), "Batch does not exist");
+        if (performData.length < 32) {
+            revert WAGAInventoryManager__InvalidPerformDataLength_performUpkeep();
         }
-
+        (uint8 upkeepType, uint256[] memory batchIds) = abi.decode(performData, (uint8, uint256[]));
+        if (batchIds.length > maxBatchesPerUpkeep) {
+            revert WAGAInventoryManager__TooManyBatches_performUpkeep();
+        }
+        for (uint256 i = 0; i < batchIds.length; i++) {
+            if (!coffeeToken.isBatchCreated(batchIds[i])) {
+                revert WAGAInventoryManager__BatchDoesNotExist_performUpkeep();
+            }
+        }
         if (upkeepType == WAGAUpkeepLib.UPKEEP_EXPIRY_CHECK) {
             performExpiryCheck(batchIds);
         } else if (upkeepType == WAGAUpkeepLib.UPKEEP_VERIFICATION_CHECK) {
@@ -188,14 +193,10 @@ contract WAGAInventoryManager is AccessControl, WAGAChainlinkFunctionsBase, Auto
         } else if (upkeepType == WAGAUpkeepLib.UPKEEP_INVENTORY_AUDIT) {
             performBatchAudit(batchIds);
         } else {
-            revert("Unknown upkeep type");
+            revert WAGAInventoryManager__UnknownUpkeepType_performUpkeep();
         }
-
         emit UpkeepPerformed(upkeepType, batchIds);
     }
-
-    // Additional functions like performExpiryCheck, performLowInventoryCheck, performLongStorageCheck, and performBatchAudit remain unchanged
-
 
     /**
      * @dev Performs expiry checks on specific batches
@@ -272,5 +273,20 @@ contract WAGAInventoryManager is AccessControl, WAGAChainlinkFunctionsBase, Auto
         }
     }
 
-
+    function updateThresholds(
+        uint256 _batchAuditInterval,
+        uint256 _expiryWarningThreshold,
+        uint256 _lowInventoryThreshold,
+        uint256 _longStorageThreshold,
+        uint256 _maxBatchesPerUpkeep
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_maxBatchesPerUpkeep == 0 || _maxBatchesPerUpkeep > 100) {
+            revert WAGAInventoryManager__InvalidThresholdValue_updateThresholds();
+        }
+        batchAuditInterval = _batchAuditInterval;
+        expiryWarningThreshold = _expiryWarningThreshold;
+        lowInventoryThreshold = _lowInventoryThreshold;
+        longStorageThreshold = _longStorageThreshold;
+        maxBatchesPerUpkeep = _maxBatchesPerUpkeep;
+    }
 }

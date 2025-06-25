@@ -3,12 +3,13 @@ pragma solidity ^0.8.18;
 
 import {WAGAChainlinkFunctionsBase} from "./WAGAChainlinkFunctionsBase.sol";
 import {WAGACoffeeToken} from "./WAGACoffeeToken.sol";
+// import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title WAGAProofOfReserve
  * @dev Contract for verifying coffee reserves using Chainlink Functions before minting tokens
  */
-contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase {
+contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
 
     WAGACoffeeToken public coffeeToken;
@@ -37,6 +38,11 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase {
         bool verified
     );
 
+    error WAGAProofOfReserve__BatchDoesNotExist_requestReserveVerification();
+    error WAGAProofOfReserve__BatchMetadataNotVerified_requestReserveVerification();
+    error WAGAProofOfReserve__RequestAlreadyCompleted_fulfillRequest();
+    error WAGAProofOfReserve__InvalidSourceCode_requestReserveVerification();
+
     /**
      * @dev Constructor to initialize the contract
      * @param coffeeTokenAddress Address of the WAGACoffeeToken contract
@@ -49,9 +55,9 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase {
         address router,
         uint64 _subscriptionId,
         bytes32 _donId
-    ) WAGAChainlinkFunctionsBase(router, _subscriptionId, _donId) {
+    ) WAGAChainlinkFunctionsBase(router, _subscriptionId, _donId) /*Ownable(msg.sender)*/ {
         coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
-        _grantRole(VERIFIER_ROLE, msg.sender);
+        _grantRole(VERIFIER_ROLE, msg.sender); // Remember to transfer this role to the appropriate verifier
     }
 
     /**
@@ -69,20 +75,19 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase {
         uint256 batchId,
         uint256 quantity,
         address recipient,
-        string calldata source // @audit: Should be bytes calldata
+        string calldata source
     ) external onlyRole(VERIFIER_ROLE) returns (bytes32 requestId) {
-        require(coffeeToken.isBatchCreated(batchId), "Batch does not exist");
-
-        // Ensure the batch metadata is verified
-        (, , , , , , , bool isMetadataVerified) = coffeeToken.batchInfo(batchId);
-        require(isMetadataVerified, "Batch metadata is not verified");
-
-        // Convert the source to bytes
+        // Check if the batch exists
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGAProofOfReserve__BatchDoesNotExist_requestReserveVerification();
+        }
+        // Check that the source code is not empty
+        if (bytes(source).length == 0) {
+            revert WAGAProofOfReserve__InvalidSourceCode_requestReserveVerification();
+        }
+        // Convert source code to bytes
         bytes memory sourceBytes = bytes(source);
-
-        // Make the Chainlink Functions request
         requestId = _sendRequest(sourceBytes, subscriptionId, 300000, donId);
-
         // Store the verification request
         verificationRequests[requestId] = VerificationRequest({
             batchId: batchId,
@@ -91,11 +96,8 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase {
             completed: false,
             verified: false
         });
-
         latestRequestId = requestId;
-
         emit ReserveVerificationRequested(requestId, batchId, quantity);
-
         return requestId;
     }
 
@@ -112,29 +114,36 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase {
     ) internal override {
         latestResponse = response;
         latestError = err;
-
-        // @audit: Is this not gas inefficient?
         VerificationRequest storage request = verificationRequests[requestId];
-        require(!request.completed, "Request already completed");
-
+        if (request.completed) {
+            revert WAGAProofOfReserve__RequestAlreadyCompleted_fulfillRequest();
+        }
         request.completed = true;
 
-        // Parse the response to get the verified quantity
-        uint256 verifiedQuantity = _parseResponse(response);
+        // Parse all required fields from the response
+        (uint256 verifiedQuantity, uint256 price, string memory packaging, string memory metadataHash) = _parseResponse(response);
 
-        // Verify if the actual quantity matches or exceeds the requested quantity
-        if (verifiedQuantity >= request.quantity) {
-            request.verified = true;
-
-            // Update the batch status in the coffee token contract before minting
-            coffeeToken.updateBatchStatus(request.batchId, true);
-
-            // Mint tokens in the coffee token contract
-            coffeeToken.mintBatch(
-                request.recipient,
-                request.batchId,
-                request.quantity
-            );
+        // Verify metadata on-chain
+        try coffeeToken.verifyBatchMetadata(
+            request.batchId,
+            price,
+            packaging,
+            metadataHash
+        ) {
+            // Metadata verified successfully
+            // Check that metadata is verified in storage before minting
+            (, , , , , , , bool isMetadataVerified) = coffeeToken.batchInfo(request.batchId);
+            if (verifiedQuantity >= request.quantity && isMetadataVerified) {
+                request.verified = true;
+                coffeeToken.updateBatchStatus(request.batchId, true);
+                coffeeToken.mintBatch(
+                    request.recipient,
+                    request.batchId,
+                    request.quantity
+                );
+            }
+        } catch {
+            // Metadata mismatch, do not mint or update status
         }
 
         emit ReserveVerificationCompleted(
