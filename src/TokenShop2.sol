@@ -11,20 +11,21 @@ contract TokenShop2 is AccessControl {
     using OracleLib for AggregatorV3Interface;
 
     error TokenShop2__NoEthSent_ethToUsd();  
-    error TokenShop2__NoEthSent_buyWithEth(); // test
-    error TokenShop2__NoUSDCsent_buyWithUSDC(); // test
+    error TokenShop2__NoEthSent_buyWithEth(); 
+    error TokenShop2__NoUSDCsent_buyWithUSDC(); 
     error TokenShop2__InvalidPriceData_setTokenPriceUsd();
     error TokenShop2__InvalidPrice_setMinPurchaseUsd();
     error TokenShop2__InvalidPriceData_getEthUsdPrice();
-    error TokenShop2__InsufficientFunds_buyWithUSDC(); // tested
-    error TokenShop2__InsufficientFunds_buyWithEth(); // tested
-    error TokenShop2__InsufficientUSD_buyWithEth(); // tokens to mint
-    error TokenShop2__InsufficientUSDC_buyWithUSDC(); // tokens to mint
+    error TokenShop2__InsufficientFunds_buyWithUSDC(); 
+    error TokenShop2__InsufficientFunds_buyWithEth(); 
+    error TokenShop2__InsufficientUSD_buyWithEth(); 
+    error TokenShop2__InsufficientUSDC_buyWithUSDC(); 
     error TokenShop2__UsdcTransferFailed_buyWithUSDC();
-    error TokenShop2__InsufficientBalance_withdrawEth(); // test 
+    error TokenShop2__InsufficientBalance_withdrawEth(); 
     error TokenShop2__WithdrawalFailed_withdrawEth(); 
-    error TokenShop2__InsufficientBalance_withdrawUsdc(); // test
+    error TokenShop2__InsufficientBalance_withdrawUsdc(); 
     error TokenShop2__WithdrawalFailed_withdrawUsdc();
+    error TokenShop2__SlippageTooHigh_buyWithEth(); 
 
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
@@ -69,59 +70,68 @@ contract TokenShop2 is AccessControl {
     }
 
     receive() external payable {
-        buyWithEth();
+        // buyWithEth();
+        revert("Use buyWithEth() and specify slippage");
     }
 
-    function buyWithEth() public payable {
+    function buyWithEth(uint256 minTokensToReceive) public payable {
         // Check ==> Data Validation
-        if (msg.value <= 0) {
+        if (msg.value == 0) {
             revert TokenShop2__NoEthSent_buyWithEth();
         }
-        //Effects: Record the amount of ETH spent by the sender
-        senderToEthSpent[msg.sender] += msg.value;
+    
         uint256 usdValue = _ethToUsd(msg.value);
         // Check ==> Data Validation
         if (usdValue <= minPurchaseUsd) {
             revert TokenShop2__InsufficientFunds_buyWithEth();
         }
         uint256 tokensToMint = _usdToTokens(usdValue);
-        if (tokensToMint <= 0) {
+        if (tokensToMint == 0) {
             revert TokenShop2__InsufficientUSD_buyWithEth();
         }
+
+         //  Slippage protection check
+        if (tokensToMint < minTokensToReceive) {
+            revert TokenShop2__SlippageTooHigh_buyWithEth();
+        }
+
+        //Effects: Record the amount of ETH spent by the sender
+        senderToEthSpent[msg.sender] += msg.value;
+
         emit TokensPurchased(msg.sender, msg.value, tokensToMint, "ETH");
         i_wagaToken.mint(msg.sender, tokensToMint);
     }
 
-    function buyWithUSDC(uint256 usdcAmount) public {
-        // Check ==> Data Validation
-        if (usdcAmount <= 0) {
-            revert TokenShop2__NoUSDCsent_buyWithUSDC();
-        }
-        if (usdcAmount * USDC_PRECISION < minPurchaseUsd) {
-            revert TokenShop2__InsufficientFunds_buyWithUSDC();
-        }
+        function buyWithUSDC(uint256 usdcAmount) public {
+            // Check ==> Data Validation
+            if (usdcAmount == 0) {
+                revert TokenShop2__NoUSDCsent_buyWithUSDC();
+            }
+            if (usdcAmount * USDC_PRECISION < minPurchaseUsd) {
+                revert TokenShop2__InsufficientFunds_buyWithUSDC();
+            }
 
-         // Effects: Update state
-        senderToUSDCSpent[msg.sender] += usdcAmount;
-        // Transfer USDC from the user to the contract
-        bool success = i_usdc.transferFrom(msg.sender, address(this), usdcAmount);
-        if (!success) {
-            revert TokenShop2__UsdcTransferFailed_buyWithUSDC();
-        }
+            // Effects: Update state
+            senderToUSDCSpent[msg.sender] += usdcAmount;
+            // Transfer USDC from the user to the contract
+            bool success = i_usdc.transferFrom(msg.sender, address(this), usdcAmount);
+            if (!success) {
+                revert TokenShop2__UsdcTransferFailed_buyWithUSDC();
+            }
 
-        // Calculate tokens to mint
-        uint256 tokensToMint = _usdToTokens(usdcAmount * USDC_PRECISION);
-        if (tokensToMint <= 0) {
-            revert TokenShop2__InsufficientUSDC_buyWithUSDC();
+            // Calculate tokens to mint
+            uint256 tokensToMint = _usdToTokens(usdcAmount * USDC_PRECISION);
+            if (tokensToMint == 0) {
+                revert TokenShop2__InsufficientUSDC_buyWithUSDC();
+            }
+            emit TokensPurchased(msg.sender, usdcAmount, tokensToMint, "USDC");
+            // Mint tokens to the user
+            i_wagaToken.mint(msg.sender, tokensToMint);
+            
         }
-        emit TokensPurchased(msg.sender, usdcAmount, tokensToMint, "USDC");
-        // Mint tokens to the user
-        i_wagaToken.mint(msg.sender, tokensToMint);
-        
-    }
 
     function setTokenPriceUsd(uint256 newPrice) external onlyAdmin {
-        if (newPrice <= 0) {
+        if (newPrice == 0) {
             revert TokenShop2__InvalidPriceData_setTokenPriceUsd();
         }
         //  require(newPrice > 0, "Invalid price");
@@ -130,7 +140,7 @@ contract TokenShop2 is AccessControl {
     }
 
     function setMinPurchaseUsd(uint256 newMin) external onlyAdmin {
-        if (newMin <= 0) {
+        if (newMin == 0) {
             revert TokenShop2__InvalidPrice_setMinPurchaseUsd();
         }
         minPurchaseUsd = newMin;
@@ -139,7 +149,7 @@ contract TokenShop2 is AccessControl {
 
     function withdrawEth() external onlyAdmin {
         uint256 balance = address(this).balance;
-        if (balance <= 0) {
+        if (balance == 0) {
             revert TokenShop2__InsufficientBalance_withdrawEth();
         }
         emit Withdrawn(msg.sender, address(0), balance);
@@ -151,8 +161,7 @@ contract TokenShop2 is AccessControl {
 
     function withdrawUsdc() external onlyAdmin {
         uint256 balance = i_usdc.balanceOf(address(this));
-        // require(balance > 0, "No USDC");
-        if (balance <= 0) {
+        if (balance == 0) {
             revert TokenShop2__InsufficientBalance_withdrawUsdc();
         }
         emit Withdrawn(msg.sender, address(i_usdc), balance);
@@ -166,7 +175,7 @@ contract TokenShop2 is AccessControl {
 
     function _ethToUsd(uint256 ethAmount) internal view returns (uint256) {
         // Check ==> Data Validation
-        if (ethAmount <= 0) {
+        if (ethAmount == 0) {
             revert TokenShop2__NoEthSent_ethToUsd();
         }
         return ((ethAmount * _getEthUsdPrice()) / 1e18);
