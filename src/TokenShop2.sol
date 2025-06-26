@@ -70,11 +70,10 @@ contract TokenShop2 is AccessControl {
     }
 
     receive() external payable {
-        // buyWithEth();
-        revert("Use buyWithEth() and specify slippage");
+        buyWithEth();
     }
 
-    function buyWithEth(uint256 minTokensToReceive) public payable {
+    function buyWithEth() public payable {
         // Check ==> Data Validation
         if (msg.value == 0) {
             revert TokenShop2__NoEthSent_buyWithEth();
@@ -88,12 +87,7 @@ contract TokenShop2 is AccessControl {
         uint256 tokensToMint = _usdToTokens(usdValue);
         if (tokensToMint == 0) {
             revert TokenShop2__InsufficientUSD_buyWithEth();
-        }
-
-         //  Slippage protection check
-        if (tokensToMint < minTokensToReceive) {
-            revert TokenShop2__SlippageTooHigh_buyWithEth();
-        }
+        }     
 
         //Effects: Record the amount of ETH spent by the sender
         senderToEthSpent[msg.sender] += msg.value;
