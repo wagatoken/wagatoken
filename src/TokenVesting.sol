@@ -93,7 +93,7 @@ contract TokenVesting is Ownable {
     mapping(Category => CategoryBalance) private s_categories;
 
     // Mapping to track vesting schedules for each beneficiary
-    mapping(address => VestingSchedule) private s_vestingSchedules; // vestingSchedules[beneficiary] = ....
+    mapping(address => VestingSchedule) private s_vestingSchedules; 
 
     // Events for logging key actions
     event VestingScheduleCreated(
@@ -207,7 +207,7 @@ contract TokenVesting is Ownable {
         }
 
         s_categories[category].remainingBalance -= beneficiaryAllocation;
-        start += block.timestamp; 
+        start += block.timestamp;  
         
         // Create the vesting schedule
         s_vestingSchedules[beneficiary] = VestingSchedule({
@@ -260,7 +260,7 @@ contract TokenVesting is Ownable {
         uint256 vestedAmount = _vestedAmount(schedule);
         uint256 releasable = vestedAmount - schedule.released;
 
-        if (releasable <= 0) {
+        if (_isValueZero(releasable)) {
             revert TokenVesting__NoTokensToRelease_releaseTokens();
         }
         schedule.released += releasable;
@@ -287,7 +287,7 @@ contract TokenVesting is Ownable {
             revert TokenVesting__ZeroAddress_distributeTokens();
         }
         // Check if the amount is greater than 0
-        if (amount <= 0) {
+        if (_isValueZero(amount)) {
             revert TokenVesting__AmountIsZero_distributeTokens();
         }
         // Check if the category is a nonVesting category
@@ -320,18 +320,35 @@ contract TokenVesting is Ownable {
         if (schedule.revoked) {
             revert TokenVesting__VestingAlreadyRevoked_revokeVesting();
         }
+        if (block.timestamp >= schedule.cliff) {
+            revert ("");
+        }
 
-        uint256 unreleased = schedule.beneficiaryAllocation - schedule.released;
+        // Yohannes 
+        // require we are not in the vesting period
+        // check if we should update the schedule state?
+
+
+        uint256 unreleased = schedule.beneficiaryAllocation;
         schedule.revoked = true;
+        schedule.released = schedule.beneficiaryAllocation;
+        // schedule.released = schedule.beneficiaryAllocation; // Yohannes we are not updating the released amount
+        // schedule.beneficiaryAllocation = 0; // Yohannes we are not updating the beneficiary allocation
 
         // Return the unreleased tokens to the category's remaining balance
-        s_categories[schedule.category].remainingBalance += unreleased;
+        // s_categories[schedule.category].remainingBalance += unreleased;
+
+        bool success = i_token.transfer(i_contractOwner, unreleased); 
+        if (!success) {
+            revert TokenVesting__TransferFailed_releaseTokens();
+        }
+
         // emit remaining balance event
         emit balanceUpdated(
             schedule.category,
             s_categories[schedule.category].remainingBalance
         );
-        emit VestingRevoked(beneficiary, unreleased);
+        emit VestingRevoked(i_contractOwner, unreleased);
     }
 
     /**
@@ -400,7 +417,7 @@ contract TokenVesting is Ownable {
      */
 
     function _isValueZero(uint256 _value) internal pure returns (bool) {
-        return (_value <= 0);
+        return (_value == 0);
     }
 
     /* Getters */
@@ -409,7 +426,6 @@ contract TokenVesting is Ownable {
         Category category //Category.community
     ) external view returns (uint256) {
         return s_categories[category].totalAllocation;
-        // return categories[Category.community].totalAllocation;
     }
 
     function getCategoryBalance(
@@ -429,9 +445,4 @@ contract TokenVesting is Ownable {
     }
 }
 
-// vesting schedule = start + cliffDuration + vestingDuration
-// vesting schedule = cliff + vestingDuration
-// cliff = start + cliffDuration
-
-// (100_000_000 ether * 250 0000) / 500 0000 => 100 000 000 ether * (250 0000 / 500 0000) => 50_000_000 ether
 
