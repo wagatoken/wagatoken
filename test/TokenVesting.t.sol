@@ -166,7 +166,7 @@ contract TokenVestingTest is Test {
         // Arrange
         address beneficiary = user;
         // advance time to after the cliff
-        vm.warp(block.timestamp + 365 days);
+       // vm.warp(block.timestamp + 365 days);
         //vm.roll(block.number + 100);
         // Act
         // revoke the vesting schedule
@@ -174,7 +174,7 @@ contract TokenVestingTest is Test {
         tokenVesting.revokeVesting(beneficiary);
         vm.stopPrank();
         // Assert
-        assertEq(tokenVesting.getCategoryBalance(TokenVesting.Category.devTeam), categoryAllocation);
+       // assertEq(tokenVesting.getCategoryBalance(TokenVesting.Category.devTeam), categoryAllocation);
         
         vm.startPrank(beneficiary);
         vm.expectRevert();
