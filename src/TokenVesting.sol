@@ -41,8 +41,9 @@ contract TokenVesting is Ownable {
     error TokenVesting__AllocationValueIsZero_createVestingSchedule(); //
     error TokenVesting__CliffDurationOutofRange_createVestingSchedule(); //
     error TokenVesting__VestingDurationOutofRange_createVestingSchedule(); //
-    error TokenVesting__TransferFailed_releaseTokens(); //
-    error TokenVesting__TransferFailed_revokeVesting(); //
+    error TokenVesting__TransferFailed_releaseTokens(); 
+    error TokenVesting__TransferFailed_revokeVesting(); 
+    error TokenVesting_CliffReached_revokeVesting(); 
 
     /*Type Declarations*/
     /**
@@ -321,7 +322,7 @@ contract TokenVesting is Ownable {
             revert TokenVesting__VestingAlreadyRevoked_revokeVesting();
         }
         if (block.timestamp >= schedule.cliff) {
-            revert ("");
+            revert TokenVesting_CliffReached_revokeVesting();
         }
 
         // Yohannes 
