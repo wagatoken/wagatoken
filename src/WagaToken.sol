@@ -27,6 +27,10 @@ contract WagaToken is ERC20, AccessControl {
         _grantRole(MINTER_ROLE, tokenShop);
     }
 
+    function revokeMinterRole(address tokenShop) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _revokeRole(MINTER_ROLE, tokenShop);
+    }
+
     function transferOwnership(address newOwner) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(DEFAULT_ADMIN_ROLE, newOwner);
