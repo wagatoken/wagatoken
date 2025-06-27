@@ -11,8 +11,9 @@ import {TokenVesting, IERC20Mintable} from "src/TokenVesting.sol";
 
 contract DeployTokenShop2 is Script {
     HelperConfig public helperConfig;
+    address multisig = 0x16fD4dC7e051685606D81021Fec266f0fC2adE96;
 
-    function run() external returns (WagaToken, TokenShop2, TokenVesting, HelperConfig) {
+    function run() external returns (WagaToken, TokenShop2, TokenVesting) {
         helperConfig = new HelperConfig();
         (
             address ethUsdPriceFeed,
@@ -44,12 +45,12 @@ contract DeployTokenShop2 is Script {
         
 
         // 5. Transfer ownership of WagaToken to TokenShop
-        //wagaToken.transferOwnership(address(tokenShop));
+        wagaToken.transferOwnership(multisig);
         // 6. Grant OWNER_ROLE to TokenShop
         // tokenShop.grantRole(tokenShop.OWNER_ROLE(), address(tokenShop));
         vm.stopBroadcast();
 
-        return (wagaToken, tokenShop, tokenVesting, helperConfig);
+        return (wagaToken, tokenShop, tokenVesting);
     }
 }
 
