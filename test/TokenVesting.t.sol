@@ -182,8 +182,6 @@ contract TokenVestingTest is Test {
         vm.stopPrank();
     }
 
-    function testTokensReturnedToCategoryAfterRevoking() public {}
-
 
     function testReleaseTokensAfterCliff()
         public
