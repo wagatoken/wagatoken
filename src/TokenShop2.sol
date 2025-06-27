@@ -6,8 +6,10 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 import {OracleLib} from "./OracleLib.sol";
 import {WagaToken} from "./WagaToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract TokenShop2 is AccessControl { 
+
+contract TokenShop2 is Ownable { 
     using OracleLib for AggregatorV3Interface;
 
     error TokenShop2__NoEthSent_ethToUsd();  
@@ -27,7 +29,6 @@ contract TokenShop2 is AccessControl {
     error TokenShop2__WithdrawalFailed_withdrawUsdc();
     error TokenShop2__SlippageTooHigh_buyWithEth(); 
 
-    bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
     WagaToken public immutable i_wagaToken;
     AggregatorV3Interface internal immutable i_priceFeed;
@@ -54,20 +55,15 @@ contract TokenShop2 is AccessControl {
         address _wagaToken,
         address _priceFeed,
         address _usdc
-    ) {
+    ) Ownable(msg.sender) {
         i_wagaToken = WagaToken(_wagaToken);
         i_priceFeed = AggregatorV3Interface(_priceFeed);
         i_usdc = IERC20(_usdc);
 
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(OWNER_ROLE, msg.sender);
+        
         i_owner = msg.sender; // This is set for testing purposes
     }
 
-    modifier onlyAdmin() {
-        require(hasRole(OWNER_ROLE, msg.sender), "Not authorized");
-        _;
-    }
 
     receive() external payable {
         buyWithEth();
@@ -96,35 +92,35 @@ contract TokenShop2 is AccessControl {
         i_wagaToken.mint(msg.sender, tokensToMint);
     }
 
-        function buyWithUSDC(uint256 usdcAmount) public {
-            // Check ==> Data Validation
-            if (usdcAmount == 0) {
-                revert TokenShop2__NoUSDCsent_buyWithUSDC();
-            }
-            if (usdcAmount * USDC_PRECISION < minPurchaseUsd) {
-                revert TokenShop2__InsufficientFunds_buyWithUSDC();
-            }
-
-            // Effects: Update state
-            senderToUSDCSpent[msg.sender] += usdcAmount;
-            // Transfer USDC from the user to the contract
-            bool success = i_usdc.transferFrom(msg.sender, address(this), usdcAmount);
-            if (!success) {
-                revert TokenShop2__UsdcTransferFailed_buyWithUSDC();
-            }
-
-            // Calculate tokens to mint
-            uint256 tokensToMint = _usdToTokens(usdcAmount * USDC_PRECISION);
-            if (tokensToMint == 0) {
-                revert TokenShop2__InsufficientUSDC_buyWithUSDC();
-            }
-            emit TokensPurchased(msg.sender, usdcAmount, tokensToMint, "USDC");
-            // Mint tokens to the user
-            i_wagaToken.mint(msg.sender, tokensToMint);
-            
+    function buyWithUSDC(uint256 usdcAmount) public {
+        // Check ==> Data Validation
+        if (usdcAmount == 0) {
+            revert TokenShop2__NoUSDCsent_buyWithUSDC();
+        }
+        if (usdcAmount * USDC_PRECISION < minPurchaseUsd) {
+            revert TokenShop2__InsufficientFunds_buyWithUSDC();
         }
 
-    function setTokenPriceUsd(uint256 newPrice) external onlyAdmin {
+        // Effects: Update state
+        senderToUSDCSpent[msg.sender] += usdcAmount;
+        // Transfer USDC from the user to the contract
+        bool success = i_usdc.transferFrom(msg.sender, address(this), usdcAmount);
+        if (!success) {
+            revert TokenShop2__UsdcTransferFailed_buyWithUSDC();
+        }
+
+        // Calculate tokens to mint
+        uint256 tokensToMint = _usdToTokens(usdcAmount * USDC_PRECISION);
+        if (tokensToMint == 0) {
+            revert TokenShop2__InsufficientUSDC_buyWithUSDC();
+        }
+        emit TokensPurchased(msg.sender, usdcAmount, tokensToMint, "USDC");
+        // Mint tokens to the user
+        i_wagaToken.mint(msg.sender, tokensToMint);
+        
+    }
+
+    function setTokenPriceUsd(uint256 newPrice) external onlyOwner {
         if (newPrice == 0) {
             revert TokenShop2__InvalidPriceData_setTokenPriceUsd();
         }
@@ -133,7 +129,7 @@ contract TokenShop2 is AccessControl {
         emit TokenPriceUpdated(newPrice);
     }
 
-    function setMinPurchaseUsd(uint256 newMin) external onlyAdmin {
+    function setMinPurchaseUsd(uint256 newMin) external onlyOwner {
         if (newMin == 0) {
             revert TokenShop2__InvalidPrice_setMinPurchaseUsd();
         }
@@ -141,7 +137,7 @@ contract TokenShop2 is AccessControl {
         emit MinPurchaseUpdated(newMin);
     }
 
-    function withdrawEth() external onlyAdmin {
+    function withdrawEth() external onlyOwner {
         uint256 balance = address(this).balance;
         if (balance == 0) {
             revert TokenShop2__InsufficientBalance_withdrawEth();
@@ -153,7 +149,7 @@ contract TokenShop2 is AccessControl {
         }
     }
 
-    function withdrawUsdc() external onlyAdmin {
+    function withdrawUsdc() external onlyOwner {
         uint256 balance = i_usdc.balanceOf(address(this));
         if (balance == 0) {
             revert TokenShop2__InsufficientBalance_withdrawUsdc();
