@@ -44,10 +44,12 @@ contract DeployTokenShop2 is Script {
         //tokenShop.grantRole(tokenShop.OWNER_ROLE(), address(tokenShop));
         
 
-        // 5. Transfer ownership of WagaToken to TokenShop
+        // 5. Transfer ownership of WagaToken to multisig
         wagaToken.transferOwnership(multisig);
-        // 6. Grant OWNER_ROLE to TokenShop
-        // tokenShop.grantRole(tokenShop.OWNER_ROLE(), address(tokenShop));
+        // 6. Transfer ownership of TokenShop to multisig
+        tokenShop.transferOwnership(multisig);
+        // 7. Transfer ownership of TokenVesting to multisig
+        tokenVesting.transferOwnership(multisig);
         vm.stopBroadcast();
 
         return (wagaToken, tokenShop, tokenVesting);
