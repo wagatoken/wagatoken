@@ -29,6 +29,9 @@ contract WAGACoffeeToken is
     error WAGACoffeeToken__InvalidredemptionContractAddress_setRedemptionContract();
     error WAGACoffeeToken__InvalidIPFSUri_createBatch();
     error WAGACoffeeToken__InvalidPackagingSize_createBatch();
+    error WAGACoffeeToken__InvalidProductionDate_createBatch();
+    error WAGACoffeeToken__ZeroMetaDataValues_createBatch();
+    error WAGACoffeeToken__InvalidBatchDates_createBatch();
     error WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
     error WAGACoffeeToken__BatchDoesNotExist_updateInventory();
     error WAGACoffeeToken__BatchDoesNotExist_setPricePerUint();
@@ -39,7 +42,15 @@ contract WAGACoffeeToken is
     error WAGACoffeeToken__BatchDoesNotExist_verifyBatchMetadata();
     error WAGACoffeeToken__MetadataMisMatch_verifyBatchMetaData();
     error WAGACoffeeToken__UnauthorizedCaller_updateBatchStatus(address caller);
-    error WAGACoffeeToken__UnauthorizedCaller_verifyBatchMetadata(address caller);
+    error WAGACoffeeToken__UnauthorizedCaller_verifyBatchMetadata(
+        address caller
+    );
+    error WAGACoffeeToken__BatchIsInactive_markBatchExpired(
+        uint256 productionDate,
+        uint256 expiryDate
+    );
+    error WAGACoffeeToken__BatchDoesNotExist_mintBatch();
+    error WAGACoffeeToken__BatchNotVerified_mintBatch();
 
     // Role definitions for access control
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE"); // Proof of Reserve Contract
@@ -47,7 +58,8 @@ contract WAGACoffeeToken is
     bytes32 public constant INVENTORY_MANAGER_ROLE =
         keccak256("INVENTORY_MANAGER_ROLE");
     bytes32 public constant REDEMPTION_ROLE = keccak256("REDEMPTION_ROLE");
-    bytes32 public constant PROOF_OF_RESERVE_ROLE = keccak256("PROOF_OF_RESERVE_ROLE");
+    bytes32 public constant PROOF_OF_RESERVE_ROLE =
+        keccak256("PROOF_OF_RESERVE_ROLE");
 
     // Addresses for inventory manager and redemption contract
     address private s_inventoryManager;
@@ -90,7 +102,11 @@ contract WAGACoffeeToken is
     event BatchCreated(uint256 indexed batchId, string ipfsUri);
     event BatchStatusUpdated(uint256 indexed batchId, bool isVerified);
     event InventoryUpdated(uint256 indexed batchId, uint256 newQuantity);
-    event BatchExpired(uint256 indexed batchId);
+    event BatchExpired(
+        uint256 indexed batchId,
+        uint256 productionDate,
+        uint256 expiryDate
+    );
     event BatchPriceUpdated(
         uint256 indexed batchId,
         uint256 oldPrice,
@@ -107,11 +123,23 @@ contract WAGACoffeeToken is
     );
 
     modifier onlyInventoryManagerOrProofOfReserve() {
-        if (!hasRole(INVENTORY_MANAGER_ROLE, msg.sender) && !hasRole(PROOF_OF_RESERVE_ROLE, msg.sender)) {
-            revert WAGACoffeeToken__UnauthorizedCaller_updateBatchStatus(msg.sender);
+        if (
+            !hasRole(INVENTORY_MANAGER_ROLE, msg.sender) &&
+            !hasRole(PROOF_OF_RESERVE_ROLE, msg.sender)
+        ) {
+            revert WAGACoffeeToken__UnauthorizedCaller_updateBatchStatus(
+                msg.sender
+            );
         }
         _;
     }
+
+    // modifier checkBatchExists(uint256 batchId) {
+    //     if (!isBatchCreated(batchId)) {
+    //         revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+    //     }
+    //     _;
+    // }
 
     /**
      * @dev Initializes the contract with the deployer as the default admin
@@ -123,6 +151,7 @@ contract WAGACoffeeToken is
     ) ERC1155("") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); // @audit: Do we need two roles for the deployer?
         _grantRole(ADMIN_ROLE, msg.sender);
+        _grantRole(MINTER_ROLE, _proofOfReserveManager);
         setInventoryManager(_inventoryManager);
         setRedemptionManager(_redemptionContract);
         setProofOfReserveManager(_proofOfReserveManager);
@@ -178,8 +207,6 @@ contract WAGACoffeeToken is
         emit RedemptionMangerUpdated(_redemptionContract, msg.sender); // Emit an event for the update
     }
 
-
-
     /**
      * @dev Sets or updates the proof of reserve manager address and grants appropriate role
      * @param _proofOfReserveManager Address of the new proof of reserve manager
@@ -227,19 +254,25 @@ contract WAGACoffeeToken is
         string memory metadataHash
     ) external onlyRole(ADMIN_ROLE) returns (uint256) {
         uint256 batchId = _nextBatchId++;
-        // require(bytes(ipfsUri).length > 0, "IPFS URI cannot be empty");
+        // Check if expiry date, production date and price per unit are valid
+        if (expiryDate == 0 || pricePerUnit == 0 || productionDate == 0) {
+            revert WAGACoffeeToken__ZeroMetaDataValues_createBatch();
+        }
+        // Check if the production and expiry dates are valid
+        if (productionDate > block.timestamp || expiryDate <= block.timestamp) {
+            revert WAGACoffeeToken__InvalidBatchDates_createBatch();
+        }
         // Check if the IPFS URI is valid
-        if (bytes(ipfsUri).length <= 0) {
+        if (
+            bytes(ipfsUri).length == 0 ||
+            bytes(packagingInfo).length == 0 ||
+            bytes(metadataHash).length == 0
+        ) {
             revert WAGACoffeeToken__InvalidIPFSUri_createBatch();
         }
-        // require(
-        //     keccak256(bytes(packagingInfo)) == keccak256("250g") ||
-        //         keccak256(bytes(packagingInfo)) == keccak256("500g"),
-        //     "Invalid packaging size"
-        // );
-        // Check if the packaging info is valid
+
         if (
-            keccak256(bytes(packagingInfo)) != keccak256("250g") ||
+            keccak256(bytes(packagingInfo)) != keccak256("250g") &&
             keccak256(bytes(packagingInfo)) != keccak256("500g")
         ) {
             revert WAGACoffeeToken__InvalidPackagingSize_createBatch();
@@ -276,10 +309,11 @@ contract WAGACoffeeToken is
         uint256 batchId,
         bool isVerified
     ) external onlyInventoryManagerOrProofOfReserve {
-        if (batchInfo[batchId].productionDate == 0) {
+        // check if the batch exists
+        if (!isBatchCreated(batchId)) {
             revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
         }
-        batchInfo[batchId].isVerified = isVerified;
+        batchInfo[batchId].isVerified = isVerified; // Check with Yohannes
         emit BatchStatusUpdated(batchId, isVerified);
     }
 
@@ -297,7 +331,7 @@ contract WAGACoffeeToken is
     ) external onlyRole(INVENTORY_MANAGER_ROLE) {
         // require(batchInfo[batchId].productionDate != 0, "Batch does not exist");
         // Check if the batch exists
-        if (batchInfo[batchId].productionDate == 0) {
+        if (!isBatchCreated(batchId)) {
             revert WAGACoffeeToken__BatchDoesNotExist_updateInventory();
         }
         // Effect: Update the current quantity for the batch
@@ -318,11 +352,14 @@ contract WAGACoffeeToken is
         uint256 batchId,
         uint256 newPrice
     ) external onlyRole(ADMIN_ROLE) {
-        // require(batchInfo[batchId].productionDate != 0, "Batch does not exist");
         // Check if the batch exists
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_setPricePerUint();
+        }
+        // Retrieve the production and expiry dates for the batch
         uint256 productionDate = batchInfo[batchId].productionDate;
         uint256 expiryDate = batchInfo[batchId].expiryDate;
-
+        // Check if the batch is currently active
         if (activeBatches[batchId] == false) {
             revert WAGACoffeeToken__BatchIsInactive_setPricePerUint(
                 productionDate,
@@ -345,7 +382,7 @@ contract WAGACoffeeToken is
      * - Caller must have INVENTORY_MANAGER_ROLE
      * - Batch must exist
      */
-     // @audit: This function should probably not be restricted to the inventory manager but made public for distribution partners
+    // @audit: This function should probably not be restricted to the inventory manager but made public for distribution partners
     function verifyBatchMetadata(
         uint256 batchId,
         uint256 expectedPrice,
@@ -353,13 +390,15 @@ contract WAGACoffeeToken is
         string memory expectedMetadataHash
     ) external onlyInventoryManagerOrProofOfReserve {
         BatchInfo storage info = batchInfo[batchId];
-        if (info.productionDate == 0) {
+        if (!isBatchCreated(batchId)) {
             revert WAGACoffeeToken__BatchDoesNotExist_verifyBatchMetadata();
         }
         if (
             info.pricePerUnit != expectedPrice &&
-            keccak256(bytes(info.packagingInfo)) != keccak256(bytes(expectedPackaging)) &&
-            keccak256(bytes(info.metadataHash)) != keccak256(bytes(expectedMetadataHash))
+            keccak256(bytes(info.packagingInfo)) !=
+            keccak256(bytes(expectedPackaging)) &&
+            keccak256(bytes(info.metadataHash)) !=
+            keccak256(bytes(expectedMetadataHash))
         ) {
             revert WAGACoffeeToken__MetadataMisMatch_verifyBatchMetaData();
         }
@@ -371,19 +410,21 @@ contract WAGACoffeeToken is
      * @dev Retrieves an array of all currently active batch IDs
      * @return uint256[] Array of active batch IDs
      */
-     // @audit: Need to review the utility of this function as it may be gas intensive. Also, why do we have it as external view?
+    // @audit: Need to review the utility of this function as it may be gas intensive. Also, why do we have it as external view?
     function getActiveBatchIds() external view returns (uint256[] memory) {
+        // Get the total number of active batches
         uint256 activeCount = 0;
         for (uint256 i = 0; i < allBatchIds.length; i++) {
             if (activeBatches[allBatchIds[i]]) {
                 activeCount++;
             }
         }
-        // uint256[] memory activeBatchIds = new uint256[](3);
+        // Create an array to hold the active batch IDs
         uint256[] memory activeBatchIds = new uint256[](activeCount); // determine size based on active count
         // Fill the activeBatchIds array with active batch IDs
         uint256 index = 0;
-        for (uint256 i = 0; i < allBatchIds.length; i++) { //@audit: should be i < activeCount
+        for (uint256 i = 0; i < allBatchIds.length; i++) {
+            //@audit: should be i < activeCount
             if (activeBatches[allBatchIds[i]]) {
                 activeBatchIds[index] = allBatchIds[i];
                 index++;
@@ -403,9 +444,19 @@ contract WAGACoffeeToken is
     function markBatchExpired(
         uint256 batchId
     ) external onlyRole(INVENTORY_MANAGER_ROLE) {
+        // Check if the batch is active
+        // Retrieve the production and expiry dates for the batch
+        uint256 productionDate = batchInfo[batchId].productionDate;
+        uint256 expiryDate = batchInfo[batchId].expiryDate;
+        if (activeBatches[batchId] == false) {
+            revert WAGACoffeeToken__BatchIsInactive_markBatchExpired(
+                productionDate,
+                expiryDate
+            );
+        }
         require(activeBatches[batchId], "Batch is not active");
         activeBatches[batchId] = false;
-        emit BatchExpired(batchId);
+        emit BatchExpired(batchId, productionDate, expiryDate);
     }
 
     /**
@@ -422,10 +473,15 @@ contract WAGACoffeeToken is
         uint256 batchId,
         uint256 amount
     ) external onlyRole(MINTER_ROLE) {
-        require(batchInfo[batchId].productionDate != 0, "Batch does not exist");
-        require(batchInfo[batchId].isVerified, "Batch is not verified");
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_mintBatch();
+        }
+        // Check if the batch is verified: @audit: This check may be redundant as the status us marked as verified by the proof of reserve contract before minting
+        if (!batchInfo[batchId].isVerified) {
+            revert WAGACoffeeToken__BatchNotVerified_mintBatch();
+        }
+        batchInfo[batchId].currentQuantity += amount; // @audit: We leave this for now till we figure out how to handle the quantity in the proof of reserve contract
         _mint(to, batchId, amount, "");
-        batchInfo[batchId].currentQuantity += amount;
     }
 
     /**
@@ -450,7 +506,7 @@ contract WAGACoffeeToken is
      * @param batchId ID of the batch to check
      * @return bool True if the batch exists, false otherwise
      */
-    function isBatchCreated(uint256 batchId) external view returns (bool) {
+    function isBatchCreated(uint256 batchId) public view returns (bool) {
         return batchInfo[batchId].productionDate != 0;
     }
 
