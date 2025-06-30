@@ -52,6 +52,7 @@ contract WAGACoffeeToken is
     // Addresses for inventory manager and redemption contract
     address private s_inventoryManager;
     address private s_redemptionManager;
+    address private s_proofOfReserveManager;
 
     /**
      * @dev Struct containing essential batch information stored on-chain
@@ -117,12 +118,14 @@ contract WAGACoffeeToken is
      */
     constructor(
         address _inventoryManager,
-        address _redemptionContract
+        address _redemptionContract,
+        address _proofOfReserveManager
     ) ERC1155("") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); // @audit: Do we need two roles for the deployer?
         _grantRole(ADMIN_ROLE, msg.sender);
         setInventoryManager(_inventoryManager);
         setRedemptionManager(_redemptionContract);
+        setProofOfReserveManager(_proofOfReserveManager);
     }
 
     /**
@@ -173,6 +176,32 @@ contract WAGACoffeeToken is
         s_redemptionManager = _redemptionContract;
         _grantRole(REDEMPTION_ROLE, _redemptionContract);
         emit RedemptionMangerUpdated(_redemptionContract, msg.sender); // Emit an event for the update
+    }
+
+
+
+    /**
+     * @dev Sets or updates the proof of reserve manager address and grants appropriate role
+     * @param _proofOfReserveManager Address of the new proof of reserve manager
+     * Requirements:
+     * - Caller must have ADMIN_ROLE
+     * - New address cannot be zero address
+     */
+
+    function setProofOfReserveManager(
+        address _proofOfReserveManager
+    ) public onlyRole(ADMIN_ROLE) {
+        // Check if the new address is valid
+        if (_proofOfReserveManager == address(0)) {
+            revert WAGACoffeeToken__InvalidredemptionContractAddress_setRedemptionContract();
+        }
+        // Check if we already have a proof of reserve manager set, if so, revoke their role
+        if (s_proofOfReserveManager != address(0)) {
+            _revokeRole(PROOF_OF_RESERVE_ROLE, s_proofOfReserveManager);
+        }
+        // Effect: Set the new proof of reserve manager address
+        s_proofOfReserveManager = _proofOfReserveManager;
+        _grantRole(PROOF_OF_RESERVE_ROLE, _proofOfReserveManager);
     }
 
     /**
