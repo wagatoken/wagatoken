@@ -21,10 +21,23 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
         address recipient;
         bool completed;
         bool verified;
-        uint256 lastVerifiedTimestamp; 
+        uint256 lastVerifiedTimestamp;
     }
+
+    struct BatchInfo {
+        uint256 productionDate;
+        uint256 expiryDate;
+        bool isVerified;
+        uint256 currentQuantity;
+        uint256 pricePerUnit;
+        string packagingInfo;
+        string metadataHash;
+        bool isMetadataVerified;
+    }
+
     // Mapping from request ID to verification request
-    mapping(bytes32 requestId => VerificationRequest verificationRequest) public verificationRequests;
+    mapping(bytes32 requestId => VerificationRequest verificationRequest)
+        public verificationRequests;
 
     // Events
     event ReserveVerificationRequested(
@@ -58,7 +71,9 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
         address router,
         uint64 _subscriptionId,
         bytes32 _donId
-    ) WAGAChainlinkFunctionsBase(router, _subscriptionId, _donId) /*Ownable(msg.sender)*/ {
+    )
+        WAGAChainlinkFunctionsBase(router, _subscriptionId, _donId)
+    /*Ownable(msg.sender)*/ {
         coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
         _grantRole(VERIFIER_ROLE, msg.sender); // Remember to transfer this role to the appropriate verifier
     }
@@ -121,68 +136,53 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
     ) internal override {
         latestResponse = response;
         latestError = err;
+        // retrieve the verification request
         VerificationRequest storage request = verificationRequests[requestId];
         if (request.completed) {
             revert WAGAProofOfReserve__RequestAlreadyCompleted_fulfillRequest();
         }
-        
 
         // Parse all required fields from the response
-        (uint256 verifiedQuantity, uint256 price, string memory packaging, string memory metadataHash) = _parseResponse(response);
-
-        // // Verify metadata on-chain
-        // try coffeeToken.verifyBatchMetadata(
-        //     request.batchId,
-        //     price,
-        //     packaging,
-        //     metadataHash
-        // ) {
-        //     // Metadata verified successfully
-        //     // Check that metadata is verified in storage before minting
-        //     (, , , , , , , bool isMetadataVerified) = coffeeToken.batchInfo(request.batchId);
-        //     if (verifiedQuantity >= request.quantity && isMetadataVerified) {
-        //         request.verified = true;
-        //         coffeeToken.updateBatchStatus(request.batchId, true);
-        //         coffeeToken.mintBatch(
-        //             request.recipient,
-        //             request.batchId,
-        //             request.quantity
-        //         );
-        //     }
-
-
-        // } catch {
-        //     // Metadata mismatch, do not mint or update status
-        // }
-
+        (
+            uint256 verifiedQuantity,
+            uint256 verifiedPrice,
+            string memory verifiedPackaging,
+            string memory verifiedMetadataHash
+        ) = _parseResponse(response);
 
         coffeeToken.verifyBatchMetadata(
             request.batchId,
-            price,
-            packaging,
-            metadataHash
-        ); 
-         (, , , , , , , bool isMetadataVerified) = coffeeToken.batchInfo(request.batchId);
-         if (!isMetadataVerified) {
+            verifiedPrice,
+            verifiedPackaging,
+            verifiedMetadataHash
+        );
+        (, , , , , , , bool isMetadataVerified) = coffeeToken.s_batchInfo(
+            request.batchId
+        );
+
+        if (!isMetadataVerified) {
             revert WAGAProofOfReserve__BatchMetadataNotVerified_fulfillRequest();
         }
-        if(verifiedQuantity < request.quantity){
-            revert WAGAProofOfReserve__QuantityNotVerified_fulfillRequest();   
+        if (verifiedQuantity < request.quantity) {
+            revert WAGAProofOfReserve__QuantityNotVerified_fulfillRequest();
         }
         request.completed = true;
-         emit ReserveVerificationCompleted(
+        request.verified = true;
+        request.lastVerifiedTimestamp = block.timestamp;
+        emit ReserveVerificationCompleted(
             requestId,
             request.batchId,
             request.verified
         );
-
-        request.verified = true;
-                coffeeToken.updateBatchStatus(request.batchId, true);
-                coffeeToken.mintBatch(
-                    request.recipient,
-                    request.batchId,
-                    request.quantity
-        );          
+        coffeeToken.updateInventory(
+            request.batchId,
+            verifiedQuantity
+        );
+        coffeeToken.updateBatchStatus(request.batchId, true);
+        coffeeToken.mintBatch(
+            request.recipient,
+            request.batchId,
+            request.quantity // @audit: Shouldn't we be minting the verified quantity?
+        );
     }
 }
-
