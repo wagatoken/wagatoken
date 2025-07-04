@@ -88,7 +88,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
             ,
             string memory packagingInfo,
             ,
-            bool isMetadataVerified
+            bool isMetadataVerified,
         ) = coffeeToken.s_batchInfo(batchId);
 
         // Ensure the batch is verified and metadata is verified

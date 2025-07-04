@@ -56,6 +56,7 @@ contract WAGACoffeeToken is
     error WAGACoffeeToken__BatchDoesNotExist_mintBatch();
     error WAGACoffeeToken__BatchNotVerified_mintBatch();
     error WAGACoffeeToken__BatchDoesNotExist_getBatchQuantity();
+    error WAGACoffeeToken__BatchDoesNotExist_updateBatchLastVerifiedTimestamp();
 
     /* -------------------------------------------------------------------------- */
     /*                              TYPE DECLARATIONS                             */
@@ -81,6 +82,7 @@ contract WAGACoffeeToken is
         string packagingInfo;
         string metadataHash;
         bool isMetadataVerified;
+        uint256 lastVerifiedTimestamp; // Timestamp of last metadata verification
     }
 
     /* -------------------------------------------------------------------------- */
@@ -142,6 +144,11 @@ contract WAGACoffeeToken is
     event ProofOfReserveManagerUpdated(
         address indexed newProofOfReserveManager,
         address indexed updatedBy
+    );
+    event TokensMinted(
+        address indexed to,
+        uint256 indexed batchId,
+        uint256 amount
     );
 
     /* -------------------------------------------------------------------------- */
@@ -289,7 +296,8 @@ contract WAGACoffeeToken is
             pricePerUnit: pricePerUnit,
             packagingInfo: packagingInfo,
             metadataHash: metadataHash,
-            isMetadataVerified: false
+            isMetadataVerified: false,
+            lastVerifiedTimestamp: 0 // Initialize to zero
         });
 
         _setURI(batchId, ipfsUri);
@@ -341,6 +349,21 @@ contract WAGACoffeeToken is
         s_batchInfo[batchId].currentQuantity = newQuantity;
         emit InventoryUpdated(batchId, newQuantity);
     }
+    /**
+     * @notice Updates the last verified timestamp for a batch
+     * @param batchId ID of the batch to update
+     * @param timestamp New last verified timestamp
+     */
+
+    function updateBatchLastVerifiedTimestamp(
+        uint256 batchId,
+        uint256 timestamp
+    ) external onlyRole(PROOF_OF_RESERVE_ROLE) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchLastVerifiedTimestamp();
+        }
+        s_batchInfo[batchId].lastVerifiedTimestamp = timestamp;
+    }
 
     /**
      * @notice Sets new price per unit for a batch
@@ -368,17 +391,7 @@ contract WAGACoffeeToken is
         emit BatchPriceUpdated(batchId, oldPrice, newPrice);
     }
 
-    // function setCurrentQuantity(
-    //     uint256 batchId,
-    //     uint256 newQuantity
-    // ) external onlyRole(INVENTORY_MANAGER_ROLE) {
-    //     if (!isBatchCreated(batchId)) {
-    //         revert WAGACoffeeToken__BatchDoesNotExist_updateInventory();
-    //     }
-
-    //     s_batchInfo[batchId].currentQuantity = newQuantity;
-    //     emit InventoryUpdated(batchId, newQuantity);
-    // }
+ 
 
     /**
      * @notice Verifies batch metadata against expected values
@@ -459,6 +472,9 @@ contract WAGACoffeeToken is
 
         s_batchInfo[batchId].currentQuantity += amount;
         _mint(to, batchId, amount, "");
+        emit TokensMinted(to, batchId, amount);
+
+    
     }
 
     /**
