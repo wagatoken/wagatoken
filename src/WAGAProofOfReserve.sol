@@ -43,6 +43,7 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
         bool completed;
         bool verified;
         uint256 lastVerifiedTimestamp; // Timestamp of last request verification
+        bool shouldMint; // Flag to indicate if tokens should be minted
     }
 
     /* -------------------------------------------------------------------------- */
@@ -60,7 +61,7 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
     /* -------------------------------------------------------------------------- */
     /*                                   Events                                   */
     /* -------------------------------------------------------------------------- */
-    
+
     event ReserveVerificationRequested(
         bytes32 indexed requestId,
         uint256 indexed batchId,
@@ -148,6 +149,7 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
             string memory expectedPackaging,
             string memory expectedMetadataHash,
             ,
+
         ) = coffeeToken.s_batchInfo(batchId);
         // Convert source code to bytes
         bytes memory sourceBytes = bytes(source);
@@ -170,8 +172,76 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
             recipient: recipient,
             completed: false,
             verified: false,
-            lastVerifiedTimestamp: block.timestamp
+            lastVerifiedTimestamp: block.timestamp,
+            shouldMint: true // Set to true by default, can be changed later
         });
+        latestRequestId = requestId;
+        emit ReserveVerificationRequested(requestId, batchId, requestQuantity);
+        return requestId;
+    }
+    /**
+     * @dev Requests verification of coffee inventory using Chainlink Functions WITHOUT token minting
+     * @param batchId Batch identifier
+     * @param source JavaScript source code for Chainlink Functions
+     * @return requestId The ID of the Chainlink Functions request
+     */
+    function requestInventoryVerification(
+        uint256 batchId,
+        string calldata source
+    ) external onlyRole(VERIFIER_ROLE) returns (bytes32 requestId) {
+        // Check if the batch exists
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGAProofOfReserve__BatchDoesNotExist_requestReserveVerification();
+        }
+        // Check if the batch is active
+        if (!coffeeToken.isBatchActive(batchId)) {
+            revert WAGAProofOfReserve__BatchInactive_requestReserveVerification();
+        }
+        // Check that the source code is not empty
+        if (bytes(source).length == 0) {
+            revert WAGAProofOfReserve__InvalidSourceCode_requestReserveVerification();
+        }
+
+        // Get Expected Values for Verification from the WAGACoffeeToken contract
+        (
+            ,
+            ,
+            ,
+            uint256 requestQuantity,
+            uint256 requestPrice,
+            string memory expectedPackaging,
+            string memory expectedMetadataHash,
+            ,
+
+        ) = coffeeToken.s_batchInfo(batchId);
+
+        // Convert source code to bytes
+        bytes memory sourceBytes = bytes(source);
+        requestId = _sendRequest(sourceBytes, subscriptionId, 300000, donId);
+
+        // Check that the request was successful
+        if (requestId == bytes32(0)) {
+            revert WAGAProofOfReserve__RequestFailed_requestReserveVerification();
+        }
+
+        // Store the verification request WITHOUT minting enabled
+        verificationRequests[requestId] = VerificationRequest({
+            batchId: batchId,
+            requestQuantity: requestQuantity,
+            verifiedQuantity: 0,
+            requestPrice: requestPrice,
+            verifiedPrice: 0,
+            expectedPackaging: expectedPackaging,
+            verifiedPackaging: "",
+            expectedMetadataHash: expectedMetadataHash,
+            verifiedMetadataHash: "",
+            recipient: address(0), // No recipient for inventory verification
+            completed: false,
+            verified: false,
+            lastVerifiedTimestamp: block.timestamp,
+            shouldMint: false // Disable minting for inventory verification
+        });
+
         latestRequestId = requestId;
         emit ReserveVerificationRequested(requestId, batchId, requestQuantity);
         return requestId;
@@ -219,7 +289,7 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
             verifiedPackaging,
             verifiedMetadataHash
         );
-        (, , , , , , ,  bool isMetadataVerified,) = coffeeToken.s_batchInfo(
+        (, , , , , , , bool isMetadataVerified, ) = coffeeToken.s_batchInfo(
             request.batchId
         );
 
@@ -232,18 +302,26 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
         request.completed = true;
         request.verified = true;
         request.lastVerifiedTimestamp = block.timestamp;
-        coffeeToken.updateBatchLastVerifiedTimestamp(request.batchId, block.timestamp);
+        // Update coffeeToken state regardless of the check.
+        coffeeToken.updateBatchLastVerifiedTimestamp(
+            request.batchId,
+            block.timestamp
+        );
+        coffeeToken.updateInventory(request.batchId, verifiedQuantity);
+        coffeeToken.updateBatchStatus(request.batchId, true);
         emit ReserveVerificationCompleted(
             requestId,
             request.batchId,
             request.verified
         );
-        coffeeToken.updateInventory(request.batchId, verifiedQuantity);
-        coffeeToken.updateBatchStatus(request.batchId, true);
-        coffeeToken.mintBatch(
-            request.recipient,
-            request.batchId,
-            request.verifiedQuantity // @audit: Shouldn't we be minting the verified quantity?
-        );
+
+        // Only mint tokens if shouldMint is true
+        if (request.shouldMint) {
+            coffeeToken.mintBatch(
+                request.recipient,
+                request.batchId,
+                request.verifiedQuantity
+            );
+        }
     }
 }

@@ -192,6 +192,9 @@ contract WAGAInventoryManager is
         }
         // Get the active batch IDs from the coffeeToken contract
         // This is a list of all batches that are currently active and not expired.
+
+
+        
         uint256[] memory activeBatchIds = coffeeToken.getActiveBatchIds();
         if (activeBatchIds.length == 0) {
             return (false, "");
