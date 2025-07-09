@@ -3,19 +3,19 @@ pragma solidity ^0.8.18;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {FunctionsClient} from "@chainlink/contracts/src/v0.8/functions/v1_3_0/FunctionsClient.sol";
-import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
+import {FunctionsRequest} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol";
 
 /**
  * @title WAGAChainlinkFunctionsBase
  * @dev Base contract for Chainlink Functions integration in the WAGA Coffee Traceability System
  * This contract provides common functionality for contracts that use Chainlink Functions
  */
- //@audit - Why do we have confirmed owner here? It is not used in the code.
 abstract contract WAGAChainlinkFunctionsBase is
     AccessControl,
-    FunctionsClient,
-    ConfirmedOwner
+    FunctionsClient
 {
+    using FunctionsRequest for FunctionsRequest.Request;
+
     error WAGAChainlinkFunctionsBase__OnlyRouterCanFulfill_handleOracleFulfillment();
     error WAGAChainlinkFunctionsBase__InvalidResponseLength_parseResponse();
     error WAGAChainlinkFunctionsBase__RequestAlreadyCompleted_fulfillRequest();
@@ -40,7 +40,7 @@ abstract contract WAGAChainlinkFunctionsBase is
         address router,
         uint64 _subscriptionId,
         bytes32 _donId
-    ) FunctionsClient(router) ConfirmedOwner(msg.sender) {
+    ) FunctionsClient(router) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
         subscriptionId = _subscriptionId;
@@ -86,5 +86,34 @@ abstract contract WAGAChainlinkFunctionsBase is
         donId = _donId;
         emit ChainlinkDonIdUpdated(_donId);
     }
+
+    /**
+     * @dev Sends a request to Chainlink Functions with arguments
+     */
+    function _sendRequestWithArgs(
+        bytes memory source,
+        string[] memory args,
+        uint64 _subscriptionId,
+        uint32 gasLimit,
+        bytes32 _donId
+    ) internal returns (bytes32 requestId) {
+        FunctionsRequest.Request memory req;
+        req.initializeRequestForInlineJavaScript(string(source));
+        if (args.length > 0) {
+            req.setArgs(args);
+        }
+        
+        return _sendRequest(req.encodeCBOR(), _subscriptionId, gasLimit, _donId);
+    }
+
+    /**
+     * @dev Abstract function that must be implemented by inheriting contracts
+     * This is the callback function that gets called when Chainlink Functions responds
+     */
+    function _fulfillRequest(
+        bytes32 requestId,
+        bytes memory response,
+        bytes memory err
+    ) internal virtual override;
 }
 

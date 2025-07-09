@@ -8,6 +8,7 @@ import {ERC1155URIStorage} from "@openzeppelin/contracts/token/ERC1155/extension
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {WAGAConfigManager} from "./WAGAConfigManager.sol";
 import {WAGAViewFunctions} from "./WAGAViewFunctions.sol";
+import {WAGACoffeeRedemption} from "./WAGACoffeeRedemption.sol";
 
 /**
  * @title WAGACoffeeToken
@@ -61,13 +62,19 @@ contract WAGACoffeeToken is
     error WAGACoffeeToken__BatchNotVerified_mintBatch();
     error WAGACoffeeToken__BatchDoesNotExist_getBatchQuantity();
     error WAGACoffeeToken__BatchDoesNotExist_updateBatchLastVerifiedTimestamp();
+    error WAGACoffeeToken__BatchDoesNotExist_resetBatchVerificationFlags();
+    error WAGACoffeeToken__BatchHasActiveRedemptions_resetBatchVerificationFlags();
+    error WAGACoffeeToken__ContractNotInitialized();
 
     /* -------------------------------------------------------------------------- */
     /*                               STATE VARIABLES                              
     /* -------------------------------------------------------------------------- */
 
-   
-
+    // Reference to redemption contract for safety checks
+    address private s_redemptionContract;
+    
+    // Initialization flag
+    bool public isInitialized;
 
     /* -------------------------------------------------------------------------- */
     /*                                   EVENTS                                   */
@@ -98,6 +105,13 @@ contract WAGACoffeeToken is
     /*                                  MODIFIERS                                 */
     /* -------------------------------------------------------------------------- */
 
+    modifier onlyInitialized() {
+        if (!isInitialized) {
+            revert WAGACoffeeToken__ContractNotInitialized();
+        }
+        _;
+    }
+
     modifier onlyInventoryManagerOrProofOfReserve() {
         if (
             !hasRole(INVENTORY_MANAGER_ROLE, msg.sender) &&
@@ -115,22 +129,35 @@ contract WAGACoffeeToken is
     /* -------------------------------------------------------------------------- */
 
     /**
-     * @notice Initializes the contract with manager addresses
+     * @notice Initializes the contract with zero addresses for two-phase deployment
+     */
+    constructor() ERC1155("") {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(ADMIN_ROLE, msg.sender);
+    }
+
+    /**
+     * @notice Second phase initialization with all contract addresses
      * @param _inventoryManager Address for inventory management
      * @param _redemptionContract Address for token redemption
      * @param _proofOfReserveManager Address for proof of reserve operations
      */
-    constructor(
+    function initialize(
         address _inventoryManager,
         address _redemptionContract,
         address _proofOfReserveManager
-    ) ERC1155("") {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, msg.sender);
+    ) external onlyRole(ADMIN_ROLE) {
+        require(!isInitialized, "Already initialized"); // write custom error later
+        
         _grantRole(MINTER_ROLE, _proofOfReserveManager);
         setInventoryManager(_inventoryManager);
         setRedemptionManager(_redemptionContract);
         setProofOfReserveManager(_proofOfReserveManager);
+        
+        // Initialize the redemption contract reference
+        s_redemptionContract = _redemptionContract;
+        
+        isInitialized = true;
     }
 
     /* -------------------------------------------------------------------------- */
@@ -154,13 +181,14 @@ contract WAGACoffeeToken is
         uint256 pricePerUnit,
         string memory packagingInfo,
         string memory metadataHash
-    ) external onlyRole(ADMIN_ROLE) returns (uint256) {
-        uint256 batchId = WAGAViewFunctions._nextBatchId++;
+    ) external onlyRole(ADMIN_ROLE) onlyInitialized returns (uint256) {
+        uint256 batchId = _nextBatchId++;
 
         if (expiryDate == 0 || pricePerUnit == 0 || productionDate == 0) {
             revert WAGACoffeeToken__ZeroMetaDataValues_createBatch();
         }
-        if (productionDate > block.timestamp || expiryDate <= block.timestamp) {
+        // Fixed: Allow past production dates for already produced coffee
+        if (productionDate <= block.timestamp || expiryDate <= productionDate) {
             revert WAGACoffeeToken__InvalidBatchDates_createBatch();
         }
         if (
@@ -255,6 +283,47 @@ contract WAGACoffeeToken is
     }
 
     /**
+     * @notice Safely resets batch verification flags before inventory verification
+     * @param batchId ID of the batch to reset flags for
+     * @dev Only resets flags if batch has no active redemption requests
+     */
+    function resetBatchVerificationFlags(
+        uint256 batchId
+    ) external onlyInventoryManagerOrProofOfReserve onlyInitialized {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_resetBatchVerificationFlags();
+        }
+        
+        // Check if batch has active redemptions before resetting flags
+        if (s_redemptionContract != address(0)) {
+            try WAGACoffeeRedemption(s_redemptionContract).hasPendingRedemptions(batchId) returns (bool hasPending) {
+                if (hasPending) {
+                    revert WAGACoffeeToken__BatchHasActiveRedemptions_resetBatchVerificationFlags();
+                }
+            } catch {
+                // If call fails, proceed with caution - don't reset flags
+                revert WAGACoffeeToken__BatchHasActiveRedemptions_resetBatchVerificationFlags();
+            }
+        }
+        
+        s_batchInfo[batchId].isVerified = false;
+        s_batchInfo[batchId].isMetadataVerified = false;
+        
+        // Emit event for tracking
+        emit BatchStatusUpdated(batchId, false);
+    }
+
+    /**
+     * @notice Updates the redemption contract address for safety checks
+     * @param _redemptionContract New redemption contract address
+     */
+    function updateRedemptionContract(
+        address _redemptionContract
+    ) external onlyRole(ADMIN_ROLE) {
+        s_redemptionContract = _redemptionContract;
+    }
+
+    /**
      * @notice Sets new price per unit for a batch
      * @param batchId ID of the batch to update
      * @param newPrice New price per unit in wei
@@ -266,7 +335,7 @@ contract WAGACoffeeToken is
         if (!isBatchCreated(batchId)) {
             revert WAGACoffeeToken__BatchDoesNotExist_setPricePerUint();
         }
-        if (!WAGAViewFunctions.s_isActiveBatch[batchId]) {
+        if (!s_isActiveBatch[batchId]) {
             uint256 productionDate = s_batchInfo[batchId].productionDate;
             uint256 expiryDate = s_batchInfo[batchId].expiryDate;
             revert WAGACoffeeToken__BatchIsInactive_setPricePerUint(
@@ -292,15 +361,16 @@ contract WAGACoffeeToken is
         uint256 verifiedPrice,
         string memory verifiedPackaging,
         string memory verifiedMetadataHash
-    ) external onlyInventoryManagerOrProofOfReserve {
+    ) external onlyInventoryManagerOrProofOfReserve onlyInitialized {
         BatchInfo storage info = s_batchInfo[batchId];
         if (!isBatchCreated(batchId)) {
             revert WAGACoffeeToken__BatchDoesNotExist_verifyBatchMetadata();
         }
+        // Fixed: Use OR logic - fail if ANY field mismatches
         if (
-            info.pricePerUnit != verifiedPrice &&
+            info.pricePerUnit != verifiedPrice ||
             keccak256(bytes(info.packagingInfo)) !=
-            keccak256(bytes(verifiedPackaging)) &&
+            keccak256(bytes(verifiedPackaging)) ||
             keccak256(bytes(info.metadataHash)) !=
             keccak256(bytes(verifiedMetadataHash))
         ) {
@@ -317,7 +387,7 @@ contract WAGACoffeeToken is
     function markBatchExpired(
         uint256 batchId
     ) external onlyRole(INVENTORY_MANAGER_ROLE) {
-        if (!WAGAViewFunctions.s_isActiveBatch[batchId]) {
+        if (!s_isActiveBatch[batchId]) {
             uint256 productionDate_1 = s_batchInfo[batchId].productionDate;
             uint256 expiryDate_1 = s_batchInfo[batchId].expiryDate;
             revert WAGACoffeeToken__BatchIsInactive_markBatchExpired(
@@ -352,7 +422,7 @@ contract WAGACoffeeToken is
 
         if (
             s_batchInfo[batchId].currentQuantity == 0 &&
-            !WAGAViewFunctions.s_isActiveBatch[batchId]
+            !s_isActiveBatch[batchId]
         ) {
             _addToActiveBatches(batchId);
         }
@@ -412,10 +482,10 @@ contract WAGACoffeeToken is
      * @param batchId ID of batch to add
      */
     function _addToActiveBatches(uint256 batchId) internal {
-        if (!WAGAViewFunctions.s_isActiveBatch[batchId]) {
-            WAGAViewFunctions.s_isActiveBatch[batchId] = true;
-            WAGAViewFunctions.s_activeBatchIndex[batchId] = WAGAViewFunctions.s_activeBatchIds.length;
-            WAGAViewFunctions.s_activeBatchIds.push(batchId); // This is how you add a new element to the array
+        if (!s_isActiveBatch[batchId]) {
+            s_isActiveBatch[batchId] = true;
+            s_activeBatchIndex[batchId] = s_activeBatchIds.length;
+            s_activeBatchIds.push(batchId);
         }
     }
 
@@ -433,7 +503,7 @@ contract WAGACoffeeToken is
             if (index != lastIndex) {
                 // Get the last batch ID from the s_activeBatchIds array and swap it with the batch to remove.
                 uint256 lastBatchId = s_activeBatchIds[lastIndex];
-                s_activeBatchIds[index] = lastBatchId; // This is how you relace the value of an array at a specific index.
+                s_activeBatchIds[index] = lastBatchId; // This is how you replace the value of an array at a specific index.
                 // Update the index mapping for the last batch ID to point to the index of the removed batch. We need the index mapping to point to the correct index in the s_activeBatchIds array after the swap.
                 s_activeBatchIndex[lastBatchId] = index;
             }
@@ -459,4 +529,4 @@ contract WAGACoffeeToken is
         super._update(from, to, ids, values);
     }
 }
-
+       

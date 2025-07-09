@@ -3,7 +3,7 @@ pragma solidity ^0.8.18;
 
 import {WAGAChainlinkFunctionsBase} from "./WAGAChainlinkFunctionsBase.sol";
 import {WAGACoffeeToken} from "./WAGACoffeeToken.sol";
-// import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @title WAGAProofOfReserve
@@ -151,9 +151,19 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
             ,
 
         ) = coffeeToken.s_batchInfo(batchId);
+
+        // Prepare arguments for Chainlink Functions
+        string[] memory args = new string[](5);
+        args[0] = Strings.toString(batchId);
+        args[1] = Strings.toString(requestQuantity);
+        args[2] = Strings.toString(requestPrice);
+        args[3] = expectedPackaging;
+        args[4] = expectedMetadataHash;
+
         // Convert source code to bytes
         bytes memory sourceBytes = bytes(source);
-        requestId = _sendRequest(sourceBytes, subscriptionId, 300000, donId); // @audit: How do we know if the request was successful?
+        requestId = _sendRequestWithArgs(sourceBytes, args, subscriptionId, 300000, donId);
+
         // Check that the request was successful
         if (requestId == bytes32(0)) {
             revert WAGAProofOfReserve__RequestFailed_requestReserveVerification();
@@ -215,9 +225,17 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
 
         ) = coffeeToken.s_batchInfo(batchId);
 
+        // Prepare arguments for Chainlink Functions  
+        string[] memory args = new string[](5);
+        args[0] = Strings.toString(batchId);
+        args[1] = Strings.toString(requestQuantity);
+        args[2] = Strings.toString(requestPrice);
+        args[3] = expectedPackaging;
+        args[4] = expectedMetadataHash;
+
         // Convert source code to bytes
         bytes memory sourceBytes = bytes(source);
-        requestId = _sendRequest(sourceBytes, subscriptionId, 300000, donId);
+        requestId = _sendRequestWithArgs(sourceBytes, args, subscriptionId, 300000, donId);
 
         // Check that the request was successful
         if (requestId == bytes32(0)) {
