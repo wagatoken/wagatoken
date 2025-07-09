@@ -7,8 +7,7 @@ contract WAGAViewFunctions {
     /* -------------------------------------------------------------------------- */
 
     error WAGAViewFunctions__BatchDoesNotExist_getBatchQuantity();
-   
-   
+
     /* -------------------------------------------------------------------------- */
     /*                              Type Declarations                             */
     /* -------------------------------------------------------------------------- */
@@ -27,12 +26,12 @@ contract WAGAViewFunctions {
     struct BatchInfo {
         uint256 productionDate;
         uint256 expiryDate;
-        bool isVerified;
+        bool isVerified; // This flag should be set to false before every Inventory Verification request.
         uint256 currentQuantity;
         uint256 pricePerUnit;
         string packagingInfo;
         string metadataHash;
-        bool isMetadataVerified;
+        bool isMetadataVerified; // This flag should be set to false before every Inventory Verification request.
         uint256 lastVerifiedTimestamp; // Timestamp of last metadata verification
     }
 
@@ -135,10 +134,6 @@ contract WAGAViewFunctions {
         return s_batchInfo[batchId].currentQuantity;
     }
 
-    /**
-     * @notice Returns the next batch ID that will be assigned
-     * @return Next batch ID
-     */
     function getNextBatchId() external view returns (uint256) {
         return _nextBatchId;
     }
@@ -175,7 +170,7 @@ contract WAGAViewFunctions {
         return s_batchInfo[batchId].lastVerifiedTimestamp;
     }
 
-      /**
+    /**
      * @notice Checks if a batch has been created
      * @param batchId ID of the batch to check
      * @return True if batch exists
@@ -183,5 +178,4 @@ contract WAGAViewFunctions {
     function isBatchCreated(uint256 batchId) public view returns (bool) {
         return s_batchInfo[batchId].productionDate != 0;
     }
-
 }

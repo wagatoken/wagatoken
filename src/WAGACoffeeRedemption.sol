@@ -37,6 +37,12 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     // Mapping from consumer address to their redemption IDs
     mapping(address => uint256[]) private consumerRedemptions;
 
+    // Mapping to track batches with pending redemptions
+    mapping(uint256 => uint256) private batchPendingRedemptions;
+    
+    // Initialization flag
+    bool public isInitialized;
+
     // Events
     event RedemptionRequested(
         uint256 indexed redemptionId,
@@ -60,6 +66,22 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         _grantRole(ADMIN_ROLE, msg.sender);
         _grantRole(FULFILLER_ROLE, msg.sender);
         nextRedemptionId = 1;
+    }
+
+    /**
+     * @notice Initialize the contract (two-phase deployment)
+     */
+    function initialize() external onlyRole(ADMIN_ROLE) {
+        require(!isInitialized, "Already initialized");
+        isInitialized = true;
+    }
+
+    /**
+     * @notice Modifier to ensure contract is initialized
+     */
+    modifier onlyInitialized() {
+        require(isInitialized, "Contract not initialized");
+        _;
     }
 
     /**
@@ -118,6 +140,9 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
 
         // Track redemption for the consumer
         consumerRedemptions[msg.sender].push(redemptionId);
+        
+        // Increment pending redemptions counter for this batch
+        batchPendingRedemptions[batchId]++;
 
         emit RedemptionRequested(
             redemptionId,
@@ -136,7 +161,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     function updateRedemptionStatus(
         uint256 redemptionId,
         RedemptionStatus status
-    ) external onlyRole(FULFILLER_ROLE) {
+    ) external onlyRole(FULFILLER_ROLE) onlyInitialized {
         require(redemptionId < nextRedemptionId, "Redemption does not exist");
         require(
             status != RedemptionStatus.Requested,
@@ -152,6 +177,15 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
             request.status != RedemptionStatus.Cancelled,
             "Redemption already cancelled"
         );
+
+        // Fixed: Only decrement if status was previously Requested and we're moving to a final state
+        if (request.status == RedemptionStatus.Requested && 
+            (status == RedemptionStatus.Fulfilled || status == RedemptionStatus.Cancelled)) {
+            // Ensure counter doesn't underflow
+            if (batchPendingRedemptions[request.batchId] > 0) {
+                batchPendingRedemptions[request.batchId]--;
+            }
+        }
 
         request.status = status;
 
@@ -178,6 +212,15 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         }
 
         emit RedemptionStatusUpdated(redemptionId, status);
+    }
+
+    /**
+     * @dev Checks if a batch has pending redemption requests
+     * @param batchId Batch identifier to check
+     * @return True if batch has pending redemptions, false otherwise
+     */
+    function hasPendingRedemptions(uint256 batchId) external view returns (bool) {
+        return batchPendingRedemptions[batchId] > 0;
     }
 
     /**
