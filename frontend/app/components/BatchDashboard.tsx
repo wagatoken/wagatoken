@@ -76,8 +76,8 @@ export default function BatchDashboard({ batches, onRefresh }: BatchDashboardPro
                   <div className="text-sm text-gray-500">{batch.batchDetails.location}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{batch.quantity} kg</div>
-                  <div className="text-sm text-gray-500">Actual: {batch.verification.inventoryActual} kg</div>
+                  <div className="text-sm text-gray-900">{batch.quantity} bags</div>
+                  <div className="text-sm text-gray-500">Actual: {batch.verification.inventoryActual} bags</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">${batch.price}</div>

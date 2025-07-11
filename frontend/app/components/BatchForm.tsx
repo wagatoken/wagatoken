@@ -12,7 +12,7 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
     batchId: '',
     quantity: '',
     price: '',
-    packaging: '60kg jute bags',
+    packaging: '250g',
     farmName: '',
     location: '',
     harvestDate: '',
@@ -68,7 +68,7 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
           batchId: '',
           quantity: '',
           price: '',
-          packaging: '60kg jute bags',
+          packaging: '250g',
           farmName: '',
           location: '',
           harvestDate: '',
@@ -116,7 +116,7 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Quantity (kg)
+            Quantity (number of bags)
           </label>
           <input
             type="number"
@@ -125,13 +125,13 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
             onChange={handleChange}
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="e.g. 1000"
+            placeholder="e.g. 100"
           />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Price (USD)
+            Price per bag (USD)
           </label>
           <input
             type="number"
@@ -140,13 +140,13 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
             onChange={handleChange}
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="e.g. 2500"
+            placeholder="e.g. 25"
           />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Packaging
+            Packaging Size
           </label>
           <select
             name="packaging"
@@ -154,9 +154,8 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="60kg jute bags">60kg jute bags</option>
-            <option value="30kg jute bags">30kg jute bags</option>
-            <option value="bulk">Bulk</option>
+            <option value="250g">250g roasted coffee bags</option>
+            <option value="500g">500g roasted coffee bags</option>
           </select>
         </div>
 
