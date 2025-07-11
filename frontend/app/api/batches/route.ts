@@ -8,13 +8,18 @@ const batchMapping = new Map<number, string>();
 
 export async function GET() {
   try {
+    console.log("Fetching all pinned coffee batches from Pinata...");
+    
     // Get all pinned files from Pinata
     const files = await pinata.files.list();
     const batches: CoffeeBatch[] = [];
 
+    console.log(`Found ${files.files.length} total files in Pinata`);
+
     for (const file of files.files) {
       if (file.name?.startsWith('coffee-batch-')) {
         try {
+          console.log(`Processing pinned file: ${file.name} (CID: ${file.cid})`);
           const data = await pinata.gateways.get(file.cid);
           const batchData = JSON.parse(data.data as string);
           batches.push(batchData);
@@ -24,6 +29,7 @@ export async function GET() {
       }
     }
 
+    console.log(`Successfully retrieved ${batches.length} coffee batches`);
     return NextResponse.json({ batches }, { status: 200 });
   } catch (error) {
     console.error("Error fetching batches:", error);
@@ -38,6 +44,8 @@ export async function POST(request: NextRequest) {
   try {
     const batchData: Omit<CoffeeBatch, 'createdAt' | 'updatedAt'> = await request.json();
     
+    console.log(`Creating new coffee batch ${batchData.batchId}...`);
+    
     // Add timestamps
     const completeBatch: CoffeeBatch = {
       ...batchData,
@@ -45,12 +53,23 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date().toISOString()
     };
 
-    // Upload to Pinata as JSON using simplified method
+    // Upload to Pinata as JSON - this automatically pins the content
+    console.log("Uploading and pinning batch data to IPFS via Pinata...");
     const upload = await pinata.upload.json(completeBatch, {
       metadata: {
-        name: `coffee-batch-${batchData.batchId}`
+        name: `coffee-batch-${batchData.batchId}`,
+        // Add additional metadata to help with organization
+        keyvalues: {
+          batchId: batchData.batchId.toString(),
+          packaging: batchData.packaging,
+          type: 'coffee-batch'
+        }
       }
     });
+
+    console.log(`✅ Batch ${batchData.batchId} successfully pinned to IPFS!`);
+    console.log(`   CID: ${upload.cid}`);
+    console.log(`   Pinned file name: coffee-batch-${batchData.batchId}`);
 
     // Store mapping
     batchMapping.set(batchData.batchId, upload.cid);
@@ -58,10 +77,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       cid: upload.cid,
-      batch: completeBatch 
+      batch: completeBatch,
+      pinned: true // Confirm that the file is pinned
     }, { status: 201 });
   } catch (error) {
-    console.error("Error creating batch:", error);
+    console.error("Error creating and pinning batch:", error);
     return NextResponse.json(
       { error: "Failed to create batch" },
       { status: 500 }
