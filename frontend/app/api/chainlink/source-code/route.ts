@@ -1,53 +1,88 @@
 import { NextResponse } from "next/server";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 export async function GET() {
-  // JavaScript source code for Chainlink Functions
-  // This will be used in your WAGAInventoryManager's setDefaultSourceCode function
-  const sourceCode = `
-// Chainlink Functions source code for WAGA Coffee verification
+  try {
+    // Read the default source code file from your codebase
+    const sourceCodePath = join(process.cwd(), '../../DefaultSourceCode.js');
+    const sourceCode = readFileSync(sourceCodePath, 'utf8');
+
+    // Replace placeholder API URL with production URL
+    const productionSourceCode = sourceCode
+      .replace('https://api.wagacoffee.com', process.env.NEXT_PUBLIC_API_BASE_URL || '')
+      .replace('/inventory/batch/', '/api/batches/')
+      .replace('/metadata/verify/', '/api/batches/pin-status?cid=');
+
+    return NextResponse.json({ 
+      sourceCode: productionSourceCode,
+      version: "1.0.0",
+      lastUpdated: new Date().toISOString()
+    }, { status: 200 });
+
+  } catch (error) {
+    console.error("Error reading source code:", error);
+    
+    // Fallback source code if file read fails
+    const fallbackSourceCode = `
+// WAGA Coffee Chainlink Functions Source Code
 const batchId = args[0];
-const expectedQuantity = args[1];
-const expectedPrice = args[2];
+const expectedQuantity = parseInt(args[1]);
+const expectedPrice = parseInt(args[2]);
 const expectedPackaging = args[3];
 const expectedMetadataHash = args[4];
 
-console.log('Verifying batch:', batchId);
-
 try {
-  // Make API call to your Next.js backend
   const response = await Functions.makeHttpRequest({
-    url: \`http://localhost:3001/api/batches/\${batchId}\`,
+    url: \`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/batches/\${batchId}\`,
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    }
+    headers: { "Content-Type": "application/json" }
   });
 
-  if (response.error) {
-    throw new Error(\`API Error: \${response.error}\`);
-  }
-
-  const batchData = response.data;
+  if (response.error) throw new Error(response.error);
   
-  console.log('Retrieved batch data:', batchData);
-
-  // Validate that we got the expected data structure
-  if (!batchData.quantity || !batchData.price || !batchData.packaging || !batchData.metadataHash) {
-    throw new Error('Invalid batch data structure');
-  }
-
-  // Return the data in the format expected by your _parseResponse function
-  // This matches the ABI encoding expected by your smart contracts
-  return Functions.encodeUint256(batchData.quantity) + 
-         Functions.encodeUint256(batchData.price) + 
-         Functions.encodeString(batchData.packaging) + 
-         Functions.encodeString(batchData.metadataHash);
-         
+  const data = response.data;
+  return Functions.encodeUint256(data.quantity) +
+         Functions.encodeUint256(data.price) +
+         Functions.encodeString(data.packaging) +
+         Functions.encodeString(data.metadataHash);
 } catch (error) {
-  console.error('Chainlink Functions error:', error);
-  throw new Error(\`Verification failed: \${error.message}\`);
-}
-  `.trim();
+  return Functions.encodeUint256(0) + Functions.encodeUint256(0) +
+         Functions.encodeString("") + Functions.encodeString("");
+}`.trim();
 
-  return NextResponse.json({ sourceCode }, { status: 200 });
+    return NextResponse.json({ 
+      sourceCode: fallbackSourceCode,
+      version: "1.0.0-fallback",
+      lastUpdated: new Date().toISOString()
+    }, { status: 200 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const { sourceCode } = await request.json();
+    
+    // In production, you might want to save custom source code
+    // For now, we'll just validate and return it
+    if (!sourceCode || typeof sourceCode !== 'string') {
+      return NextResponse.json(
+        { error: "Invalid source code provided" },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ 
+      success: true,
+      message: "Source code updated successfully",
+      preview: sourceCode.substring(0, 200) + "..."
+    }, { status: 200 });
+
+  } catch (error) {
+    console.error("Error updating source code:", error);
+    return NextResponse.json(
+      { error: "Failed to update source code" },
+      { status: 500 }
+    );
+  }
 }

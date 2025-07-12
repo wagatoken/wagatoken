@@ -35,3 +35,31 @@ export interface VerificationRequest {
   status: 'pending' | 'completed' | 'failed';
   timestamp: string;
 }
+
+export interface ChainlinkFunctionsRequest {
+  requestId: string;
+  batchId: number;
+  verificationType: 'reserve' | 'inventory';
+  status: 'pending' | 'fulfilled' | 'failed';
+  submittedAt: string;
+  completedAt?: string;
+  result?: ChainlinkFunctionsResult;
+  error?: string;
+  transactionHash?: string;
+}
+
+export interface ChainlinkFunctionsResult {
+  verifiedQuantity: number;
+  verifiedPrice: number;
+  verifiedPackaging: string;
+  verifiedMetadataHash: string;
+  verified: boolean;
+}
+
+export interface ChainlinkConfig {
+  subscriptionId: string;
+  donId: string;
+  routerAddress: string;
+  proofOfReserveAddress: string;
+  inventoryManagerAddress: string;
+}
