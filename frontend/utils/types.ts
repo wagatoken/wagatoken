@@ -4,6 +4,7 @@ export interface CoffeeBatch {
   price: number;
   packaging: string;
   metadataHash: string;
+  ipfsUri?: string; // Added to match smart contract
   verification: {
     lastVerified: string;
     verificationStatus: 'pending' | 'verified' | 'failed';
@@ -12,12 +13,11 @@ export interface CoffeeBatch {
   batchDetails: {
     farmName: string;
     location: string;
-    harvestDate: string;
+    productionDate: string; // Changed from harvestDate to match smart contract
     expiryDate: string;
     processingMethod?: string;
     qualityScore?: number;
   };
-  ipfsHash?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -62,4 +62,58 @@ export interface ChainlinkConfig {
   routerAddress: string;
   proofOfReserveAddress: string;
   inventoryManagerAddress: string;
+}
+
+export interface RedemptionRequest {
+  redemptionId: number;
+  consumer: string;
+  batchId: number;
+  quantity: number;
+  deliveryAddress: string;
+  requestDate: string;
+  status: 'Requested' | 'Processing' | 'Fulfilled' | 'Cancelled';
+  fulfillmentDate?: string;
+  packagingInfo?: string;
+}
+
+export interface UserTokenBalance {
+  batchId: number;
+  balance: number;
+  batchDetails: {
+    farmName: string;
+    location: string;
+    packaging: string;
+    pricePerUnit: number;
+  };
+}
+
+export interface RedemptionFormData {
+  batchId: number;
+  quantity: number;
+  deliveryAddress: string;
+  deliveryCity: string;
+  deliveryState: string;
+  deliveryZip: string;
+  deliveryCountry: string;
+  specialInstructions?: string;
+}
+
+// Add smart contract interaction types
+export interface SmartContractBatch {
+  productionDate: number; // Unix timestamp
+  expiryDate: number; // Unix timestamp
+  isVerified: boolean;
+  currentQuantity: number;
+  pricePerUnit: number; // In wei
+  packagingInfo: string;
+  metadataHash: string;
+  isMetadataVerified: boolean;
+  lastVerifiedTimestamp: number;
+}
+
+export interface ContractConfig {
+  coffeeTokenAddress: string;
+  proofOfReserveAddress: string;
+  inventoryManagerAddress: string;
+  redemptionContractAddress: string;
 }

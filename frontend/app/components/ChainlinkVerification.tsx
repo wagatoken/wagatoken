@@ -112,59 +112,68 @@ export default function ChainlinkVerification({ batchId, onVerificationComplete 
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-medium text-gray-900">
-          Chainlink Functions Verification
-        </h3>
-        <div className="text-sm text-gray-500">
-          Batch #{batchId}
+    <div className="web3-card-dark">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-xl font-bold web3-gradient-text mb-1">
+            ⛓️ Chainlink Functions Verification
+          </h3>
+          <p className="text-gray-400 text-sm">Decentralized verification powered by Chainlink oracles</p>
+        </div>
+        <div className="text-right">
+          <div className="text-sm text-purple-300 font-semibold">Ethiopian Batch #{batchId}</div>
+          <div className="text-xs text-gray-500">On-chain verification</div>
         </div>
       </div>
       
-      <div className="space-y-4">
+      <div className="space-y-6">
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <button
             onClick={() => triggerVerification('inventory')}
             disabled={verifying}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            className={`${verifying ? 'opacity-50 cursor-not-allowed' : 'web3-gradient-button'} relative overflow-hidden`}
           >
             {verifying && status === 'requesting' ? (
               <span className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 Requesting...
               </span>
-            ) : verifying ? 'Verifying...' : 'Verify Inventory'}
+            ) : verifying ? '🔄 Verifying...' : '📊 Verify Inventory'}
           </button>
           
           <button
             onClick={() => triggerVerification('reserve')}
             disabled={verifying}
-            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            className={`${verifying ? 'opacity-50 cursor-not-allowed' : 'web3-gradient-button-secondary'} relative overflow-hidden`}
           >
-            {verifying && status === 'requesting' ? 'Requesting...' : verifying ? 'Verifying...' : 'Verify & Mint Tokens'}
+            {verifying && status === 'requesting' ? '🔄 Requesting...' : verifying ? '⚡ Verifying...' : '🪙 Verify & Mint Tokens'}
           </button>
         </div>
 
         {/* Progress Bar */}
         {verifying && (
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
-              style={{ width: `${progress}%` }}
-            ></div>
+          <div className="relative">
+            <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out relative"
+                style={{ width: `${progress}%` }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+              </div>
+            </div>
+            <div className="text-center mt-2 text-purple-300 text-sm font-medium">{progress}% Complete</div>
           </div>
         )}
 
         {/* Request ID */}
         {requestId && (
-          <div className="text-sm bg-gray-50 p-3 rounded-md">
-            <div className="font-medium text-gray-700 mb-1">Request ID:</div>
-            <div className="font-mono text-xs text-gray-600 break-all">{requestId}</div>
+          <div className="bg-gray-800/50 p-4 rounded-xl border border-purple-500/20">
+            <div className="font-semibold text-purple-300 mb-2">🆔 Request ID:</div>
+            <div className="font-mono text-xs text-gray-300 break-all bg-gray-900/50 p-2 rounded">{requestId}</div>
           </div>
         )}
 
@@ -230,12 +239,21 @@ export default function ChainlinkVerification({ batchId, onVerificationComplete 
         )}
 
         {/* Help Text */}
-        <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-md">
-          <div className="font-medium mb-1">How it works:</div>
-          <ul className="space-y-1">
-            <li>• <strong>Verify Inventory:</strong> Checks current stock without minting tokens</li>
-            <li>• <strong>Verify & Mint:</strong> Verifies inventory and mints tokens to recipient</li>
-            <li>• Uses Chainlink Functions to fetch data from your IPFS-stored batch information</li>
+        <div className="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 p-4 rounded-xl border border-purple-400/20">
+          <div className="font-semibold mb-2 text-purple-300">⚡ How Chainlink Functions Works:</div>
+          <ul className="space-y-2 text-sm text-gray-300">
+            <li className="flex items-start">
+              <span className="text-purple-400 mr-2">📊</span>
+              <span><strong>Verify Inventory:</strong> Checks current Ethiopian coffee stock without minting tokens</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-emerald-400 mr-2">🪙</span>
+              <span><strong>Verify & Mint:</strong> Verifies inventory and mints tokens to recipient wallet</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-cyan-400 mr-2">⛓️</span>
+              <span>Uses decentralized Chainlink oracles to fetch data from your IPFS-stored batch information</span>
+            </li>
           </ul>
         </div>
       </div>

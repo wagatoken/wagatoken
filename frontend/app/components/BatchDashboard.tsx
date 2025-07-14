@@ -41,75 +41,78 @@ export default function BatchDashboard({ batches, onRefresh }: BatchDashboardPro
   };
 
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-900">Coffee Batches</h2>
-          <div className="flex gap-3">
-            <button
-              onClick={() => {
-                setSelectedBatch(null);
-                setShowVerificationPanel(false);
-              }}
-              className="text-sm text-gray-600 hover:text-gray-900"
-            >
-              Hide Verification
-            </button>
-            <button
-              onClick={onRefresh}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
-            >
-              Refresh
-            </button>
-          </div>
+    <div className="web3-card">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-2xl font-bold web3-gradient-text">Coffee Batches</h2>
+          <p className="text-gray-400 mt-1">Manage and verify your inventory on the blockchain</p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              setSelectedBatch(null);
+              setShowVerificationPanel(false);
+            }}
+            className="text-purple-300 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-purple-500/20"
+          >
+            Hide Verification
+          </button>
+          <button
+            onClick={onRefresh}
+            className="web3-gradient-button"
+          >
+            🔄 Refresh
+          </button>
         </div>
       </div>
 
       {batches.length === 0 ? (
-        <div className="px-6 py-8 text-center text-gray-500">
-          No coffee batches found. Create your first batch to get started.
+        <div className="text-center py-16">
+          <div className="text-6xl mb-6">☕</div>
+          <h3 className="text-xl font-bold text-white mb-3">No Coffee Batches Yet</h3>
+          <p className="text-gray-400 max-w-md mx-auto">Create your first batch of premium Ethiopian coffee to start tokenizing your inventory.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+        <div className="overflow-x-auto rounded-xl">
+          <table className="min-w-full">
+            <thead>
+              <tr className="border-b border-purple-500/20">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-purple-300 uppercase tracking-wider">
                   Batch ID
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-purple-300 uppercase tracking-wider">
                   Farm Details
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-purple-300 uppercase tracking-wider">
                   Quantity
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-purple-300 uppercase tracking-wider">
                   Price
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-purple-300 uppercase tracking-wider">
                   Packaging
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-purple-300 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-purple-300 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-purple-500/10">
               {batches.map((batch) => (
                 <tr 
                   key={batch.batchId} 
-                  className={`hover:bg-gray-50 ${selectedBatch === batch.batchId ? 'bg-blue-50' : ''}`}
+                  className={`hover:bg-purple-500/10 transition-colors ${selectedBatch === batch.batchId ? 'bg-purple-500/20' : ''}`}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">#{batch.batchId}</div>
-                    <div className="text-sm text-gray-500">ID: {batch.batchId}</div>
+                    <div className="text-sm font-semibold text-white">#{batch.batchId}</div>
+                    <div className="text-sm text-gray-400">Ethiopian ID: {batch.batchId}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{batch.batchDetails.farmName}</div>
-                    <div className="text-sm text-gray-500">{batch.batchDetails.location}</div>
+                    <div className="text-sm font-semibold text-white">{batch.batchDetails.farmName}</div>
+                    <div className="text-sm text-purple-300">📍 {batch.batchDetails.location}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{batch.quantity} bags</div>
@@ -130,18 +133,16 @@ export default function BatchDashboard({ batches, onRefresh }: BatchDashboardPro
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => toggleVerification(batch.batchId)}
-                        className={`px-3 py-1 text-xs rounded-md border transition-colors ${
-                          selectedBatch === batch.batchId && showVerificationPanel
-                            ? 'bg-blue-600 text-white border-blue-600'
-                            : 'text-blue-600 border-blue-600 hover:bg-blue-50'
-                        }`}
-                      >
-                        {selectedBatch === batch.batchId && showVerificationPanel ? 'Hide' : 'Verify'}
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => toggleVerification(batch.batchId)}
+                      className={`px-4 py-2 text-xs rounded-lg font-semibold transition-all duration-300 ${
+                        selectedBatch === batch.batchId && showVerificationPanel
+                          ? 'bg-gradient-to-r from-red-500 to-red-600 text-white'
+                          : 'web3-gradient-button'
+                      }`}
+                    >
+                      {selectedBatch === batch.batchId && showVerificationPanel ? '🔒 Hide' : '🔗 Verify'}
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -152,7 +153,7 @@ export default function BatchDashboard({ batches, onRefresh }: BatchDashboardPro
 
       {/* Chainlink Verification Panel */}
       {selectedBatch && showVerificationPanel && (
-        <div className="border-t border-gray-200 p-6 bg-gray-50">
+        <div className="mt-8 p-6 bg-gradient-to-r from-purple-900/50 to-indigo-900/50 rounded-2xl border border-purple-400/30">
           <ChainlinkVerification 
             batchId={selectedBatch} 
             onVerificationComplete={handleVerificationComplete}

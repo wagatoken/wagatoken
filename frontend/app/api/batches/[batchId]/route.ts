@@ -9,24 +9,24 @@ export async function GET(
   try {
     const batchId = parseInt(params.batchId);
     
-    // Search for the batch in Pinata files using the updated SDK
+    // Search for the Ethiopian coffee batch in Pinata files
     const files = await pinata.files.list();
     const batchFile = files.files.find(file => 
-      file.name === `coffee-batch-${batchId}`
+      file.name === `ethiopian-coffee-batch-${batchId}`
     );
 
     if (!batchFile) {
       return NextResponse.json(
-        { error: "Batch not found" },
+        { error: `Ethiopian coffee batch ${batchId} not found` },
         { status: 404 }
       );
     }
 
-    // Fetch the batch data using the correct gateway method
+    // Fetch the batch data using the gateway
     const data = await pinata.gateways.get(batchFile.cid);
     const batchData: CoffeeBatch = JSON.parse(data.data as string);
 
-    // Return in the format expected by Chainlink Functions and your smart contracts
+    // Return in the format expected by Chainlink Functions and smart contracts
     const response: ChainlinkFunctionsResponse = {
       quantity: batchData.quantity,
       price: batchData.price,
@@ -34,9 +34,11 @@ export async function GET(
       metadataHash: batchData.metadataHash
     };
 
+    console.log(`📦 Retrieved Ethiopian coffee batch ${batchId} for verification`);
+
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    console.error("Error fetching batch:", error);
+    console.error("Error fetching Ethiopian coffee batch:", error);
     return NextResponse.json(
       { error: "Failed to fetch batch" },
       { status: 500 }
@@ -55,7 +57,7 @@ export async function PUT(
     // Find existing batch
     const files = await pinata.files.list();
     const batchFile = files.files.find(file => 
-      file.name === `coffee-batch-${batchId}`
+      file.name === `ethiopian-coffee-batch-${batchId}`
     );
 
     if (!batchFile) {
@@ -79,7 +81,7 @@ export async function PUT(
     // Upload updated version using the correct SDK method
     const upload = await pinata.upload.json(updatedBatch, {
       metadata: {
-        name: `coffee-batch-${batchId}`
+        name: `ethiopian-coffee-batch-${batchId}`
       }
     });
 

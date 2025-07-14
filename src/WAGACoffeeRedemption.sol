@@ -7,6 +7,26 @@ import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155
 import {WAGACoffeeToken} from "./WAGACoffeeToken.sol";
 
 contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
+    /* -------------------------------------------------------------------------- */
+    /*                                CUSTOM ERRORS                               */
+    /* -------------------------------------------------------------------------- */
+
+    error WAGACoffeeRedemption__ZeroQuantity_requestRedemption();
+    error WAGACoffeeRedemption__InsufficientTokenBalance_requestRedemption();
+    error WAGACoffeeRedemption__BatchNotVerified_requestRedemption();
+    error WAGACoffeeRedemption__BatchMetadataNotVerified_requestRedemption();
+    error WAGACoffeeRedemption__RedemptionDoesNotExist_updateRedemptionStatus();
+    error WAGACoffeeRedemption__CannotSetStatusBackToRequested_updateRedemptionStatus();
+    error WAGACoffeeRedemption__RedemptionAlreadyFulfilled_updateRedemptionStatus();
+    error WAGACoffeeRedemption__RedemptionAlreadyCancelled_updateRedemptionStatus();
+    error WAGACoffeeRedemption__RedemptionDoesNotExist_getRedemptionDetails();
+    error WAGACoffeeRedemption__AlreadyInitialized_initialize();
+    error WAGACoffeeRedemption__ContractNotInitialized();
+
+    /* -------------------------------------------------------------------------- */
+    /*                               TYPE DECLARATIONS                            */
+    /* -------------------------------------------------------------------------- */
+
     bytes32 public constant FULFILLER_ROLE = keccak256("FULFILLER_ROLE");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     WAGACoffeeToken public coffeeToken;
@@ -30,6 +50,10 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         uint256 fulfillmentDate;
     }
 
+    /* -------------------------------------------------------------------------- */
+    /*                               STATE VARIABLES                              */
+    /* -------------------------------------------------------------------------- */
+
     // Mapping from redemption ID to redemption request
     mapping(uint256 => RedemptionRequest) public redemptions;
     uint256 public nextRedemptionId;
@@ -43,7 +67,10 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     // Initialization flag
     bool public isInitialized;
 
-    // Events
+    /* -------------------------------------------------------------------------- */
+    /*                                   EVENTS                                   */
+    /* -------------------------------------------------------------------------- */
+
     event RedemptionRequested(
         uint256 indexed redemptionId,
         address indexed consumer,
@@ -60,6 +87,24 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         uint256 fulfillmentDate
     );
 
+    /* -------------------------------------------------------------------------- */
+    /*                                 MODIFIERS                                  */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @notice Modifier to ensure contract is initialized
+     */
+    modifier onlyInitialized() {
+        if (!isInitialized) {
+            revert WAGACoffeeRedemption__ContractNotInitialized();
+        }
+        _;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                CONSTRUCTOR                                 */
+    /* -------------------------------------------------------------------------- */
+
     constructor(address coffeeTokenAddress) {
         coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -68,20 +113,18 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         nextRedemptionId = 1;
     }
 
+    /* -------------------------------------------------------------------------- */
+    /*                              EXTERNAL FUNCTIONS                            */
+    /* -------------------------------------------------------------------------- */
+
     /**
      * @notice Initialize the contract (two-phase deployment)
      */
     function initialize() external onlyRole(ADMIN_ROLE) {
-        require(!isInitialized, "Already initialized");
+        if (isInitialized) {
+            revert WAGACoffeeRedemption__AlreadyInitialized_initialize();
+        }
         isInitialized = true;
-    }
-
-    /**
-     * @notice Modifier to ensure contract is initialized
-     */
-    modifier onlyInitialized() {
-        require(isInitialized, "Contract not initialized");
-        _;
     }
 
     /**
@@ -95,11 +138,12 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         uint256 quantity,
         string memory deliveryAddress
     ) external nonReentrant {
-        require(quantity > 0, "Quantity must be greater than zero");
-        require(
-            coffeeToken.balanceOf(msg.sender, batchId) >= quantity,
-            "Insufficient token balance"
-        );
+        if (quantity == 0) {
+            revert WAGACoffeeRedemption__ZeroQuantity_requestRedemption();
+        }
+        if (coffeeToken.balanceOf(msg.sender, batchId) < quantity) {
+            revert WAGACoffeeRedemption__InsufficientTokenBalance_requestRedemption();
+        }
 
         // Fetch batch info
         (
@@ -114,8 +158,12 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         ) = coffeeToken.s_batchInfo(batchId);
 
         // Ensure the batch is verified and metadata is verified
-        require(isVerified, "Batch is not verified");
-        require(isMetadataVerified, "Batch metadata is not verified");
+        if (!isVerified) {
+            revert WAGACoffeeRedemption__BatchNotVerified_requestRedemption();
+        }
+        if (!isMetadataVerified) {
+            revert WAGACoffeeRedemption__BatchMetadataNotVerified_requestRedemption();
+        }
 
         // Transfer tokens from consumer to this contract
         coffeeToken.safeTransferFrom(
@@ -162,21 +210,20 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         uint256 redemptionId,
         RedemptionStatus status
     ) external onlyRole(FULFILLER_ROLE) onlyInitialized {
-        require(redemptionId < nextRedemptionId, "Redemption does not exist");
-        require(
-            status != RedemptionStatus.Requested,
-            "Cannot set status back to Requested"
-        );
+        if (redemptionId >= nextRedemptionId) {
+            revert WAGACoffeeRedemption__RedemptionDoesNotExist_updateRedemptionStatus();
+        }
+        if (status == RedemptionStatus.Requested) {
+            revert WAGACoffeeRedemption__CannotSetStatusBackToRequested_updateRedemptionStatus();
+        }
 
         RedemptionRequest storage request = redemptions[redemptionId];
-        require(
-            request.status != RedemptionStatus.Fulfilled,
-            "Redemption already fulfilled"
-        );
-        require(
-            request.status != RedemptionStatus.Cancelled,
-            "Redemption already cancelled"
-        );
+        if (request.status == RedemptionStatus.Fulfilled) {
+            revert WAGACoffeeRedemption__RedemptionAlreadyFulfilled_updateRedemptionStatus();
+        }
+        if (request.status == RedemptionStatus.Cancelled) {
+            revert WAGACoffeeRedemption__RedemptionAlreadyCancelled_updateRedemptionStatus();
+        }
 
         // Fixed: Only decrement if status was previously Requested and we're moving to a final state
         if (request.status == RedemptionStatus.Requested && 
@@ -231,7 +278,9 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     function getRedemptionDetails(
         uint256 redemptionId
     ) external view returns (RedemptionRequest memory) {
-        require(redemptionId < nextRedemptionId, "Redemption does not exist");
+        if (redemptionId >= nextRedemptionId) {
+            revert WAGACoffeeRedemption__RedemptionDoesNotExist_getRedemptionDetails();
+        }
         return redemptions[redemptionId];
     }
 

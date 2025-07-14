@@ -15,7 +15,7 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
     packaging: '250g',
     farmName: '',
     location: '',
-    harvestDate: '',
+    productionDate: '',
     expiryDate: '',
     processingMethod: 'washed',
     qualityScore: '85'
@@ -44,7 +44,7 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
         batchDetails: {
           farmName: formData.farmName,
           location: formData.location,
-          harvestDate: formData.harvestDate,
+          productionDate: formData.productionDate,  // Now consistent
           expiryDate: formData.expiryDate,
           processingMethod: formData.processingMethod,
           qualityScore: parseInt(formData.qualityScore)
@@ -71,7 +71,7 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
           packaging: '250g',
           farmName: '',
           location: '',
-          harvestDate: '',
+          productionDate: '',
           expiryDate: '',
           processingMethod: 'washed',
           qualityScore: '85'
@@ -95,13 +95,16 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">Create New Coffee Batch</h3>
+    <div className="web3-card">
+      <div className="text-center mb-6">
+        <h3 className="text-2xl font-bold web3-gradient-text mb-2">Create New Coffee Batch</h3>
+        <p className="text-gray-400">Add a new batch of premium Ethiopian roasted coffee to the blockchain</p>
+      </div>
       
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Batch ID
+          <label className="block text-sm font-semibold text-purple-300 mb-2">
+            🆔 Batch ID
           </label>
           <input
             type="number"
@@ -109,14 +112,14 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
             value={formData.batchId}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full web3-input"
             placeholder="e.g. 1001"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Quantity (number of bags)
+          <label className="block text-sm font-semibold text-purple-300 mb-2">
+            📦 Quantity (number of bags)
           </label>
           <input
             type="number"
@@ -124,14 +127,14 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
             value={formData.quantity}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full web3-input"
             placeholder="e.g. 100"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Price per bag (USD)
+          <label className="block text-sm font-semibold text-purple-300 mb-2">
+            💰 Price per bag (USD)
           </label>
           <input
             type="number"
@@ -139,20 +142,20 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
             value={formData.price}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full web3-input"
             placeholder="e.g. 25"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Packaging Size
+          <label className="block text-sm font-semibold text-purple-300 mb-2">
+            📏 Packaging Size
           </label>
           <select
             name="packaging"
             value={formData.packaging}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full web3-select"
           >
             <option value="250g">250g roasted coffee bags</option>
             <option value="500g">500g roasted coffee bags</option>
@@ -160,8 +163,8 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Farm Name
+          <label className="block text-sm font-semibold text-purple-300 mb-2">
+            🏔️ Farm Name
           </label>
           <input
             type="text"
@@ -169,14 +172,14 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
             value={formData.farmName}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="e.g. Highland Coffee Farm"
+            className="w-full web3-input"
+            placeholder="e.g. Yirgacheffe Highlands Farm"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Location
+          <label className="block text-sm font-semibold text-purple-300 mb-2">
+            📍 Location
           </label>
           <input
             type="text"
@@ -184,28 +187,28 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
             value={formData.location}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="e.g. Kigali, Rwanda"
+            className="w-full web3-input"
+            placeholder="e.g. Sidama, Ethiopia"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Harvest Date
+          <label className="block text-sm font-semibold text-purple-300 mb-2">
+            🏭 Production Date
           </label>
           <input
             type="date"
-            name="harvestDate"
-            value={formData.harvestDate}
+            name="productionDate"
+            value={formData.productionDate}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full web3-input"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Expiry Date
+          <label className="block text-sm font-semibold text-purple-300 mb-2">
+            ⏳ Expiry Date
           </label>
           <input
             type="date"
@@ -213,17 +216,24 @@ export default function BatchForm({ onBatchCreated }: BatchFormProps) {
             value={formData.expiryDate}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full web3-input"
           />
         </div>
 
-        <div className="md:col-span-2">
+        <div className="md:col-span-2 mt-6">
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-md transition-colors"
+            className={`w-full ${submitting ? 'opacity-50 cursor-not-allowed' : 'web3-gradient-button'} text-lg py-4`}
           >
-            {submitting ? 'Creating Batch...' : 'Create Coffee Batch'}
+            {submitting ? (
+              <div className="flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin mr-3"></div>
+                Creating Ethiopian Coffee Batch...
+              </div>
+            ) : (
+              '🚀 Create New Coffee Batch'
+            )}
           </button>
         </div>
       </form>
