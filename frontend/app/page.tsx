@@ -84,13 +84,26 @@ export default function Home() {
             <span className="web3-gradient-text">WAGA</span>{" "}
             <span className="text-white">Coffee Platform</span>
           </h1>
-          <p className="text-gray-300 text-xl max-w-3xl mx-auto leading-relaxed">
-            Tokenize Coffee Batches, Verify with Chainlink Functions, and Redeem Tokens for Physical Delivery of Premium Ethiopian Roasted Coffee ☕
+          <p className="text-gray-300 text-xl max-w-3xl mx-auto leading-relaxed mb-6">
+            Tokenize coffee batches, verify with Chainlink Functions, and manage redemptions ☕
           </p>
-          <div className="flex items-center justify-center mt-6 space-x-2">
-            <div className="w-3 h-3 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full animate-pulse"></div>
-            <span className="text-purple-300 text-sm font-medium">Powered by Blockchain & IPFS</span>
-            <div className="w-3 h-3 bg-gradient-to-r from-pink-400 to-purple-400 rounded-full animate-pulse"></div>
+          
+          {/* Dashboard Selection */}
+          <div className="flex justify-center space-x-4 mb-8">
+            <button
+              onClick={() => window.location.href = '/dashboard/user'}
+              className="web3-gradient-button-secondary px-8 py-4 text-center"
+            >
+              <div className="text-lg font-semibold">👤 Consumer Dashboard</div>
+              <div className="text-xs opacity-75 mt-1">Manage tokens & deliveries</div>
+            </button>
+            <button
+              onClick={() => setActiveTab('batches')}
+              className="web3-gradient-button px-8 py-4 text-center"
+            >
+              <div className="text-lg font-semibold">🏭 Producer Dashboard</div>
+              <div className="text-xs opacity-75 mt-1">Create & verify batches</div>
+            </button>
           </div>
         </div>
 
