@@ -275,11 +275,7 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
      * @param response Response from Chainlink Functions
      * @param err Error from Chainlink Functions
      */
-    function _fulfillRequest(
-        bytes32 requestId,
-        bytes memory response,
-        bytes memory err
-    ) internal override {
+    function _fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
         latestResponse = response;
         latestError = err;
         // retrieve the verification request
@@ -301,15 +297,8 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
         request.verifiedPackaging = verifiedPackaging;
         request.verifiedMetadataHash = verifiedMetadataHash;
         // Verify the batch metadata
-        coffeeToken.verifyBatchMetadata(
-            request.batchId,
-            verifiedPrice,
-            verifiedPackaging,
-            verifiedMetadataHash
-        );
-        (, , , , , , , bool isMetadataVerified, ) = coffeeToken.s_batchInfo(
-            request.batchId
-        );
+        coffeeToken.verifyBatchMetadata(request.batchId, verifiedPrice, verifiedPackaging, verifiedMetadataHash);
+        (,,,,,,, bool isMetadataVerified, uint256 _unused) = coffeeToken.s_batchInfo(request.batchId);
 
         if (!isMetadataVerified) {
             revert WAGAProofOfReserve__BatchMetadataNotVerified_fulfillRequest();
@@ -327,19 +316,11 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
         );
         coffeeToken.updateInventory(request.batchId, verifiedQuantity);
         coffeeToken.updateBatchStatus(request.batchId, true);
-        emit ReserveVerificationCompleted(
-            requestId,
-            request.batchId,
-            request.verified
-        );
+        emit ReserveVerificationCompleted(requestId, request.batchId, request.verified);
 
         // Only mint tokens if shouldMint is true
         if (request.shouldMint) {
-            coffeeToken.mintBatch(
-                request.recipient,
-                request.batchId,
-                request.verifiedQuantity
-            );
+            coffeeToken.mintBatch(request.recipient, request.batchId, request.verifiedQuantity);
         }
     }
 }

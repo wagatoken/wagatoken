@@ -84,9 +84,7 @@ contract WAGAViewFunctions {
      * @return metadataHash Hash of off-chain metadata
      * @return isMetadataVerified Whether metadata is verified
      */
-    function getbatchInfo(
-        uint256 batchId
-    )
+    function getbatchInfo(uint256 batchId)
         external
         view
         returns (

@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 import { NextResponse, type NextRequest } from "next/server";
 import { pinata } from "@/utils/config";
 
@@ -29,9 +31,9 @@ export async function GET(request: NextRequest) {
       fileInfo: pinnedFile || null
     }, { status: 200 });
   } catch (error) {
-    console.error("Error checking pin status:", error);
-    return NextResponse.json(
-      { error: "Failed to check pin status" },
+    const errMsg = (error as any)?.response?.data ?? 'Failed to check pin status';
+    console.error("Error checking pin status:", errMsg);
+    return NextResponse.json({ error: errMsg },
       { status: 500 }
     );
   }

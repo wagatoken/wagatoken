@@ -1,3 +1,12 @@
+export const runtime = 'nodejs';
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
+
 import { NextResponse, type NextRequest } from "next/server";
 import { pinata } from "@/utils/config";
 import { CoffeeBatch, ChainlinkFunctionsResponse } from "@/utils/types";
@@ -38,9 +47,9 @@ export async function GET(
 
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    console.error("Error fetching Ethiopian coffee batch:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch batch" },
+    const errMsg = (error as any)?.response?.data ?? 'Failed to fetch batch';
+    console.error("Error fetching Ethiopian coffee batch:", errMsg);
+    return NextResponse.json({ error: errMsg },
       { status: 500 }
     );
   }
@@ -94,9 +103,9 @@ export async function PUT(
       batch: updatedBatch 
     }, { status: 200 });
   } catch (error) {
-    console.error("Error updating batch:", error);
-    return NextResponse.json(
-      { error: "Failed to update batch" },
+    const errMsg = (error as any)?.response?.data ?? 'Failed to update batch';
+    console.error("Error updating batch:", errMsg);
+    return NextResponse.json({ error: errMsg },
       { status: 500 }
     );
   }

@@ -1,27 +1,46 @@
+export const runtime = 'nodejs';
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
+
 import { NextResponse, type NextRequest } from "next/server";
 import { pinata } from "@/utils/config";
+import { getPinnedFiles } from "@/utils/pinataCache";
+import { getSigner, getCoffeeTokenContract } from "@/utils/ethersClient";
 import { CoffeeBatch } from "@/utils/types";
 
 // In-memory storage for batch ID to IPFS hash mapping
 // In production, use a database
 const batchMapping = new Map<number, string>();
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    console.log("Fetching all pinned Ethiopian coffee batches from Pinata...");
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') ?? '1');
+    const pageLimit = parseInt(searchParams.get('limit') ?? '50');
+
+    console.log(`Fetching Ethiopian coffee batches (page ${page}, limit ${pageLimit}) ...`);
     
-    // Get all pinned files from Pinata
-    const files = await pinata.files.list();
+    // Use cached list to minimise Pinata traffic
+    const files = await getPinnedFiles();
     const batches: CoffeeBatch[] = [];
 
     console.log(`Found ${files.files.length} total files in Pinata`);
 
-    for (const file of files.files) {
+    // filter then slice for pagination
+    const filtered = files.files.filter(file => file.name?.startsWith('ethiopian-coffee-batch-'));
+    const paginated = filtered.slice((page-1)*pageLimit, page*pageLimit);
+
+    for (const file of paginated) {
       if (file.name?.startsWith('ethiopian-coffee-batch-')) {
         try {
           console.log(`Processing pinned file: ${file.name} (CID: ${file.cid})`);
           const data = await pinata.gateways.get(file.cid);
-          const batchData = JSON.parse(data.data as string);
+          const batchData: CoffeeBatch = typeof data.data === 'string' ? JSON.parse(data.data) : (data.data as any);
           
           // Ensure the batch data includes IPFS URI
           batchData.ipfsUri = `ipfs://${file.cid}`;
@@ -33,12 +52,13 @@ export async function GET() {
       }
     }
 
-    console.log(`Successfully retrieved ${batches.length} Ethiopian coffee batches`);
-    return NextResponse.json({ batches }, { status: 200 });
+    const total = filtered.length;
+    console.log(`Successfully retrieved ${batches.length} Ethiopian coffee batches (total ${total})`);
+    return NextResponse.json({ batches, page, pageLimit, total }, { status: 200 });
   } catch (error) {
-    console.error("Error fetching batches:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch batches" },
+    const errMsg = (error as any)?.response?.data ?? 'Failed to fetch batches';
+    console.error("Error fetching batches:", errMsg);
+    return NextResponse.json({ error: errMsg },
       { status: 500 }
     );
   }
@@ -96,6 +116,27 @@ export async function POST(request: NextRequest) {
 
     console.log(`📝 Smart contract creation data prepared:`, smartContractData);
 
+    // ---- On-chain integration ----
+    try {
+      const signer = getSigner();
+      const coffeeToken = getCoffeeTokenContract(signer);
+      console.log("Sending createBatch transaction to WAGACoffeeToken...");
+      const tx = await coffeeToken.createBatch(
+        smartContractData.ipfsUri,
+        smartContractData.productionDate,
+        smartContractData.expiryDate,
+        smartContractData.pricePerUnit,
+        smartContractData.packagingInfo,
+        smartContractData.metadataHash
+      );
+      console.log("⏳ Tx submitted:", tx.hash);
+      const receipt = await tx.wait();
+      console.log("✅ Tx confirmed in block", receipt.blockNumber);
+    } catch (chainErr) {
+      console.error("⚠️  Failed to create batch on-chain", chainErr);
+      // We don't fail the whole request; front-end can retry.
+    }
+
     return NextResponse.json({ 
       success: true, 
       cid: upload.cid,
@@ -105,9 +146,9 @@ export async function POST(request: NextRequest) {
       message: `Ethiopian coffee batch ${batchData.batchId} ready for blockchain deployment`
     }, { status: 201 });
   } catch (error) {
-    console.error("Error creating and pinning Ethiopian coffee batch:", error);
-    return NextResponse.json(
-      { error: "Failed to create batch" },
+    const errMsg = (error as any)?.response?.data ?? 'Failed to create batch';
+    console.error("Error creating and pinning Ethiopian coffee batch:", errMsg);
+    return NextResponse.json({ error: errMsg },
       { status: 500 }
     );
   }

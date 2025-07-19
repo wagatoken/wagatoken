@@ -27,8 +27,7 @@ contract WAGAInventoryManager is
     error WAGAInventoryManager__InvalidThresholdValue_updateThresholds();
     error WAGAInventoryManager__BatchDoesNotExist_performUpkeep();
 
-    bytes32 public constant INVENTORY_MANAGER_ROLE =
-        keccak256("INVENTORY_MANAGER_ROLE");
+    bytes32 public constant INVENTORY_MANAGER_ROLE = keccak256("INVENTORY_MANAGER_ROLE");
 
     WAGACoffeeToken public coffeeToken;
 
@@ -56,16 +55,8 @@ contract WAGAInventoryManager is
     // Last timestamp when upkeep was performed
     uint256 private s_lastTimeStamp;
 
-    event VerificationRequested(
-        bytes32 indexed requestId,
-        uint256 indexed batchId,
-        uint256 expectedQuantity
-    );
-    event VerificationCompleted(
-        bytes32 indexed requestId,
-        uint256 indexed batchId,
-        bool verified
-    );
+    event VerificationRequested(bytes32 indexed requestId, uint256 indexed batchId, uint256 expectedQuantity);
+    event VerificationCompleted(bytes32 indexed requestId, uint256 indexed batchId, bool verified);
     event InventorySynced(uint256 indexed batchId, uint256 actualQuantity);
     event BatchMetadataMismatch(uint256 indexed batchId);
     event UpkeepPerformed(uint8 upkeepType, uint256[] batchIds);
@@ -78,7 +69,9 @@ contract WAGAInventoryManager is
         uint64 subscriptionId, // chainlink functions subscription ID
         bytes32 donId, // chainlink functions DON ID
         uint256 _intervalSeconds // Interval for Chainlink Automation upkeep
-    ) WAGAChainlinkFunctionsBase(router, subscriptionId, donId) {
+    )
+        WAGAChainlinkFunctionsBase(router, subscriptionId, donId)
+    {
         coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
         _grantRole(INVENTORY_MANAGER_ROLE, msg.sender); // @audit: Should this role be called Inventory_Manager? Why not Admin? We have an inventory manager role already in the WAGACoffeeToken contract. so this may be confusing.
         coffeeToken.setInventoryManager(address(this)); //@audit: This is redundant.  Inventory Manager is already set to this contract upon deployment of the WAGACoffeeToken
@@ -97,7 +90,11 @@ contract WAGAInventoryManager is
         string calldata expectedPackaging, // @audit: why not encode in the source code?
         string calldata expectedMetadataHash, // @audit: why not encode in the source code?
         string calldata source
-    ) public onlyRole(INVENTORY_MANAGER_ROLE) returns (bytes32 requestId) {
+    )
+        public
+        onlyRole(INVENTORY_MANAGER_ROLE)
+        returns (bytes32 requestId)
+    {
         // expectedQuantity = coffeeToken.getBatchQuantity(batchId);
         // expectedPrice = coffeeToken.getBatchPrice(batchId);
         // expectedPackaging = coffeeToken.getBatchPackaging(batchId);
@@ -120,11 +117,7 @@ contract WAGAInventoryManager is
     /**
      * @dev Handles responses from Chainlink Functions
      */
-    function _fulfillRequest(
-        bytes32 requestId,
-        bytes memory response,
-        bytes memory /* err */
-    ) internal override {
+    function _fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
         // Retrieve the verification request
         VerificationRequest storage request = s_verificationRequests[requestId];
         // Check if the request has already been completed
@@ -133,12 +126,7 @@ contract WAGAInventoryManager is
         }
 
         // Parse the response
-        (
-            uint256 verifiedQuantity,
-            uint256 verifiedPrice,
-            string memory verifiedPackaging,
-            string memory verifiedMetadataHash
-        ) = _parseResponse(response);
+        (uint256 verifiedQuantity, uint256 verifiedPrice, string memory verifiedPackaging, string memory verifiedMetadataHash) = _parseResponse(response);
 
         // Set the request to completed
         request.completed = true;
@@ -150,7 +138,7 @@ contract WAGAInventoryManager is
             verifiedPackaging,
             verifiedMetadataHash
         );
-        (, , , , , , , bool isMetadataVerified,) = coffeeToken.s_batchInfo(
+        (, , , , , , , bool isMetadataVerified, uint256 _unused) = coffeeToken.s_batchInfo(
             request.batchId
         );
         // Check if the verified inventory and metadata matches the expected values
@@ -210,21 +198,8 @@ contract WAGAInventoryManager is
         // A batch is considered critical if it has expired or if it is not verified and has a current quantity greater than 0.
         for (uint256 i = 0; i < limit; i++) {
             uint256 batchId = activeBatchIds[i];
-            (
-                ,
-                uint256 expiryDate,
-                bool isVerified,
-                uint256 currentQuantity,
-                ,
-                ,
-                ,
-                ,
-
-            ) = coffeeToken.s_batchInfo(batchId);
-            if (
-                block.timestamp > expiryDate ||
-                (!isVerified && currentQuantity > 0)
-            ) {
+            (,, uint256 expiryDate, bool isVerified, uint256 currentQuantity,,,,) = coffeeToken.s_batchInfo(batchId);
+            if (block.timestamp > expiryDate || (!isVerified && currentQuantity > 0)) {
                 criticalBatchIds[criticalCount] = batchId; // store the batch ID at index criticalCount in the criticalBatchIds array
                 criticalCount++;
             }
@@ -237,10 +212,7 @@ contract WAGAInventoryManager is
             return (
                 true, // bool upkeepNeeded
                 // bytes performData
-                abi.encode(
-                    WAGAUpkeepLib.UPKEEP_VERIFICATION_CHECK,
-                    criticalBatchIds
-                )
+                abi.encode(WAGAUpkeepLib.UPKEEP_VERIFICATION_CHECK, criticalBatchIds)
             );
         }
         return (false, "");
@@ -253,10 +225,7 @@ contract WAGAInventoryManager is
         if (performData.length < 32) {
             revert WAGAInventoryManager__InvalidPerformDataLength_performUpkeep();
         }
-        (uint8 upkeepType, uint256[] memory batchIds) = abi.decode(
-            performData,
-            (uint8, uint256[])
-        );
+        (uint8 upkeepType, uint256[] memory batchIds) = abi.decode(performData, (uint8, uint256[]));
         if (batchIds.length > s_maxBatchesPerUpkeep) {
             revert WAGAInventoryManager__TooManyBatches_performUpkeep();
         }
@@ -298,7 +267,7 @@ contract WAGAInventoryManager is
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
 
-            (, uint256 expiryDate, , , , , , , ) = coffeeToken.s_batchInfo(batchId);
+            (, uint256 expiryDate, , , , , , , uint256 _unused) = coffeeToken.s_batchInfo(batchId);
 
             if (block.timestamp > expiryDate) {
                 coffeeToken.markBatchExpired(batchId);
@@ -314,7 +283,7 @@ contract WAGAInventoryManager is
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
 
-            (, , bool isVerified, uint256 currentQuantity, , , , ,) = coffeeToken
+            (, , bool isVerified, uint256 currentQuantity, , , , , uint256 _unused) = coffeeToken
                 .s_batchInfo(batchId);
 
             if (!isVerified && currentQuantity > 0) {
@@ -331,9 +300,7 @@ contract WAGAInventoryManager is
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
 
-            (, , , uint256 currentQuantity, , , , ,) = coffeeToken.s_batchInfo(
-                batchId
-            );
+            (,,, uint256 currentQuantity,,,,, uint256 _unused) = coffeeToken.s_batchInfo(batchId);
 
             if (currentQuantity > 0 && currentQuantity <= 10) {
                 emit LowInventoryWarning(batchId, currentQuantity);
@@ -349,13 +316,10 @@ contract WAGAInventoryManager is
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
 
-            (uint256 productionDate, , , , , , , ,) = coffeeToken.s_batchInfo(
-                batchId
-            );
+            (uint256 productionDate,,,,,,,, uint256 _unused) = coffeeToken.s_batchInfo(batchId);
 
             if (block.timestamp - productionDate > 180 days) {
-                uint256 daysInStorage = (block.timestamp - productionDate) /
-                    1 days;
+                uint256 daysInStorage = (block.timestamp - productionDate) / 1 days;
                 emit LongStorageWarning(batchId, daysInStorage);
             }
         }
@@ -377,7 +341,10 @@ contract WAGAInventoryManager is
         uint256 _lowInventoryThreshold,
         uint256 _longStorageThreshold,
         uint256 _maxBatchesPerUpkeep
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    )
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         if (_maxBatchesPerUpkeep == 0 || _maxBatchesPerUpkeep > 100) {
             revert WAGAInventoryManager__InvalidThresholdValue_updateThresholds();
         }

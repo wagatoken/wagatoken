@@ -18,11 +18,9 @@ contract WAGAConfigManager is AccessControl {
     // Role definitions
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant INVENTORY_MANAGER_ROLE =
-        keccak256("INVENTORY_MANAGER_ROLE");
+    bytes32 public constant INVENTORY_MANAGER_ROLE = keccak256("INVENTORY_MANAGER_ROLE");
     bytes32 public constant REDEMPTION_ROLE = keccak256("REDEMPTION_ROLE");
-    bytes32 public constant PROOF_OF_RESERVE_ROLE =
-        keccak256("PROOF_OF_RESERVE_ROLE");
+    bytes32 public constant PROOF_OF_RESERVE_ROLE = keccak256("PROOF_OF_RESERVE_ROLE");
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
@@ -33,18 +31,9 @@ contract WAGAConfigManager is AccessControl {
     /* -------------------------------------------------------------------------- */
     /*                                   Events                                   */
     /* -------------------------------------------------------------------------- */
-    event InventoryManagerUpdated(
-        address indexed newInventoryManager,
-        address indexed updatedBy
-    );
-    event RedemptionMangerUpdated(
-        address indexed newRedemptionManager,
-        address indexed updatedBy
-    );
-    event ProofOfReserveManagerUpdated(
-        address indexed newProofOfReserveManager,
-        address indexed updatedBy
-    );
+    event InventoryManagerUpdated(address indexed newInventoryManager, address indexed updatedBy);
+    event RedemptionMangerUpdated(address indexed newRedemptionManager, address indexed updatedBy);
+    event ProofOfReserveManagerUpdated(address indexed newProofOfReserveManager, address indexed updatedBy);
 
     /* -------------------------------------------------------------------------- */
     /*                              Public Functions                              */
@@ -53,9 +42,7 @@ contract WAGAConfigManager is AccessControl {
      * @notice Sets or updates the inventory manager address
      * @param _inventoryManager New inventory manager address
      */
-    function setInventoryManager(
-        address _inventoryManager
-    ) public onlyRole(ADMIN_ROLE) {
+    function setInventoryManager(address _inventoryManager) public onlyRole(ADMIN_ROLE) {
         if (_inventoryManager == address(0)) {
             revert WAGAConfigManager__InvalidInventoryManagerAddress_setInventoryManager();
         }
@@ -71,9 +58,7 @@ contract WAGAConfigManager is AccessControl {
      * @notice Sets or updates the redemption contract address
      * @param _redemptionContract New redemption contract address
      */
-    function setRedemptionManager(
-        address _redemptionContract
-    ) public onlyRole(ADMIN_ROLE) {
+    function setRedemptionManager(address _redemptionContract) public onlyRole(ADMIN_ROLE) {
         if (_redemptionContract == address(0)) {
             revert WAGAConfigManager__InvalidredemptionContractAddress_setRedemptionContract();
         }
@@ -89,9 +74,7 @@ contract WAGAConfigManager is AccessControl {
      * @notice Sets or updates the proof of reserve manager address
      * @param _proofOfReserveManager New proof of reserve manager address
      */
-    function setProofOfReserveManager(
-        address _proofOfReserveManager
-    ) public onlyRole(ADMIN_ROLE) {
+    function setProofOfReserveManager(address _proofOfReserveManager) public onlyRole(ADMIN_ROLE) {
         if (_proofOfReserveManager == address(0)) {
             revert WAGAConfigManager__InvalidredemptionContractAddress_setRedemptionContract();
         }
