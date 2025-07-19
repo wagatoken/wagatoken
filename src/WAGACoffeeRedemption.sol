@@ -71,21 +71,9 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     /*                                   EVENTS                                   */
     /* -------------------------------------------------------------------------- */
 
-    event RedemptionRequested(
-        uint256 indexed redemptionId,
-        address indexed consumer,
-        uint256 batchId,
-        uint256 quantity,
-        string packagingInfo
-    );
-    event RedemptionStatusUpdated(
-        uint256 indexed redemptionId,
-        RedemptionStatus status
-    );
-    event RedemptionFulfilled(
-        uint256 indexed redemptionId,
-        uint256 fulfillmentDate
-    );
+    event RedemptionRequested(uint256 indexed redemptionId, address indexed consumer, uint256 batchId, uint256 quantity, string packagingInfo);
+    event RedemptionStatusUpdated(uint256 indexed redemptionId, RedemptionStatus status);
+    event RedemptionFulfilled(uint256 indexed redemptionId, uint256 fulfillmentDate);
 
     /* -------------------------------------------------------------------------- */
     /*                                 MODIFIERS                                  */
@@ -133,11 +121,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
      * @param quantity Number of coffee bags to redeem
      * @param deliveryAddress Physical delivery address
      */
-    function requestRedemption(
-        uint256 batchId,
-        uint256 quantity,
-        string memory deliveryAddress
-    ) external nonReentrant {
+    function requestRedemption(uint256 batchId, uint256 quantity, string memory deliveryAddress) external nonReentrant {
         if (quantity == 0) {
             revert WAGACoffeeRedemption__ZeroQuantity_requestRedemption();
         }
@@ -166,13 +150,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         }
 
         // Transfer tokens from consumer to this contract
-        coffeeToken.safeTransferFrom(
-            msg.sender,
-            address(this),
-            batchId,
-            quantity,
-            ""
-        );
+        coffeeToken.safeTransferFrom(msg.sender, address(this), batchId, quantity, "");
 
         // Create redemption request
         uint256 redemptionId = nextRedemptionId++;
@@ -192,13 +170,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         // Increment pending redemptions counter for this batch
         batchPendingRedemptions[batchId]++;
 
-        emit RedemptionRequested(
-            redemptionId,
-            msg.sender,
-            batchId,
-            quantity,
-            packagingInfo
-        );
+        emit RedemptionRequested(redemptionId, msg.sender, batchId, quantity, packagingInfo);
     }
 
     /**
@@ -206,10 +178,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
      * @param redemptionId Redemption identifier
      * @param status New status
      */
-    function updateRedemptionStatus(
-        uint256 redemptionId,
-        RedemptionStatus status
-    ) external onlyRole(FULFILLER_ROLE) onlyInitialized {
+    function updateRedemptionStatus(uint256 redemptionId, RedemptionStatus status) external onlyRole(FULFILLER_ROLE) onlyInitialized {
         if (redemptionId >= nextRedemptionId) {
             revert WAGACoffeeRedemption__RedemptionDoesNotExist_updateRedemptionStatus();
         }
@@ -240,22 +209,12 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
             request.fulfillmentDate = block.timestamp;
 
             // Burn the tokens as they've been redeemed
-            coffeeToken.burnForRedemption(
-                address(this),
-                request.batchId,
-                request.quantity
-            );
+            coffeeToken.burnForRedemption(address(this), request.batchId, request.quantity);
 
             emit RedemptionFulfilled(redemptionId, request.fulfillmentDate);
         } else if (status == RedemptionStatus.Cancelled) {
             // Return tokens to the consumer
-            coffeeToken.safeTransferFrom(
-                address(this),
-                request.consumer,
-                request.batchId,
-                request.quantity,
-                ""
-            );
+            coffeeToken.safeTransferFrom(address(this), request.consumer, request.batchId, request.quantity, "");
         }
 
         emit RedemptionStatusUpdated(redemptionId, status);
@@ -275,9 +234,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
      * @param redemptionId Redemption identifier
      * @return RedemptionRequest struct containing redemption details
      */
-    function getRedemptionDetails(
-        uint256 redemptionId
-    ) external view returns (RedemptionRequest memory) {
+    function getRedemptionDetails(uint256 redemptionId) external view returns (RedemptionRequest memory) {
         if (redemptionId >= nextRedemptionId) {
             revert WAGACoffeeRedemption__RedemptionDoesNotExist_getRedemptionDetails();
         }
@@ -289,24 +246,14 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
      * @param consumer Consumer address
      * @return Array of redemption IDs
      */
-    function getConsumerRedemptions(
-        address consumer
-    ) external view returns (uint256[] memory) {
+    function getConsumerRedemptions(address consumer) external view returns (uint256[] memory) {
         return consumerRedemptions[consumer];
     }
 
     /**
      * @dev See {IERC165-supportsInterface}.
      */
-    function supportsInterface(
-        bytes4 interfaceId
-    )
-        public
-        view
-        virtual
-        override(AccessControl, ERC1155Holder)
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControl, ERC1155Holder) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 }

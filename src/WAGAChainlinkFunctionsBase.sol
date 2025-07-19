@@ -10,10 +10,7 @@ import {FunctionsRequest} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/l
  * @dev Base contract for Chainlink Functions integration in the WAGA Coffee Traceability System
  * This contract provides common functionality for contracts that use Chainlink Functions
  */
-abstract contract WAGAChainlinkFunctionsBase is
-    AccessControl,
-    FunctionsClient
-{
+abstract contract WAGAChainlinkFunctionsBase is AccessControl, FunctionsClient {
     using FunctionsRequest for FunctionsRequest.Request;
 
     error WAGAChainlinkFunctionsBase__OnlyRouterCanFulfill_handleOracleFulfillment();
@@ -36,11 +33,7 @@ abstract contract WAGAChainlinkFunctionsBase is
      * @param _subscriptionId Chainlink Functions subscription ID
      * @param _donId Chainlink Functions DON ID
      */
-    constructor(
-        address router,
-        uint64 _subscriptionId,
-        bytes32 _donId
-    ) FunctionsClient(router) {
+    constructor(address router, uint64 _subscriptionId, bytes32 _donId) FunctionsClient(router) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
         subscriptionId = _subscriptionId;
@@ -54,12 +47,7 @@ abstract contract WAGAChainlinkFunctionsBase is
      */
     function _parseResponse(
         bytes memory response
-    ) internal pure returns (
-        uint256 verifiedQuantity,
-        uint256 price,
-        string memory packaging,
-        string memory metadataHash
-    ) {
+    ) internal pure returns (uint256 verifiedQuantity, uint256 price, string memory packaging, string memory metadataHash) {
         if (response.length == 0) {
             return (0, 0, "", "");
         }
@@ -71,9 +59,7 @@ abstract contract WAGAChainlinkFunctionsBase is
      * @dev Updates the Chainlink subscription ID
      * @param _subscriptionId New subscription ID
      */
-    function updateSubscriptionId(
-        uint64 _subscriptionId
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function updateSubscriptionId(uint64 _subscriptionId) external onlyRole(DEFAULT_ADMIN_ROLE) {
         subscriptionId = _subscriptionId;
         emit ChainlinkSubscriptionUpdated(_subscriptionId);
     }

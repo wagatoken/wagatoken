@@ -44,20 +44,12 @@ contract WAGACoffeeToken is
     error WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
     error WAGACoffeeToken__BatchDoesNotExist_updateInventory();
     error WAGACoffeeToken__BatchDoesNotExist_setPricePerUint();
-    error WAGACoffeeToken__BatchIsInactive_setPricePerUint(
-        uint256 productionDate,
-        uint256 expiryDate
-    );
+    error WAGACoffeeToken__BatchIsInactive_setPricePerUint(uint256 productionDate, uint256 expiryDate);
     error WAGACoffeeToken__BatchDoesNotExist_verifyBatchMetadata();
     error WAGACoffeeToken__MetadataMisMatch_verifyBatchMetaData();
     error WAGACoffeeToken__UnauthorizedCaller_updateBatchStatus(address caller);
-    error WAGACoffeeToken__UnauthorizedCaller_verifyBatchMetadata(
-        address caller
-    );
-    error WAGACoffeeToken__BatchIsInactive_markBatchExpired(
-        uint256 productionDate,
-        uint256 expiryDate
-    );
+    error WAGACoffeeToken__UnauthorizedCaller_verifyBatchMetadata(address caller);
+    error WAGACoffeeToken__BatchIsInactive_markBatchExpired(uint256 productionDate, uint256 expiryDate);
     error WAGACoffeeToken__BatchDoesNotExist_mintBatch();
     error WAGACoffeeToken__BatchNotVerified_mintBatch();
     error WAGACoffeeToken__BatchDoesNotExist_getBatchQuantity();
@@ -83,23 +75,10 @@ contract WAGACoffeeToken is
     event BatchCreated(uint256 indexed batchId, string ipfsUri);
     event BatchStatusUpdated(uint256 indexed batchId, bool isVerified);
     event InventoryUpdated(uint256 indexed batchId, uint256 newQuantity);
-    event BatchExpired(
-        uint256 indexed batchId,
-        uint256 productionDate,
-        uint256 expiryDate
-    );
-    event BatchPriceUpdated(
-        uint256 indexed batchId,
-        uint256 oldPrice,
-        uint256 newPrice
-    );
+    event BatchExpired(uint256 indexed batchId, uint256 productionDate, uint256 expiryDate);
+    event BatchPriceUpdated(uint256 indexed batchId, uint256 oldPrice, uint256 newPrice);
     event BatchMetadataVerified(uint256 indexed batchId);
-
-    event TokensMinted(
-        address indexed to,
-        uint256 indexed batchId,
-        uint256 amount
-    );
+    event TokensMinted(address indexed to, uint256 indexed batchId, uint256 amount);
 
     /* -------------------------------------------------------------------------- */
     /*                                  MODIFIERS                                 */
@@ -142,21 +121,20 @@ contract WAGACoffeeToken is
      * @param _redemptionContract Address for token redemption
      * @param _proofOfReserveManager Address for proof of reserve operations
      */
-    function initialize(
-        address _inventoryManager,
-        address _redemptionContract,
-        address _proofOfReserveManager
-    ) external onlyRole(ADMIN_ROLE) {
+    function initialize(address _inventoryManager, address _redemptionContract, address _proofOfReserveManager)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
         require(!isInitialized, "Already initialized"); // write custom error later
-        
+
         _grantRole(MINTER_ROLE, _proofOfReserveManager);
         setInventoryManager(_inventoryManager);
         setRedemptionManager(_redemptionContract);
         setProofOfReserveManager(_proofOfReserveManager);
-        
+
         // Initialize the redemption contract reference
         s_redemptionContract = _redemptionContract;
-        
+
         isInitialized = true;
     }
 
@@ -181,7 +159,12 @@ contract WAGACoffeeToken is
         uint256 pricePerUnit,
         string memory packagingInfo,
         string memory metadataHash
-    ) external onlyRole(ADMIN_ROLE) onlyInitialized returns (uint256) {
+    )
+        external
+        onlyRole(ADMIN_ROLE)
+        onlyInitialized
+        returns (uint256)
+    {
         uint256 batchId = _nextBatchId++;
 
         if (expiryDate == 0 || pricePerUnit == 0 || productionDate == 0) {
@@ -191,17 +174,10 @@ contract WAGACoffeeToken is
         if (productionDate <= block.timestamp || expiryDate <= productionDate) {
             revert WAGACoffeeToken__InvalidBatchDates_createBatch();
         }
-        if (
-            bytes(ipfsUri).length == 0 ||
-            bytes(packagingInfo).length == 0 ||
-            bytes(metadataHash).length == 0
-        ) {
+        if (bytes(ipfsUri).length == 0 || bytes(packagingInfo).length == 0 || bytes(metadataHash).length == 0) {
             revert WAGACoffeeToken__InvalidIPFSUri_createBatch();
         }
-        if (
-            keccak256(bytes(packagingInfo)) != keccak256("250g") &&
-            keccak256(bytes(packagingInfo)) != keccak256("500g")
-        ) {
+        if (keccak256(bytes(packagingInfo)) != keccak256("250g") && keccak256(bytes(packagingInfo)) != keccak256("500g")) {
             revert WAGACoffeeToken__InvalidPackagingSize_createBatch();
         }
 
@@ -231,10 +207,7 @@ contract WAGACoffeeToken is
      * @param batchId ID of the batch to update
      * @param isVerified New verification status
      */
-    function updateBatchStatus(
-        uint256 batchId,
-        bool isVerified
-    ) external onlyInventoryManagerOrProofOfReserve {
+    function updateBatchStatus(uint256 batchId, bool isVerified) external onlyInventoryManagerOrProofOfReserve {
         if (!isBatchCreated(batchId)) {
             revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
         }
@@ -247,10 +220,7 @@ contract WAGACoffeeToken is
      * @param batchId ID of the batch to update
      * @param newQuantity New quantity value
      */
-    function updateInventory(
-        uint256 batchId,
-        uint256 newQuantity
-    ) external onlyInventoryManagerOrProofOfReserve {
+    function updateInventory(uint256 batchId, uint256 newQuantity) external onlyInventoryManagerOrProofOfReserve {
         if (!isBatchCreated(batchId)) {
             revert WAGACoffeeToken__BatchDoesNotExist_updateInventory();
         }
@@ -272,10 +242,7 @@ contract WAGACoffeeToken is
      * @param timestamp New last verified timestamp
      */
 
-    function updateBatchLastVerifiedTimestamp(
-        uint256 batchId,
-        uint256 timestamp
-    ) external onlyRole(PROOF_OF_RESERVE_ROLE) {
+    function updateBatchLastVerifiedTimestamp(uint256 batchId, uint256 timestamp) external onlyRole(PROOF_OF_RESERVE_ROLE) {
         if (!isBatchCreated(batchId)) {
             revert WAGACoffeeToken__BatchDoesNotExist_updateBatchLastVerifiedTimestamp();
         }
@@ -287,9 +254,7 @@ contract WAGACoffeeToken is
      * @param batchId ID of the batch to reset flags for
      * @dev Only resets flags if batch has no active redemption requests
      */
-    function resetBatchVerificationFlags(
-        uint256 batchId
-    ) external onlyInventoryManagerOrProofOfReserve onlyInitialized {
+    function resetBatchVerificationFlags(uint256 batchId) external onlyInventoryManagerOrProofOfReserve onlyInitialized {
         if (!isBatchCreated(batchId)) {
             revert WAGACoffeeToken__BatchDoesNotExist_resetBatchVerificationFlags();
         }
@@ -317,9 +282,7 @@ contract WAGACoffeeToken is
      * @notice Updates the redemption contract address for safety checks
      * @param _redemptionContract New redemption contract address
      */
-    function updateRedemptionContract(
-        address _redemptionContract
-    ) external onlyRole(ADMIN_ROLE) {
+    function updateRedemptionContract(address _redemptionContract) external onlyRole(ADMIN_ROLE) {
         s_redemptionContract = _redemptionContract;
     }
 
