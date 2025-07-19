@@ -307,7 +307,7 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
             verifiedPackaging,
             verifiedMetadataHash
         );
-        (, , , , , , , bool isMetadataVerified, ) = coffeeToken.s_batchInfo(
+        (, , , , , , , bool isMetadataVerified, uint256 _unused) = coffeeToken.s_batchInfo(
             request.batchId
         );
 

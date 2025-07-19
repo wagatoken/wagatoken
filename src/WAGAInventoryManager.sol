@@ -123,7 +123,7 @@ contract WAGAInventoryManager is
     function _fulfillRequest(
         bytes32 requestId,
         bytes memory response,
-        bytes memory /* err */
+        bytes memory err
     ) internal override {
         // Retrieve the verification request
         VerificationRequest storage request = s_verificationRequests[requestId];
@@ -150,7 +150,7 @@ contract WAGAInventoryManager is
             verifiedPackaging,
             verifiedMetadataHash
         );
-        (, , , , , , , bool isMetadataVerified,) = coffeeToken.s_batchInfo(
+        (, , , , , , , bool isMetadataVerified, uint256 _unused) = coffeeToken.s_batchInfo(
             request.batchId
         );
         // Check if the verified inventory and metadata matches the expected values
@@ -298,7 +298,7 @@ contract WAGAInventoryManager is
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
 
-            (, uint256 expiryDate, , , , , , , ) = coffeeToken.s_batchInfo(batchId);
+            (, uint256 expiryDate, , , , , , , uint256 _unused) = coffeeToken.s_batchInfo(batchId);
 
             if (block.timestamp > expiryDate) {
                 coffeeToken.markBatchExpired(batchId);
@@ -314,7 +314,7 @@ contract WAGAInventoryManager is
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
 
-            (, , bool isVerified, uint256 currentQuantity, , , , ,) = coffeeToken
+            (, , bool isVerified, uint256 currentQuantity, , , , , uint256 _unused) = coffeeToken
                 .s_batchInfo(batchId);
 
             if (!isVerified && currentQuantity > 0) {
@@ -331,7 +331,7 @@ contract WAGAInventoryManager is
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
 
-            (, , , uint256 currentQuantity, , , , ,) = coffeeToken.s_batchInfo(
+            (, , , uint256 currentQuantity, , , , , uint256 _unused) = coffeeToken.s_batchInfo(
                 batchId
             );
 
@@ -349,7 +349,7 @@ contract WAGAInventoryManager is
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
 
-            (uint256 productionDate, , , , , , , ,) = coffeeToken.s_batchInfo(
+            (uint256 productionDate, , , , , , , , uint256 _unused) = coffeeToken.s_batchInfo(
                 batchId
             );
 
