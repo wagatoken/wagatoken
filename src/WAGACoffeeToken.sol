@@ -72,7 +72,7 @@ contract WAGACoffeeToken is
 
     // Reference to redemption contract for safety checks
     address private s_redemptionContract;
-    
+
     // Initialization flag
     bool public isInitialized;
 
@@ -132,8 +132,8 @@ contract WAGACoffeeToken is
      * @notice Initializes the contract with zero addresses for two-phase deployment
      */
     constructor() ERC1155("") {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, msg.sender);
+        // _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        // _grantRole(ADMIN_ROLE, msg.sender);
     }
 
     /**
@@ -148,15 +148,15 @@ contract WAGACoffeeToken is
         address _proofOfReserveManager
     ) external onlyRole(ADMIN_ROLE) {
         require(!isInitialized, "Already initialized"); // write custom error later
-        
+
         _grantRole(MINTER_ROLE, _proofOfReserveManager);
         setInventoryManager(_inventoryManager);
         setRedemptionManager(_redemptionContract);
         setProofOfReserveManager(_proofOfReserveManager);
-        
+
         // Initialize the redemption contract reference
         s_redemptionContract = _redemptionContract;
-        
+
         isInitialized = true;
     }
 
@@ -293,10 +293,13 @@ contract WAGACoffeeToken is
         if (!isBatchCreated(batchId)) {
             revert WAGACoffeeToken__BatchDoesNotExist_resetBatchVerificationFlags();
         }
-        
+
         // Check if batch has active redemptions before resetting flags
         if (s_redemptionContract != address(0)) {
-            try WAGACoffeeRedemption(s_redemptionContract).hasPendingRedemptions(batchId) returns (bool hasPending) {
+            try
+                WAGACoffeeRedemption(s_redemptionContract)
+                    .hasPendingRedemptions(batchId)
+            returns (bool hasPending) {
                 if (hasPending) {
                     revert WAGACoffeeToken__BatchHasActiveRedemptions_resetBatchVerificationFlags();
                 }
@@ -305,10 +308,10 @@ contract WAGACoffeeToken is
                 revert WAGACoffeeToken__BatchHasActiveRedemptions_resetBatchVerificationFlags();
             }
         }
-        
+
         s_batchInfo[batchId].isVerified = false;
         s_batchInfo[batchId].isMetadataVerified = false;
-        
+
         // Emit event for tracking
         emit BatchStatusUpdated(batchId, false);
     }
@@ -462,11 +465,11 @@ contract WAGACoffeeToken is
         return ERC1155URIStorage.uri(tokenId);
     }
 
-    /**
-     * @notice Checks interface support
-     * @param interfaceId Interface identifier
-     * @return True if interface is supported
-     */
+    // /**
+    //  * @notice Checks interface support
+    //  * @param interfaceId Interface identifier
+    //  * @return True if interface is supported
+    //  */
     function supportsInterface(
         bytes4 interfaceId
     ) public view override(ERC1155, AccessControl) returns (bool) {
@@ -529,4 +532,3 @@ contract WAGACoffeeToken is
         super._update(from, to, ids, values);
     }
 }
-       

@@ -32,6 +32,10 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
     bytes32 public constant INVENTORY_MANAGER_ROLE =
         keccak256("INVENTORY_MANAGER_ROLE");
 
+    bytes32 public constant OWNER_ROLE =
+        keccak256("OWNER_ROLE");
+
+
     WAGACoffeeToken public coffeeToken;
     WAGAProofOfReserve public proofOfReserve;
 
@@ -79,8 +83,9 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
         if (proofOfReserveAddress != address(0)) {
             proofOfReserve = WAGAProofOfReserve(proofOfReserveAddress);
         }
-        _grantRole(INVENTORY_MANAGER_ROLE, msg.sender);
+       // _grantRole(INVENTORY_MANAGER_ROLE, msg.sender);
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(OWNER_ROLE, msg.sender);
 
         i_intervalSeconds = _intervalSeconds;
         s_lastTimeStamp = block.timestamp;

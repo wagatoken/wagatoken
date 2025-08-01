@@ -71,6 +71,10 @@ contract WAGAConfigManager is AccessControl {
      * @notice Sets or updates the redemption contract address
      * @param _redemptionContract New redemption contract address
      */
+
+
+
+     
     function setRedemptionManager(
         address _redemptionContract
     ) public onlyRole(ADMIN_ROLE) {

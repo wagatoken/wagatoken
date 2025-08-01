@@ -4,12 +4,13 @@ pragma solidity ^0.8.18;
 import {WAGAChainlinkFunctionsBase} from "./WAGAChainlinkFunctionsBase.sol";
 import {WAGACoffeeToken} from "./WAGACoffeeToken.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {WAGAConfigManager} from "./WAGAConfigManager.sol";
 
 /**
  * @title WAGAProofOfReserve
  * @dev Contract for verifying coffee reserves using Chainlink Functions before minting tokens
  */
-contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
+contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase, WAGAConfigManager /*, Ownable */ {
     /* -------------------------------------------------------------------------- */
     /*                                  // Errors                                 */
     /* -------------------------------------------------------------------------- */
@@ -51,7 +52,7 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
     /* -------------------------------------------------------------------------- */
 
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+   // bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     WAGACoffeeToken public coffeeToken;
 
     // Mapping from request ID to verification request
@@ -198,7 +199,7 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase /*, Ownable */ {
     function requestInventoryVerification(
         uint256 batchId,
         string calldata source
-    ) external onlyRole(VERIFIER_ROLE) returns (bytes32 requestId) {
+    ) external onlyRole(INVENTORY_MANAGER_ROLE) returns (bytes32 requestId) {
         // Check if the batch exists
         if (!coffeeToken.isBatchCreated(batchId)) {
             revert WAGAProofOfReserve__BatchDoesNotExist_requestReserveVerification();
