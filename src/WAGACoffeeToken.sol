@@ -390,6 +390,7 @@ contract WAGACoffeeToken is
     function markBatchExpired(
         uint256 batchId
     ) external onlyRole(INVENTORY_MANAGER_ROLE) {
+        // @Yohannes not checking if batch is created
         if (!s_isActiveBatch[batchId]) {
             uint256 productionDate_1 = s_batchInfo[batchId].productionDate;
             uint256 expiryDate_1 = s_batchInfo[batchId].expiryDate;
