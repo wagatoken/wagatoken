@@ -89,8 +89,8 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
         if (proofOfReserveAddress != address(0)) {
             proofOfReserve = WAGAProofOfReserve(proofOfReserveAddress);
         }
-        _grantRole(INVENTORY_MANAGER_ROLE, msg.sender);
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        // _grantRole(INVENTORY_MANAGER_ROLE, msg.sender);
+        // _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
         i_intervalSeconds = _intervalSeconds;
         s_lastTimeStamp = block.timestamp;
