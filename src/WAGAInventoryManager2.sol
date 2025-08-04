@@ -4,14 +4,14 @@ pragma solidity ^0.8.18;
 import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/interfaces/AutomationCompatibleInterface.sol";
 import {WAGACoffeeToken} from "./WAGACoffeeToken.sol";
 import {WAGAProofOfReserve} from "./WAGAProofOfReserve.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {WAGAUpkeepLib} from "./Libraries/WAGAUpkeepLib.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title WAGAInventoryManager
  * @dev Manages coffee inventory with Chainlink Functions for verification and Chainlink Automation for upkeep tasks
  */
-contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
+contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
     using WAGAUpkeepLib for uint8;
 
     /* -------------------------------------------------------------------------- */
@@ -21,16 +21,22 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
     error WAGAInventoryManager__TooManyBatches_performUpkeep();
     error WAGAInventoryManager__UnknownUpkeepType_performUpkeep();
     error WAGAInventoryManager__InvalidThresholdValue_updateThresholds();
-    error WAGAInventoryManager__BatchDoesNotExist_performUpkeep();
     error WAGAInventoryManager__EmptySourceCode_performVerificationCheck();
     error WAGAInventoryManager__ContractNotInitialized();
+
+    error WAGAInventoryManager__BatchDoesNotExist_performVerificationCheck();
+    error WAGAInventoryManager__BatchDoesNotExist_performExpiryCheck();
+    error WAGAInventoryManager__BatchDoesNotExist_performLowInventoryCheck();
+    error WAGAInventoryManager__BatchDoesNotExist_performLongStorageCheck();
+    error WAGAInventoryManager__BatchDoesNotExist_performBatchAudit();
+
 
     /* -------------------------------------------------------------------------- */
     /*                               State Variables                              */
     /* -------------------------------------------------------------------------- */
 
-    bytes32 public constant INVENTORY_MANAGER_ROLE =
-        keccak256("INVENTORY_MANAGER_ROLE");
+    // bytes32 public constant INVENTORY_MANAGER_ROLE =
+    //     keccak256("INVENTORY_MANAGER_ROLE");
 
     WAGACoffeeToken public coffeeToken;
     WAGAProofOfReserve public proofOfReserve;
@@ -71,7 +77,7 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
         address coffeeTokenAddress,
         address proofOfReserveAddress,
         uint256 _intervalSeconds
-    ) {
+    ) Ownable(msg.sender) {
         // Initialize with zero addresses for two-phase deployment
         if (coffeeTokenAddress != address(0)) {
             coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
@@ -79,8 +85,9 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
         if (proofOfReserveAddress != address(0)) {
             proofOfReserve = WAGAProofOfReserve(proofOfReserveAddress);
         }
-        _grantRole(INVENTORY_MANAGER_ROLE, msg.sender);
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        // _grantRole(INVENTORY_MANAGER_ROLE, msg.sender);
+        // _grantRole(INVENTORY_MANAGER_ROLE, address(this));
+        // _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
         i_intervalSeconds = _intervalSeconds;
         s_lastTimeStamp = block.timestamp;
@@ -96,7 +103,7 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
         address coffeeTokenAddress,
         address proofOfReserveAddress,
         string calldata defaultSourceCode
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyOwner {
         require(!isInitialized, "Already initialized"); // write custom error later
         
         if (address(coffeeToken) == address(0)) {
@@ -126,7 +133,7 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
      */
     function setDefaultSourceCode(
         string calldata sourceCode
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) onlyInitialized {
+    ) external onlyOwner onlyInitialized {
         s_defaultSourceCode = sourceCode;
     }
 
@@ -138,7 +145,7 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
     function setBatchSourceCode(
         uint256 batchId,
         string calldata sourceCode
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) onlyInitialized {
+    ) external onlyOwner onlyInitialized {
         s_batchSpecificSourceCode[batchId] = sourceCode;
     }
 
@@ -156,23 +163,9 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
     }
 
     /**
-     * @dev Requests inventory verification using WAGAProofOfReserve (no token minting)
-     */
-    function requestInventoryVerification(
-        uint256 batchId,
-        string calldata source
-    ) public onlyRole(INVENTORY_MANAGER_ROLE) returns (bytes32 requestId) {
-        requestId = proofOfReserve.requestInventoryVerification(
-            batchId,
-            source
-        );
-        emit InventoryVerificationRequested(requestId, batchId);
-        return requestId;
-    }
-
-    /**
      * @dev Checks if upkeep is needed based on time interval and batch conditions
      */
+
     function checkUpkeep(
         bytes calldata /* checkData */
     )
@@ -216,7 +209,7 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
                 if (currentTime + s_expiryWarningThreshold >= expiryDate) {
                     expiryBatches[expiryCount] = batchId;
                     expiryCount++;
-                    continue;
+                  continue;
                 }
             }
             
@@ -325,11 +318,6 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
         }
         
         // Validate all batches exist
-        for (uint256 i = 0; i < batchIds.length; i++) {
-            if (!coffeeToken.isBatchCreated(batchIds[i])) {
-                revert WAGAInventoryManager__BatchDoesNotExist_performUpkeep();
-            }
-        }
 
         // Execute appropriate upkeep type
         if (upkeepType == WAGAUpkeepLib.UPKEEP_EXPIRY_CHECK) {
@@ -356,6 +344,9 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
     function performExpiryCheck(uint256[] memory batchIds) internal {
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
+             if (!coffeeToken.isBatchCreated(batchId)) {
+                revert WAGAInventoryManager__BatchDoesNotExist_performExpiryCheck();
+            }
             uint256 expiryDate = coffeeToken.getBatchExpiryDate(batchId);
 
             if (block.timestamp > expiryDate) {
@@ -372,9 +363,13 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
         // Reset verification flags safely before verification
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
-            
+
+             if (!coffeeToken.isBatchCreated(batchId)) {
+                revert WAGAInventoryManager__BatchDoesNotExist_performVerificationCheck();
+            }
             // Get source code for this batch
             string memory sourceCode = getSourceCodeForBatch(batchId);
+            // @Yohannes why revert?
             if (bytes(sourceCode).length == 0) {
                 revert WAGAInventoryManager__EmptySourceCode_performVerificationCheck();
             }
@@ -382,7 +377,8 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
             // Try to reset verification flags safely
             try coffeeToken.resetBatchVerificationFlags(batchId) {
                 // Request inventory verification using stored source code
-                this.requestInventoryVerification(batchId, sourceCode);
+                // this.requestInventoryVerification(batchId, sourceCode);
+                  proofOfReserve.requestInventoryVerification(batchId, sourceCode);
                 
                 // Update audit time
                 s_lastBatchAuditTime[batchId] = block.timestamp;
@@ -397,9 +393,14 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
      * @dev Performs low inventory checks on specific batches
      * @param batchIds Array of batch IDs to check
      */
+
+    // @Yohannes if state isn't being updated why is this not done ofchain?
     function performLowInventoryCheck(uint256[] memory batchIds) internal {
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
+            if (!coffeeToken.isBatchCreated(batchId)) {
+                revert WAGAInventoryManager__BatchDoesNotExist_performLowInventoryCheck();
+            }
             uint256 currentQuantity = coffeeToken.getBatchQuantity(batchId);
 
             if (currentQuantity > 0 && currentQuantity <= s_lowInventoryThreshold) {
@@ -412,9 +413,13 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
      * @dev Performs long storage checks on specific batches
      * @param batchIds Array of batch IDs to check
      */
+    // @Yohannes if state isn't being updated why is this not done ofchain?
     function performLongStorageCheck(uint256[] memory batchIds) internal {
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
+            if (!coffeeToken.isBatchCreated(batchId)) {
+                revert WAGAInventoryManager__BatchDoesNotExist_performLongStorageCheck();
+            }
             uint256 productionDate = coffeeToken.getBatchCreationDate(batchId);
 
             if (block.timestamp - productionDate > s_longStorageThreshold) {
@@ -428,31 +433,49 @@ contract WAGAInventoryManager is AccessControl, AutomationCompatibleInterface {
      * @dev Performs inventory audits on specific batches
      * @param batchIds Array of batch IDs to audit
      */
+    //@Yohannes what is this function doing?
     function performBatchAudit(uint256[] memory batchIds) internal {
         for (uint256 i = 0; i < batchIds.length; i++) {
-            s_lastBatchAuditTime[batchIds[i]] = block.timestamp;
+            uint256 batchId = batchIds[i];
+            if (!coffeeToken.isBatchCreated(batchId)) {
+                revert WAGAInventoryManager__BatchDoesNotExist_performBatchAudit();
+            }
+            s_lastBatchAuditTime[batchId] = block.timestamp;
         }
     }
 
     /**
      * @dev Updates various threshold values for upkeep conditions
      */
-    function updateThresholds(
-        uint256 _batchAuditInterval,
-        uint256 _expiryWarningThreshold,
-        uint256 _lowInventoryThreshold,
-        uint256 _longStorageThreshold,
-        uint256 _maxBatchesPerUpkeep
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+
+    // Update Batch Audit Interval
+    function updateBatchAuditInterval(uint256 _batchAuditInterval) external onlyOwner {
+        s_batchAuditInterval = _batchAuditInterval;
+    }
+
+    // Update Expiry Warning Threshold
+    function updateExpiryWarningThreshold(uint256 _expiryWarningThreshold) external onlyOwner {
+        s_expiryWarningThreshold = _expiryWarningThreshold;
+    }
+
+    // Update Low Inventory Threshold
+    function updateLowInventoryThreshold(uint256 _lowInventoryThreshold) external onlyOwner {
+        s_lowInventoryThreshold = _lowInventoryThreshold;
+    }
+
+    // Update Long Storage Threshold
+    function updateLongStorageThreshold(uint256 _longStorageThreshold) external onlyOwner {
+        s_longStorageThreshold = _longStorageThreshold;
+    }
+
+    // Update Max Batches Per Upkeep with validation
+    function updateMaxBatchesPerUpkeep(uint256 _maxBatchesPerUpkeep) external onlyOwner {
         if (_maxBatchesPerUpkeep == 0 || _maxBatchesPerUpkeep > 100) {
             revert WAGAInventoryManager__InvalidThresholdValue_updateThresholds();
         }
-        s_batchAuditInterval = _batchAuditInterval;
-        s_expiryWarningThreshold = _expiryWarningThreshold;
-        s_lowInventoryThreshold = _lowInventoryThreshold;
-        s_longStorageThreshold = _longStorageThreshold;
         s_maxBatchesPerUpkeep = _maxBatchesPerUpkeep;
     }
+
 
     /**
      * @dev Returns the last audit time for a specific batch
