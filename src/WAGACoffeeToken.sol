@@ -22,7 +22,7 @@ import {WAGACoffeeRedemption} from "./WAGACoffeeRedemption.sol";
  */
 contract WAGACoffeeToken is
     ERC1155,
-    AccessControl,
+    // AccessControl,
     ERC1155Supply,
     ERC1155URIStorage,
     WAGAConfigManager,
@@ -65,6 +65,7 @@ contract WAGACoffeeToken is
     error WAGACoffeeToken__BatchDoesNotExist_resetBatchVerificationFlags();
     error WAGACoffeeToken__BatchHasActiveRedemptions_resetBatchVerificationFlags();
     error WAGACoffeeToken__ContractNotInitialized();
+    error WAGACoffeeToken__ContractAlreadyInitialized_initialize();
 
     /* -------------------------------------------------------------------------- */
     /*                               STATE VARIABLES                              
@@ -132,8 +133,7 @@ contract WAGACoffeeToken is
      * @notice Initializes the contract with zero addresses for two-phase deployment
      */
     constructor() ERC1155("") {
-        // _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        // _grantRole(ADMIN_ROLE, msg.sender);
+        _grantRole(ADMIN_ROLE, msg.sender);
     }
 
     /**
@@ -147,9 +147,13 @@ contract WAGACoffeeToken is
         address _redemptionContract,
         address _proofOfReserveManager
     ) external onlyRole(ADMIN_ROLE) {
-        require(!isInitialized, "Already initialized"); // write custom error later
+        if (isInitialized) {
+            revert WAGACoffeeToken__ContractAlreadyInitialized_initialize();
+        }
 
         _grantRole(MINTER_ROLE, _proofOfReserveManager);
+        _grantRole(VERIFIER_ROLE, msg.sender);
+        _grantRole(FULFILLER_ROLE, msg.sender);
         setInventoryManager(_inventoryManager);
         setRedemptionManager(_redemptionContract);
         setProofOfReserveManager(_proofOfReserveManager);
@@ -182,7 +186,9 @@ contract WAGACoffeeToken is
         string memory packagingInfo,
         string memory metadataHash
     ) external onlyRole(ADMIN_ROLE) onlyInitialized returns (uint256) {
-        uint256 batchId = _nextBatchId++;
+        // uint256 batchId = _nextBatchId++;
+        uint256 batchId = _nextBatchId;
+        _nextBatchId++; // Increment after assignment
 
         if (expiryDate == 0 || pricePerUnit == 0 || productionDate == 0) {
             revert WAGACoffeeToken__ZeroMetaDataValues_createBatch();

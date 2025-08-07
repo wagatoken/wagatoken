@@ -27,6 +27,7 @@ contract WAGAConfigManager is AccessControl, Ownable {
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
+    bytes32 public constant FULFILLER_ROLE = keccak256("FULFILLER_ROLE");
 
     address private s_inventoryManager;
     address private s_redemptionManager;

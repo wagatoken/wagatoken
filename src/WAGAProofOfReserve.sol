@@ -4,15 +4,15 @@ pragma solidity ^0.8.18;
 import {WAGAChainlinkFunctionsBase} from "./WAGAChainlinkFunctionsBase.sol";
 import {WAGACoffeeToken} from "./WAGACoffeeToken.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {WAGAConfigManager} from "./WAGAConfigManager.sol";
+//import {WAGAConfigManager} from "./WAGAConfigManager.sol";
 
 /**
  * @title WAGAProofOfReserve
  * @dev Contract for verifying coffee reserves using Chainlink Functions before minting tokens
  */
 contract WAGAProofOfReserve is
-    WAGAChainlinkFunctionsBase,
-    WAGAConfigManager /*, Ownable */
+    WAGAChainlinkFunctionsBase
+   // WAGAConfigManager /*, Ownable */
 {
     /* -------------------------------------------------------------------------- */
     /*                                  // Errors                                 */
@@ -28,7 +28,8 @@ contract WAGAProofOfReserve is
     error WAGAProofOfReserve__RequestFailed_requestReserveVerification();
     error WAGAProofOfReserve__QuantityNotVerified_fulfillRequest();
     error WAGAProofOfReserve__BatchMetadataNotVerified_fulfillRequest();
-    
+    error WAGAProofOfReserve__CallerDoesNotHaveRequiredRole_callHasRoleFromCoffeeToken();
+
     // error WAGAProofOfReserve__InvalidAddress_requestReserveVerification();
 
     /* -------------------------------------------------------------------------- */
@@ -56,8 +57,8 @@ contract WAGAProofOfReserve is
     /*                               State Variables                              */
     /* -------------------------------------------------------------------------- */
 
-   // bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
-   // bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    // bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
+    // bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     WAGACoffeeToken public coffeeToken;
 
     // Mapping from request ID to verification request
@@ -95,17 +96,14 @@ contract WAGAProofOfReserve is
         WAGAChainlinkFunctionsBase(router, _subscriptionId, _donId)
     /*Ownable(msg.sender)*/ {
         coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
-        _grantRole(VERIFIER_ROLE, msg.sender);
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); // what is the difference between this and ADMIN_ROLE?
-        _grantRole(ADMIN_ROLE, msg.sender); // Remember to transfer this role to the appropriate verifier
+        // _grantRole(VERIFIER_ROLE, msg.sender);
+        // _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); // what is the difference between this and ADMIN_ROLE?
+        // _grantRole(ADMIN_ROLE, msg.sender); // Remember to transfer this role to the appropriate verifier
     }
 
-
-    modifier callHasRoleFromCoffeeToken(bytes32 roleType) {
-        if (
-            !coffeeToken.hasRole(roleType, msg.sender)
-        ) {
-            revert("Caller does not have the required role");
+    modifier callerHasRoleFromCoffeeToken(bytes32 roleType) {
+        if (!coffeeToken.hasRole(roleType, msg.sender)) {
+            revert WAGAProofOfReserve__CallerDoesNotHaveRequiredRole_callHasRoleFromCoffeeToken();
         }
         _;
     }
@@ -133,7 +131,12 @@ contract WAGAProofOfReserve is
         // uint256 quantity,
         address recipient,
         string calldata source // Get quantity, price, packaging, metadata hash (API call to offchain database)
-    ) external callHasRoleFromCoffeeToken(VERIFIER_ROLE) returns (bytes32 requestId) {
+    )
+        external
+        callerHasRoleFromCoffeeToken(coffeeToken.VERIFIER_ROLE())
+       // onlyRole(coffeeToken.VERIFIER_ROLE())
+        returns (bytes32 requestId)
+    {
         // Check if the batch exists
         if (!coffeeToken.isBatchCreated(batchId)) {
             revert WAGAProofOfReserve__BatchDoesNotExist_requestReserveVerification();
@@ -220,7 +223,12 @@ contract WAGAProofOfReserve is
     function requestInventoryVerification(
         uint256 batchId,
         string calldata source
-    ) external callHasRoleFromCoffeeToken(INVENTORY_MANAGER_ROLE) returns (bytes32 requestId) {
+    )
+        external
+        callerHasRoleFromCoffeeToken(coffeeToken.INVENTORY_MANAGER_ROLE())
+       // onlyRole(coffeeToken.INVENTORY_MANAGER_ROLE())
+        returns (bytes32 requestId)
+    {
         // Check if the batch exists
         if (!coffeeToken.isBatchCreated(batchId)) {
             revert WAGAProofOfReserve__BatchDoesNotExist_requestReserveVerification();

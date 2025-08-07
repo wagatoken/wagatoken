@@ -22,6 +22,10 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     error WAGACoffeeRedemption__RedemptionDoesNotExist_getRedemptionDetails();
     error WAGACoffeeRedemption__AlreadyInitialized_initialize();
     error WAGACoffeeRedemption__ContractNotInitialized();
+    error WAGACoffeeRedemption__BatchExpired_requestRedemption();
+    error WAGACoffeeRedemption__BatchDoesNotExist_requestRedemption();
+    error WAGACoffeeRedemption__statusMustBeDifferentFromCurrentStatus_updateRedemptionStatus();
+    error WAGACoffeeRedemption__CallerDoesNotHaveRequiredRole_callHasRoleFromCoffeeToken();
 
     /* -------------------------------------------------------------------------- */
     /*                               TYPE DECLARATIONS                            */
@@ -56,14 +60,15 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
 
     // Mapping from redemption ID to redemption request
     mapping(uint256 => RedemptionRequest) public redemptions;
-    uint256 public nextRedemptionId;
+    uint256 public nextRedemptionId; // 1000
 
     // Mapping from consumer address to their redemption IDs
-    mapping(address => uint256[]) private consumerRedemptions;
+    mapping(address consumer => uint256[] redemptionIds)
+        private consumerRedemptions;
 
     // Mapping to track batches with pending redemptions
-    mapping(uint256 => uint256) private batchPendingRedemptions;
-    
+    mapping(uint256 => uint256) private batchPendingRedemptions; // batchId to count of pending redemptions
+
     // Initialization flag
     bool public isInitialized;
 
@@ -84,7 +89,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     );
     event RedemptionFulfilled(
         uint256 indexed redemptionId,
-        uint256 fulfillmentDate
+        uint256 fulfillmentDate // shipping date or delivery date ?
     );
 
     /* -------------------------------------------------------------------------- */
@@ -101,16 +106,23 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         _;
     }
 
+    modifier callerHasRoleFromCoffeeToken(bytes32 roleType) {
+        if (!coffeeToken.hasRole(roleType, msg.sender)) {
+            revert WAGACoffeeRedemption__CallerDoesNotHaveRequiredRole_callHasRoleFromCoffeeToken();
+        }
+        _;
+    }
+
     /* -------------------------------------------------------------------------- */
     /*                                CONSTRUCTOR                                 */
     /* -------------------------------------------------------------------------- */
 
-    constructor(address coffeeTokenAddress) {
-        coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    constructor() /*address coffeeTokenAddress*/ {
+        // coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
+        // _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ADMIN_ROLE, msg.sender);
         _grantRole(FULFILLER_ROLE, msg.sender);
-        nextRedemptionId = 1;
+        nextRedemptionId = 1000; // Do we need to initialize this?
     }
 
     /* -------------------------------------------------------------------------- */
@@ -120,10 +132,13 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     /**
      * @notice Initialize the contract (two-phase deployment)
      */
-    function initialize() external onlyRole(ADMIN_ROLE) {
+    function initialize(
+        address coffeeTokenAddress
+    ) external onlyRole(ADMIN_ROLE) {
         if (isInitialized) {
             revert WAGACoffeeRedemption__AlreadyInitialized_initialize();
         }
+        coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
         isInitialized = true;
     }
 
@@ -138,6 +153,11 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         uint256 quantity,
         string memory deliveryAddress
     ) external nonReentrant {
+        // Ensure the batch exists
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGACoffeeRedemption__BatchDoesNotExist_requestRedemption();
+        }
+        // Ensure the quantity is greater than zero and consumer has enough tokens
         if (quantity == 0) {
             revert WAGACoffeeRedemption__ZeroQuantity_requestRedemption();
         }
@@ -148,19 +168,26 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         // Fetch batch info
         (
             ,
-            ,
+            uint256 expiryDate,
             bool isVerified,
             ,
             ,
             string memory packagingInfo,
             ,
             bool isMetadataVerified,
+
         ) = coffeeToken.s_batchInfo(batchId);
+
+        // Ensure the batch has not expired
+        if (block.timestamp > expiryDate) {
+            revert WAGACoffeeRedemption__BatchExpired_requestRedemption();
+        }
 
         // Ensure the batch is verified and metadata is verified
         if (!isVerified) {
             revert WAGACoffeeRedemption__BatchNotVerified_requestRedemption();
         }
+
         if (!isMetadataVerified) {
             revert WAGACoffeeRedemption__BatchMetadataNotVerified_requestRedemption();
         }
@@ -175,7 +202,9 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         );
 
         // Create redemption request
-        uint256 redemptionId = nextRedemptionId++;
+        uint256 redemptionId = nextRedemptionId;
+        nextRedemptionId++; // redemptionId = nextRedemptionId + 1;
+        // Update the redemption mapping:   mapping(uint256 => RedemptionRequest) public redemptions;
         redemptions[redemptionId] = RedemptionRequest({
             consumer: msg.sender,
             batchId: batchId,
@@ -187,8 +216,8 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         });
 
         // Track redemption for the consumer
-        consumerRedemptions[msg.sender].push(redemptionId);
-        
+        consumerRedemptions[msg.sender].push(redemptionId); // mapping(address => uint256[]) private consumerRedemptions;
+
         // Increment pending redemptions counter for this batch
         batchPendingRedemptions[batchId]++;
 
@@ -209,9 +238,17 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     function updateRedemptionStatus(
         uint256 redemptionId,
         RedemptionStatus status
-    ) external onlyRole(FULFILLER_ROLE) onlyInitialized {
-        if (redemptionId >= nextRedemptionId) {
-            revert WAGACoffeeRedemption__RedemptionDoesNotExist_updateRedemptionStatus();
+    )
+        external
+        callerHasRoleFromCoffeeToken(coffeeToken.FULFILLER_ROLE())
+        onlyInitialized
+    {
+        // if (redemptionId >= nextRedemptionId) {
+        //     revert WAGACoffeeRedemption__RedemptionDoesNotExist_updateRedemptionStatus();
+        // }
+        RedemptionStatus currentStatus = redemptions[redemptionId].status;
+        if (currentStatus == status) {
+            revert WAGACoffeeRedemption__statusMustBeDifferentFromCurrentStatus_updateRedemptionStatus();
         }
         if (status == RedemptionStatus.Requested) {
             revert WAGACoffeeRedemption__CannotSetStatusBackToRequested_updateRedemptionStatus();
@@ -226,8 +263,11 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         }
 
         // Fixed: Only decrement if status was previously Requested and we're moving to a final state
-        if (request.status == RedemptionStatus.Requested && 
-            (status == RedemptionStatus.Fulfilled || status == RedemptionStatus.Cancelled)) {
+        if (
+            request.status == RedemptionStatus.Requested &&
+            (status == RedemptionStatus.Fulfilled ||
+                status == RedemptionStatus.Cancelled)
+        ) {
             // Ensure counter doesn't underflow
             if (batchPendingRedemptions[request.batchId] > 0) {
                 batchPendingRedemptions[request.batchId]--;
@@ -266,7 +306,9 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
      * @param batchId Batch identifier to check
      * @return True if batch has pending redemptions, false otherwise
      */
-    function hasPendingRedemptions(uint256 batchId) external view returns (bool) {
+    function hasPendingRedemptions(
+        uint256 batchId
+    ) external view returns (bool) {
         return batchPendingRedemptions[batchId] > 0;
     }
 

@@ -37,7 +37,7 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
     // bytes32 public constant INVENTORY_MANAGER_ROLE =
     //     keccak256("INVENTORY_MANAGER_ROLE");
 
-    // bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");hhhzo
+    // bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
     WAGACoffeeToken public coffeeToken;
     WAGAProofOfReserve public proofOfReserve;
