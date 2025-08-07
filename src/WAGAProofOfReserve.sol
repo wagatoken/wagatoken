@@ -25,6 +25,8 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase, WAGAConfigManager /*,
     error WAGAProofOfReserve__RequestFailed_requestReserveVerification();
     error WAGAProofOfReserve__QuantityNotVerified_fulfillRequest();
     error WAGAProofOfReserve__BatchMetadataNotVerified_fulfillRequest();
+    
+    // error WAGAProofOfReserve__InvalidAddress_requestReserveVerification();
 
     /* -------------------------------------------------------------------------- */
     /*                              Type Declarations                             */
@@ -51,7 +53,7 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase, WAGAConfigManager /*,
     /*                               State Variables                              */
     /* -------------------------------------------------------------------------- */
 
-    bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
+    // bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
    // bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     WAGACoffeeToken public coffeeToken;
 
@@ -74,6 +76,8 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase, WAGAConfigManager /*,
         bool verified
     );
 
+     
+
     /**
      * @dev Constructor to initialize the contract
      * @param coffeeTokenAddress Address of the WAGACoffeeToken contract
@@ -93,6 +97,16 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase, WAGAConfigManager /*,
         _grantRole(VERIFIER_ROLE, msg.sender);
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); // what is the difference between this and ADMIN_ROLE?
         _grantRole(ADMIN_ROLE, msg.sender); // Remember to transfer this role to the appropriate verifier
+    }
+
+
+    modifier callHasRoleFromCoffeeToken(bytes32 roleType) {
+        if (
+            !coffeeToken.hasRole(roleType, msg.sender)
+        ) {
+            revert("Caller does not have the required role");
+        }
+        _;
     }
 
     /* -------------------------------------------------------------------------- */
@@ -118,7 +132,7 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase, WAGAConfigManager /*,
         // uint256 quantity,
         address recipient,
         string calldata source // Get quantity, price, packaging, metadata hash (API call to offchain database)
-    ) external onlyRole(VERIFIER_ROLE) returns (bytes32 requestId) {
+    ) external callHasRoleFromCoffeeToken(VERIFIER_ROLE) returns (bytes32 requestId) {
         // Check if the batch exists
         if (!coffeeToken.isBatchCreated(batchId)) {
             revert WAGAProofOfReserve__BatchDoesNotExist_requestReserveVerification();
@@ -199,7 +213,7 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase, WAGAConfigManager /*,
     function requestInventoryVerification(
         uint256 batchId,
         string calldata source
-    ) external onlyRole(INVENTORY_MANAGER_ROLE) returns (bytes32 requestId) {
+    ) external callHasRoleFromCoffeeToken(INVENTORY_MANAGER_ROLE) returns (bytes32 requestId) {
         // Check if the batch exists
         if (!coffeeToken.isBatchCreated(batchId)) {
             revert WAGAProofOfReserve__BatchDoesNotExist_requestReserveVerification();
