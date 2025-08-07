@@ -10,7 +10,10 @@ import {WAGAConfigManager} from "./WAGAConfigManager.sol";
  * @title WAGAProofOfReserve
  * @dev Contract for verifying coffee reserves using Chainlink Functions before minting tokens
  */
-contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase, WAGAConfigManager /*, Ownable */ {
+contract WAGAProofOfReserve is
+    WAGAChainlinkFunctionsBase,
+    WAGAConfigManager /*, Ownable */
+{
     /* -------------------------------------------------------------------------- */
     /*                                  // Errors                                 */
     /* -------------------------------------------------------------------------- */
@@ -51,8 +54,8 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase, WAGAConfigManager /*,
     /*                               State Variables                              */
     /* -------------------------------------------------------------------------- */
 
-    bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
-   // bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    // bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
+    // bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     WAGACoffeeToken public coffeeToken;
 
     // Mapping from request ID to verification request
@@ -73,6 +76,11 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase, WAGAConfigManager /*,
         uint256 indexed batchId,
         bool verified
     );
+
+
+   
+
+
 
     /**
      * @dev Constructor to initialize the contract
@@ -163,7 +171,13 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase, WAGAConfigManager /*,
 
         // Convert source code to bytes
         bytes memory sourceBytes = bytes(source);
-        requestId = _sendRequestWithArgs(sourceBytes, args, subscriptionId, 300000, donId);
+        requestId = _sendRequestWithArgs(
+            sourceBytes,
+            args,
+            subscriptionId,
+            300000,
+            donId
+        );
 
         // Check that the request was successful
         if (requestId == bytes32(0)) {
@@ -226,7 +240,7 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase, WAGAConfigManager /*,
 
         ) = coffeeToken.s_batchInfo(batchId);
 
-        // Prepare arguments for Chainlink Functions  
+        // Prepare arguments for Chainlink Functions
         string[] memory args = new string[](5);
         args[0] = Strings.toString(batchId);
         args[1] = Strings.toString(requestQuantity);
@@ -236,7 +250,13 @@ contract WAGAProofOfReserve is WAGAChainlinkFunctionsBase, WAGAConfigManager /*,
 
         // Convert source code to bytes
         bytes memory sourceBytes = bytes(source);
-        requestId = _sendRequestWithArgs(sourceBytes, args, subscriptionId, 300000, donId);
+        requestId = _sendRequestWithArgs(
+            sourceBytes,
+            args,
+            subscriptionId,
+            300000,
+            donId
+        );
 
         // Check that the request was successful
         if (requestId == bytes32(0)) {

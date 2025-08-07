@@ -2,8 +2,9 @@
 pragma solidity ^0.8.18;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract WAGAConfigManager is AccessControl {
+contract WAGAConfigManager is AccessControl, Ownable {
     /* -------------------------------------------------------------------------- */
     /*                                   Errors                                   */
     /* -------------------------------------------------------------------------- */
@@ -25,10 +26,12 @@ contract WAGAConfigManager is AccessControl {
         keccak256("PROOF_OF_RESERVE_ROLE");
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
 
     address private s_inventoryManager;
     address private s_redemptionManager;
     address private s_proofOfReserveManager;
+    address private immutable i_owner;
 
     /* -------------------------------------------------------------------------- */
     /*                                   Events                                   */
@@ -45,6 +48,11 @@ contract WAGAConfigManager is AccessControl {
         address indexed newProofOfReserveManager,
         address indexed updatedBy
     );
+
+    constructor() Ownable(msg.sender) {
+        i_owner = msg.sender;
+        _grantRole(ADMIN_ROLE, msg.sender);
+    }
 
     /* -------------------------------------------------------------------------- */
     /*                              Public Functions                              */
@@ -72,9 +80,6 @@ contract WAGAConfigManager is AccessControl {
      * @param _redemptionContract New redemption contract address
      */
 
-
-
-     
     function setRedemptionManager(
         address _redemptionContract
     ) public onlyRole(ADMIN_ROLE) {
@@ -104,6 +109,7 @@ contract WAGAConfigManager is AccessControl {
         }
         s_proofOfReserveManager = _proofOfReserveManager;
         _grantRole(PROOF_OF_RESERVE_ROLE, _proofOfReserveManager);
+        _grantRole(MINTER_ROLE, _proofOfReserveManager);
         emit ProofOfReserveManagerUpdated(_proofOfReserveManager, msg.sender);
     }
 
