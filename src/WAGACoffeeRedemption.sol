@@ -24,7 +24,9 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     error WAGACoffeeRedemption__ContractNotInitialized();
     error WAGACoffeeRedemption__BatchExpired_requestRedemption();
     error WAGACoffeeRedemption__BatchDoesNotExist_requestRedemption();
-    error WAGACoffeeRedemption__statusMustBeDifferentFromCurrentStatus_updateRedemptionStatus();
+    error WAGACoffeeRedemption__statusMustBeDifferentFromCurrentStatus_updateRedemptionStatus(
+        RedemptionStatus status
+    );
     error WAGACoffeeRedemption__CallerDoesNotHaveRequiredRole_callHasRoleFromCoffeeToken();
 
     /* -------------------------------------------------------------------------- */
@@ -67,7 +69,8 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         private consumerRedemptions;
 
     // Mapping to track batches with pending redemptions
-    mapping(uint256 => uint256) private batchPendingRedemptions; // batchId to count of pending redemptions
+    mapping(uint256 batchId => uint256 countOfPendingRedemptions)
+        private batchPendingRedemptions; // batchId to count of pending redemptions
 
     // Initialization flag
     bool public isInitialized;
@@ -153,6 +156,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         uint256 quantity,
         string memory deliveryAddress
     ) external nonReentrant {
+       
         // Ensure the batch exists
         if (!coffeeToken.isBatchCreated(batchId)) {
             revert WAGACoffeeRedemption__BatchDoesNotExist_requestRedemption();
@@ -243,18 +247,20 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         callerHasRoleFromCoffeeToken(coffeeToken.FULFILLER_ROLE())
         onlyInitialized
     {
-        // if (redemptionId >= nextRedemptionId) {
-        //     revert WAGACoffeeRedemption__RedemptionDoesNotExist_updateRedemptionStatus();
-        // }
+        // Check if redemption exists
+        if (redemptionId >= nextRedemptionId) {
+            revert WAGACoffeeRedemption__RedemptionDoesNotExist_updateRedemptionStatus();
+        }
+        // Ensure the status is different from the current status
         RedemptionStatus currentStatus = redemptions[redemptionId].status;
         if (currentStatus == status) {
-            revert WAGACoffeeRedemption__statusMustBeDifferentFromCurrentStatus_updateRedemptionStatus();
-        }
-        if (status == RedemptionStatus.Requested) {
-            revert WAGACoffeeRedemption__CannotSetStatusBackToRequested_updateRedemptionStatus();
+            revert WAGACoffeeRedemption__statusMustBeDifferentFromCurrentStatus_updateRedemptionStatus(
+                currentStatus
+            );
         }
 
         RedemptionRequest storage request = redemptions[redemptionId];
+        // Check if the request is already fulfilled or cancelled
         if (request.status == RedemptionStatus.Fulfilled) {
             revert WAGACoffeeRedemption__RedemptionAlreadyFulfilled_updateRedemptionStatus();
         }
