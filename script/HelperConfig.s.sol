@@ -51,7 +51,7 @@ contract HelperConfig is Script {
                 subscriptionId: 0, // TODO: Replace with actual Sepolia subscription ID
                 donId: 0x66756e2d657468657265756d2d7365706f6c69612d3100000000000000000000, // fun-ethereum-sepolia-1
                 router: 0xb83E47C2bC239B3bf370bc41e1459A34b41238D0, // Sepolia Functions Router
-                deployerKey: vm.envUint("PRIVATE_KEY_SEP"),
+                deployerKey: vm.envUint("PRIVATE_KEY_SEP")
                 // intervalSeconds: 300, // 5 minutes
                 // maxBatchesPerUpkeep: 10,
                 // lowInventoryThreshold: 100,
@@ -65,7 +65,7 @@ contract HelperConfig is Script {
                 subscriptionId: 0, // TODO: Replace with actual Base subscription ID
                 donId: 0x66756e2d626173652d6d61696e6e65742d310000000000000000000000000000, // fun-base-mainnet-1
                 router: 0xf9B8fc078197181C841c296C876945aaa425B278, // Base Functions Router
-                deployerKey: vm.envUint("PRIVATE_KEY_MAINNET"),
+                deployerKey: vm.envUint("PRIVATE_KEY_MAINNET")
                 // intervalSeconds: 300, // 5 minutes
                 // maxBatchesPerUpkeep: 10,
                 // lowInventoryThreshold: 100,
@@ -79,7 +79,7 @@ contract HelperConfig is Script {
                 subscriptionId: 0, // TODO: Replace with actual Base Sepolia subscription ID
                 donId: 0x66756e2d626173652d7365706f6c69612d310000000000000000000000000000, // fun-base-sepolia-1
                 router: 0xf9B8fc078197181C841c296C876945aaa425B278, // Base Sepolia Functions Router
-                deployerKey: vm.envUint("PRIVATE_KEY_SEP"),
+                deployerKey: vm.envUint("PRIVATE_KEY_SEP")
                 // intervalSeconds: 300, // 5 minutes
                 // maxBatchesPerUpkeep: 10,
                 // lowInventoryThreshold: 100,
@@ -93,7 +93,7 @@ contract HelperConfig is Script {
                 subscriptionId: 0, // TODO: ZkSync doesn't support Chainlink Functions yet
                 donId: bytes32(0), // TODO: ZkSync doesn't support Chainlink Functions yet
                 router: address(0), // TODO: ZkSync doesn't support Chainlink Functions yet
-                deployerKey: vm.envUint("PRIVATE_KEY_MAINNET"),
+                deployerKey: vm.envUint("PRIVATE_KEY_SEP")
                 // intervalSeconds: 300, // 5 minutes
                 // maxBatchesPerUpkeep: 10,
                 // lowInventoryThreshold: 100,
@@ -107,7 +107,7 @@ contract HelperConfig is Script {
                 subscriptionId: 0, // TODO: ZkSync doesn't support Chainlink Functions yet
                 donId: bytes32(0), // TODO: ZkSync doesn't support Chainlink Functions yet
                 router: address(0), // TODO: ZkSync doesn't support Chainlink Functions yet
-                deployerKey: vm.envUint("PRIVATE_KEY_SEP"),
+                deployerKey: vm.envUint("PRIVATE_KEY_SEP")
                 // intervalSeconds: 300, // 5 minutes
                 // maxBatchesPerUpkeep: 10,
                 // lowInventoryThreshold: 100,
@@ -121,7 +121,7 @@ contract HelperConfig is Script {
                 subscriptionId: DEFAULT_SUBSCRIPTION_ID,
                 donId: DEFAULT_DON_ID,
                 router: address(0), // No Chainlink Functions on local
-                deployerKey: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80,
+                deployerKey: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
                 // intervalSeconds: 60, // 1 minute for testing
                 // maxBatchesPerUpkeep: 5,
                 // lowInventoryThreshold: 10,

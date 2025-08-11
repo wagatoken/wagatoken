@@ -151,12 +151,13 @@ contract WAGACoffeeToken is
             revert WAGACoffeeToken__ContractAlreadyInitialized_initialize();
         }
 
-        _grantRole(MINTER_ROLE, _proofOfReserveManager);
-        _grantRole(VERIFIER_ROLE, msg.sender);
-        _grantRole(FULFILLER_ROLE, msg.sender);
         setInventoryManager(_inventoryManager);
         setRedemptionManager(_redemptionContract);
         setProofOfReserveManager(_proofOfReserveManager);
+        _grantRole(MINTER_ROLE, _proofOfReserveManager);
+        _grantRole(REDEMPTION_ROLE, _redemptionContract);
+        _grantRole(VERIFIER_ROLE, msg.sender);
+        _grantRole(FULFILLER_ROLE, msg.sender);
 
         // Initialize the redemption contract reference
         s_redemptionContract = _redemptionContract;

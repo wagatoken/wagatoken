@@ -57,7 +57,7 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
     uint256 public s_longStorageThreshold = 180 days;
     uint256 public s_maxBatchesPerUpkeep = 50;
 
-    uint256 public immutable i_intervalSeconds;
+    uint256 public s_intervalSeconds;
     uint256 private s_lastTimeStamp;
 
     /* -------------------------------------------------------------------------- */
@@ -76,56 +76,46 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
 
     constructor(
         address coffeeTokenAddress,
-        address proofOfReserveAddress,
-        uint256 _intervalSeconds
+        address proofOfReserveAddress
     ) Ownable(msg.sender) {
-        // Initialize with zero addresses for two-phase deployment
-        if (coffeeTokenAddress != address(0)) {
-            coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
-        }
-        if (proofOfReserveAddress != address(0)) {
-            proofOfReserve = WAGAProofOfReserve(proofOfReserveAddress);
-        }
-        // _grantRole(INVENTORY_MANAGER_ROLE, msg.sender);
-        // _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-
-        i_intervalSeconds = _intervalSeconds;
+        coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
+        proofOfReserve = WAGAProofOfReserve(proofOfReserveAddress);
         s_lastTimeStamp = block.timestamp;
     }
 
-    /**
-     * @notice Initialize the contract with contract addresses (two-phase deployment)
-     * @param coffeeTokenAddress Address of the coffee token contract
-     * @param proofOfReserveAddress Address of the proof of reserve contract
-     * @param defaultSourceCode Default source code for Chainlink Functions
-     */
-    function initialize(
-        address coffeeTokenAddress,
-        address proofOfReserveAddress,
-        string calldata defaultSourceCode
-    ) external onlyOwner {
-        require(!isInitialized, "Already initialized"); // write custom error later
+    // /**
+    //  * @notice Initialize the contract with contract addresses (two-phase deployment)
+    //  * @param coffeeTokenAddress Address of the coffee token contract
+    //  * @param proofOfReserveAddress Address of the proof of reserve contract
+    //  * @param defaultSourceCode Default source code for Chainlink Functions
+    //  */
+    // function initialize(
+    //     address coffeeTokenAddress,
+    //     address proofOfReserveAddress,
+    //     string calldata defaultSourceCode
+    // ) external onlyOwner {
+    //     require(!isInitialized, "Already initialized"); // write custom error later
 
-        if (address(coffeeToken) == address(0)) {
-            coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
-        }
-        if (address(proofOfReserve) == address(0)) {
-            proofOfReserve = WAGAProofOfReserve(proofOfReserveAddress);
-        }
+    //     if (address(coffeeToken) == address(0)) {
+    //         coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
+    //     }
+    //     if (address(proofOfReserve) == address(0)) {
+    //         proofOfReserve = WAGAProofOfReserve(proofOfReserveAddress);
+    //     }
 
-        s_defaultSourceCode = defaultSourceCode;
-        isInitialized = true;
-    }
+    //     s_defaultSourceCode = defaultSourceCode;
+    //     isInitialized = true;
+    // }
 
-    /**
-     * @notice Modifier to ensure contract is initialized
-     */
-    modifier onlyInitialized() {
-        if (!isInitialized) {
-            revert WAGAInventoryManager__ContractNotInitialized();
-        }
-        _;
-    }
+    // /**
+    //  * @notice Modifier to ensure contract is initialized
+    //  */
+    // modifier onlyInitialized() {
+    //     if (!isInitialized) {
+    //         revert WAGAInventoryManager__ContractNotInitialized();
+    //     }
+    //     _;
+    // }
 
     /**
      * @notice Sets default source code for Chainlink Functions
@@ -133,7 +123,7 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
      */
     function setDefaultSourceCode(
         string calldata sourceCode
-    ) external onlyOwner onlyInitialized {
+    ) external onlyOwner {
         s_defaultSourceCode = sourceCode;
     }
 
@@ -145,7 +135,7 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
     function setBatchSourceCode(
         uint256 batchId,
         string calldata sourceCode
-    ) external onlyOwner onlyInitialized {
+    ) external onlyOwner {
         s_batchSpecificSourceCode[batchId] = sourceCode;
     }
 
@@ -156,7 +146,7 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
      */
     function getSourceCodeForBatch(
         uint256 batchId
-    ) public view onlyInitialized returns (string memory) {
+    ) public view returns (string memory) {
         // Use batch-specific source code if available, otherwise use default
         if (bytes(s_batchSpecificSourceCode[batchId]).length > 0) {
             return s_batchSpecificSourceCode[batchId];
@@ -177,7 +167,7 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
         returns (bool upkeepNeeded, bytes memory performData)
     {
         // Check if enough time has passed since last upkeep
-        if (block.timestamp - s_lastTimeStamp < i_intervalSeconds) {
+        if (block.timestamp - s_lastTimeStamp < s_intervalSeconds) {
             return (false, "");
         }
         // Get Active batches from the coffee token contract
@@ -512,5 +502,9 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
         uint256 batchId
     ) external view returns (uint256) {
         return s_lastBatchAuditTime[batchId];
+    }
+
+    function setBatchAuditInterval(uint256 intervalSeconds) external onlyOwner {
+        s_intervalSeconds = intervalSeconds;
     }
 }
