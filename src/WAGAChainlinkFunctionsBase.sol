@@ -98,7 +98,7 @@ abstract contract WAGAChainlinkFunctionsBase is
         bytes32 _donId
     ) internal returns (bytes32 requestId) {
         FunctionsRequest.Request memory req;
-        req.initializeRequestForInlineJavaScript(string(source));
+        req.initializeRequestForInlineJavaScript(string(source)); //@audit: What does this line do?
         if (args.length > 0) {
             req.setArgs(args);
         }

@@ -183,9 +183,9 @@ contract WAGAProofOfReserve is
         bytes memory sourceBytes = bytes(source);
         requestId = _sendRequestWithArgs(
             sourceBytes,
-            args,
+            args, // @audit We do not have this in the base contract, need to be sure the DON supports and/or processes it
             subscriptionId,
-            300000,
+            300000, // @audit: Magic Number for gas limit
             donId
         );
 
