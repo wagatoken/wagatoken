@@ -90,12 +90,12 @@ export default function WalletConnect() {
   if (isConnected && address) {
     return (
       <div className="flex items-center space-x-3">
-        <div className="text-sm font-medium text-white bg-white/10 px-3 py-1 rounded-lg">
+        <div className="text-sm font-medium text-gray-700">
           {formatAddress(address)}
         </div>
         <button
           onClick={disconnectWallet}
-          className="text-sm text-amber-200 hover:text-amber-300 font-medium transition-colors hover:bg-white/10 px-2 py-1 rounded"
+          className="text-sm text-red-600 hover:text-red-700 font-medium transition-colors"
         >
           Disconnect
         </button>
@@ -107,7 +107,7 @@ export default function WalletConnect() {
     <button
       onClick={connectWallet}
       disabled={isConnecting}
-      className="bg-gradient-to-r from-amber-500 to-green-600 hover:from-amber-600 hover:to-green-700 text-white font-semibold py-2 px-4 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300 text-sm border border-amber-400/30"
+      className="web3-gradient-button-secondary text-sm px-4 py-2"
     >
       {isConnecting ? "Connecting..." : "Connect Wallet"}
     </button>
