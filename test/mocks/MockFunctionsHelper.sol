@@ -27,12 +27,15 @@ contract MockFunctionsHelper {
         uint256 quantity,
         uint256 price
     ) external {
-        mockRouter.mockSuccessfulVerification(
+        // For successful verification, we need to send the packaging and metadata
+        // that match what was used in createBatch for the verification to pass
+        mockRouter.mockVerificationResponse(
             requestId,
             client,
-            true, // verified = true
             quantity,
-            price
+            price,
+            "250g", // default packaging for successful tests
+            "metadataHash123" // default metadata for successful tests
         );
     }
 
@@ -45,13 +48,11 @@ contract MockFunctionsHelper {
         bytes32 requestId,
         address client
     ) external {
-        mockRouter.mockSuccessfulVerification(
-            requestId,
-            client,
-            false, // verified = false
-            0,
-            0
-        );
+        // For failed verification, send an error instead of response data
+        bytes memory response = "";
+        bytes memory err = "Batch verification failed: batch not found or invalid";
+        
+        mockRouter.mockResponse(requestId, response, err, client);
     }
 
     /**
@@ -75,20 +76,22 @@ contract MockFunctionsHelper {
      * @dev Simulate a custom verification response
      * @param requestId The request ID from the original request
      * @param client The client contract (WAGAProofOfReserve)
-     * @param verified Whether the batch is verified
      * @param quantity The actual quantity found
      * @param price The actual price found
+     * @param packaging The verified packaging info
+     * @param metadataHash The verified metadata hash
      * @param errorMessage Any error message (empty string if no error)
      */
     function simulateCustomResponse(
         bytes32 requestId,
         address client,
-        bool verified,
         uint256 quantity,
         uint256 price,
+        string memory packaging,
+        string memory metadataHash,
         string memory errorMessage
     ) external {
-        bytes memory response = abi.encode(verified, quantity, price);
+        bytes memory response = abi.encode(quantity, price, packaging, metadataHash);
         bytes memory err = bytes(errorMessage);
         
         mockRouter.mockResponse(requestId, response, err, client);

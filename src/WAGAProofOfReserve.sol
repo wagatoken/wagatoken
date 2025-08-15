@@ -324,6 +324,21 @@ contract WAGAProofOfReserve is
             revert WAGAProofOfReserve__RequestAlreadyCompleted_fulfillRequest();
         }
 
+        // Handle API errors first
+        if (err.length > 0) {
+            // Mark request as completed but not verified due to error
+            request.completed = true;
+            request.verified = false;
+            request.lastVerifiedTimestamp = block.timestamp;
+            
+            emit ReserveVerificationCompleted(
+                requestId,
+                request.batchId,
+                false // verification failed due to error
+            );
+            return; // Exit early, don't process response
+        }
+
         // Parse all required fields from the response
         (
             uint256 verifiedQuantity,

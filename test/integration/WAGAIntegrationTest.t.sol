@@ -40,42 +40,33 @@ contract WAGAIntegrationTest is Test {
             helperConfig
         ) = deployer.run();
 
-        // Get network config and mock router
+        // Get network config from the HelperConfig that was actually used during deployment
         HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
+        
+        // Use the MockRouter that was actually created during deployment
         mockRouter = MockFunctionsRouter(config.router);
         mockHelper = new MockFunctionsHelper(address(mockRouter));
 
-        // Note: CoffeeToken is already initialized by the deployment script
-        // WAGACoffeeToken inherits from WAGAConfigManager, so role management is built-in
-
         // Set up roles correctly
-        // The deployment script deploys with the test environment's default account
+        // The deployer (vm.addr(config.deployerKey)) has DEFAULT_ADMIN_ROLE and ADMIN_ROLE
+        address deployer_address = vm.addr(config.deployerKey);
         
-        // For Anvil (local testing), the first account is typically used as deployer
-        address defaultAnvilAccount = 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38; // First anvil account
+        // Grant roles using the deployer address which has DEFAULT_ADMIN_ROLE
+        vm.startPrank(deployer_address);
         
-        // Grant ADMIN_ROLE to ADMIN_USER and VERIFIER_ROLE to VERIFIER_USER
-        // Since WAGACoffeeToken inherits from WAGAConfigManager, we use coffeeToken for role management
+        // Grant ADMIN_ROLE to ADMIN_USER
+        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), ADMIN_USER);
+        console.log("Granted ADMIN_ROLE to ADMIN_USER");
         
-        vm.startPrank(defaultAnvilAccount);
-        try coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), ADMIN_USER) {
-            console.log("Successfully granted ADMIN_ROLE to ADMIN_USER");
-            coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), VERIFIER_USER);
-            console.log("Successfully granted VERIFIER_ROLE to VERIFIER_USER");
-        } catch {
-            vm.stopPrank();
-            // Try with the test contract itself
-            vm.startPrank(address(this));
-            try coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), ADMIN_USER) {
-                console.log("Successfully granted ADMIN_ROLE using test contract");
-                coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), VERIFIER_USER);
-                console.log("Successfully granted VERIFIER_ROLE using test contract");
-            } catch {
-                // For now, we'll proceed without explicit role setup
-                console.log("Role setup skipped - test will use existing permissions");
-            }
-        }
+        // Grant VERIFIER_ROLE to VERIFIER_USER  
+        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), VERIFIER_USER);
+        console.log("Granted VERIFIER_ROLE to VERIFIER_USER");
+        
         vm.stopPrank();
+
+        // Verify roles were granted correctly
+        assertTrue(coffeeToken.hasRole(coffeeToken.ADMIN_ROLE(), ADMIN_USER), "ADMIN_USER should have ADMIN_ROLE");
+        assertTrue(coffeeToken.hasRole(coffeeToken.VERIFIER_ROLE(), VERIFIER_USER), "VERIFIER_USER should have VERIFIER_ROLE");
 
         console.log("Integration test setup completed");
         console.log("CoffeeToken:", address(coffeeToken));
@@ -100,23 +91,15 @@ contract WAGAIntegrationTest is Test {
             block.timestamp + 1 days, // productionDate (future date as required by contract validation)
             block.timestamp + 365 days, // expiryDate
             50 * 1e18, // pricePerUnit
-            "Premium Coffee Bags", // packagingInfo
+            "250g", // packagingInfo - must be "250g" or "500g"
             "metadataHash123" // metadataHash
         );
         
         console.log("Created batch ID:", batchId);
         
-        // Step 2: Verify batch metadata (admin function)
-        coffeeToken.verifyBatchMetadata(
-            batchId,
-            50 * 1e18, // verifiedPrice
-            "Premium Coffee Bags", // verifiedPackaging
-            "metadataHash123" // verifiedMetadataHash
-        );
-        
         vm.stopPrank();
 
-        // Step 3: Request verification through ProofOfReserve (VERIFIER_ROLE)
+        // Step 2: Request verification through ProofOfReserve (VERIFIER_ROLE)
         vm.startPrank(VERIFIER_USER);
         
         string memory jsSource = "return { verified: true, quantity: 1000, price: 50000000000000000000 };";
@@ -130,7 +113,7 @@ contract WAGAIntegrationTest is Test {
         console.log("Verification request ID:", vm.toString(requestId));
         vm.stopPrank();
 
-        // Step 4: Simulate successful Chainlink Functions response
+        // Step 3: Simulate successful Chainlink Functions response
         console.log("Simulating successful Chainlink response...");
         
         mockHelper.simulateSuccessfulVerification(
@@ -140,7 +123,7 @@ contract WAGAIntegrationTest is Test {
             50 * 1e18 // verified price
         );
 
-        // Step 5: Verify the results
+        // Step 4: Verify the results
         console.log("Checking verification results...");
         
         // Check that batch is now verified
@@ -155,7 +138,7 @@ contract WAGAIntegrationTest is Test {
         console.log("Recipient balance:", balance);
     }
 
-    function testFailedVerification() public {
+    function testVerificationFailureHandling() public {
         console.log("Starting failed verification test...");
 
         // Step 1: Create a batch as ADMIN_USER
@@ -166,21 +149,13 @@ contract WAGAIntegrationTest is Test {
             block.timestamp + 1 days, // productionDate (future date)
             block.timestamp + 365 days, // expiryDate
             50 * 1e18, // pricePerUnit
-            "Premium Coffee Bags", // packagingInfo
+            "500g", // packagingInfo - using different valid size for this test
             "metadataHashFail" // metadataHash
-        );
-        
-        // Step 2: Verify batch metadata
-        coffeeToken.verifyBatchMetadata(
-            batchId,
-            50 * 1e18,
-            "Premium Coffee Bags",
-            "metadataHashFail"
         );
         
         vm.stopPrank();
 
-        // Step 3: Request verification as VERIFIER_USER
+        // Step 2: Request verification as VERIFIER_USER
         vm.startPrank(VERIFIER_USER);
         
         string memory jsSource = "return { verified: false, quantity: 0, price: 0 };";
@@ -193,22 +168,24 @@ contract WAGAIntegrationTest is Test {
         
         vm.stopPrank();
 
-        // Step 4: Simulate failed verification response
+        // Step 3: Simulate failed verification response
         console.log("Simulating failed Chainlink response...");
         
-        mockHelper.simulateFailedVerification(requestId, address(proofOfReserve));
+        // For true failed verification, we simulate that the API couldn't find the batch
+        // or found mismatched metadata, which should cause an error response
+        mockHelper.simulateApiError(requestId, address(proofOfReserve), "Batch not found in database");
 
-        // Step 5: Verify the results
+        // Step 4: Verify the results
         console.log("Checking failed verification results...");
         
-        // Check that no tokens were minted
+        // Check that no tokens were minted (request should fail)
         uint256 balance = coffeeToken.balanceOf(VERIFIER_USER, batchId);
         assertEq(balance, 0, "No tokens should be minted for failed verification");
         
-        // Check that batch verification status (this depends on your implementation)
-        (, , bool isVerified, , , , , , ) = coffeeToken.s_batchInfo(batchId);
-        // For failed verification, the batch should remain unverified
+        // Check the batch verification status - should remain as initially created
+        (, , bool isVerified, , , , , bool isMetadataVerified, ) = coffeeToken.s_batchInfo(batchId);
         assertFalse(isVerified, "Batch should remain unverified after failed verification");
+        assertFalse(isMetadataVerified, "Batch metadata should remain unverified after failed verification");
         
         console.log("Failed verification test completed successfully!");
         console.log("Batch verification status:", isVerified);

@@ -118,6 +118,29 @@ contract MockFunctionsRouter is IFunctionsRouter {
     }
 
     /**
+     * @dev Simulates a verification response with proper format for WAGA testing
+     */
+    function mockVerificationResponse(
+        bytes32 requestId,
+        address client,
+        uint256 quantity,
+        uint256 price,
+        string memory packaging,
+        string memory metadataHash
+    ) external {
+        if (!s_pendingRequests[requestId]) {
+            revert RequestNotPending(requestId);
+        }
+        
+        // Encode response data in the format WAGAProofOfReserve expects:
+        // (uint256 verifiedQuantity, uint256 price, string packaging, string metadataHash)
+        bytes memory response = abi.encode(quantity, price, packaging, metadataHash);
+        bytes memory err = "";
+        
+        this.mockResponse(requestId, response, err, client);
+    }
+
+    /**
      * @dev Add a valid subscription for testing
      */
     function addValidSubscription(uint64 subscriptionId) external {
