@@ -7,9 +7,8 @@ import Footer from './components/layout/Footer'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'WAGA Coffee Platform - Ethiopian Coffee Tokenization',
-  description:
-    'Blockchain-powered platform for tokenizing premium Ethiopian roasted coffee with Chainlink verification and IPFS storage',
+  title: 'WAGA Coffee - Blockchain Coffee Traceability',
+  description: 'Track Ethiopian coffee from farm to cup with complete transparency using blockchain technology, Chainlink oracles, and IPFS storage.',
   keywords: [
     'coffee',
     'blockchain',
@@ -17,8 +16,14 @@ export const metadata: Metadata = {
     'chainlink',
     'ipfs',
     'ethiopia',
-    'tokenization',
+    'traceability',
+    'web3',
   ],
+  openGraph: {
+    title: 'WAGA Coffee - Blockchain Coffee Traceability',
+    description: 'Track Ethiopian coffee from farm to cup with complete transparency',
+    type: 'website',
+  },
 }
 
 export default function RootLayout({
@@ -28,10 +33,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} flex flex-col min-h-screen`}>
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+      <body className={`${inter.className} bg-white text-gray-900 antialiased`}>
+        <div className="min-h-screen flex flex-col">
+          <Navbar />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </div>
       </body>
     </html>
   )

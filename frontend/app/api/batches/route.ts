@@ -21,7 +21,17 @@ export async function GET() {
         try {
           console.log(`Processing pinned file: ${file.name} (CID: ${file.cid})`);
           const data = await pinata.gateways.get(file.cid);
-          const batchData = JSON.parse(data.data as string);
+          
+          // Handle different data formats from Pinata
+          let batchData;
+          if (typeof data.data === 'string') {
+            batchData = JSON.parse(data.data);
+          } else if (typeof data.data === 'object') {
+            batchData = data.data;
+          } else {
+            console.error(`Unexpected data format for ${file.cid}:`, typeof data.data);
+            continue;
+          }
           
           // Ensure the batch data includes IPFS URI
           batchData.ipfsUri = `ipfs://${file.cid}`;

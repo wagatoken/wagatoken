@@ -73,7 +73,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div className="mb-8">
             <div className="text-6xl mb-4 animate-coffee-bounce web3-cyber-glow">☕</div>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 web3-text-stable">
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 web3-perspective-transform">
               WAGA Coffee
             </h1>
             <p className="text-xl md:text-2xl mb-8 opacity-90">
@@ -87,13 +87,13 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 
                 href="/producer" 
-                className="web3-gradient-button text-lg px-8 py-4 web3-button-stable web3-subtle-glow"
+                className="web3-gradient-button text-lg px-8 py-4 animate-neon-pulse"
               >
                 🏛️ WAGA Admin Tools
               </Link>
               <Link 
                 href="/browse" 
-                className="web3-button-outline text-lg px-8 py-4 web3-holographic-border web3-button-stable"
+                className="web3-button-outline text-lg px-8 py-4 web3-holographic-border"
               >
                 🌱 Browse Coffee
               </Link>
@@ -107,10 +107,8 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
-              <div key={index} className="web3-stat-card web3-card-stable group">
-                <div className="text-4xl mb-4 animate-on-hover-only">
-                  <span className="animate-particle-float-gentle">{stat.icon}</span>
-                </div>
+              <div key={index} className="web3-stat-card group animate-liquid-morph">
+                <div className="text-4xl mb-4 group-hover:animate-particle-float">{stat.icon}</div>
                 <div className="text-3xl font-bold web3-gradient-text mb-2">
                   {stat.value}
                 </div>
@@ -126,7 +124,7 @@ export default function HomePage() {
         <section className="py-16 web3-section-alt web3-matrix-rain">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4 web3-text-stable">Featured Coffee Batches</h2>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4 web3-perspective-transform">Featured Coffee Batches</h2>
               <p className="text-xl text-gray-600">Discover the latest verified coffee from our partner farms</p>
             </div>
 
@@ -137,7 +135,7 @@ export default function HomePage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {featuredBatches.map((batch, index) => (
-                  <div key={batch.batchId} className="web3-card web3-holographic-border web3-card-stable" style={{ animationDelay: `${index * 200}ms` }}>
+                  <div key={batch.batchId} className="web3-card web3-holographic-border animate-border-dance" style={{ animationDelay: `${index * 200}ms` }}>
                     <div className="mb-4">
                       <h3 className="text-lg font-bold text-gray-900 mb-1">
                         {batch.batchDetails.farmName}
@@ -164,7 +162,7 @@ export default function HomePage() {
 
                     <Link
                       href="/browse"
-                      className="w-full web3-gradient-button-secondary text-sm py-2 block text-center web3-button-stable"
+                      className="w-full web3-gradient-button-secondary text-sm py-2 block text-center animate-shimmer"
                     >
                       🛒 View Details
                     </Link>
@@ -180,7 +178,7 @@ export default function HomePage() {
       <section className="py-20 web3-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4 web3-text-stable">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4 web3-perspective-transform">
               Complete Coffee Ecosystem
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -192,8 +190,8 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
               <Link key={index} href={feature.href}>
-                <div className="web3-card-feature group cursor-pointer h-full web3-quantum-blur web3-card-stable animate-on-hover-only" style={{ animationDelay: `${index * 150}ms` }}>
-                  <div className="text-5xl mb-6 animate-particle-float-gentle">
+                <div className="web3-card-feature group cursor-pointer h-full web3-quantum-blur" style={{ animationDelay: `${index * 150}ms` }}>
+                  <div className="text-5xl mb-6 group-hover:animate-particle-float">
                     {feature.icon}
                   </div>
                   <h3 className="text-xl font-bold text-gray-900 mb-3">
@@ -216,7 +214,7 @@ export default function HomePage() {
       <section className="py-20 web3-section-alt web3-neural-network">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4 web3-text-stable">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4 web3-perspective-transform">
               Powered by Web3 Technology
             </h2>
             <p className="text-xl text-gray-600">
@@ -225,8 +223,8 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="web3-card text-center web3-glass-morphism web3-card-stable">
-              <div className="text-4xl mb-4 web3-subtle-glow">🔗</div>
+            <div className="web3-card text-center web3-glass-morphism animate-liquid-morph">
+              <div className="text-4xl mb-4 animate-neon-pulse">🔗</div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Smart Contracts</h3>
               <p className="text-gray-600 mb-4">
                 ERC-1155 tokens representing verified coffee batches on Base Sepolia
@@ -236,8 +234,8 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="web3-card text-center web3-glass-morphism web3-card-stable" style={{ animationDelay: '0.2s' }}>
-              <div className="text-4xl mb-4 web3-subtle-glow">⚡</div>
+            <div className="web3-card text-center web3-glass-morphism animate-liquid-morph" style={{ animationDelay: '1s' }}>
+              <div className="text-4xl mb-4 animate-neon-pulse">⚡</div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Chainlink Oracles</h3>
               <p className="text-gray-600 mb-4">
                 Decentralized verification of coffee inventory through Chainlink Functions
@@ -247,8 +245,8 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="web3-card text-center web3-glass-morphism web3-card-stable" style={{ animationDelay: '0.4s' }}>
-              <div className="text-4xl mb-4 web3-subtle-glow">📦</div>
+            <div className="web3-card text-center web3-glass-morphism animate-liquid-morph" style={{ animationDelay: '2s' }}>
+              <div className="text-4xl mb-4 animate-neon-pulse">📦</div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">IPFS Storage</h3>
               <p className="text-gray-600 mb-4">
                 Immutable metadata storage via Pinata for complete transparency
@@ -262,9 +260,9 @@ export default function HomePage() {
       </section>
 
       {/* Call to Action */}
-      <section className="py-20 web3-hero web3-data-grid-subtle">
+      <section className="py-20 web3-hero web3-data-grid">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <h2 className="text-4xl font-bold mb-6 web3-text-stable">
+          <h2 className="text-4xl font-bold mb-6 web3-perspective-transform">
             Ready to Transform Coffee Traceability?
           </h2>
           <p className="text-xl mb-10 opacity-90">
@@ -273,13 +271,13 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link 
               href="/producer" 
-              className="web3-button-outline text-lg px-8 py-4 web3-holographic-border web3-clickable-stable"
+              className="web3-button-outline text-lg px-8 py-4 web3-holographic-border"
             >
               🏛️ WAGA Admin Access
             </Link>
             <Link 
               href="/docs" 
-              className="web3-gradient-button text-lg px-8 py-4 web3-clickable-stable"
+              className="web3-gradient-button text-lg px-8 py-4 animate-neon-pulse"
             >
               📚 Read Documentation
             </Link>

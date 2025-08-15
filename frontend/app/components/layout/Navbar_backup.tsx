@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState         { href: '/producer', label: '🏪 Vendor Tools' }, from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import WalletConnect from "../WalletConnect";
@@ -22,7 +22,7 @@ export default function Navbar() {
 
     if (pathname.startsWith('/producer')) {
       return [
-        { href: '/producer', label: '�️ WAGA Admin', active: true },
+        { href: '/vendor', label: '� Vendor Tools', active: true },
         { href: '/consumer', label: '👤 Consumer Portal' },
         ...baseItems
       ];
@@ -31,14 +31,14 @@ export default function Navbar() {
     if (pathname.startsWith('/consumer')) {
       return [
         { href: '/consumer', label: '👤 Consumer Portal', active: true },
-        { href: '/producer', label: '�️ WAGA Admin' },
+        { href: '/vendor', label: '� Vendor Tools' },
         ...baseItems
       ];
     }
 
     // Default navigation for home and other pages
     return [
-      { href: '/producer', label: '�️ WAGA Admin' },
+      { href: '/vendor', label: '� Vendor Tools' },
       { href: '/consumer', label: '👤 Consumer Portal' },
       ...baseItems
     ];
@@ -67,13 +67,13 @@ export default function Navbar() {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex flex-1 justify-center">
-            <div className="flex items-center space-x-2">
+          <div className="hidden md:block">
+            <div className="ml-10 flex items-center space-x-1">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center whitespace-nowrap ${
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
                     ('active' in item && item.active) || pathname === item.href
                       ? 'bg-amber-500/20 text-amber-200 shadow-sm border border-amber-400/30'
                       : 'text-green-100 hover:text-amber-300 hover:bg-white/10'
@@ -86,15 +86,16 @@ export default function Navbar() {
           </div>
 
           {/* Wallet Connection */}
-          <div className="hidden md:flex items-center space-x-3">
-            {/* Network Status */}
-            <div className="bg-green-100/90 text-green-800 border border-green-300/50 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm flex items-center space-x-1">
-              <span>🌐</span>
-              <span>Base Sepolia</span>
+          <div className="hidden md:block">
+            <div className="ml-4 flex items-center space-x-4">
+              {/* Network Status */}
+              <div className="bg-green-100/90 text-green-800 border border-green-300/50 px-3 py-1 rounded-full text-xs font-medium shadow-sm">
+                🌐 Base Sepolia
+              </div>
+              
+              {/* Wallet Connect Component */}
+              <WalletConnect />
             </div>
-            
-            {/* Wallet Connect Component */}
-            <WalletConnect />
           </div>
 
           {/* Mobile menu button */}
@@ -150,3 +151,4 @@ export default function Navbar() {
     </nav>
   );
 }
+

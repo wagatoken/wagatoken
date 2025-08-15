@@ -5,7 +5,7 @@ import { join } from "path";
 export async function GET() {
   try {
     // Read the default source code file from your codebase
-    const sourceCodePath = join(process.cwd(), '../../DefaultSourceCode.js');
+    const sourceCodePath = join(process.cwd(), '../DefaultSourceCode.js');
     let sourceCode = readFileSync(sourceCodePath, 'utf8');
 
     // Replace placeholder URLs with production URLs for Ethiopian coffee API

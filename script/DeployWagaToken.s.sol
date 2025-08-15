@@ -70,3 +70,11 @@ contract DeployWagaToken is Script {
 
 
 }
+
+// All WAGA Contracts Successfully Deployed & Verified on Base Sepolia:
+// Contract Addresses:
+// WAGACoffeeToken: 0xbAA584BDA90bF54fee155329e59C0E7e02A40FD2
+// WAGAInventoryManager: 0xb9e41ab9c876B8281F8a286f4db1cFAFD6eFF25C
+// WAGACoffeeRedemption: 0x82f57003c108d99337cc3E40D9DB86d2B3Fe6df2
+// WAGAProofOfReserve: 0xf04e3F560DcFF5927aBDD0aa7755Dbaec56247ac
+// HelperConfig: 0xC7f2Cf4845C6db0e1a1e91ED41Bcd0FcC1b0E141
