@@ -133,6 +133,7 @@ contract WAGACoffeeToken is
      * @notice Initializes the contract with zero addresses for two-phase deployment
      */
     constructor() ERC1155("") {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); // Grant DEFAULT_ADMIN_ROLE first
         _grantRole(ADMIN_ROLE, msg.sender);
     }
 

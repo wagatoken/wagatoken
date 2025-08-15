@@ -52,6 +52,7 @@ contract WAGAConfigManager is AccessControl, Ownable {
 
     constructor() Ownable(msg.sender) {
         i_owner = msg.sender;
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); // Grant DEFAULT_ADMIN_ROLE first
         _grantRole(ADMIN_ROLE, msg.sender);
     }
 
