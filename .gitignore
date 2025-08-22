@@ -14,8 +14,7 @@ out/
 .env.development.local
 .env.test.local
 .env.production.local
-# Keep frontend env file for deployment
-!frontend/.env.local
+frontend/.env.local
 
 # IDE
 .vscode/

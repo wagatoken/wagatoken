@@ -53,7 +53,16 @@ npm install
 ```
 
 3. **Environment Setup**
-The `.env.local` file is included with production contract addresses.
+Copy the example environment file and configure it with your values:
+```bash
+cp frontend/.env.example frontend/.env.local
+```
+
+Edit `frontend/.env.local` with your actual values:
+- **Pinata credentials**: For IPFS storage
+- **Contract addresses**: Use the deployed Base Sepolia contracts above
+- **Chainlink subscription**: For oracle functionality
+- **API keys**: For external services
 
 4. **Run the development server**
 ```bash
@@ -77,7 +86,22 @@ This branch is optimized for Netlify deployment with all Solidity files excluded
 ### Netlify Settings
 - **Build command**: `cd frontend && npm run build`
 - **Publish directory**: `frontend/.next`
-- **Environment variables**: Automatically handled via included `.env.local`
+- **Environment variables**: Configure in Netlify dashboard using values from `.env.example`
+
+**Required Netlify Environment Variables:**
+```
+PINATA_JWT=your_pinata_jwt_token
+NEXT_PUBLIC_GATEWAY_URL=your_pinata_gateway_url
+NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS=0xE69bdd3E783212D11522E7f0057c9F52FC4D0A39
+NEXT_PUBLIC_WAGA_INVENTORY_MANAGER_ADDRESS=0xe882dcD6F1283F83Ab19F954d70fC024eE70A908
+NEXT_PUBLIC_WAGA_REDEMPTION_CONTRACT_ADDRESS=0xc235C005202a9ec26d59120B8e9c2cc6AB432fC4
+NEXT_PUBLIC_WAGA_PROOF_OF_RESERVE_ADDRESS=0xaA42A460107A61D34D461fb59c46343b1a8FAdc5
+NEXT_PUBLIC_CHAINLINK_FUNCTIONS_ROUTER=0xf9B8fc078197181C841c296C876945aaa425B278
+NEXT_PUBLIC_CHAINLINK_DON_ID=fun-base-sepolia-1
+NEXT_PUBLIC_CHAINLINK_SUBSCRIPTION_ID=your_subscription_id
+NEXT_PUBLIC_API_BASE_URL=https://your-api-domain.com
+WAGA_API_KEY=your_production_api_key
+```
 
 ## Network Configuration
 
