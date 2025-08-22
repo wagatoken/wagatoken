@@ -1,4 +1,5 @@
-import Link from "next/link";
+import Link from 'next/link';
+import DynamicPlatformStats from '../components/DynamicPlatformStats';
 
 export default function Docs() {
   return (
@@ -104,11 +105,47 @@ export default function Docs() {
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
                     <span className="text-gray-800 font-medium">WAGA Coffee Token:</span>
-                    <span className="text-emerald-600 font-mono text-xs">0xbAA584...40FD2</span>
+                    <a 
+                      href="https://sepolia.basescan.org/address/0xe69bdd3e783212d11522e7f0057c9f52fc4d0a39"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-600 font-mono text-xs hover:text-emerald-800 hover:underline transition-colors"
+                    >
+                      0xe69b...0a39
+                    </a>
                   </div>
                   <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
                     <span className="text-gray-800 font-medium">Proof of Reserve:</span>
-                    <span className="text-emerald-600 font-mono text-xs">0xf04e3F...47ac</span>
+                    <a 
+                      href="https://sepolia.basescan.org/address/0xaa42a460107a61d34d461fb59c46343b1a8fadc5"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-600 font-mono text-xs hover:text-emerald-800 hover:underline transition-colors"
+                    >
+                      0xaa42...adc5
+                    </a>
+                  </div>
+                  <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
+                    <span className="text-gray-800 font-medium">Inventory Manager:</span>
+                    <a 
+                      href="https://sepolia.basescan.org/address/0xe882dcd6f1283f83ab19f954d70fc024ee70a908"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-600 font-mono text-xs hover:text-emerald-800 hover:underline transition-colors"
+                    >
+                      0xe882...a908
+                    </a>
+                  </div>
+                  <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
+                    <span className="text-gray-800 font-medium">Coffee Redemption:</span>
+                    <a 
+                      href="https://sepolia.basescan.org/address/0xc235c005202a9ec26d59120b8e9c2cc6ab432fc4"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-600 font-mono text-xs hover:text-emerald-800 hover:underline transition-colors"
+                    >
+                      0xc235...2fc4
+                    </a>
                   </div>
                   <div className="flex justify-between items-center p-2 bg-amber-50 rounded-lg">
                     <span className="text-gray-800 font-medium">Network:</span>
@@ -116,26 +153,7 @@ export default function Docs() {
                   </div>
                 </div>
               </div>
-              <div className="web3-card">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                  <span>📊</span>
-                  <span>Platform Stats</span>
-                </h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">Total Batches:</span>
-                    <span className="text-emerald-600 font-bold">12+</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">Verification Rate:</span>
-                    <span className="text-emerald-600 font-bold">100%</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">IPFS Status:</span>
-                    <span className="text-emerald-600 font-bold">Active</span>
-                  </div>
-                </div>
-              </div>
+              <DynamicPlatformStats />
             </div>
             
             <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
