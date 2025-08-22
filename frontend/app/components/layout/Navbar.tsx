@@ -49,7 +49,7 @@ export default function Navbar() {
   return (
     <nav className="web3-mobile-nav bg-gradient-to-r from-emerald-900 via-green-800 to-emerald-800 backdrop-blur-md border-b border-amber-500/30 transition-all duration-300 shadow-lg shadow-emerald-900/20">
       <div className="web3-container-mobile">
-        <div className="flex justify-between items-center h-16 md:h-18">
+        <div className="flex justify-between items-center h-16 md:h-18 gap-6">
           {/* Logo and Brand */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2 group sm:space-x-3">
@@ -67,19 +67,22 @@ export default function Navbar() {
                 </div>
               </div>
             </Link>
+            <div className="web3-blockchain-status ml-3 hidden sm:flex">
+              <span className="text-emerald-700">Live on Base</span>
+            </div>
           </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex flex-1 justify-center">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-4">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center whitespace-nowrap ${
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center whitespace-nowrap min-w-fit ${
                     ('active' in item && item.active) || pathname === item.href
                       ? 'bg-amber-500/20 text-amber-200 shadow-sm border border-amber-400/30'
-                      : 'text-green-100 hover:text-amber-300 hover:bg-white/10'
+                      : 'text-green-100 hover:text-amber-300 hover:bg-white/10 border border-transparent'
                   }`}
                 >
                   {item.label}
@@ -90,12 +93,6 @@ export default function Navbar() {
 
           {/* Wallet Connection */}
           <div className="hidden md:flex items-center space-x-3">
-            {/* Network Status */}
-            <div className="bg-green-100/90 text-green-800 border border-green-300/50 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm flex items-center space-x-1">
-              <span>🌐</span>
-              <span>Base Sepolia</span>
-            </div>
-            
             {/* Wallet Connect Component */}
             <WalletConnect />
           </div>
@@ -140,11 +137,8 @@ export default function Navbar() {
               <div className="px-3 py-3 border-t border-emerald-700/50 mt-4">
                 <div className="text-xs font-medium text-white mb-2 sm:text-sm">Wallet Connection</div>
                 <div className="mb-2">
-                  <div className="bg-green-100/90 text-green-800 border border-green-300/50 px-2 py-1 rounded-full text-xs font-medium shadow-sm mb-2 inline-block sm:px-3">
-                    🌐 Base Sepolia
-                  </div>
+                  <WalletConnect />
                 </div>
-                <WalletConnect />
               </div>
             </div>
           </div>

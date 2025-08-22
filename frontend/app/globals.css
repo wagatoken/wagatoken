@@ -1119,6 +1119,64 @@
     transform: translateY(-2px) scale(1.01);
   }
 
+  /* Wallet Connection Card - Trust & Security Theme */
+  .web3-card-wallet {
+    background: linear-gradient(135deg, rgba(240, 253, 250, 0.95), rgba(209, 250, 241, 0.9));
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 16px;
+    box-shadow: 
+      0 10px 15px -3px rgba(6, 78, 59, 0.1), 
+      0 4px 6px -2px rgba(6, 78, 59, 0.05),
+      0 0 0 1px rgba(16, 185, 129, 0.1) inset;
+    padding: 24px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .web3-card-wallet::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.7), transparent);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .web3-card-wallet::after {
+    content: '🔐';
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    font-size: 12px;
+    opacity: 0.3;
+    transition: all 0.4s ease;
+  }
+
+  .web3-card-wallet:hover {
+    border-color: rgba(5, 150, 105, 0.5);
+    box-shadow: 
+      0 20px 25px -5px rgba(6, 78, 59, 0.15), 
+      0 10px 10px -5px rgba(6, 78, 59, 0.04),
+      0 0 0 1px rgba(16, 185, 129, 0.2) inset,
+      0 0 30px rgba(16, 185, 129, 0.1);
+    transform: translateY(-2px) scale(1.01);
+    background: linear-gradient(135deg, rgba(240, 253, 250, 1), rgba(209, 250, 241, 0.95));
+  }
+
+  .web3-card-wallet:hover::before {
+    opacity: 1;
+  }
+
+  .web3-card-wallet:hover::after {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+
   /* Reduced intensity animations for better UX */
   .web3-subtle-glow {
     transition: filter 0.3s ease;
@@ -1126,6 +1184,146 @@
 
   .web3-subtle-glow:hover {
     filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.3));
+  }
+
+  /* Enhanced Blockchain Real-Time Effects */
+  .web3-blockchain-pulse {
+    position: relative;
+    animation: blockchain-heartbeat 3s ease-in-out infinite;
+  }
+
+  .web3-blockchain-pulse::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    background: linear-gradient(45deg, 
+      rgba(16, 185, 129, 0.4), 
+      rgba(245, 158, 11, 0.4),
+      rgba(16, 185, 129, 0.4)
+    );
+    background-size: 200% 200%;
+    animation: blockchain-data-flow 4s linear infinite;
+    opacity: 0;
+    z-index: -1;
+    transition: opacity 0.3s ease;
+  }
+
+  .web3-blockchain-pulse:hover::before {
+    opacity: 1;
+  }
+
+  @keyframes blockchain-heartbeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+  }
+
+  @keyframes blockchain-data-flow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* Coffee Bean Particle System */
+  .web3-coffee-particles {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .web3-coffee-particles::before {
+    content: '☕';
+    position: absolute;
+    top: 10%;
+    left: 5%;
+    font-size: 8px;
+    opacity: 0.1;
+    animation: coffee-particle-float-1 8s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .web3-coffee-particles::after {
+    content: '🌱';
+    position: absolute;
+    top: 80%;
+    right: 10%;
+    font-size: 10px;
+    opacity: 0.15;
+    animation: coffee-particle-float-2 10s ease-in-out infinite reverse;
+    pointer-events: none;
+  }
+
+  @keyframes coffee-particle-float-1 {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 0.1; }
+    25% { transform: translate(15px, -10px) rotate(90deg); opacity: 0.2; }
+    50% { transform: translate(30px, 5px) rotate(180deg); opacity: 0.1; }
+    75% { transform: translate(15px, 15px) rotate(270deg); opacity: 0.15; }
+  }
+
+  @keyframes coffee-particle-float-2 {
+    0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.15; }
+    33% { transform: translate(-20px, -15px) scale(1.2); opacity: 0.2; }
+    66% { transform: translate(10px, -25px) scale(0.8); opacity: 0.1; }
+  }
+
+  /* Enhanced Holographic Border with Ethiopian Coffee Colors */
+  .web3-holographic-border-enhanced {
+    position: relative;
+    border: 2px solid transparent;
+    background: linear-gradient(white, white) padding-box,
+                linear-gradient(45deg, 
+                  rgba(16, 185, 129, 0.6),
+                  rgba(245, 158, 11, 0.8),
+                  rgba(139, 69, 19, 0.6),
+                  rgba(16, 185, 129, 0.6)
+                ) border-box;
+    animation: holographic-shift 6s linear infinite;
+  }
+
+  @keyframes holographic-shift {
+    0% { filter: hue-rotate(0deg) saturate(1); }
+    25% { filter: hue-rotate(15deg) saturate(1.2); }
+    50% { filter: hue-rotate(-10deg) saturate(0.9); }
+    75% { filter: hue-rotate(20deg) saturate(1.1); }
+    100% { filter: hue-rotate(0deg) saturate(1); }
+  }
+
+  /* Real-Time Blockchain Status Indicator */
+  .web3-blockchain-status {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.2));
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .web3-blockchain-status::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    animation: blockchain-status-pulse 2s ease-in-out infinite;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+
+  @keyframes blockchain-status-pulse {
+    0% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    70% {
+      transform: scale(1);
+      box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    }
+    100% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
   }
 
   /* Enhanced Web3 Visual Effects */

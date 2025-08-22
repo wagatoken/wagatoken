@@ -93,11 +93,11 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div className="mb-6 sm:mb-8">
             <div className="mb-4 sm:mb-6 flex justify-center">
-              <div className="waga-logo-container transition-all duration-300">
+              <div className="waga-logo-container web3-blockchain-pulse web3-coffee-particles transition-all duration-300">
                 <img 
                   src="https://violet-rainy-toad-577.mypinata.cloud/ipfs/bafkreigqbyeqnmjqznbikaj7q2mipyijlslb57fgdw7nhloq3xinvhvcca" 
                   alt="WAGA Coffee Logo" 
-                  className="h-16 sm:h-20 lg:h-24 w-auto rounded-lg sm:rounded-xl"
+                  className="h-16 sm:h-20 lg:h-24 w-auto rounded-lg sm:rounded-xl web3-holographic-border-enhanced"
                 />
               </div>
             </div>
@@ -135,7 +135,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             {stats.map((stat, index) => (
-              <div key={index} className="web3-stat-card web3-card-stable group">
+              <div key={index} className="web3-stat-card web3-card-stable web3-blockchain-pulse group">
                 <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 animate-on-hover-only">
                   <span className="animate-particle-float-gentle">{stat.icon}</span>
                 </div>
@@ -165,7 +165,7 @@ export default function HomePage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                 {featuredBatches.map((batch, index) => (
-                  <div key={batch.batchId} className="web3-card web3-holographic-border web3-card-stable" style={{ animationDelay: `${index * 200}ms` }}>
+                  <div key={batch.batchId} className="web3-card web3-holographic-border-enhanced web3-card-stable web3-coffee-particles" style={{ animationDelay: `${index * 200}ms` }}>
                     <div className="mb-4">
                       <h3 className="text-lg font-bold text-gray-900 mb-1">
                         {batch.batchDetails.farmName}

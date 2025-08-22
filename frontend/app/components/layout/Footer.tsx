@@ -6,9 +6,9 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-gradient-to-r from-green-800 to-emerald-900 backdrop-blur-xl border-t border-amber-500/20 mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+    <footer className="bg-gradient-to-br from-green-900 via-green-800 to-amber-900 text-white">
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand Column */}
           <div className="col-span-1">
             <div className="flex items-center space-x-3 mb-4">
@@ -27,11 +27,11 @@ export default function Footer() {
             <p className="text-green-100 text-sm mb-4">
               Tokenizing premium roasted coffee from the highlands of Ethiopia. Farm-to-cup traceability powered by blockchain technology.
             </p>
-            <div className="flex items-center space-x-2 text-xs text-amber-200">
+            <div className="flex items-center space-x-2 text-xs text-amber-200 mb-4">
               <span>🇪🇹</span>
               <span>Proudly Ethiopian</span>
             </div>
-            <div className="flex space-x-2 mt-4">
+            <div className="flex space-x-2">
               <div className="web3-badge web3-badge-success">
                 ✅ Base Sepolia
               </div>
@@ -41,9 +41,9 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Navigation & Resources */}
           <div className="col-span-1">
-            <h3 className="text-white font-semibold mb-4">Quick Links</h3>
+            <h3 className="text-white font-semibold mb-4">Platform</h3>
             <ul className="space-y-2">
               <li>
                 <Link href="/browse" className="text-green-100 hover:text-amber-300 text-sm transition-colors">
@@ -51,13 +51,13 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/consumer" className="text-green-100 hover:text-amber-300 text-sm transition-colors">
-                  Consumer Portal
+                <Link href="/distributor" className="text-green-100 hover:text-amber-300 text-sm transition-colors">
+                  Distributor Portal
                 </Link>
               </li>
               <li>
-                <Link href="/producer" className="text-green-100 hover:text-amber-300 text-sm transition-colors">
-                  WAGA Admin Tools
+                <Link href="/admin" className="text-green-100 hover:text-amber-300 text-sm transition-colors">
+                  Admin Tools
                 </Link>
               </li>
               <li>
@@ -70,63 +70,18 @@ export default function Footer() {
                   Documentation
                 </Link>
               </li>
-            </ul>
-          </div>
-
-          {/* Platform */}
-          <div className="col-span-1">
-            <h3 className="text-white font-semibold mb-4">Blockchain</h3>
-            <ul className="space-y-2">
               <li>
-                <a 
-                  href="https://basescan.org/address/0xbAA584BDA90bF54fee155329e59C0E7e02A40FD2" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-green-100 hover:text-amber-300 text-sm transition-colors flex items-center space-x-1"
-                >
-                  <span>Smart Contracts</span>
-                  <span>↗</span>
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="https://functions.chain.link" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-green-100 hover:text-amber-300 text-sm transition-colors flex items-center space-x-1"
-                >
-                  <span>Chainlink Functions</span>
-                  <span>↗</span>
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="https://pinata.cloud" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-green-100 hover:text-amber-300 text-sm transition-colors flex items-center space-x-1"
-                >
-                  <span>IPFS Storage</span>
-                  <span>↗</span>
-                </a>
-              </li>
-              <li>
-                <Link href="/docs" className="text-green-100 hover:text-amber-300 text-sm transition-colors">
-                  API Reference
-                </Link>
-              </li>
-              <li>
-                <Link href="/docs" className="text-green-100 hover:text-amber-300 text-sm transition-colors">
-                  Integration Guide
+                <Link href="/docs/guides/distributor" className="text-green-100 hover:text-amber-300 text-sm transition-colors">
+                  Distributor Guide
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Social & Community */}
+          {/* Community & Contact */}
           <div className="col-span-1">
             <h3 className="text-white font-semibold mb-4">Community</h3>
-            <div className="space-y-3">
+            <div className="space-y-3 mb-6">
               <a
                 href="https://x.com/Wagatoken?t=DJ-g5RE824iE4dpeTUHc7w&s=09"
                 target="_blank"
@@ -154,6 +109,39 @@ export default function Footer() {
                 <span>💼</span>
                 <span>LinkedIn</span>
               </a>
+            </div>
+            
+            <div className="border-t border-amber-500/20 pt-4">
+              <h4 className="text-white font-medium mb-2 text-sm">Technology</h4>
+              <div className="space-y-1 text-xs text-green-200">
+                <a
+                  href="https://docs.chain.link/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-1 hover:text-amber-300 transition-colors"
+                >
+                  <span>⚡</span>
+                  <span>Powered by Chainlink</span>
+                </a>
+                <a
+                  href="https://pinata.cloud/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-1 hover:text-amber-300 transition-colors"
+                >
+                  <span>📡</span>
+                  <span>Stored on IPFS</span>
+                </a>
+                <a
+                  href="https://docs.base.org/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-1 hover:text-amber-300 transition-colors"
+                >
+                  <span>🔗</span>
+                  <span>Base Network</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>

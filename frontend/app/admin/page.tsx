@@ -257,7 +257,7 @@ export default function AdminPage() {
 
           {/* Enhanced Quick Stats */}
           <div className="web3-stats-grid">
-            <div className="web3-enhanced-stat-card group">
+            <div className="web3-enhanced-stat-card web3-blockchain-pulse group">
               <div className="text-5xl mb-4 group-hover:animate-pulse">📦</div>
               <div className="text-4xl font-bold web3-gradient-text mb-2">{batches.length}</div>
               <div className="text-gray-600 font-semibold">Total Batches</div>
@@ -265,7 +265,7 @@ export default function AdminPage() {
                 {batches.filter(b => b.isVerified).length} verified
               </div>
             </div>
-            <div className="web3-enhanced-stat-card group" style={{ animationDelay: '100ms' }}>
+            <div className="web3-enhanced-stat-card web3-blockchain-pulse group" style={{ animationDelay: '100ms' }}>
               <div className="text-5xl mb-4 group-hover:animate-pulse">✅</div>
               <div className="text-4xl font-bold text-emerald-600 mb-2">
                 {batches.filter(b => b.isVerified).length}
@@ -275,7 +275,7 @@ export default function AdminPage() {
                 {batches.length > 0 ? Math.round((batches.filter(b => b.isVerified).length / batches.length) * 100) : 0}% success rate
               </div>
             </div>
-            <div className="web3-enhanced-stat-card group" style={{ animationDelay: '200ms' }}>
+            <div className="web3-enhanced-stat-card web3-blockchain-pulse web3-coffee-particles group" style={{ animationDelay: '200ms' }}>
               <div className="text-5xl mb-4 group-hover:animate-pulse">☕</div>
               <div className="text-4xl font-bold text-emerald-700 mb-2">
                 {batches.reduce((sum, b) => sum + b.quantity, 0)}
@@ -310,11 +310,11 @@ export default function AdminPage() {
         {userAddress && (
           <>
             {/* Connected Wallet Info */}
-            <div className="web3-card-dark animate-card-entrance mb-8">
+            <div className="web3-card-wallet animate-card-entrance mb-8">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Connected Wallet</h3>
-                  <p className="text-gray-600 font-mono text-sm">
+                  <h3 className="text-lg font-bold text-emerald-900">Connected Wallet</h3>
+                  <p className="text-emerald-700 font-mono text-sm">
                     {userAddress.substring(0, 6)}...{userAddress.substring(userAddress.length - 4)}
                   </p>
                 </div>
