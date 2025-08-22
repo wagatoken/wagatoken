@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Docs() {
   return (
     <div className="min-h-screen web3-section">
@@ -17,9 +19,9 @@ export default function Docs() {
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
                 Learn how to navigate the WAGA platform, connect your wallet, and start trading tokenized Ethiopian coffee.
               </p>
-              <button className="web3-button-outline text-sm">
+              <Link href="/docs/guides/getting-started" className="web3-button-outline text-sm">
                 Read Guide →
-              </button>
+              </Link>
             </div>
             
             <div className="web3-card-feature animate-card-entrance" style={{ animationDelay: '200ms' }}>
@@ -30,9 +32,9 @@ export default function Docs() {
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
                 Internal documentation for WAGA administrators on how to create, verify, and manage coffee batches on the blockchain.
               </p>
-              <button className="web3-button-outline text-sm">
-                Admin Portal →
-              </button>
+              <Link href="/docs/guides/admin" className="web3-button-outline text-sm">
+                Admin Guide →
+              </Link>
             </div>
             
             <div className="web3-card-feature animate-card-entrance" style={{ animationDelay: '300ms' }}>
@@ -43,9 +45,9 @@ export default function Docs() {
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
                 How to browse coffee batches, purchase tokens, and redeem them for physical coffee delivery to your location.
               </p>
-              <button className="web3-button-outline text-sm">
-                Explore →
-              </button>
+              <Link href="/docs/guides/consumer" className="web3-button-outline text-sm">
+                Consumer Guide →
+              </Link>
             </div>
             
             <div className="web3-card-feature animate-card-entrance" style={{ animationDelay: '400ms' }}>
@@ -56,9 +58,9 @@ export default function Docs() {
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
                 Technical details on how we use Chainlink Functions for automated inventory verification and proof of reserve.
               </p>
-              <button className="web3-button-outline text-sm">
+              <Link href="/docs/guides/chainlink" className="web3-button-outline text-sm">
                 Technical Docs →
-              </button>
+              </Link>
             </div>
             
             <div className="web3-card-feature animate-card-entrance" style={{ animationDelay: '500ms' }}>
@@ -69,9 +71,9 @@ export default function Docs() {
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
                 Understanding how coffee batch metadata, images, and certificates are stored decentrally on IPFS via Pinata.
               </p>
-              <button className="web3-button-outline text-sm">
-                View Details →
-              </button>
+              <Link href="/docs/guides/ipfs-storage" className="web3-button-outline text-sm">
+                Storage Guide →
+              </Link>
             </div>
             
             <div className="web3-card-feature animate-card-entrance" style={{ animationDelay: '600ms' }}>
@@ -82,9 +84,9 @@ export default function Docs() {
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
                 Deployed smart contract addresses, verification links, and technical implementation details on Base Sepolia.
               </p>
-              <button className="web3-button-outline text-sm">
+              <Link href="/docs/guides/smart-contracts" className="web3-button-outline text-sm">
                 Contract Docs →
-              </button>
+              </Link>
             </div>
           </div>
 
