@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { CoffeeBatch } from "@/utils/types";
+import { CoffeeBeanIcon, VerificationIcon } from "../components/icons/WagaIcons";
 import Breadcrumbs from "../components/layout/Breadcrumbs";
 
 export default function BrowsePage() {
@@ -52,7 +53,8 @@ export default function BrowsePage() {
         
         {/* Header */}
         <div className="mb-8 animate-card-entrance">
-          <h1 className="text-4xl font-bold web3-gradient-text mb-2">
+          <h1 className="flex items-center gap-3 text-4xl font-bold web3-gradient-text mb-2">
+            <CoffeeBeanIcon size={36} className="waga-icon-coffee" />
             Browse Coffee Batches
           </h1>
           <p className="text-gray-600">
@@ -65,7 +67,7 @@ export default function BrowsePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
               <label className="block text-sm font-semibold text-emerald-700 mb-2">
-                🔍 Search Farms & Locations
+                Search Farms & Locations
               </label>
               <input
                 type="text"
@@ -77,7 +79,7 @@ export default function BrowsePage() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-emerald-700 mb-2">
-                📦 Filter by Packaging
+                Filter by Packaging
               </label>
               <select
                 value={filterPackaging}
@@ -107,14 +109,16 @@ export default function BrowsePage() {
               >
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">
+                    <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-1">
+                      <CoffeeBeanIcon size={18} className="waga-icon-coffee" />
                       Batch #{batch.batchId}
                     </h3>
                     <div className="text-amber-700 text-sm font-medium">
                       {batch.batchDetails.farmName}
                     </div>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(batch)}`}>
+                  <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(batch)}`}>
+                    <VerificationIcon size={12} className="waga-icon-verification" />
                     {batch.verification.verificationStatus}
                   </span>
                 </div>

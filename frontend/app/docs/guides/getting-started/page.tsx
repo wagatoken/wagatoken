@@ -27,7 +27,7 @@ export default function GettingStartedGuide() {
 
           {/* Table of Contents */}
           <div className="web3-card mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">📋 Table of Contents</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Table of Contents</h2>
             <ul className="space-y-2">
               <li><a href="#overview" className="text-emerald-600 hover:text-emerald-800">1. Platform Overview</a></li>
               <li><a href="#browse" className="text-emerald-600 hover:text-emerald-800">2. Browsing Coffee Batches</a></li>
@@ -43,7 +43,6 @@ export default function GettingStartedGuide() {
             {/* Platform Overview */}
             <section id="overview" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>🌍</span>
                 <span>1. Platform Overview</span>
               </h2>
               
@@ -55,7 +54,7 @@ export default function GettingStartedGuide() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-emerald-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-emerald-800 mb-2">🔗 Blockchain Technology</h3>
+                    <h3 className="font-semibold text-emerald-800 mb-2">Blockchain Technology</h3>
                     <p className="text-sm text-emerald-700">
                       Built on Base Testnet with ERC-1155 tokens representing verified coffee batches.
                     </p>
@@ -67,13 +66,13 @@ export default function GettingStartedGuide() {
                     </p>
                   </div>
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-blue-800 mb-2">⚡ Chainlink Verification</h3>
+                    <h3 className="font-semibold text-blue-800 mb-2">Chainlink Verification</h3>
                     <p className="text-sm text-blue-700">
                       Automated inventory verification using Chainlink Functions for transparency.
                     </p>
                   </div>
                   <div className="bg-purple-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-purple-800 mb-2">📦 IPFS Storage</h3>
+                    <h3 className="font-semibold text-purple-800 mb-2">IPFS Storage</h3>
                     <p className="text-sm text-purple-700">
                       Immutable metadata storage via Pinata for complete batch documentation.
                     </p>
@@ -85,7 +84,6 @@ export default function GettingStartedGuide() {
             {/* Browsing Coffee Batches */}
             <section id="browse" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>🌱</span>
                 <span>2. Browsing Coffee Batches</span>
               </h2>
               
@@ -97,7 +95,7 @@ export default function GettingStartedGuide() {
 
                 <div className="space-y-4">
                   <div className="bg-emerald-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-emerald-800 mb-2">🔍 Search & Filter</h3>
+                    <h3 className="font-semibold text-emerald-800 mb-2">Search & Filter</h3>
                     <ul className="text-sm text-emerald-700 space-y-1">
                       <li>• Search by farm name, location, or batch ID</li>
                       <li>• Filter by packaging type (Washed, Natural, Honey)</li>
@@ -106,7 +104,7 @@ export default function GettingStartedGuide() {
                   </div>
 
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-blue-800 mb-2">📊 Batch Information</h3>
+                    <h3 className="font-semibold text-blue-800 mb-2">Batch Information</h3>
                     <ul className="text-sm text-blue-700 space-y-1">
                       <li>• Farm details and location</li>
                       <li>• Roast level and processing method</li>
@@ -117,7 +115,7 @@ export default function GettingStartedGuide() {
                   </div>
 
                   <div className="bg-purple-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-purple-800 mb-2">✅ Verification Badges</h3>
+                    <h3 className="font-semibold text-purple-800 mb-2">Verification Badges</h3>
                     <div className="text-sm text-purple-700 space-y-2">
                       <div className="flex items-center space-x-2">
                         <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-xs">Verified</span>
@@ -140,7 +138,6 @@ export default function GettingStartedGuide() {
             {/* Vendor Managed Inventory Model */}
             <section id="vmi-model" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>🏢</span>
                 <span>3. Vendor Managed Inventory Model</span>
               </h2>
               
@@ -153,9 +150,6 @@ export default function GettingStartedGuide() {
 
                 <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
                   <div className="flex">
-                    <div className="flex-shrink-0">
-                      <div className="text-blue-400 text-xl">ℹ️</div>
-                    </div>
                     <div className="ml-3">
                       <p className="text-sm text-blue-700">
                         <strong>Key Concept:</strong> End customers purchase coffee normally through distributors. 
@@ -167,7 +161,7 @@ export default function GettingStartedGuide() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-emerald-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-emerald-800 mb-2">🎯 Customer Benefits</h3>
+                    <h3 className="font-semibold text-emerald-800 mb-2">Customer Benefits</h3>
                     <ul className="text-sm text-emerald-700 space-y-1">
                       <li>• No need for crypto wallets or technical knowledge</li>
                       <li>• Traditional payment methods (credit cards, cash)</li>
@@ -188,7 +182,7 @@ export default function GettingStartedGuide() {
                 </div>
 
                 <div className="bg-amber-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-amber-800 mb-3">🔄 How It Works</h3>
+                  <h3 className="font-semibold text-amber-800 mb-3">How It Works</h3>
                   <div className="space-y-2 text-sm text-amber-700">
                     <div className="flex items-center space-x-2">
                       <span className="bg-amber-200 px-2 py-1 rounded text-xs">1</span>
@@ -214,7 +208,6 @@ export default function GettingStartedGuide() {
             {/* Understanding Distributor Role */}
             <section id="distributor-role" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>🤝</span>
                 <span>4. Understanding Distributor Role</span>
               </h2>
               
@@ -238,7 +231,7 @@ export default function GettingStartedGuide() {
                     </div>
 
                     <div className="bg-amber-50 p-4 rounded-lg border-l-4 border-amber-300">
-                      <h4 className="font-semibold text-amber-800 mb-2">🔥 Roasteries</h4>
+                      <h4 className="font-semibold text-amber-800 mb-2">Roasteries</h4>
                       <ul className="text-sm text-amber-700 space-y-1">
                         <li>• Roast and package verified coffee</li>
                         <li>• Wholesale to other businesses</li>
@@ -247,7 +240,7 @@ export default function GettingStartedGuide() {
                     </div>
 
                     <div className="bg-emerald-50 p-4 rounded-lg border-l-4 border-emerald-300">
-                      <h4 className="font-semibold text-emerald-800 mb-2">🏪 Retailers</h4>
+                      <h4 className="font-semibold text-emerald-800 mb-2">Retailers</h4>
                       <ul className="text-sm text-emerald-700 space-y-1">
                         <li>• Sell packaged coffee to consumers</li>
                         <li>• Provide authenticity guarantees</li>
@@ -257,7 +250,7 @@ export default function GettingStartedGuide() {
                   </div>
 
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-blue-800 mb-3">🛠️ Distributor Responsibilities</h3>
+                    <h3 className="font-semibold text-blue-800 mb-3">Distributor Responsibilities</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-700">
                       <div>
                         <h4 className="font-semibold mb-2">Blockchain Operations:</h4>
@@ -367,7 +360,6 @@ export default function GettingStartedGuide() {
             {/* Understanding Verification */}
             <section id="verification" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>🛡️</span>
                 <span>6. Understanding Verification</span>
               </h2>
               
@@ -379,7 +371,7 @@ export default function GettingStartedGuide() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-emerald-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-emerald-800 mb-3">🔗 Chainlink Functions</h3>
+                    <h3 className="font-semibold text-emerald-800 mb-3">Chainlink Functions</h3>
                     <ul className="text-sm text-emerald-700 space-y-1">
                       <li>• Automated inventory verification</li>
                       <li>• Real-time proof of reserve checks</li>
@@ -389,7 +381,7 @@ export default function GettingStartedGuide() {
                   </div>
 
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-blue-800 mb-3">📋 Manual Review</h3>
+                    <h3 className="font-semibold text-blue-800 mb-3">Manual Review</h3>
                     <ul className="text-sm text-blue-700 space-y-1">
                       <li>• Quality assessment by WAGA experts</li>
                       <li>• Farm certification verification</li>
@@ -399,7 +391,7 @@ export default function GettingStartedGuide() {
                   </div>
 
                   <div className="bg-purple-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-purple-800 mb-3">📦 IPFS Metadata</h3>
+                    <h3 className="font-semibold text-purple-800 mb-3">IPFS Metadata</h3>
                     <ul className="text-sm text-purple-700 space-y-1">
                       <li>• Immutable batch documentation</li>
                       <li>• Farm photos and certificates</li>
@@ -420,7 +412,7 @@ export default function GettingStartedGuide() {
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-800 mb-3">🔄 Verification Process Flow</h3>
+                  <h3 className="font-semibold text-gray-800 mb-3">Verification Process Flow</h3>
                   <div className="flex items-center space-x-2 text-sm text-gray-700">
                     <span className="bg-gray-200 px-2 py-1 rounded">Batch Created</span>
                     <span>→</span>
@@ -438,15 +430,14 @@ export default function GettingStartedGuide() {
           {/* Next Steps */}
           <div className="mt-12 web3-card">
             <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-              <span>🎯</span>
               <span>Next Steps</span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Link href="/browse" className="web3-button-outline block text-center">
-                🌱 Browse Coffee Batches
+                Browse Coffee Batches
               </Link>
               <Link href="/docs/guides/distributor" className="web3-button-outline block text-center">
-                🤝 Become a Distributor
+                Become a Distributor
               </Link>
               <Link href="/docs" className="web3-button-outline block text-center">
                 📚 View All Guides

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { NetworkEthereum, TokenETH, WalletMetamask } from '@web3icons/react';
 import DynamicPlatformStats from '../components/DynamicPlatformStats';
 
 export default function Docs() {
@@ -14,7 +15,6 @@ export default function Docs() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="web3-card-feature animate-card-entrance" style={{ animationDelay: '100ms' }}>
               <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center space-x-2">
-                <span className="text-2xl">🚀</span>
                 <span>Getting Started</span>
               </h3>
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
@@ -27,7 +27,6 @@ export default function Docs() {
             
             <div className="web3-card-feature animate-card-entrance" style={{ animationDelay: '200ms' }}>
               <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center space-x-2">
-                <span className="text-2xl">🏭</span>
                 <span>WAGA Admin Guide</span>
               </h3>
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
@@ -40,7 +39,6 @@ export default function Docs() {
             
             <div className="web3-card-feature animate-card-entrance" style={{ animationDelay: '300ms' }}>
               <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center space-x-2">
-                <span className="text-2xl">🏢</span>
                 <span>Distributor Guide</span>
               </h3>
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
@@ -66,7 +64,6 @@ export default function Docs() {
             
             <div className="web3-card-feature animate-card-entrance" style={{ animationDelay: '500ms' }}>
               <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center space-x-2">
-                <span className="text-2xl">📡</span>
                 <span>IPFS Storage</span>
               </h3>
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
@@ -79,7 +76,6 @@ export default function Docs() {
             
             <div className="web3-card-feature animate-card-entrance" style={{ animationDelay: '600ms' }}>
               <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center space-x-2">
-                <span className="text-2xl">🛠️</span>
                 <span>Smart Contracts</span>
               </h3>
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
@@ -92,14 +88,13 @@ export default function Docs() {
           </div>
 
           <div className="mt-12 web3-card-feature animate-card-entrance" style={{ animationDelay: '700ms' }}>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-              <span className="text-3xl">🔍</span>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
               <span>Quick Reference</span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="web3-card">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                  <span>🔗</span>
+                  <NetworkEthereum size={20} variant="branded" />
                   <span>Smart Contract Addresses</span>
                 </h3>
                 <div className="space-y-3 text-sm">
@@ -163,7 +158,9 @@ export default function Docs() {
                 <div className="text-sm text-gray-800">Premium Coffee</div>
               </div>
               <div className="web3-stat-card">
-                <div className="text-3xl mb-2">🔒</div>
+                <div className="flex justify-center mb-2">
+                  <NetworkEthereum size={32} variant="branded" />
+                </div>
                 <div className="text-2xl font-bold text-amber-600">Blockchain</div>
                 <div className="text-sm text-gray-800">Verified Batches</div>
               </div>

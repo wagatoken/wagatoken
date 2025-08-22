@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import WAGA Custom Icons */
+@import './components/icons/waga-icons.css';
+
 @layer base {
   body {
     background: linear-gradient(135deg, #fef7ec 0%, #ecfdf5 50%, #ecfccb 100%);

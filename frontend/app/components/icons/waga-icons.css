@@ -1,0 +1,156 @@
+/* WAGA Custom Icons Styling */
+
+.waga-icon {
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.3));
+}
+
+.waga-icon:hover {
+  transform: scale(1.05);
+  filter: drop-shadow(0 0 12px rgba(16, 185, 129, 0.5));
+}
+
+/* Coffee-themed gradients */
+.waga-icon-coffee {
+  background: linear-gradient(135deg, #8B4513 0%, #D2691E 50%, #CD853F 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Blockchain verification gradient */
+.waga-icon-blockchain {
+  background: linear-gradient(135deg, #10B981 0%, #059669 50%, #047857 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Farm/origin gradient */
+.waga-icon-farm {
+  background: linear-gradient(135deg, #22C55E 0%, #16A34A 50%, #15803D 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Quality grade gradient */
+.waga-icon-quality {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 50%, #B45309 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Storage gradient */
+.waga-icon-storage {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 50%, #1D4ED8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Traceability gradient */
+.waga-icon-trace {
+  background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 50%, #6D28D9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Distributor network gradient */
+.waga-icon-network {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 50%, #B91C1C 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Animated glow effects for special contexts */
+.waga-icon-glow {
+  animation: wagaIconGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes wagaIconGlow {
+  from {
+    filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.3));
+  }
+  to {
+    filter: drop-shadow(0 0 16px rgba(16, 185, 129, 0.6));
+  }
+}
+
+/* Web3 integration styles */
+.waga-icon-web3 {
+  background: linear-gradient(135deg, #10B981 0%, #3B82F6 50%, #8B5CF6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.waga-icon-ethereum {
+  color: #627EEA;
+}
+
+.waga-icon-success {
+  color: #10B981;
+}
+
+.waga-icon-warning {
+  color: #F59E0B;
+}
+
+.waga-icon-error {
+  color: #EF4444;
+}
+
+/* Size variants */
+.waga-icon-sm {
+  width: 16px;
+  height: 16px;
+}
+
+.waga-icon-md {
+  width: 24px;
+  height: 24px;
+}
+
+.waga-icon-lg {
+  width: 32px;
+  height: 32px;
+}
+
+.waga-icon-xl {
+  width: 48px;
+  height: 48px;
+}
+
+.waga-icon-2xl {
+  width: 64px;
+  height: 64px;
+}
+
+/* Interactive states */
+.waga-icon-interactive {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.waga-icon-interactive:hover {
+  transform: translateY(-2px);
+  filter: drop-shadow(0 4px 12px rgba(16, 185, 129, 0.4));
+}
+
+.waga-icon-interactive:active {
+  transform: translateY(0);
+  filter: drop-shadow(0 2px 8px rgba(16, 185, 129, 0.3));
+}
+
+/* Brand consistency */
+.waga-icon-brand {
+  color: var(--waga-primary, #10B981);
+}
+
+.waga-icon-brand-secondary {
+  color: var(--waga-secondary, #F59E0B);
+}

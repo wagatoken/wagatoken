@@ -1,3 +1,13 @@
+import { NetworkEthereum, TokenETH, WalletMetamask } from '@web3icons/react';
+import { 
+  CoffeeBeanIcon,
+  VerificationIcon,
+  FarmOriginIcon,
+  TraceabilityIcon,
+  QualityGradeIcon,
+  CoffeeStorageIcon
+} from '../components/icons/WagaIcons';
+
 export default function About() {
   return (
     <div className="min-h-screen web3-section">
@@ -25,7 +35,7 @@ export default function About() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
               <div className="space-y-4 animate-card-entrance" style={{ animationDelay: '200ms' }}>
                 <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-                  <span>🌱</span>
+                  <FarmOriginIcon size={24} className="waga-icon-farm" />
                   <span>Our Mission</span>
                 </h2>
                 <p className="text-gray-700 leading-relaxed">
@@ -37,7 +47,7 @@ export default function About() {
               
               <div className="space-y-4 animate-card-entrance" style={{ animationDelay: '400ms' }}>
                 <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-                  <span>🔗</span>
+                  <NetworkEthereum size={24} variant="branded" />
                   <span>Technology</span>
                 </h2>
                 <p className="text-gray-700 leading-relaxed">
@@ -49,7 +59,7 @@ export default function About() {
 
               <div className="space-y-4 animate-card-entrance" style={{ animationDelay: '600ms' }}>
                 <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-                  <span>🇪🇹</span>
+                  <CoffeeBeanIcon size={24} className="waga-icon-coffee" />
                   <span>Ethiopian Heritage</span>
                 </h2>
                 <p className="text-gray-700 leading-relaxed">
@@ -61,7 +71,7 @@ export default function About() {
 
               <div className="space-y-4 animate-card-entrance" style={{ animationDelay: '800ms' }}>
                 <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-                  <span>🛡️</span>
+                  <QualityGradeIcon size={24} className="waga-icon-quality" />
                   <span>Quality Assurance</span>
                 </h2>
                 <p className="text-gray-700 leading-relaxed">
@@ -74,23 +84,27 @@ export default function About() {
 
             <div className="mt-12 p-6 web3-card-dark animate-card-entrance" style={{ animationDelay: '1000ms' }}>
               <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
-                <span>📊</span>
+                <TraceabilityIcon size={24} className="waga-icon-trace" />
                 <span>Platform Statistics</span>
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div>
+                <div className="flex flex-col items-center space-y-2">
+                  <NetworkEthereum size={32} variant="branded" />
                   <div className="text-2xl font-bold web3-gradient-text">4</div>
                   <div className="text-sm text-gray-600">Smart Contracts</div>
                 </div>
-                <div>
+                <div className="flex flex-col items-center space-y-2">
+                  <CoffeeBeanIcon size={32} className="waga-icon-coffee" />
                   <div className="text-2xl font-bold web3-gradient-text">12+</div>
                   <div className="text-sm text-gray-600">Coffee Batches</div>
                 </div>
-                <div>
+                <div className="flex flex-col items-center space-y-2">
+                  <VerificationIcon size={32} className="waga-icon-verification" />
                   <div className="text-2xl font-bold web3-gradient-text">100%</div>
                   <div className="text-sm text-gray-600">Verification Rate</div>
                 </div>
-                <div>
+                <div className="flex flex-col items-center space-y-2">
+                  <CoffeeStorageIcon size={32} className="waga-icon-storage" />
                   <div className="text-2xl font-bold web3-gradient-text">Active</div>
                   <div className="text-sm text-gray-600">IPFS Storage</div>
                 </div>

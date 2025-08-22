@@ -2,44 +2,53 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { NetworkEthereum, TokenETH } from '@web3icons/react';
+import { 
+  CoffeeBeanIcon,
+  VerificationIcon,
+  CoffeeStorageIcon,
+  DistributorNetworkIcon,
+  TraceabilityIcon,
+  BatchCreationIcon
+} from './components/icons/WagaIcons';
 import { CoffeeBatch } from "@/utils/types";
 
 export default function HomePage() {
   const [featuredBatches, setFeaturedBatches] = useState<CoffeeBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState([
-    { label: "Smart Contracts Deployed", value: "4", icon: "🔗" },
-    { label: "Coffee Batches Tracked", value: "Loading...", icon: "☕" },
-    { label: "Verified Batches", value: "Loading...", icon: "⚡" },
-    { label: "IPFS Storage", value: "Active", icon: "📦" },
+    { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" /> },
+    { label: "Coffee Batches Tracked", value: "Loading...", icon: <CoffeeBeanIcon size={24} className="waga-icon-coffee" /> },
+    { label: "Verified Batches", value: "Loading...", icon: <VerificationIcon size={24} className="waga-icon-verification" /> },
+    { label: "IPFS Storage", value: "Active", icon: <CoffeeStorageIcon size={24} className="waga-icon-storage" /> },
   ]);
 
   const features = [
     {
       title: "Admin Portal",
       description: "Administrative interface for WAGA staff to create, verify, and manage coffee batches",
-      icon: "⚙️",
+      icon: <BatchCreationIcon size={32} className="waga-icon-batch" />,
       href: "/admin",
       color: "emerald"
     },
     {
       title: "Distributor Portal",
       description: "Request verified coffee batches and redeem tokens for physical coffee delivery",
-      icon: "�",
+      icon: <DistributorNetworkIcon size={32} className="waga-icon-network" />,
       href: "/distributor",
       color: "blue"
     },
     {
       title: "Browse Coffee",
       description: "Explore verified Ethiopian coffee batches managed by WAGA",
-      icon: "🌱",
+      icon: <CoffeeBeanIcon size={32} className="waga-icon-coffee" />,
       href: "/browse",
       color: "green"
     },
     {
       title: "Documentation",
       description: "Learn about our blockchain coffee traceability system",
-      icon: "📚",
+      icon: <TraceabilityIcon size={32} className="waga-icon-trace" />,
       href: "/docs",
       color: "purple"
     }
@@ -62,20 +71,20 @@ export default function HomePage() {
         const verificationRate = totalBatches > 0 ? Math.round((verifiedBatches / totalBatches) * 100) : 0;
         
         setStats([
-          { label: "Smart Contracts Deployed", value: "4", icon: "🔗" },
-          { label: "Coffee Batches Tracked", value: `${totalBatches}`, icon: "☕" },
-          { label: "Verification Rate", value: `${verificationRate}%`, icon: "⚡" },
-          { label: "IPFS Storage", value: "Active", icon: "📦" },
+          { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" /> },
+          { label: "Coffee Batches Tracked", value: `${totalBatches}`, icon: <CoffeeBeanIcon size={24} className="waga-icon-coffee" /> },
+          { label: "Verification Rate", value: `${verificationRate}%`, icon: <VerificationIcon size={24} className="waga-icon-verification" /> },
+          { label: "IPFS Storage", value: "Active", icon: <CoffeeStorageIcon size={24} className="waga-icon-storage" /> },
         ]);
       }
     } catch (error) {
       console.error('Error fetching featured batches:', error);
       // Keep default stats if fetch fails
       setStats([
-        { label: "Smart Contracts Deployed", value: "4", icon: "🔗" },
-        { label: "Coffee Batches Tracked", value: "12+", icon: "☕" },
-        { label: "Verification Rate", value: "85%", icon: "⚡" },
-        { label: "IPFS Storage", value: "Active", icon: "📦" },
+        { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" /> },
+        { label: "Coffee Batches Tracked", value: "12+", icon: <CoffeeBeanIcon size={24} className="waga-icon-coffee" /> },
+        { label: "Verification Rate", value: "85%", icon: <VerificationIcon size={24} className="waga-icon-verification" /> },
+        { label: "IPFS Storage", value: "Active", icon: <CoffeeStorageIcon size={24} className="waga-icon-storage" /> },
       ]);
     } finally {
       setLoading(false);
@@ -117,13 +126,13 @@ export default function HomePage() {
                 href="/admin" 
                 className="web3-gradient-button text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 web3-button-stable web3-subtle-glow min-h-[44px]"
               >
-                ⚙️ Admin Portal
+                Admin Portal
               </Link>
               <Link 
                 href="/distributor" 
                 className="web3-button-outline text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 web3-holographic-border web3-button-stable min-h-[44px]"
               >
-                🚚 Distributor Portal
+                Distributor Portal
               </Link>
             </div>
           </div>
@@ -194,7 +203,7 @@ export default function HomePage() {
                       href="/browse"
                       className="w-full web3-gradient-button-secondary text-sm py-2 block text-center web3-button-stable"
                     >
-                      🛒 View Details
+                      View Details
                     </Link>
                   </div>
                 ))}
@@ -263,7 +272,9 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             <div className="web3-card text-center web3-glass-morphism web3-card-stable">
-              <div className="text-4xl mb-4 web3-subtle-glow">🔗</div>
+              <div className="flex justify-center mb-4 web3-subtle-glow">
+                <NetworkEthereum size={48} variant="branded" />
+              </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Smart Contracts</h3>
               <p className="text-gray-600 mb-4">
                 ERC-1155 tokens represent verified coffee batches 
@@ -274,13 +285,15 @@ export default function HomePage() {
             </div>
 
             <div className="web3-card text-center web3-glass-morphism web3-card-stable" style={{ animationDelay: '0.2s' }}>
-              <div className="text-4xl mb-4 web3-subtle-glow">⚡</div>
+              <div className="flex justify-center mb-4 web3-subtle-glow">
+                <NetworkEthereum size={48} variant="branded" />
+              </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Chainlink Oracles</h3>
               <p className="text-gray-600 mb-4">
                 Decentralized verification of coffee inventory through Chainlink Functions
               </p>
               <div className="web3-badge web3-badge-info">
-                🌐 Base Testnet Active
+                Base Testnet Active
               </div>
             </div>
 
@@ -291,7 +304,7 @@ export default function HomePage() {
                 Immutable metadata storage via Pinata for complete transparency
               </p>
               <div className="web3-badge web3-badge-warning">
-                📡 Pinata Integrated
+                Pinata Integrated
               </div>
             </div>
           </div>

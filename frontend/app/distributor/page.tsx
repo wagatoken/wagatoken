@@ -9,6 +9,12 @@ import {
   requestCoffeeRedemption,
   getUserRoles
 } from "@/utils/smartContracts";
+import { 
+  CoffeeBeanIcon,
+  VerificationIcon,
+  DistributorNetworkIcon,
+  CoffeeStorageIcon
+} from "../components/icons/WagaIcons";
 import { CoffeeBatchMetadata } from "@/utils/ipfsMetadata";
 
 interface BatchDisplay {
@@ -367,7 +373,10 @@ export default function DistributorPage() {
               <div className="space-y-6">
                 {/* Batch Request Form */}
                 <div className="web3-card animate-card-entrance">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Request Coffee Batch Verification</h2>
+                  <h2 className="flex items-center gap-3 text-2xl font-bold text-gray-900 mb-6">
+                    <VerificationIcon size={24} className="waga-icon-verification" />
+                    Request Coffee Batch Verification
+                  </h2>
                   <p className="text-gray-600 mb-6">
                     Select a batch to request verification. Upon successful verification via Chainlink Functions, 
                     tokens will be automatically minted to your address.
@@ -421,7 +430,10 @@ export default function DistributorPage() {
 
                 {/* Available Batches Display */}
                 <div className="web3-card animate-card-entrance">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Available Coffee Batches</h3>
+                  <h3 className="flex items-center gap-2 text-xl font-bold text-gray-900 mb-4">
+                    <CoffeeBeanIcon size={20} className="waga-icon-coffee" />
+                    Available Coffee Batches
+                  </h3>
                   
                   {loading ? (
                     <div className="text-center py-8">
@@ -481,7 +493,10 @@ export default function DistributorPage() {
 
             {activeTab === 'redeem' && (
               <div className="web3-card animate-card-entrance">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Redeem Tokens for Physical Coffee</h2>
+                <h2 className="flex items-center gap-3 text-2xl font-bold text-gray-900 mb-6">
+                  <CoffeeStorageIcon size={24} className="waga-icon-storage" />
+                  Redeem Tokens for Physical Coffee
+                </h2>
                 <p className="text-gray-600 mb-6">
                   Redeem your verified coffee tokens for physical coffee delivery. 
                   Only tokens from verified batches can be redeemed.

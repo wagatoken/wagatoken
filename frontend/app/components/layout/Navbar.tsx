@@ -15,31 +15,31 @@ export default function Navbar() {
 
   const getNavItems = () => {
     const baseItems = [
-      { href: '/browse', label: '🌱 Browse Coffee', public: true },
+      { href: '/browse', label: 'Browse Coffee', public: true },
       { href: '/about', label: 'About', public: true },
       { href: '/docs', label: 'Docs', public: true }
     ];
 
     if (pathname.startsWith('/admin')) {
       return [
-        { href: '/admin', label: '⚙️ Admin Portal', active: true },
-        { href: '/distributor', label: '� Distributor Portal' },
+        { href: '/admin', label: 'Admin Portal', active: true },
+        { href: '/distributor', label: 'Distributor Portal' },
         ...baseItems
       ];
     }
     
     if (pathname.startsWith('/distributor')) {
       return [
-        { href: '/distributor', label: '� Distributor Portal', active: true },
-        { href: '/admin', label: '⚙️ Admin Portal' },
+        { href: '/distributor', label: 'Distributor Portal', active: true },
+        { href: '/admin', label: 'Admin Portal' },
         ...baseItems
       ];
     }
 
     // Default navigation for home and other pages
     return [
-      { href: '/admin', label: '⚙️ Admin Portal' },
-      { href: '/distributor', label: '� Distributor Portal' },
+      { href: '/admin', label: 'Admin Portal' },
+      { href: '/distributor', label: 'Distributor Portal' },
       ...baseItems
     ];
   };
