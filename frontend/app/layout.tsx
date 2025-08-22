@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     'web3',
   ],
   openGraph: {
-    title: 'WAGA - Onchain Coffee, OffChain Impact',
+    title: 'WAGA - Onchain Coffee  OffChain Impact',
     description: 'Fair and Transparent farm to cup',
     type: 'website',
   },
