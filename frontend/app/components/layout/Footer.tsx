@@ -154,15 +154,6 @@ export default function Footer() {
                 <span>💼</span>
                 <span>LinkedIn</span>
               </a>
-              <a
-                href="https://github.com/wagatoken/wagatoken"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center space-x-2 text-green-100 hover:text-amber-300 text-sm transition-colors"
-              >
-                <span>💻</span>
-                <span>GitHub</span>
-              </a>
             </div>
           </div>
         </div>
