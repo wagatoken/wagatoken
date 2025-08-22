@@ -39,7 +39,16 @@ lerna-debug.log*
 .parcel-cache/
 .eslintcache
 
-# Foundry
+# Foundry/Solidity files (ADD THESE LINES)
+#src/ 
+#test/
+#script/
+#lib/
+#foundry.toml
+#remappings.txt
+#*.sol
+
+# Foundry artifacts
 cache/
 artifacts/
 broadcast/
