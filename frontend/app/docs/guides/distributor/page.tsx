@@ -32,8 +32,8 @@ export default function DistributorGuide() {
               </div>
               <div className="ml-3">
                 <p className="text-sm text-emerald-700">
-                  <strong>Revolutionary Model:</strong> Distributors operate inventory-free, only paying for tokens when 
-                  customers redeem for physical delivery. Staking ensures commitment while minimizing overhead costs.
+                  <strong>Revolutionary Model:</strong> Distributors manage coffee tokens and redeem them when customers 
+                  place orders and pay. End customers receive physical coffee without handling blockchain tokens directly.
                 </p>
               </div>
             </div>
@@ -50,8 +50,9 @@ export default function DistributorGuide() {
               <li><a href="#operations" className="text-emerald-600 hover:text-emerald-800">5. Inventory-Free Operations</a></li>
               <li><a href="#customer-flow" className="text-emerald-600 hover:text-emerald-800">6. Customer Fulfillment Process</a></li>
               <li><a href="#payments" className="text-emerald-600 hover:text-emerald-800">7. Payment & Redemption System</a></li>
-              <li><a href="#wallet-management" className="text-emerald-600 hover:text-emerald-800">8. Token Wallet Management</a></li>
-              <li><a href="#compliance" className="text-emerald-600 hover:text-emerald-800">9. Compliance & Reporting</a></li>
+              <li><a href="#wallet-management" className="text-emerald-600 hover:text-emerald-800">8. Distributor Token Management</a></li>
+              <li><a href="#horeca" className="text-emerald-600 hover:text-emerald-800">9. HORECA & End-User Distributors</a></li>
+              <li><a href="#compliance" className="text-emerald-600 hover:text-emerald-800">10. Compliance & Reporting</a></li>
             </ul>
           </div>
 
@@ -66,8 +67,9 @@ export default function DistributorGuide() {
               
               <div className="space-y-6">
                 <p className="text-gray-700 leading-relaxed">
-                  WAGA's distributor network operates on a revolutionary inventory-free model where distributors facilitate 
-                  customer access to verified coffee tokens without bearing inventory costs or advance payments.
+                  WAGA's distributor network operates on a transformative inventory-free model where distributors hold 
+                  coffee tokens and redeem them when customers place orders. End customers receive traditional coffee 
+                  purchases without needing blockchain knowledge, while distributors handle all token operations.
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -77,7 +79,7 @@ export default function DistributorGuide() {
                       <span>Zero Inventory</span>
                     </h3>
                     <p className="text-sm text-emerald-700">
-                      No need to purchase or store physical coffee inventory. Tokens are minted only when customers redeem.
+                      No need to purchase or store physical coffee inventory. Tokens are minted on request and inventory verification.
                     </p>
                   </div>
 
@@ -87,7 +89,7 @@ export default function DistributorGuide() {
                       <span>Pay on Redemption</span>
                     </h3>
                     <p className="text-sm text-blue-700">
-                      Payment in USDC/ETH only occurs when customers redeem tokens for physical coffee delivery.
+                      Payment in USDC/ETH only occurs when distributors redeem tokens after receiving customer orders and payments.
                     </p>
                   </div>
 
@@ -106,11 +108,12 @@ export default function DistributorGuide() {
                   <h3 className="font-semibold text-amber-800 mb-3">🎯 Key Benefits for Distributors</h3>
                   <ul className="text-sm text-amber-700 space-y-1">
                     <li>• <strong>Zero Inventory Risk:</strong> No physical storage or spoilage concerns</li>
-                    <li>• <strong>Minimal Capital Requirements:</strong> Only stake tokens, no inventory investment</li>
+                    <li>• <strong>Minimal Capital Requirements:</strong> Only stake WAGA utility tokens, no inventory investment</li>
                     <li>• <strong>Verified Network:</strong> ERC3643 compliance ensures legitimate operators</li>
                     <li>• <strong>Automated Fulfillment:</strong> Smart contracts handle redemption process</li>
                     <li>• <strong>Global Reach:</strong> Serve customers worldwide without shipping infrastructure</li>
-                    <li>• <strong>Commission Structure:</strong> Earn from successful customer redemptions</li>
+                    <li>• <strong>Commission Structure:</strong> Earn from customer orders and successful On Time In Full deliveries</li>
+                    <li>• <strong>B2B & HORECA Focus:</strong> Perfect for retailers, cafes, restaurants, and hotels</li>
                   </ul>
                 </div>
               </div>
@@ -125,16 +128,16 @@ export default function DistributorGuide() {
               
               <div className="space-y-6">
                 <p className="text-gray-700 leading-relaxed">
-                  To become a WAGA distributor, you must meet specific requirements for verification, staking, and operational capability.
+                  To become a WAGA distributor, you must meet specific requirements for verification (KYC), staking, and operational capability.
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h3 className="font-semibold text-blue-800 mb-3">🏢 Business Requirements</h3>
                     <ul className="text-sm text-blue-700 space-y-1">
-                      <li>• Valid business registration and license</li>
+                      <li>• Valid business (sole proprietorship or LLC) and license</li>
                       <li>• Compliance with local regulations</li>
-                      <li>• Business insurance coverage</li>
+                      <li>• Business and/or personal insurance coverage</li>
                       <li>• Established customer service capabilities</li>
                       <li>• Marketing and customer acquisition plan</li>
                     </ul>
@@ -300,14 +303,14 @@ export default function DistributorGuide() {
                       <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</span>
                       <div>
                         <h4 className="font-semibold text-gray-900">Submit Application</h4>
-                        <p className="text-gray-700">Complete distributor application with business documentation and compliance certificates.</p>
+                        <p className="text-gray-700">Complete distributor application with business documentation and if applicable, compliance certificates.</p>
                       </div>
                     </li>
                     <li className="flex items-start space-x-3">
                       <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
                       <div>
                         <h4 className="font-semibold text-gray-900">Identity Verification</h4>
-                        <p className="text-gray-700">Complete KYC/AML verification through certified third-party providers.</p>
+                        <p className="text-gray-700">Complete KYC/AML verification through our Identity Registry Process.</p>
                       </div>
                     </li>
                     <li className="flex items-start space-x-3">
@@ -331,9 +334,9 @@ export default function DistributorGuide() {
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h3 className="font-semibold text-blue-800 mb-3">📋 Required Documentation</h3>
                     <ul className="text-sm text-blue-700 space-y-1">
-                      <li>• Business registration certificate</li>
+                      <li>• Business Plan</li>
                       <li>• Tax identification documents</li>
-                      <li>• Proof of address and operations</li>
+                      <li>• Proof of address and/or operations</li>
                       <li>• Financial statements (if required)</li>
                       <li>• Compliance certifications</li>
                       <li>• Authorized signatory identification</li>
@@ -396,7 +399,7 @@ export default function DistributorGuide() {
                       <span>No Advance Payments</span>
                     </h3>
                     <p className="text-sm text-blue-700">
-                      Pay only when customers redeem tokens. No upfront capital tied up in coffee inventory.
+                      Pay only when customers order and you redeem tokens. No upfront capital tied up in coffee inventory.
                     </p>
                   </div>
 
@@ -419,35 +422,35 @@ export default function DistributorGuide() {
                         <span className="bg-emerald-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">1</span>
                         <div>
                           <h4 className="font-medium text-gray-900">Customer Acquisition</h4>
-                          <p className="text-sm text-gray-600">Market WAGA coffee tokens to potential customers</p>
+                          <p className="text-sm text-gray-600">Market WAGA coffee to customers (B2B, HORECA, or end consumers)</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-4">
                         <span className="bg-emerald-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">2</span>
                         <div>
-                          <h4 className="font-medium text-gray-900">Token Selection</h4>
-                          <p className="text-sm text-gray-600">Help customers choose appropriate coffee batches</p>
+                          <h4 className="font-medium text-gray-900">Customer Orders</h4>
+                          <p className="text-sm text-gray-600">Customer places order and pays distributor directly (traditional payment)</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-4">
                         <span className="bg-emerald-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">3</span>
                         <div>
-                          <h4 className="font-medium text-gray-900">Token Allocation</h4>
-                          <p className="text-sm text-gray-600">Allocate tokens to customer wallets (no payment yet)</p>
+                          <h4 className="font-medium text-gray-900">Token Redemption</h4>
+                          <p className="text-sm text-gray-600">Distributor redeems allocated coffee tokens for physical delivery</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-4">
                         <span className="bg-emerald-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">4</span>
                         <div>
-                          <h4 className="font-medium text-gray-900">Customer Redemption</h4>
-                          <p className="text-sm text-gray-600">Customer initiates redemption for physical delivery</p>
+                          <h4 className="font-medium text-gray-900">Payment Processing</h4>
+                          <p className="text-sm text-gray-600">Distributor pays WAGA in USDC/ETH to complete redemption</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-4">
                         <span className="bg-emerald-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">5</span>
                         <div>
-                          <h4 className="font-medium text-gray-900">Payment Processing</h4>
-                          <p className="text-sm text-gray-600">Distributor pays in USDC/ETH only when redemption occurs</p>
+                          <h4 className="font-medium text-gray-900">Automated Fulfillment</h4>
+                          <p className="text-sm text-gray-600">Coffee is prepared and shipped directly to customer's address</p>
                         </div>
                       </div>
                     </div>
@@ -476,53 +479,55 @@ export default function DistributorGuide() {
               
               <div className="space-y-6">
                 <p className="text-gray-700 leading-relaxed">
-                  Guide your customers through the complete journey from token acquisition to physical coffee delivery.
+                  Distributors operate as intermediaries who hold coffee tokens and provide traditional coffee purchases 
+                  to their customers. End customers don't need blockchain knowledge - they simply order and pay for coffee 
+                  through normal channels while distributors handle the token redemption behind the scenes.
                 </p>
 
                 <div className="space-y-6">
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-blue-800 mb-3">🔄 Complete Customer Journey</h3>
+                    <h3 className="font-semibold text-blue-800 mb-3">🔄 Customer Order Process</h3>
                     <div className="space-y-3 text-sm">
                       <div className="flex items-start space-x-3">
                         <span className="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">1</span>
                         <div>
-                          <h4 className="font-medium text-blue-800">Customer Onboarding</h4>
-                          <p className="text-blue-700">Help customer set up Web3 wallet and understand the process</p>
+                          <h4 className="font-medium text-blue-800">Customer Places Order</h4>
+                          <p className="text-blue-700">Customer orders coffee through distributor's normal sales channels</p>
                         </div>
                       </div>
                       <div className="flex items-start space-x-3">
                         <span className="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">2</span>
                         <div>
-                          <h4 className="font-medium text-blue-800">Batch Selection</h4>
-                          <p className="text-blue-700">Guide customer through coffee options based on preferences</p>
+                          <h4 className="font-medium text-blue-800">Traditional Payment</h4>
+                          <p className="text-blue-700">Customer pays distributor using normal payment methods (cash, card, transfer)</p>
                         </div>
                       </div>
                       <div className="flex items-start space-x-3">
                         <span className="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">3</span>
                         <div>
-                          <h4 className="font-medium text-blue-800">Token Transfer</h4>
-                          <p className="text-blue-700">Transfer coffee tokens to customer's wallet</p>
+                          <h4 className="font-medium text-blue-800">Token Redemption</h4>
+                          <p className="text-blue-700">Distributor redeems coffee tokens to fulfill the customer order</p>
                         </div>
                       </div>
                       <div className="flex items-start space-x-3">
                         <span className="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">4</span>
                         <div>
-                          <h4 className="font-medium text-blue-800">Customer Experience</h4>
-                          <p className="text-blue-700">Customer explores traceability data and enjoys token ownership</p>
+                          <h4 className="font-medium text-blue-800">Blockchain Payment</h4>
+                          <p className="text-blue-700">Distributor pays WAGA in USDC/ETH for the redeemed tokens</p>
                         </div>
                       </div>
                       <div className="flex items-start space-x-3">
                         <span className="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">5</span>
                         <div>
-                          <h4 className="font-medium text-blue-800">Redemption Request</h4>
-                          <p className="text-blue-700">Customer initiates redemption for physical coffee delivery</p>
+                          <h4 className="font-medium text-blue-800">Direct Fulfillment</h4>
+                          <p className="text-blue-700">Coffee is shipped directly from source to customer's address</p>
                         </div>
                       </div>
                       <div className="flex items-start space-x-3">
                         <span className="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">6</span>
                         <div>
-                          <h4 className="font-medium text-blue-800">Automated Fulfillment</h4>
-                          <p className="text-blue-700">Smart contract processes payment and coordinates shipping</p>
+                          <h4 className="font-medium text-blue-800">Customer Satisfaction</h4>
+                          <p className="text-blue-700">Customer receives traceable, verified coffee without blockchain complexity</p>
                         </div>
                       </div>
                     </div>
@@ -532,24 +537,24 @@ export default function DistributorGuide() {
                     <div className="bg-emerald-50 p-4 rounded-lg">
                       <h3 className="font-semibold text-emerald-800 mb-3">🎯 Distributor Responsibilities</h3>
                       <ul className="text-sm text-emerald-700 space-y-1">
-                        <li>• Customer education and onboarding</li>
-                        <li>• Coffee selection guidance</li>
-                        <li>• Wallet setup assistance</li>
-                        <li>• Ongoing customer support</li>
-                        <li>• Marketing and promotion</li>
-                        <li>• Dispute resolution support</li>
+                        <li>• Customer sales and relationship management</li>
+                        <li>• Coffee selection and recommendations</li>
+                        <li>• Order processing and payment collection</li>
+                        <li>• Token redemption management</li>
+                        <li>• Customer support and satisfaction</li>
+                        <li>• Marketing and brand representation</li>
                       </ul>
                     </div>
 
                     <div className="bg-purple-50 p-4 rounded-lg">
-                      <h3 className="font-semibold text-purple-800 mb-3">🤖 Automated by Smart Contracts</h3>
+                      <h3 className="font-semibold text-purple-800 mb-3">🤖 Automated by WAGA System</h3>
                       <ul className="text-sm text-purple-700 space-y-1">
-                        <li>• Token minting and transfer</li>
-                        <li>• Payment processing</li>
-                        <li>• Redemption coordination</li>
-                        <li>• Shipping arrangements</li>
-                        <li>• Inventory tracking</li>
-                        <li>• Transaction recording</li>
+                        <li>• Token allocation and management</li>
+                        <li>• Blockchain payment processing</li>
+                        <li>• Coffee sourcing and preparation</li>
+                        <li>• Direct-to-customer shipping</li>
+                        <li>• Quality verification and traceability</li>
+                        <li>• Transaction recording and audit trail</li>
                       </ul>
                     </div>
                   </div>
@@ -558,12 +563,12 @@ export default function DistributorGuide() {
                 <div className="bg-amber-50 p-4 rounded-lg">
                   <h3 className="font-semibold text-amber-800 mb-2">📞 Customer Support Best Practices</h3>
                   <ul className="text-sm text-amber-700 space-y-1">
-                    <li>• Provide clear wallet setup instructions</li>
-                    <li>• Create educational content about blockchain and coffee traceability</li>
+                    <li>• Provide clear product information and traceability benefits</li>
+                    <li>• Create educational content about coffee origins and quality</li>
                     <li>• Offer multiple communication channels (chat, email, phone)</li>
-                    <li>• Maintain FAQ section for common questions</li>
-                    <li>• Proactively communicate during redemption process</li>
-                    <li>• Follow up post-delivery for customer satisfaction</li>
+                    <li>• Maintain FAQ section for delivery and product questions</li>
+                    <li>• Proactively communicate during order fulfillment</li>
+                    <li>• Follow up post-delivery for customer satisfaction and repeat orders</li>
                   </ul>
                 </div>
               </div>
@@ -578,14 +583,15 @@ export default function DistributorGuide() {
               
               <div className="space-y-6">
                 <p className="text-gray-700 leading-relaxed">
-                  Understand the payment flow where distributors only pay in USDC or ETH when customers redeem tokens for physical delivery.
+                  Understand the payment flow where distributors only pay WAGA in USDC or ETH when they redeem tokens 
+                  after receiving customer orders and payments through traditional channels.
                 </p>
 
                 <div className="bg-emerald-50 p-4 rounded-lg">
                   <h3 className="font-semibold text-emerald-800 mb-2">💡 Payment Model Innovation</h3>
                   <p className="text-sm text-emerald-700">
-                    This model eliminates distributor cash flow risks by only requiring payment at the moment customers 
-                    redeem tokens. Distributors maintain positive cash flow and minimal financial exposure.
+                    This model eliminates distributor cash flow risks by only requiring payment to WAGA when distributors 
+                    redeem tokens after customers have already ordered and paid them. Distributors maintain positive cash flow.
                   </p>
                 </div>
 
@@ -595,16 +601,26 @@ export default function DistributorGuide() {
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="flex items-center space-x-3 mb-3">
                         <span className="bg-purple-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">1</span>
-                        <h4 className="font-semibold text-gray-900">Customer Requests Redemption</h4>
+                        <h4 className="font-semibold text-gray-900">Customer Places Order</h4>
                       </div>
                       <p className="text-sm text-gray-700 ml-11">
-                        Customer initiates redemption process through WAGA platform, providing delivery details.
+                        Customer orders coffee through distributor's sales channels and pays via traditional methods.
                       </p>
                     </div>
 
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="flex items-center space-x-3 mb-3">
                         <span className="bg-purple-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                        <h4 className="font-semibold text-gray-900">Distributor Initiates Redemption</h4>
+                      </div>
+                      <p className="text-sm text-gray-700 ml-11">
+                        Distributor redeems allocated coffee tokens through WAGA platform for customer fulfillment.
+                      </p>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <span className="bg-purple-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">3</span>
                         <h4 className="font-semibold text-gray-900">Smart Contract Verification</h4>
                       </div>
                       <p className="text-sm text-gray-700 ml-11">
@@ -614,31 +630,21 @@ export default function DistributorGuide() {
 
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="flex items-center space-x-3 mb-3">
-                        <span className="bg-purple-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">3</span>
-                        <h4 className="font-semibold text-gray-900">Payment Request to Distributor</h4>
-                      </div>
-                      <p className="text-sm text-gray-700 ml-11">
-                        System notifies distributor to deposit USDC/ETH payment for physical coffee costs.
-                      </p>
-                    </div>
-
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="flex items-center space-x-3 mb-3">
                         <span className="bg-purple-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">4</span>
-                        <h4 className="font-semibold text-gray-900">Distributor Payment</h4>
+                        <h4 className="font-semibold text-gray-900">USDC/ETH Payment</h4>
                       </div>
                       <p className="text-sm text-gray-700 ml-11">
-                        Distributor deposits required USDC/ETH amount to complete redemption transaction.
+                        Distributor pays WAGA the required USDC/ETH amount to complete token redemption.
                       </p>
                     </div>
 
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="flex items-center space-x-3 mb-3">
                         <span className="bg-purple-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">5</span>
-                        <h4 className="font-semibold text-gray-900">Fulfillment Execution</h4>
+                        <h4 className="font-semibold text-gray-900">Automated Fulfillment</h4>
                       </div>
                       <p className="text-sm text-gray-700 ml-11">
-                        Payment triggers automatic coffee preparation and shipping to customer address.
+                        Payment triggers coffee preparation and direct shipping to the customer's address.
                       </p>
                     </div>
                   </div>
@@ -670,11 +676,11 @@ export default function DistributorGuide() {
                 <div className="bg-purple-50 p-4 rounded-lg">
                   <h3 className="font-semibold text-purple-800 mb-2">💎 Financial Benefits</h3>
                   <ul className="text-sm text-purple-700 space-y-1">
-                    <li>• <strong>Positive Cash Flow:</strong> Customers often pay you before you pay suppliers</li>
+                    <li>• <strong>Positive Cash Flow:</strong> Customers pay you before you pay WAGA for token redemption</li>
                     <li>• <strong>No Inventory Risk:</strong> Zero financial exposure to unsold inventory</li>
-                    <li>• <strong>Predictable Costs:</strong> Know exact payment amount before committing</li>
+                    <li>• <strong>Predictable Costs:</strong> Know exact payment amount before committing to customer orders</li>
                     <li>• <strong>Scalable Model:</strong> Handle more customers without proportional capital increase</li>
-                    <li>• <strong>Commission Earnings:</strong> Earn from successful redemption facilitation</li>
+                    <li>• <strong>Commission Structure:</strong> Earn margin between customer payments and WAGA costs</li>
                   </ul>
                 </div>
               </div>
@@ -684,107 +690,231 @@ export default function DistributorGuide() {
             <section id="wallet-management" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>👛</span>
-                <span>8. Token Wallet Management</span>
+                <span>8. Distributor Token Management</span>
               </h2>
               
               <div className="space-y-6">
                 <p className="text-gray-700 leading-relaxed">
-                  Important: Coffee tokens may not automatically appear in standard wallets. Users need to connect to the WAGA platform or check Etherscan to view their token balances.
+                  As a distributor, you manage coffee tokens on behalf of your customers. End customers never need to 
+                  handle tokens directly - they simply place orders and receive coffee through traditional channels.
                 </p>
 
-                <div className="bg-red-50 border-l-4 border-red-400 p-4">
+                <div className="bg-emerald-50 border-l-4 border-emerald-400 p-4">
                   <div className="flex">
                     <div className="flex-shrink-0">
-                      <div className="text-red-400 text-xl">⚠️</div>
+                      <div className="text-emerald-400 text-xl">💡</div>
                     </div>
                     <div className="ml-3">
-                      <h3 className="text-sm font-semibold text-red-800">Critical Wallet Information</h3>
-                      <p className="text-sm text-red-700 mt-1">
-                        WAGA coffee tokens are ERC-1155 tokens that may not display automatically in wallet interfaces. 
-                        Customers must use specific methods to view their token holdings.
+                      <h3 className="text-sm font-semibold text-emerald-800">Distributor-Managed Model</h3>
+                      <p className="text-sm text-emerald-700 mt-1">
+                        Coffee tokens are allocated to distributor wallets and managed entirely by the distributor. 
+                        End customers enjoy the benefits of traceable, verified coffee without blockchain complexity.
                       </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">How Customers Can View Their Tokens:</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">How Distributors Manage Tokens:</h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-emerald-50 p-4 rounded-lg">
-                      <h4 className="font-semibold text-emerald-800 mb-3 flex items-center space-x-2">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <h4 className="font-semibold text-blue-800 mb-3 flex items-center space-x-2">
                         <span>🌐</span>
                         <span>WAGA Platform Dashboard</span>
                       </h4>
-                      <ul className="text-sm text-emerald-700 space-y-1">
-                        <li>• Connect wallet to WAGA platform</li>
-                        <li>• View complete token portfolio</li>
+                      <ul className="text-sm text-blue-700 space-y-1">
+                        <li>• Connect distributor wallet to WAGA platform</li>
+                        <li>• View allocated token inventory</li>
                         <li>• Access batch details and metadata</li>
-                        <li>• Initiate redemption process</li>
-                        <li>• Track transaction history</li>
+                        <li>• Initiate token redemptions for customer orders</li>
+                        <li>• Track redemption history and status</li>
+                        <li>• Monitor token allocation and availability</li>
                       </ul>
                     </div>
 
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <h4 className="font-semibold text-blue-800 mb-3 flex items-center space-x-2">
+                    <div className="bg-purple-50 p-4 rounded-lg">
+                      <h4 className="font-semibold text-purple-800 mb-3 flex items-center space-x-2">
                         <span>🔍</span>
-                        <span>Blockchain Explorers</span>
+                        <span>Blockchain Verification</span>
                       </h4>
-                      <ul className="text-sm text-blue-700 space-y-1">
-                        <li>• Check wallet address on Etherscan</li>
-                        <li>• View ERC-1155 token transactions</li>
-                        <li>• Verify token authenticity</li>
-                        <li>• Track transfer history</li>
-                        <li>• View contract interactions</li>
+                      <ul className="text-sm text-purple-700 space-y-1">
+                        <li>• Check distributor wallet on Base Sepolia explorer</li>
+                        <li>• View ERC-1155 token holdings</li>
+                        <li>• Verify token authenticity and origin</li>
+                        <li>• Track redemption transactions</li>
+                        <li>• Monitor contract interactions</li>
+                        <li>• Validate compliance and audit trails</li>
                       </ul>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Customer Education Points:</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Customer-Facing Benefits:</h3>
                   
                   <div className="space-y-3">
                     <div className="bg-gray-50 p-3 rounded-lg">
-                      <h4 className="font-medium text-gray-900 mb-2">📱 Wallet Compatibility</h4>
+                      <h4 className="font-medium text-gray-900 mb-2">📱 No Blockchain Knowledge Required</h4>
                       <p className="text-sm text-gray-700">
-                        Not all wallets display ERC-1155 tokens. Recommend MetaMask, Trust Wallet, or specialized NFT wallets.
+                        Customers order coffee through normal channels without needing to understand blockchain technology.
                       </p>
                     </div>
 
                     <div className="bg-gray-50 p-3 rounded-lg">
-                      <h4 className="font-medium text-gray-900 mb-2">🔗 Platform Connection</h4>
+                      <h4 className="font-medium text-gray-900 mb-2">� Transparency Without Complexity</h4>
                       <p className="text-sm text-gray-700">
-                        Emphasize that connecting to the WAGA platform provides the best token viewing and management experience.
+                        Customers can access traceability information through simple web interfaces you provide.
                       </p>
                     </div>
 
                     <div className="bg-gray-50 p-3 rounded-lg">
-                      <h4 className="font-medium text-gray-900 mb-2">🔍 Manual Token Adding</h4>
+                      <h4 className="font-medium text-gray-900 mb-2">🎯 Traditional Shopping Experience</h4>
                       <p className="text-sm text-gray-700">
-                        Some wallets allow manual token addition using contract address: 
-                        <code className="bg-gray-200 px-1 rounded">0xe69bdd3e783212d11522e7f0057c9f52fc4d0a39</code>
-                      </p>
-                    </div>
-
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <h4 className="font-medium text-gray-900 mb-2">📊 Etherscan Verification</h4>
-                      <p className="text-sm text-gray-700">
-                        Teach customers how to verify token ownership by checking their address on Etherscan's token holdings section.
+                        Customers enjoy familiar ordering, payment, and delivery processes while getting verified coffee.
                       </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-amber-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-amber-800 mb-2">💡 Best Practices for Customer Support</h3>
+                  <h3 className="font-semibold text-amber-800 mb-2">💡 Best Practices for Token Management</h3>
                   <ul className="text-sm text-amber-700 space-y-1">
-                    <li>• Create wallet setup guides with screenshots</li>
-                    <li>• Provide step-by-step platform connection instructions</li>
-                    <li>• Offer video tutorials for token viewing</li>
-                    <li>• Maintain list of compatible wallets</li>
-                    <li>• Set expectations about token visibility limitations</li>
-                    <li>• Provide Etherscan links for transaction verification</li>
+                    <li>• Monitor token allocation to ensure adequate inventory</li>
+                    <li>• Track customer orders against available token batches</li>
+                    <li>• Maintain backup plans for high-demand periods</li>
+                    <li>• Keep customers informed about coffee origins and quality</li>
+                    <li>• Use traceability data as a competitive advantage</li>
+                    <li>• Coordinate with WAGA for special requests or bulk orders</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            {/* HORECA Section */}
+            <section id="horeca" className="web3-card">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+                <span>🏨</span>
+                <span>9. HORECA & End-User Distributors</span>
+              </h2>
+              
+              <div className="space-y-6">
+                <p className="text-gray-700 leading-relaxed">
+                  Some distributors also serve as end customers (Hotels, Restaurants, Cafes - HORECA). These distributors 
+                  redeem tokens when they need coffee delivered for their own operations, following the same payment model.
+                </p>
+
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-blue-800 mb-3">🏨 HORECA Use Cases</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <h4 className="font-medium text-blue-800 mb-2">Hotels</h4>
+                      <ul className="text-blue-700 space-y-1">
+                        <li>• Guest room coffee service</li>
+                        <li>• Restaurant and breakfast service</li>
+                        <li>• Conference and event catering</li>
+                        <li>• Gift shop retail sales</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-blue-800 mb-2">Restaurants & Cafes</h4>
+                      <ul className="text-blue-700 space-y-1">
+                        <li>• Daily coffee service operations</li>
+                        <li>• Specialty coffee menu items</li>
+                        <li>• Take-away and retail sales</li>
+                        <li>• Catering services</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-blue-800 mb-2">Distributors + End Users</h4>
+                      <ul className="text-blue-700 space-y-1">
+                        <li>• Resell to other businesses</li>
+                        <li>• Use for own operations</li>
+                        <li>• Flexible redemption timing</li>
+                        <li>• Dual revenue streams</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">HORECA Operational Model:</h3>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-4">
+                        <span className="bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                        <div>
+                          <h4 className="font-medium text-gray-900">Inventory Planning</h4>
+                          <p className="text-sm text-gray-600">HORECA business plans coffee needs for operations</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <span className="bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                        <div>
+                          <h4 className="font-medium text-gray-900">Token Allocation</h4>
+                          <p className="text-sm text-gray-600">Receive allocated coffee tokens based on anticipated needs</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <span className="bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                        <div>
+                          <h4 className="font-medium text-gray-900">Flexible Redemption</h4>
+                          <p className="text-sm text-gray-600">Redeem tokens when coffee is needed for operations</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <span className="bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">4</span>
+                        <div>
+                          <h4 className="font-medium text-gray-900">Payment on Delivery</h4>
+                          <p className="text-sm text-gray-600">Pay WAGA in USDC/ETH only when coffee is shipped</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <span className="bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">5</span>
+                        <div>
+                          <h4 className="font-medium text-gray-900">Direct Operations Use</h4>
+                          <p className="text-sm text-gray-600">Coffee delivered directly to business for immediate use</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-emerald-50 p-4 rounded-lg">
+                    <h3 className="font-semibold text-emerald-800 mb-3">🎯 HORECA Benefits</h3>
+                    <ul className="text-sm text-emerald-700 space-y-1">
+                      <li>• Guaranteed coffee quality and traceability</li>
+                      <li>• Just-in-time inventory management</li>
+                      <li>• No storage costs or spoilage risk</li>
+                      <li>• Transparent sourcing for customer appeal</li>
+                      <li>• Flexible ordering based on actual demand</li>
+                      <li>• Premium product positioning</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <h3 className="font-semibold text-purple-800 mb-3">💰 Dual Revenue Model</h3>
+                    <ul className="text-sm text-purple-700 space-y-1">
+                      <li>• Resell tokens to other businesses</li>
+                      <li>• Use tokens for own coffee needs</li>
+                      <li>• Earn distributor commissions</li>
+                      <li>• Reduce operational coffee costs</li>
+                      <li>• Offer premium coffee experiences</li>
+                      <li>• Market transparency to customers</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-amber-800 mb-2">💡 HORECA Best Practices</h3>
+                  <ul className="text-sm text-amber-700 space-y-1">
+                    <li>• Plan redemptions based on seasonal demand patterns</li>
+                    <li>• Use coffee origin stories as marketing content</li>
+                    <li>• Coordinate with WAGA for special event requirements</li>
+                    <li>• Train staff on coffee quality and traceability benefits</li>
+                    <li>• Maintain customer-facing information about coffee sources</li>
+                    <li>• Consider bulk orders for cost optimization</li>
                   </ul>
                 </div>
               </div>
@@ -794,7 +924,7 @@ export default function DistributorGuide() {
             <section id="compliance" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>⚖️</span>
-                <span>9. Compliance & Reporting</span>
+                <span>10. Compliance & Reporting</span>
               </h2>
               
               <div className="space-y-6">
