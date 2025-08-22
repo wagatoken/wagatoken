@@ -1,10 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverActions: {
-      allowedOrigins: ["localhost:3001", "*.vercel.app"]
-    }
-  },
   images: {
     domains: ['violet-rainy-toad-577.mypinata.cloud'],
     remotePatterns: [
@@ -15,7 +10,16 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
-  }
+  },
+  // Remove experimental features that might cause build issues
+  webpack: (config, { isServer }) => {
+    // Fix for potential module resolution issues
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+    };
+    return config;
+  },
 }
 
 module.exports = nextConfig
