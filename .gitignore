@@ -11,10 +11,11 @@ out/
 
 # Environment variables
 .env
-frontend/.env.local
 .env.development.local
 .env.test.local
 .env.production.local
+# Keep frontend env file for deployment
+!frontend/.env.local
 
 # IDE
 .vscode/
@@ -39,14 +40,18 @@ lerna-debug.log*
 .parcel-cache/
 .eslintcache
 
-# Foundry/Solidity files (ADD THESE LINES)
-#src/ 
-#test/
-#script/
-#lib/
-#foundry.toml
-#remappings.txt
-#*.sol
+# Foundry/Solidity files - Frontend-only deployment branch
+src/
+test/
+script/
+lib/
+foundry.toml
+remappings.txt
+*.sol
+Makefile
+chainlink/
+CHAINLINK_FUNCTIONS_SOURCE_CODE_FLOW.md
+IPFSMetadataScript.js
 
 # Foundry artifacts
 cache/
