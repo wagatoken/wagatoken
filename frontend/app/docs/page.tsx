@@ -40,14 +40,14 @@ export default function Docs() {
             
             <div className="web3-card-feature animate-card-entrance" style={{ animationDelay: '300ms' }}>
               <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center space-x-2">
-                <span className="text-2xl">👤</span>
-                <span>Consumer Guide</span>
+                <span className="text-2xl">🏢</span>
+                <span>Distributor Guide</span>
               </h3>
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
-                How to browse coffee batches, purchase tokens, and redeem them for physical coffee delivery to your location.
+                Complete guide for verified distributors: staking, inventory-free operations, and customer fulfillment in the WAGA ecosystem.
               </p>
-              <Link href="/docs/guides/consumer" className="web3-button-outline text-sm">
-                Consumer Guide →
+              <Link href="/docs/guides/distributor" className="web3-button-outline text-sm">
+                Distributor Guide →
               </Link>
             </div>
             
