@@ -47,20 +47,23 @@ export default function Navbar() {
   const navItems = getNavItems();
 
   return (
-    <nav className="fixed top-0 w-full z-50 bg-gradient-to-r from-green-800 to-emerald-900 backdrop-blur-md border-b border-emerald-700/50 transition-all duration-300">
+    <nav className="fixed top-0 w-full z-50 bg-gradient-to-r from-emerald-900 via-green-800 to-emerald-800 backdrop-blur-md border-b border-amber-500/30 transition-all duration-300 shadow-lg shadow-emerald-900/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo and Brand */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-3 group">
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-green-500 rounded-xl flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12">
-                <span className="text-white font-bold text-lg animate-coffee-bounce">☕</span>
+              <div className="waga-navbar-logo transition-all duration-300 group-hover:scale-105">
+                <img 
+                  src="https://violet-rainy-toad-577.mypinata.cloud/ipfs/bafkreigqbyeqnmjqznbikaj7q2mipyijlslb57fgdw7nhloq3xinvhvcca" 
+                  alt="WAGA Logo" 
+                  className="w-10 h-10 object-contain rounded-lg"
+                />
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-2xl font-bold text-white">WAGA</span>
+                <span className="text-2xl font-bold text-white tracking-wide">WAGA</span>
                 <div className="hidden sm:flex flex-col">
-                  <span className="text-white font-semibold text-sm">Coffee</span>
-                  <span className="text-green-200 text-xs">Blockchain Traceability</span>
+                  <span className="text-amber-200 font-semibold text-sm tracking-wide">Coffee</span>
                 </div>
               </div>
             </Link>

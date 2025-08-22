@@ -7,7 +7,7 @@ import Footer from './components/layout/Footer'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'WAGA Coffee - Blockchain Coffee Traceability',
+  title: 'WAGA  - Blockchain Coffee Traceability',
   description: 'Track Ethiopian coffee from farm to cup with complete transparency using blockchain technology, Chainlink oracles, and IPFS storage.',
   keywords: [
     'coffee',
@@ -20,8 +20,8 @@ export const metadata: Metadata = {
     'web3',
   ],
   openGraph: {
-    title: 'WAGA Coffee - Blockchain Coffee Traceability',
-    description: 'Track Ethiopian coffee from farm to cup with complete transparency',
+    title: 'WAGA - Onchain Coffee, OffChain Impact',
+    description: 'Fair and Transparent farm to cup',
     type: 'website',
   },
 }

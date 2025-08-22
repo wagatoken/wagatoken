@@ -74,25 +74,24 @@ export default function HomePage() {
           <div className="mb-8">
             <div className="text-6xl mb-4 animate-coffee-bounce web3-cyber-glow">☕</div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6 web3-perspective-transform">
-              WAGA Coffee
+              WAGA
             </h1>
             <p className="text-xl md:text-2xl mb-8 opacity-90">
-              Blockchain Coffee Traceability Platform
+              Onchain Coffee, OffChain Impact
             </p>
             <p className="text-lg mb-10 opacity-80 max-w-3xl mx-auto">
-              Track Ethiopian coffee from farm to cup with complete transparency using 
-              blockchain technology, Chainlink oracles, and IPFS storage.
+              Fair and Transparent farm to cup
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link 
-                href="/producer" 
+              <Link
+                href="/producer"
                 className="web3-gradient-button text-lg px-8 py-4 animate-neon-pulse"
               >
                 🏛️ WAGA Admin Tools
               </Link>
-              <Link 
-                href="/browse" 
+              <Link
+                href="/browse"
                 className="web3-button-outline text-lg px-8 py-4 web3-holographic-border"
               >
                 🌱 Browse Coffee
@@ -182,7 +181,7 @@ export default function HomePage() {
               Complete Coffee Ecosystem
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              From production to consumption, every step is verified and transparent 
+              From production to consumption, every step is verified and transparent
               through our decentralized platform.
             </p>
           </div>
@@ -269,14 +268,14 @@ export default function HomePage() {
             Join the future of coffee supply chain management with blockchain technology
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link 
-              href="/producer" 
+            <Link
+              href="/producer"
               className="web3-button-outline text-lg px-8 py-4 web3-holographic-border"
             >
               🏛️ WAGA Admin Access
             </Link>
-            <Link 
-              href="/docs" 
+            <Link
+              href="/docs"
               className="web3-gradient-button text-lg px-8 py-4 animate-neon-pulse"
             >
               📚 Read Documentation

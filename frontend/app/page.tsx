@@ -17,17 +17,17 @@ export default function HomePage() {
 
   const features = [
     {
-      title: "WAGA Admin Tools",
-      description: "Administrative interface for WAGA staff to create and manage verified coffee batches",
-      icon: "🏛️",
-      href: "/producer",
+      title: "Admin Portal",
+      description: "Administrative interface for WAGA staff to create, verify, and manage coffee batches",
+      icon: "⚙️",
+      href: "/admin",
       color: "emerald"
     },
     {
-      title: "Consumer Portal",
-      description: "Browse, purchase, and redeem tokenized coffee from Ethiopian farms",
-      icon: "👤",
-      href: "/consumer",
+      title: "Distributor Portal",
+      description: "Request verified coffee batches and redeem tokens for physical coffee delivery",
+      icon: "�",
+      href: "/distributor",
       color: "blue"
     },
     {
@@ -72,30 +72,38 @@ export default function HomePage() {
       <section className="web3-hero py-20 web3-neural-network">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div className="mb-8">
-            <div className="text-6xl mb-4 animate-coffee-bounce web3-cyber-glow">☕</div>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 web3-text-stable">
-              WAGA Coffee
+            <div className="mb-6 flex justify-center">
+              <div className="waga-logo-container transition-all duration-300">
+                <img 
+                  src="https://violet-rainy-toad-577.mypinata.cloud/ipfs/bafkreigqbyeqnmjqznbikaj7q2mipyijlslb57fgdw7nhloq3xinvhvcca" 
+                  alt="WAGA Coffee Logo" 
+                  className="h-24 w-auto rounded-xl"
+                />
+              </div>
+            </div>
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 web3-hero-title">
+              WAGA 
             </h1>
-            <p className="text-xl md:text-2xl mb-8 opacity-90">
-              Blockchain Coffee Traceability Platform
+            <p className="text-xl md:text-2xl mb-8 opacity-90 text-white font-semibold">
+              Onchain Coffee, OffChain Impact
             </p>
-            <p className="text-lg mb-10 opacity-80 max-w-3xl mx-auto">
-              Track Ethiopian coffee from farm to cup with complete transparency using 
-              blockchain technology, Chainlink oracles, and IPFS storage.
+            <p className="text-lg mb-10 opacity-80 max-w-3xl mx-auto text-white">
+                Fair and Transparent farm to cup with
+              Blockchain Technology, Chainlink oracles, and IPFS Storage.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 
-                href="/producer" 
+                href="/admin" 
                 className="web3-gradient-button text-lg px-8 py-4 web3-button-stable web3-subtle-glow"
               >
-                🏛️ WAGA Admin Tools
+                ⚙️ Admin Portal
               </Link>
               <Link 
-                href="/browse" 
+                href="/distributor" 
                 className="web3-button-outline text-lg px-8 py-4 web3-holographic-border web3-button-stable"
               >
-                🌱 Browse Coffee
+                🚚 Distributor Portal
               </Link>
             </div>
           </div>
@@ -216,7 +224,16 @@ export default function HomePage() {
       <section className="py-20 web3-section-alt web3-neural-network">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4 web3-text-stable">
+            <div className="flex justify-center mb-6">
+              <div className="waga-logo-container transition-all duration-300 opacity-90 hover:opacity-100">
+                <img 
+                  src="https://violet-rainy-toad-577.mypinata.cloud/ipfs/bafkreigqbyeqnmjqznbikaj7q2mipyijlslb57fgdw7nhloq3xinvhvcca" 
+                  alt="WAGA Coffee Logo" 
+                  className="h-16 w-auto rounded-lg"
+                />
+              </div>
+            </div>
+            <h2 className="text-4xl font-bold mb-4 web3-gradient-text-harmonized">
               Powered by Web3 Technology
             </h2>
             <p className="text-xl text-gray-600">
@@ -229,7 +246,7 @@ export default function HomePage() {
               <div className="text-4xl mb-4 web3-subtle-glow">🔗</div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Smart Contracts</h3>
               <p className="text-gray-600 mb-4">
-                ERC-1155 tokens representing verified coffee batches on Base Sepolia
+                ERC-1155 tokens represent verified coffee batches 
               </p>
               <div className="web3-badge web3-badge-success">
                 ✅ Deployed & Verified
@@ -265,10 +282,10 @@ export default function HomePage() {
       <section className="py-20 web3-hero web3-data-grid-subtle">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <h2 className="text-4xl font-bold mb-6 web3-text-stable">
-            Ready to Transform Coffee Traceability?
+            Ready to Transform the Coffee Value Chain?
           </h2>
           <p className="text-xl mb-10 opacity-90">
-            Join the future of coffee supply chain management with blockchain technology
+            Join the future of coffee supply chain management with decentralized technology
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link 

@@ -12,18 +12,22 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="col-span-1">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-green-500 rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-lg">☕</span>
+              <div className="waga-navbar-logo transition-all duration-300 hover:scale-105">
+                <img 
+                  src="https://violet-rainy-toad-577.mypinata.cloud/ipfs/bafkreigqbyeqnmjqznbikaj7q2mipyijlslb57fgdw7nhloq3xinvhvcca" 
+                  alt="WAGA Logo" 
+                  className="w-10 h-10 object-contain rounded-lg"
+                />
               </div>
               <div>
-                <div className="text-white text-xl font-bold">WAGA</div>
-                <div className="text-green-200 text-sm">Coffee Platform</div>
+                <div className="text-white text-xl font-bold tracking-wide">WAGA</div>
+                <div className="text-amber-200 text-sm font-semibold tracking-wide">Coffee</div>
               </div>
             </div>
             <p className="text-green-100 text-sm mb-4">
               Tokenizing premium roasted coffee from the highlands of Ethiopia. Farm-to-cup traceability powered by blockchain technology.
             </p>
-            <div className="flex items-center space-x-2 text-xs text-green-200">
+            <div className="flex items-center space-x-2 text-xs text-amber-200">
               <span>🇪🇹</span>
               <span>Proudly Ethiopian</span>
             </div>

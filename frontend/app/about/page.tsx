@@ -3,7 +3,18 @@ export default function About() {
     <div className="min-h-screen web3-section">
       <div className="max-w-4xl mx-auto py-12 px-4 relative z-10">
         <div className="web3-card animate-card-entrance">
-          <h1 className="text-4xl font-bold web3-gradient-text mb-6">About WAGA Coffee Platform</h1>
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-6">
+              <div className="waga-logo-container transition-all duration-300">
+                <img 
+                  src="https://violet-rainy-toad-577.mypinata.cloud/ipfs/bafkreigqbyeqnmjqznbikaj7q2mipyijlslb57fgdw7nhloq3xinvhvcca" 
+                  alt="WAGA Coffee Logo" 
+                  className="h-20 w-auto rounded-xl"
+                />
+              </div>
+            </div>
+            <h1 className="text-4xl font-bold web3-gradient-text-harmonized mb-6">About WAGA Coffee Platform</h1>
+          </div>
           
           <div className="space-y-6 text-gray-700">
             <p className="text-lg leading-relaxed">
