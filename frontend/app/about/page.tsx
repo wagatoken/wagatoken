@@ -1,7 +1,7 @@
 export default function About() {
   return (
     <div className="min-h-screen web3-section">
-      <div className="max-w-4xl mx-auto py-12 px-4 relative z-10">
+      <div className="max-w-4xl mx-auto web3-page-spacing relative z-10">
         <div className="web3-card animate-card-entrance">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-6">

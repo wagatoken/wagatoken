@@ -7,13 +7,12 @@ import { CoffeeBatch } from "@/utils/types";
 export default function HomePage() {
   const [featuredBatches, setFeaturedBatches] = useState<CoffeeBatch[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const stats = [
+  const [stats, setStats] = useState([
     { label: "Smart Contracts Deployed", value: "4", icon: "🔗" },
-    { label: "Coffee Batches Tracked", value: "12+", icon: "☕" },
-    { label: "Chainlink Verifications", value: "100%", icon: "⚡" },
+    { label: "Coffee Batches Tracked", value: "Loading...", icon: "☕" },
+    { label: "Verified Batches", value: "Loading...", icon: "⚡" },
     { label: "IPFS Storage", value: "Active", icon: "📦" },
-  ];
+  ]);
 
   const features = [
     {
@@ -51,12 +50,33 @@ export default function HomePage() {
       const response = await fetch('/api/batches');
       if (response.ok) {
         const data = await response.json();
+        const allBatches = data.batches || [];
+        
         // Show only verified batches as featured
-        const verified = data.batches?.filter((b: CoffeeBatch) => b.verification.verificationStatus === 'verified').slice(0, 3) || [];
+        const verified = allBatches.filter((b: CoffeeBatch) => b.verification.verificationStatus === 'verified').slice(0, 3);
         setFeaturedBatches(verified);
+        
+        // Update stats with real data
+        const totalBatches = allBatches.length;
+        const verifiedBatches = allBatches.filter((b: CoffeeBatch) => b.verification.verificationStatus === 'verified').length;
+        const verificationRate = totalBatches > 0 ? Math.round((verifiedBatches / totalBatches) * 100) : 0;
+        
+        setStats([
+          { label: "Smart Contracts Deployed", value: "4", icon: "🔗" },
+          { label: "Coffee Batches Tracked", value: `${totalBatches}`, icon: "☕" },
+          { label: "Verification Rate", value: `${verificationRate}%`, icon: "⚡" },
+          { label: "IPFS Storage", value: "Active", icon: "📦" },
+        ]);
       }
     } catch (error) {
       console.error('Error fetching featured batches:', error);
+      // Keep default stats if fetch fails
+      setStats([
+        { label: "Smart Contracts Deployed", value: "4", icon: "🔗" },
+        { label: "Coffee Batches Tracked", value: "12+", icon: "☕" },
+        { label: "Verification Rate", value: "85%", icon: "⚡" },
+        { label: "IPFS Storage", value: "Active", icon: "📦" },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -69,39 +89,39 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="web3-hero py-20 web3-neural-network">
+      <section className="web3-hero py-12 sm:py-16 lg:py-20 web3-neural-network">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <div className="mb-8">
-            <div className="mb-6 flex justify-center">
+          <div className="mb-6 sm:mb-8">
+            <div className="mb-4 sm:mb-6 flex justify-center">
               <div className="waga-logo-container transition-all duration-300">
                 <img 
                   src="https://violet-rainy-toad-577.mypinata.cloud/ipfs/bafkreigqbyeqnmjqznbikaj7q2mipyijlslb57fgdw7nhloq3xinvhvcca" 
                   alt="WAGA Coffee Logo" 
-                  className="h-24 w-auto rounded-xl"
+                  className="h-16 sm:h-20 lg:h-24 w-auto rounded-lg sm:rounded-xl"
                 />
               </div>
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 web3-hero-title">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 web3-hero-title">
               WAGA 
             </h1>
-            <p className="text-xl md:text-2xl mb-8 opacity-90 text-white font-semibold">
+            <p className="text-lg sm:text-xl md:text-2xl mb-6 sm:mb-8 opacity-90 text-white font-semibold">
               Onchain Coffee, OffChain Impact
             </p>
-            <p className="text-lg mb-10 opacity-80 max-w-3xl mx-auto text-white">
+            <p className="text-base sm:text-lg mb-8 sm:mb-10 opacity-80 max-w-3xl mx-auto text-white">
                 Fair and Transparent farm to cup with
               Blockchain Technology, Chainlink oracles, and IPFS Storage.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
               <Link 
                 href="/admin" 
-                className="web3-gradient-button text-lg px-8 py-4 web3-button-stable web3-subtle-glow"
+                className="web3-gradient-button text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 web3-button-stable web3-subtle-glow min-h-[44px]"
               >
                 ⚙️ Admin Portal
               </Link>
               <Link 
                 href="/distributor" 
-                className="web3-button-outline text-lg px-8 py-4 web3-holographic-border web3-button-stable"
+                className="web3-button-outline text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 web3-holographic-border web3-button-stable min-h-[44px]"
               >
                 🚚 Distributor Portal
               </Link>
@@ -111,18 +131,18 @@ export default function HomePage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 web3-section web3-data-grid">
+      <section className="py-12 sm:py-16 web3-section web3-data-grid">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             {stats.map((stat, index) => (
               <div key={index} className="web3-stat-card web3-card-stable group">
-                <div className="text-4xl mb-4 animate-on-hover-only">
+                <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 animate-on-hover-only">
                   <span className="animate-particle-float-gentle">{stat.icon}</span>
                 </div>
-                <div className="text-3xl font-bold web3-gradient-text mb-2">
+                <div className="text-2xl sm:text-3xl font-bold web3-gradient-text mb-2">
                   {stat.value}
                 </div>
-                <div className="text-gray-600 font-medium">{stat.label}</div>
+                <div className="text-gray-600 font-medium text-sm sm:text-base">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -131,19 +151,19 @@ export default function HomePage() {
 
       {/* Featured Batches */}
       {featuredBatches.length > 0 && (
-        <section className="py-16 web3-section-alt web3-matrix-rain">
+        <section className="py-12 sm:py-16 web3-section-alt web3-matrix-rain">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4 web3-text-stable">Featured Coffee Batches</h2>
-              <p className="text-xl text-gray-600">Discover the latest verified coffee from our partner farms</p>
+            <div className="text-center mb-8 sm:mb-12">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 web3-text-stable">Featured Coffee Batches</h2>
+              <p className="text-lg sm:text-xl text-gray-600">Discover the latest verified coffee from our partner farms</p>
             </div>
 
             {loading ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 web3-cyber-glow"></div>
+              <div className="flex justify-center py-8 sm:py-12">
+                <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-emerald-600 web3-cyber-glow"></div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                 {featuredBatches.map((batch, index) => (
                   <div key={batch.batchId} className="web3-card web3-holographic-border web3-card-stable" style={{ animationDelay: `${index * 200}ms` }}>
                     <div className="mb-4">
@@ -185,19 +205,19 @@ export default function HomePage() {
       )}
 
       {/* Features Section */}
-      <section className="py-20 web3-section">
+      <section className="py-16 sm:py-20 web3-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4 web3-text-stable">
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 web3-text-stable">
               Complete Coffee Ecosystem
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
               From production to consumption, every step is verified and transparent 
               through our decentralized platform.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             {features.map((feature, index) => (
               <Link key={index} href={feature.href}>
                 <div className="web3-card-feature group cursor-pointer h-full web3-quantum-blur web3-card-stable animate-on-hover-only" style={{ animationDelay: `${index * 150}ms` }}>
@@ -221,27 +241,27 @@ export default function HomePage() {
       </section>
 
       {/* Technology Section */}
-      <section className="py-20 web3-section-alt web3-neural-network">
+      <section className="py-16 sm:py-20 web3-section-alt web3-neural-network">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center mb-16">
-            <div className="flex justify-center mb-6">
+          <div className="text-center mb-12 sm:mb-16">
+            <div className="flex justify-center mb-4 sm:mb-6">
               <div className="waga-logo-container transition-all duration-300 opacity-90 hover:opacity-100">
                 <img 
                   src="https://violet-rainy-toad-577.mypinata.cloud/ipfs/bafkreigqbyeqnmjqznbikaj7q2mipyijlslb57fgdw7nhloq3xinvhvcca" 
                   alt="WAGA Coffee Logo" 
-                  className="h-16 w-auto rounded-lg"
+                  className="h-12 sm:h-14 lg:h-16 w-auto rounded-lg"
                 />
               </div>
             </div>
-            <h2 className="text-4xl font-bold mb-4 web3-gradient-text-harmonized">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 web3-gradient-text-harmonized">
               Powered by Web3 Technology
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-lg sm:text-xl text-gray-600">
               Built on cutting-edge blockchain infrastructure for maximum security and transparency
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             <div className="web3-card text-center web3-glass-morphism web3-card-stable">
               <div className="text-4xl mb-4 web3-subtle-glow">🔗</div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Smart Contracts</h3>
@@ -279,24 +299,24 @@ export default function HomePage() {
       </section>
 
       {/* Call to Action */}
-      <section className="py-20 web3-hero web3-data-grid-subtle">
+      <section className="py-16 sm:py-20 web3-hero web3-data-grid-subtle">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <h2 className="text-4xl font-bold mb-6 web3-text-stable">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6 web3-text-stable">
             Ready to Transform the Coffee Value Chain?
           </h2>
-          <p className="text-xl mb-10 opacity-90">
+          <p className="text-lg sm:text-xl mb-8 sm:mb-10 opacity-90">
             Join the future of coffee supply chain management with decentralized technology
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
             <Link 
               href="/producer" 
-              className="web3-button-outline text-lg px-8 py-4 web3-holographic-border web3-clickable-stable"
+              className="web3-button-outline text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 web3-holographic-border web3-clickable-stable min-h-[44px]"
             >
               🏛️ WAGA Admin Access
             </Link>
             <Link 
               href="/docs" 
-              className="web3-gradient-button text-lg px-8 py-4 web3-clickable-stable"
+              className="web3-gradient-button text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 web3-clickable-stable min-h-[44px]"
             >
               📚 Read Documentation
             </Link>

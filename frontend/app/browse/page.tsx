@@ -46,7 +46,7 @@ export default function BrowsePage() {
   };
 
   return (
-    <div className="p-6 min-h-screen web3-section">
+    <div className="web3-page-spacing min-h-screen web3-section">
       <div className="max-w-7xl mx-auto relative z-10">
         <Breadcrumbs />
         

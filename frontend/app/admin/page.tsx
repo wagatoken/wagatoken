@@ -241,7 +241,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen web3-section">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
+      <div className="max-w-7xl mx-auto web3-page-spacing relative z-10">
         {/* Header */}
         <div className="mb-12 animate-card-entrance">
           <div className="text-center mb-8">
