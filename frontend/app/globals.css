@@ -2082,3 +2082,23 @@
       padding-right: 2rem;
     }
   }
+
+  /* Hero Section Spacing - specific for hero sections with larger top spacing */
+  .web3-hero-spacing {
+    padding-top: 5rem; /* 80px on mobile */
+    padding-bottom: 3rem; /* 48px */
+  }
+
+  @media (min-width: 640px) {
+    .web3-hero-spacing {
+      padding-top: 6rem; /* 96px on small screens */
+      padding-bottom: 4rem; /* 64px */
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .web3-hero-spacing {
+      padding-top: 7rem; /* 112px on large screens */
+      padding-bottom: 5rem; /* 80px */
+    }
+  }

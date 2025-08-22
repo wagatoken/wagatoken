@@ -89,7 +89,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="web3-hero py-12 sm:py-16 lg:py-20 web3-neural-network">
+      <section className="web3-hero web3-hero-spacing web3-neural-network">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div className="mb-6 sm:mb-8">
             <div className="mb-4 sm:mb-6 flex justify-center">
