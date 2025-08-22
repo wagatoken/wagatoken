@@ -506,6 +506,55 @@
     border: 1px solid #fca5a5;
   }
 
+/* Colored Stat Cards using Color Theory - Higher Specificity */
+.web3-stat-card.stat-card-blockchain {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.15) 100%) !important;
+  border: 1px solid rgba(99, 102, 241, 0.3) !important;
+  backdrop-filter: blur(12px);
+}
+
+.web3-stat-card.stat-card-blockchain:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.2) 100%) !important;
+  border-color: rgba(99, 102, 241, 0.5) !important;
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);
+}
+
+.web3-stat-card.stat-card-coffee {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.15) 100%) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  backdrop-filter: blur(12px);
+}
+
+.web3-stat-card.stat-card-coffee:hover {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.2) 100%) !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  box-shadow: 0 8px 32px rgba(245, 158, 11, 0.2);
+}
+
+.web3-stat-card.stat-card-verification {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.15) 100%) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  backdrop-filter: blur(12px);
+}
+
+.web3-stat-card.stat-card-verification:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.2) 100%) !important;
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.2);
+}
+
+.web3-stat-card.stat-card-storage {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(147, 51, 234, 0.15) 100%) !important;
+  border: 1px solid rgba(168, 85, 247, 0.3) !important;
+  backdrop-filter: blur(12px);
+}
+
+.web3-stat-card.stat-card-storage:hover {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(147, 51, 234, 0.2) 100%) !important;
+  border-color: rgba(168, 85, 247, 0.5) !important;
+  box-shadow: 0 8px 32px rgba(168, 85, 247, 0.2);
+}
+
   .web3-stat-card {
     background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(12px);
@@ -574,7 +623,7 @@
         rgba(255, 255, 255, 0.03) 60px,
         rgba(255, 255, 255, 0.03) 120px
       );
-    animation: mesh-drift 25s linear infinite;
+    /* Removed intrusive animation: animation: mesh-drift 25s linear infinite; */
     pointer-events: none;
   }
 
@@ -848,6 +897,98 @@
   animation: glow-pulse 2s ease-in-out infinite;
 }
 
+/* ===============================================
+   ENHANCED ANIMATIONS
+   =============================================== */
+
+/* Gentle Sideways Oscillating Animation */
+@keyframes gentleSway {
+  0%, 100% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(10px);
+  }
+}
+
+@keyframes gentleSwayReverse {
+  0%, 100% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(-10px);
+  }
+}
+
+.animate-gentle-sway {
+  animation: gentleSway 4s ease-in-out infinite;
+}
+
+.animate-gentle-sway-reverse {
+  animation: gentleSwayReverse 4s ease-in-out infinite;
+}
+
+/* Horizontal Gliding Animations for Cards */
+@keyframes slideInFromLeft {
+  0% {
+    transform: translateX(-150vw);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromRight {
+  0% {
+    transform: translateX(150vw);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-left {
+  animation: slideInFromLeft 1.5s ease-out forwards;
+  opacity: 0; /* Start invisible */
+}
+
+.animate-slide-right {
+  animation: slideInFromRight 1.5s ease-out forwards;
+  opacity: 0; /* Start invisible */
+}
+
+/* Subtle Hero Animation - Gentle Floating */
+@keyframes gentleFloat {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) scale(1.02);
+  }
+}
+
+.animate-gentle-float {
+  animation: gentleFloat 4s ease-in-out infinite;
+}
+
+/* Subtle Glow Animation */
+@keyframes subtleGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(79, 70, 229, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(79, 70, 229, 0.5);
+  }
+}
+
+.animate-subtle-glow {
+  animation: subtleGlow 3s ease-in-out infinite;
+}
+
 .animate-card-entrance {
   animation: card-entrance 0.6s ease-out forwards;
 }
@@ -1019,7 +1160,7 @@
     radial-gradient(circle at 25% 75%, rgba(13, 148, 136, 0.2) 1px, transparent 1px),
     radial-gradient(circle at 75% 75%, rgba(16, 185, 129, 0.2) 1px, transparent 1px);
   background-size: 60px 60px;
-  animation: particle-float 6s ease-in-out infinite;
+  /* Removed intrusive animation: animation: particle-float 6s ease-in-out infinite; */
   pointer-events: none;
 }
 

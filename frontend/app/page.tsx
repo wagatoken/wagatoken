@@ -17,10 +17,10 @@ export default function HomePage() {
   const [featuredBatches, setFeaturedBatches] = useState<CoffeeBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState([
-    { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" /> },
-    { label: "Coffee Batches Tracked", value: "Loading...", icon: <CoffeeBeanIcon size={24} className="waga-icon-coffee" /> },
-    { label: "Verified Batches", value: "Loading...", icon: <VerificationIcon size={24} className="waga-icon-verification" /> },
-    { label: "IPFS Storage", value: "Active", icon: <CoffeeStorageIcon size={24} className="waga-icon-storage" /> },
+    { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" />, theme: "blockchain" },
+    { label: "Coffee Batches Tracked", value: "Loading...", icon: <CoffeeBeanIcon size={24} className="waga-icon-coffee" />, theme: "coffee" },
+    { label: "Verified Batches", value: "Loading...", icon: <VerificationIcon size={24} className="waga-icon-verification" />, theme: "verification" },
+    { label: "IPFS Storage", value: "Active", icon: <CoffeeStorageIcon size={24} className="waga-icon-storage" />, theme: "storage" },
   ]);
 
   const features = [
@@ -71,20 +71,20 @@ export default function HomePage() {
         const verificationRate = totalBatches > 0 ? Math.round((verifiedBatches / totalBatches) * 100) : 0;
         
         setStats([
-          { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" /> },
-          { label: "Coffee Batches Tracked", value: `${totalBatches}`, icon: <CoffeeBeanIcon size={24} className="waga-icon-coffee" /> },
-          { label: "Verification Rate", value: `${verificationRate}%`, icon: <VerificationIcon size={24} className="waga-icon-verification" /> },
-          { label: "IPFS Storage", value: "Active", icon: <CoffeeStorageIcon size={24} className="waga-icon-storage" /> },
+          { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" />, theme: "blockchain" },
+          { label: "Coffee Batches Tracked", value: `${totalBatches}`, icon: <CoffeeBeanIcon size={24} className="waga-icon-coffee" />, theme: "coffee" },
+          { label: "Verification Rate", value: `${verificationRate}%`, icon: <VerificationIcon size={24} className="waga-icon-verification" />, theme: "verification" },
+          { label: "IPFS Storage", value: "Active", icon: <CoffeeStorageIcon size={24} className="waga-icon-storage" />, theme: "storage" },
         ]);
       }
     } catch (error) {
       console.error('Error fetching featured batches:', error);
       // Keep default stats if fetch fails
       setStats([
-        { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" /> },
-        { label: "Coffee Batches Tracked", value: "12+", icon: <CoffeeBeanIcon size={24} className="waga-icon-coffee" /> },
-        { label: "Verification Rate", value: "85%", icon: <VerificationIcon size={24} className="waga-icon-verification" /> },
-        { label: "IPFS Storage", value: "Active", icon: <CoffeeStorageIcon size={24} className="waga-icon-storage" /> },
+        { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" />, theme: "blockchain" },
+        { label: "Coffee Batches Tracked", value: "12+", icon: <CoffeeBeanIcon size={24} className="waga-icon-coffee" />, theme: "coffee" },
+        { label: "Verification Rate", value: "85%", icon: <VerificationIcon size={24} className="waga-icon-verification" />, theme: "verification" },
+        { label: "IPFS Storage", value: "Active", icon: <CoffeeStorageIcon size={24} className="waga-icon-storage" />, theme: "storage" },
       ]);
     } finally {
       setLoading(false);
@@ -102,11 +102,11 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div className="mb-6 sm:mb-8">
             <div className="mb-4 sm:mb-6 flex justify-center">
-              <div className="waga-logo-container web3-blockchain-pulse web3-coffee-particles transition-all duration-300">
+              <div className="waga-logo-container animate-gentle-float transition-all duration-300">
                 <img 
                   src="https://violet-rainy-toad-577.mypinata.cloud/ipfs/bafkreigqbyeqnmjqznbikaj7q2mipyijlslb57fgdw7nhloq3xinvhvcca" 
                   alt="WAGA Coffee Logo" 
-                  className="h-16 sm:h-20 lg:h-24 w-auto rounded-lg sm:rounded-xl web3-holographic-border-enhanced"
+                  className="h-16 sm:h-20 lg:h-24 w-auto rounded-lg sm:rounded-xl"
                 />
               </div>
             </div>
@@ -140,13 +140,15 @@ export default function HomePage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-12 sm:py-16 web3-section web3-data-grid">
+      <section className="py-12 sm:py-16 web3-section web3-data-grid-static">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             {stats.map((stat, index) => (
-              <div key={index} className="web3-stat-card web3-card-stable web3-blockchain-pulse group">
-                <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 animate-on-hover-only">
-                  <span className="animate-particle-float-gentle">{stat.icon}</span>
+              <div key={index} className={`web3-stat-card stat-card-${stat.theme} group ${
+                index % 2 === 0 ? 'animate-gentle-sway' : 'animate-gentle-sway-reverse'
+              }`} style={{ animationDelay: `${index * 0.5}s` }}>
+                <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">
+                  <span>{stat.icon}</span>
                 </div>
                 <div className="text-2xl sm:text-3xl font-bold web3-gradient-text mb-2">
                   {stat.value}
@@ -229,8 +231,10 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             {features.map((feature, index) => (
               <Link key={index} href={feature.href}>
-                <div className="web3-card-feature group cursor-pointer h-full web3-quantum-blur web3-card-stable animate-on-hover-only" style={{ animationDelay: `${index * 150}ms` }}>
-                  <div className="text-5xl mb-6 animate-particle-float-gentle">
+                <div className={`web3-card-feature group cursor-pointer h-full web3-quantum-blur web3-card-stable ${
+                  index % 2 === 0 ? 'animate-slide-left' : 'animate-slide-right'
+                }`} style={{ animationDelay: `${index * 300}ms` }}>
+                  <div className="text-5xl mb-6">
                     {feature.icon}
                   </div>
                   <h3 className="text-xl font-bold text-gray-900 mb-3">
