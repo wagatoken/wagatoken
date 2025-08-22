@@ -214,7 +214,7 @@ contract WAGAInventoryManager is
                 ,
                 uint256 expiryDate,
                 bool isVerified,
-                uint256 currentQuantity,
+                uint256 currentQuantity, // quantity field
                 ,
                 ,
                 ,
@@ -314,7 +314,7 @@ contract WAGAInventoryManager is
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
 
-            (, , bool isVerified, uint256 currentQuantity, , , , ,) = coffeeToken
+            (, , bool isVerified, uint256 currentQuantity, , , , , ) = coffeeToken
                 .s_batchInfo(batchId);
 
             if (!isVerified && currentQuantity > 0) {
@@ -331,7 +331,7 @@ contract WAGAInventoryManager is
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
 
-            (, , , uint256 currentQuantity, , , , ,) = coffeeToken.s_batchInfo(
+            (, , , uint256 currentQuantity, , , , , ) = coffeeToken.s_batchInfo(
                 batchId
             );
 
@@ -349,7 +349,7 @@ contract WAGAInventoryManager is
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
 
-            (uint256 productionDate, , , , , , , ,) = coffeeToken.s_batchInfo(
+            (uint256 productionDate, , , , , , , , ) = coffeeToken.s_batchInfo(
                 batchId
             );
 

@@ -90,6 +90,7 @@ contract WAGAIntegrationTest is Test {
             "QmTestHash123", // ipfsUri
             block.timestamp + 1 days, // productionDate (future date as required by contract validation)
             block.timestamp + 365 days, // expiryDate
+            1000, // quantity
             50 * 1e18, // pricePerUnit
             "250g", // packagingInfo - must be "250g" or "500g"
             "metadataHash123" // metadataHash
@@ -148,6 +149,7 @@ contract WAGAIntegrationTest is Test {
             "QmTestFailHash", // ipfsUri
             block.timestamp + 1 days, // productionDate (future date)
             block.timestamp + 365 days, // expiryDate
+            500, // quantity
             50 * 1e18, // pricePerUnit
             "500g", // packagingInfo - using different valid size for this test
             "metadataHashFail" // metadataHash

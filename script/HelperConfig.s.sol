@@ -56,7 +56,7 @@ contract HelperConfig is Script {
                 subscriptionId: 0, // TODO: Replace with actual Base subscription ID
                 donId: 0x66756e2d626173652d6d61696e6e65742d310000000000000000000000000000, // fun-base-mainnet-1
                 router: 0xf9B8fc078197181C841c296C876945aaa425B278, // Base Functions Router
-                deployerKey: vm.envOr("PRIVATE_KEY_MAINNET", uint256(0))
+                deployerKey: vm.envOr("PRIVATE_KEY_SEP", uint256(0))
             });
     }
 

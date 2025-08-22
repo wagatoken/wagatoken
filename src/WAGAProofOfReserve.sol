@@ -38,13 +38,13 @@ contract WAGAProofOfReserve is
     // Reserve verification request structure
     struct VerificationRequest {
         uint256 batchId;
-        uint256 requestQuantity; // Quantity retrieved from WAGACoffeeToken contract
+        uint256 requestQuantity; // Expected quantity from batch (not minted tokens)
         uint256 verifiedQuantity; // Quantity verified by Chainlink Functions
-        uint256 requestPrice; // Price retrieved from WAGACoffeeToken contract
+        uint256 requestPrice; // Price per unit from batch
         uint256 verifiedPrice; // Price verified by Chainlink Functions
-        string expectedPackaging; // Packaging retrieved from WAGACoffeeToken contract
+        string expectedPackaging; // Packaging info from batch
         string verifiedPackaging; // Packaging verified by Chainlink Functions
-        string expectedMetadataHash; // Quantity verified by Chainlink Functions
+        string expectedMetadataHash; // Metadata hash from batch
         string verifiedMetadataHash; // Metadata hash verified by Chainlink Functions
         address recipient;
         bool completed;
@@ -163,10 +163,10 @@ contract WAGAProofOfReserve is
             ,
             ,
             ,
-            uint256 requestQuantity,
-            uint256 requestPrice,
-            string memory expectedPackaging,
-            string memory expectedMetadataHash,
+            uint256 quantity,
+            uint256 pricePerUnit,
+            string memory packagingInfo,
+            string memory metadataHash,
             ,
 
         ) = coffeeToken.s_batchInfo(batchId);
@@ -174,10 +174,10 @@ contract WAGAProofOfReserve is
         // Prepare arguments for Chainlink Functions
         string[] memory args = new string[](5);
         args[0] = Strings.toString(batchId);
-        args[1] = Strings.toString(requestQuantity);
-        args[2] = Strings.toString(requestPrice);
-        args[3] = expectedPackaging;
-        args[4] = expectedMetadataHash;
+        args[1] = Strings.toString(quantity);
+        args[2] = Strings.toString(pricePerUnit);
+        args[3] = packagingInfo;
+        args[4] = metadataHash;
 
         // Convert source code to bytes
         bytes memory sourceBytes = bytes(source);
@@ -196,13 +196,13 @@ contract WAGAProofOfReserve is
         // Store the verification request
         verificationRequests[requestId] = VerificationRequest({
             batchId: batchId,
-            requestQuantity: requestQuantity,
+            requestQuantity: quantity,
             verifiedQuantity: 0,
-            requestPrice: requestPrice,
+            requestPrice: pricePerUnit,
             verifiedPrice: 0,
-            expectedPackaging: expectedPackaging,
+            expectedPackaging: packagingInfo,
             verifiedPackaging: "",
-            expectedMetadataHash: expectedMetadataHash,
+            expectedMetadataHash: metadataHash,
             verifiedMetadataHash: "",
             recipient: recipient,
             completed: false,
@@ -211,7 +211,7 @@ contract WAGAProofOfReserve is
             shouldMint: true // Set to true by default, can be changed later
         });
         latestRequestId = requestId;
-        emit ReserveVerificationRequested(requestId, batchId, requestQuantity);
+        emit ReserveVerificationRequested(requestId, batchId, quantity);
         return requestId;
     }
     /**
@@ -247,10 +247,10 @@ contract WAGAProofOfReserve is
             ,
             ,
             ,
-            uint256 requestQuantity,
-            uint256 requestPrice,
-            string memory expectedPackaging,
-            string memory expectedMetadataHash,
+            uint256 quantity, // Now uses quantity field
+            uint256 pricePerUnit,
+            string memory packagingInfo,
+            string memory metadataHash,
             ,
 
         ) = coffeeToken.s_batchInfo(batchId);
@@ -258,10 +258,10 @@ contract WAGAProofOfReserve is
         // Prepare arguments for Chainlink Functions
         string[] memory args = new string[](5);
         args[0] = Strings.toString(batchId);
-        args[1] = Strings.toString(requestQuantity);
-        args[2] = Strings.toString(requestPrice);
-        args[3] = expectedPackaging;
-        args[4] = expectedMetadataHash;
+        args[1] = Strings.toString(quantity);
+        args[2] = Strings.toString(pricePerUnit);
+        args[3] = packagingInfo;
+        args[4] = metadataHash;
 
         // Convert source code to bytes
         bytes memory sourceBytes = bytes(source);
@@ -281,13 +281,13 @@ contract WAGAProofOfReserve is
         // Store the verification request WITHOUT minting enabled
         verificationRequests[requestId] = VerificationRequest({
             batchId: batchId,
-            requestQuantity: requestQuantity,
+            requestQuantity: quantity,
             verifiedQuantity: 0,
-            requestPrice: requestPrice,
+            requestPrice: pricePerUnit,
             verifiedPrice: 0,
-            expectedPackaging: expectedPackaging,
+            expectedPackaging: packagingInfo,
             verifiedPackaging: "",
-            expectedMetadataHash: expectedMetadataHash,
+            expectedMetadataHash: metadataHash,
             verifiedMetadataHash: "",
             recipient: address(0), // No recipient for inventory verification
             completed: false,
@@ -297,7 +297,7 @@ contract WAGAProofOfReserve is
         });
 
         latestRequestId = requestId;
-        emit ReserveVerificationRequested(requestId, batchId, requestQuantity);
+        emit ReserveVerificationRequested(requestId, batchId, quantity);
         return requestId;
     }
 

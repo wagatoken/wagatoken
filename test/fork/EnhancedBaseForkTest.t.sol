@@ -88,6 +88,7 @@ contract EnhancedBaseForkTest is Test {
             "QmForkTestHash123", // ipfsUri
             block.timestamp + 1 days, // productionDate
             block.timestamp + 365 days, // expiryDate
+            1000, // quantity
             75 * 1e18, // pricePerUnit (75 WAGA per unit)
             "250g", // packagingInfo
             "forkTestMetadata" // metadataHash
@@ -124,7 +125,7 @@ contract EnhancedBaseForkTest is Test {
         console.log("Is Metadata Verified:", isMetadataVerified);
         console.log("Current Quantity:", currentQuantity);
         console.log("Last Verified Timestamp:", lastVerifiedTimestamp);
-        
+
         // Verify initial state
         assertFalse(isVerified, "Batch should not be verified initially");
         assertFalse(isMetadataVerified, "Metadata should not be verified initially");
@@ -148,6 +149,7 @@ contract EnhancedBaseForkTest is Test {
             "QmVerificationTest",
             block.timestamp + 1 days,
             block.timestamp + 365 days,
+            1000, // quantity
             50 * 1e18,
             "500g",
             "verificationTestMetadata"
@@ -194,6 +196,7 @@ contract EnhancedBaseForkTest is Test {
                 string.concat("QmPersistenceTest", vm.toString(i)),
                 block.timestamp + 1 days,
                 block.timestamp + 365 days,
+                1000, // quantity
                 (50 + i * 10) * 1e18, // Different prices
                 i % 2 == 0 ? "250g" : "500g", // Alternate packaging
                 string.concat("persistenceMetadata", vm.toString(i))
@@ -217,7 +220,7 @@ contract EnhancedBaseForkTest is Test {
         for (uint256 i = 0; i < 3; i++) {
             assertTrue(coffeeToken.isBatchCreated(batchIds[i]), "Batch should still exist");
             
-            (, , , , uint256 price, string memory packaging, ,, ) = coffeeToken.s_batchInfo(batchIds[i]);
+            (, , , , uint256 price, string memory packaging, , , ) = coffeeToken.s_batchInfo(batchIds[i]);
             
             assertEq(price, (50 + i * 10) * 1e18, "Price should be preserved");
             
@@ -256,6 +259,7 @@ contract EnhancedBaseForkTest is Test {
             "QmRoleTest",
             block.timestamp + 1 days,
             block.timestamp + 365 days,
+            1000, // quantity
             100 * 1e18,
             "250g",
             "roleTestMetadata"
@@ -270,6 +274,7 @@ contract EnhancedBaseForkTest is Test {
             "QmShouldFail",
             block.timestamp + 1 days,
             block.timestamp + 365 days,
+            1000, // quantity
             100 * 1e18,
             "250g",
             "shouldFailMetadata"
@@ -304,6 +309,7 @@ contract EnhancedBaseForkTest is Test {
             "QmGasTest",
             block.timestamp + 1 days,
             block.timestamp + 365 days,
+            1000, // quantity
             60 * 1e18,
             "250g",
             "gasTestMetadata"
@@ -338,7 +344,7 @@ contract EnhancedBaseForkTest is Test {
         console.log("Sample batch data - Is Verified:", isVerified);
         console.log("Sample batch data - Is Metadata Verified:", isMetadataVerified);
         console.log("Sample batch data - Current Quantity:", currentQuantity);
-        console.log("Sample batch data - Last Verified:", lastVerifiedTimestamp);
+        console.log("Sample batch data - Last Verified Timestamp:", lastVerifiedTimestamp);
         
         // Test role check gas usage
         gasStart = gasleft();

@@ -184,6 +184,7 @@ contract WAGACoffeeToken is
         string memory ipfsUri,
         uint256 productionDate,
         uint256 expiryDate,
+        uint256 quantity,
         uint256 pricePerUnit,
         string memory packagingInfo,
         string memory metadataHash
@@ -192,7 +193,7 @@ contract WAGACoffeeToken is
         uint256 batchId = _nextBatchId;
         _nextBatchId++; // Increment after assignment
 
-        if (expiryDate == 0 || pricePerUnit == 0 || productionDate == 0) {
+        if (expiryDate == 0 || pricePerUnit == 0 || productionDate == 0 || quantity == 0) {
             revert WAGACoffeeToken__ZeroMetaDataValues_createBatch();
         }
         // Fixed: Allow past production dates for already produced coffee
@@ -217,7 +218,7 @@ contract WAGACoffeeToken is
             productionDate: productionDate,
             expiryDate: expiryDate,
             isVerified: false,
-            currentQuantity: 0,
+            quantity: quantity, // Number of coffee bags in batch
             pricePerUnit: pricePerUnit,
             packagingInfo: packagingInfo,
             metadataHash: metadataHash,
@@ -263,7 +264,7 @@ contract WAGACoffeeToken is
             revert WAGACoffeeToken__BatchDoesNotExist_updateInventory();
         }
 
-        uint256 currentQuantity = s_batchInfo[batchId].currentQuantity;
+        uint256 currentQuantity = s_batchInfo[batchId].quantity;
 
         if (newQuantity == 0 && currentQuantity > 0) {
             _removeFromActiveBatches(batchId);
@@ -271,7 +272,7 @@ contract WAGACoffeeToken is
             _addToActiveBatches(batchId);
         }
 
-        s_batchInfo[batchId].currentQuantity = newQuantity;
+        s_batchInfo[batchId].quantity = newQuantity;
         emit InventoryUpdated(batchId, newQuantity);
     }
     /**
@@ -433,13 +434,13 @@ contract WAGACoffeeToken is
         }
 
         if (
-            s_batchInfo[batchId].currentQuantity == 0 &&
+            s_batchInfo[batchId].quantity == 0 &&
             !s_isActiveBatch[batchId]
         ) {
             _addToActiveBatches(batchId);
         }
 
-        s_batchInfo[batchId].currentQuantity += amount;
+        s_batchInfo[batchId].quantity += amount;
         _mint(to, batchId, amount, "");
         emit TokensMinted(to, batchId, amount);
     }
@@ -456,7 +457,7 @@ contract WAGACoffeeToken is
         uint256 amount
     ) external onlyRole(REDEMPTION_ROLE) {
         _burn(account, batchId, amount);
-        s_batchInfo[batchId].currentQuantity -= amount;
+        s_batchInfo[batchId].quantity -= amount;
     }
 
     /* -------------------------------------------------------------------------- */

@@ -16,18 +16,19 @@ contract WAGAViewFunctions {
      * @param productionDate Timestamp when the batch was produced
      * @param expiryDate Timestamp when the batch expires
      * @param isVerified Whether batch has been verified by Proof of Reserve Manager
-     * @param currentQuantity Current available quantity of tokens for this batch
+     * @param quantity Number of coffee bags in this batch (gets verified and minted)
      * @param pricePerUnit Price per unit in wei
      * @param packagingInfo Must be "250g" or "500g"
      * @param metadataHash IPFS CID or SHA-256 hash of off-chain metadata
      * @param isMetadataVerified Whether metadata has been verified
+     * @param lastVerifiedTimestamp Timestamp of last metadata verification
      */
 
     struct BatchInfo {
         uint256 productionDate;
         uint256 expiryDate;
         bool isVerified; // This flag should be set to false before every Inventory Verification request.
-        uint256 currentQuantity;
+        uint256 quantity; // Number of coffee bags in batch (for verification and minting)
         uint256 pricePerUnit;
         string packagingInfo;
         string metadataHash;
@@ -78,11 +79,12 @@ contract WAGAViewFunctions {
      * @return productionDate Batch production timestamp
      * @return expiryDate Batch expiry timestamp
      * @return isVerified Whether batch is verified
-     * @return currentQuantity Current quantity available
+     * @return quantity Number of coffee bags in batch
      * @return pricePerUnit Price per unit in wei
      * @return packagingInfo Packaging size information
      * @return metadataHash Hash of off-chain metadata
      * @return isMetadataVerified Whether metadata is verified
+     * @return lastVerifiedTimestamp Timestamp of last verification
      */
     function getbatchInfo(
         uint256 batchId
@@ -93,11 +95,12 @@ contract WAGAViewFunctions {
             uint256 productionDate,
             uint256 expiryDate,
             bool isVerified,
-            uint256 currentQuantity,
+            uint256 quantity,
             uint256 pricePerUnit,
             string memory packagingInfo,
             string memory metadataHash,
-            bool isMetadataVerified
+            bool isMetadataVerified,
+            uint256 lastVerifiedTimestamp
         )
     {
         BatchInfo storage info = s_batchInfo[batchId];
@@ -105,11 +108,12 @@ contract WAGAViewFunctions {
             info.productionDate,
             info.expiryDate,
             info.isVerified,
-            info.currentQuantity,
+            info.quantity,
             info.pricePerUnit,
             info.packagingInfo,
             info.metadataHash,
-            info.isMetadataVerified
+            info.isMetadataVerified,
+            info.lastVerifiedTimestamp
         );
     }
 
@@ -123,15 +127,15 @@ contract WAGAViewFunctions {
     }
 
     /**
-     * @notice Returns current quantity for a batch
+     * @notice Returns quantity for a batch
      * @param batchId ID of the batch to query
-     * @return Current quantity available
+     * @return Quantity of coffee bags in batch
      */
     function getBatchQuantity(uint256 batchId) external view returns (uint256) {
         if (!isBatchCreated(batchId)) {
             revert WAGAViewFunctions__BatchDoesNotExist_getBatchQuantity();
         }
-        return s_batchInfo[batchId].currentQuantity;
+        return s_batchInfo[batchId].quantity;
     }
 
     function getNextBatchId() external view returns (uint256) {
