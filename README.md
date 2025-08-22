@@ -265,7 +265,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **WAGA Coffee - Bringing transparency to every cup** ☕  
-*Onchain Coffee, OffChain Impact*
+*Onchain Coffee OffChain Impact*
 
 ---
 

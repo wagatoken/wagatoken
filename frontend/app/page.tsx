@@ -114,7 +114,7 @@ export default function HomePage() {
               WAGA 
             </h1>
             <p className="text-lg sm:text-xl md:text-2xl mb-6 sm:mb-8 opacity-90 text-white font-semibold">
-              Onchain Coffee, OffChain Impact
+              Onchain Coffee - OffChain Impact
             </p>
             <p className="text-base sm:text-lg mb-8 sm:mb-10 opacity-80 max-w-3xl mx-auto text-white">
                 Fair and Transparent farm to cup with
