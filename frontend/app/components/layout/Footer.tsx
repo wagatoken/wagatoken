@@ -128,7 +128,7 @@ export default function Footer() {
             <h3 className="text-white font-semibold mb-4">Community</h3>
             <div className="space-y-3">
               <a
-                href="https://twitter.com/wagacoffee"
+                href="https://x.com/Wagatoken?t=DJ-g5RE824iE4dpeTUHc7w&s=09"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-2 text-green-100 hover:text-amber-300 text-sm transition-colors"
@@ -137,7 +137,7 @@ export default function Footer() {
                 <span>Twitter</span>
               </a>
               <a
-                href="https://t.me/wagacoffee"
+                href="https://t.me/wagatoken"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-2 text-green-100 hover:text-amber-300 text-sm transition-colors"
@@ -146,7 +146,7 @@ export default function Footer() {
                 <span>Telegram</span>
               </a>
               <a
-                href="https://linkedin.com/company/wagacoffee"
+                href="https://www.linkedin.com/company/wagaprotocol/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-2 text-green-100 hover:text-amber-300 text-sm transition-colors"
@@ -155,22 +155,13 @@ export default function Footer() {
                 <span>LinkedIn</span>
               </a>
               <a
-                href="https://github.com/wagacoffee"
+                href="https://github.com/wagatoken/wagatoken"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-2 text-green-100 hover:text-amber-300 text-sm transition-colors"
               >
                 <span>💻</span>
                 <span>GitHub</span>
-              </a>
-              <a
-                href="https://discord.gg/wagacoffee"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center space-x-2 text-green-100 hover:text-amber-300 text-sm transition-colors"
-              >
-                <span>🎮</span>
-                <span>Discord</span>
               </a>
             </div>
           </div>
