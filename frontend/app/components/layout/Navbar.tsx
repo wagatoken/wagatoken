@@ -68,7 +68,9 @@ export default function Navbar() {
               </div>
             </Link>
             <div className="web3-blockchain-status ml-3 hidden sm:flex">
-              <span className="text-emerald-700">Live on Base</span>
+              <div className="bg-blue-500/20 border border-blue-400/40 px-3 py-1 rounded-full backdrop-blur-sm">
+                <span className="text-blue-200 font-medium text-sm">🌐 Live on Base Testnet</span>
+              </div>
             </div>
           </div>
 

@@ -41,7 +41,7 @@ export default function About() {
                   <span>Technology</span>
                 </h2>
                 <p className="text-gray-700 leading-relaxed">
-                  Built on Base Sepolia with Chainlink Functions for inventory verification and IPFS for 
+                  Built on Base Testnet with Chainlink Functions for inventory verification and IPFS for 
                   decentralized metadata storage. Our smart contracts ensure data integrity, transparency, 
                   and immutable proof of origin for every coffee batch.
                 </p>

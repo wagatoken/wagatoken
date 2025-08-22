@@ -83,7 +83,7 @@ export default function Docs() {
                 <span>Smart Contracts</span>
               </h3>
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
-                Deployed smart contract addresses, verification links, and technical implementation details on Base Sepolia.
+                Deployed smart contract addresses, verification links, and technical implementation details on Base Testnet.
               </p>
               <Link href="/docs/guides/smart-contracts" className="web3-button-outline text-sm">
                 Contract Docs →
@@ -149,7 +149,7 @@ export default function Docs() {
                   </div>
                   <div className="flex justify-between items-center p-2 bg-amber-50 rounded-lg">
                     <span className="text-gray-800 font-medium">Network:</span>
-                    <span className="text-amber-600 font-medium">Base Sepolia</span>
+                    <span className="text-amber-600 font-medium">Base Testnet</span>
                   </div>
                 </div>
               </div>

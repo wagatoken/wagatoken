@@ -21,7 +21,7 @@ export default function GettingStartedGuide() {
               <h1 className="text-4xl font-bold web3-gradient-text">Getting Started with WAGA Coffee</h1>
             </div>
             <p className="text-xl text-gray-600">
-              Learn how to navigate the WAGA platform, connect your wallet, and start trading tokenized Ethiopian coffee.
+              Learn how to navigate the WAGA platform and understand our distributor-managed tokenized Ethiopian coffee system.
             </p>
           </div>
 
@@ -30,10 +30,10 @@ export default function GettingStartedGuide() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">📋 Table of Contents</h2>
             <ul className="space-y-2">
               <li><a href="#overview" className="text-emerald-600 hover:text-emerald-800">1. Platform Overview</a></li>
-              <li><a href="#wallet" className="text-emerald-600 hover:text-emerald-800">2. Connecting Your Wallet</a></li>
-              <li><a href="#browse" className="text-emerald-600 hover:text-emerald-800">3. Browsing Coffee Batches</a></li>
-              <li><a href="#purchase" className="text-emerald-600 hover:text-emerald-800">4. Purchasing Coffee Tokens</a></li>
-              <li><a href="#redeem" className="text-emerald-600 hover:text-emerald-800">5. Redeeming for Physical Coffee</a></li>
+              <li><a href="#browse" className="text-emerald-600 hover:text-emerald-800">2. Browsing Coffee Batches</a></li>
+              <li><a href="#vmi-model" className="text-emerald-600 hover:text-emerald-800">3. Vendor Managed Inventory Model</a></li>
+              <li><a href="#distributor-role" className="text-emerald-600 hover:text-emerald-800">4. Understanding Distributor Role</a></li>
+              <li><a href="#customer-experience" className="text-emerald-600 hover:text-emerald-800">5. Customer Experience</a></li>
               <li><a href="#verification" className="text-emerald-600 hover:text-emerald-800">6. Understanding Verification</a></li>
             </ul>
           </div>
@@ -49,7 +49,7 @@ export default function GettingStartedGuide() {
               
               <div className="space-y-6">
                 <p className="text-gray-700 leading-relaxed">
-                  WAGA Coffee Platform is a revolutionary blockchain-powered coffee traceability system that tokenizes premium Ethiopian coffee. 
+                  WAGA Coffee Platform is a transformative blockchain-powered coffee traceability system that tokenizes premium Ethiopian coffee. 
                   Our platform ensures complete transparency from farm to cup through Web3 technology.
                 </p>
 
@@ -57,7 +57,7 @@ export default function GettingStartedGuide() {
                   <div className="bg-emerald-50 p-4 rounded-lg">
                     <h3 className="font-semibold text-emerald-800 mb-2">🔗 Blockchain Technology</h3>
                     <p className="text-sm text-emerald-700">
-                      Built on Base Sepolia with ERC-1155 tokens representing verified coffee batches.
+                      Built on Base Testnet with ERC-1155 tokens representing verified coffee batches.
                     </p>
                   </div>
                   <div className="bg-amber-50 p-4 rounded-lg">
@@ -82,80 +82,17 @@ export default function GettingStartedGuide() {
               </div>
             </section>
 
-            {/* Connecting Wallet */}
-            <section id="wallet" className="web3-card">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>🔐</span>
-                <span>2. Connecting Your Wallet</span>
-              </h2>
-              
-              <div className="space-y-6">
-                <div className="bg-amber-50 border-l-4 border-amber-400 p-4">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <div className="text-amber-400 text-xl">⚠️</div>
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm text-amber-700">
-                        <strong>Important:</strong> Make sure you're connected to the Base Sepolia testnet. 
-                        You'll need testnet ETH for transaction fees.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <ol className="space-y-4">
-                  <li className="flex items-start space-x-3">
-                    <span className="flex-shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</span>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Install MetaMask</h3>
-                      <p className="text-gray-700">Download and install MetaMask from <a href="https://metamask.io" target="_blank" className="text-emerald-600 hover:underline">metamask.io</a></p>
-                    </div>
-                  </li>
-                  <li className="flex items-start space-x-3">
-                    <span className="flex-shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Add Base Sepolia Network</h3>
-                      <div className="text-gray-700">
-                        <p>Add the Base Sepolia testnet to MetaMask:</p>
-                        <div className="mt-2 bg-gray-100 p-3 rounded-md text-sm font-mono">
-                          <div>Network Name: Base Sepolia</div>
-                          <div>RPC URL: https://sepolia.base.org</div>
-                          <div>Chain ID: 84532</div>
-                          <div>Symbol: ETH</div>
-                          <div>Block Explorer: https://sepolia-explorer.base.org</div>
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                  <li className="flex items-start space-x-3">
-                    <span className="flex-shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Get Testnet ETH</h3>
-                      <p className="text-gray-700">Visit the <a href="https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet" target="_blank" className="text-emerald-600 hover:underline">Base Sepolia faucet</a> to get free testnet ETH.</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start space-x-3">
-                    <span className="flex-shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-bold">4</span>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Connect to WAGA</h3>
-                      <p className="text-gray-700">Click the "Connect Wallet" button on any WAGA platform page and approve the connection.</p>
-                    </div>
-                  </li>
-                </ol>
-              </div>
-            </section>
-
             {/* Browsing Coffee Batches */}
             <section id="browse" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>🌱</span>
-                <span>3. Browsing Coffee Batches</span>
+                <span>2. Browsing Coffee Batches</span>
               </h2>
               
               <div className="space-y-6">
                 <p className="text-gray-700 leading-relaxed">
-                  The Browse Coffee page allows you to explore all available verified coffee batches from Ethiopian farms.
+                  The Browse Coffee page allows you to explore all available verified coffee batches from Ethiopian farms. 
+                  This transparency tool shows what inventory is available through our distributor network.
                 </p>
 
                 <div className="space-y-4">
@@ -164,7 +101,7 @@ export default function GettingStartedGuide() {
                     <ul className="text-sm text-emerald-700 space-y-1">
                       <li>• Search by farm name, location, or batch ID</li>
                       <li>• Filter by packaging type (Washed, Natural, Honey)</li>
-                      <li>• View only verified batches</li>
+                      <li>• View verified batches available through distributors</li>
                     </ul>
                   </div>
 
@@ -173,7 +110,7 @@ export default function GettingStartedGuide() {
                     <ul className="text-sm text-blue-700 space-y-1">
                       <li>• Farm details and location</li>
                       <li>• Roast level and processing method</li>
-                      <li>• Pricing and availability</li>
+                      <li>• Distributor availability</li>
                       <li>• Verification status and date</li>
                       <li>• IPFS metadata links</li>
                     </ul>
@@ -192,7 +129,7 @@ export default function GettingStartedGuide() {
                       </div>
                       <div className="flex items-center space-x-2">
                         <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">Failed</span>
-                        <span>Verification failed - not available for purchase</span>
+                        <span>Verification failed - not available for distribution</span>
                       </div>
                     </div>
                   </div>
@@ -200,128 +137,228 @@ export default function GettingStartedGuide() {
               </div>
             </section>
 
-            {/* Purchasing Coffee Tokens */}
-            <section id="purchase" className="web3-card">
+            {/* Vendor Managed Inventory Model */}
+            <section id="vmi-model" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>🛒</span>
-                <span>4. Purchasing Coffee Tokens</span>
+                <span>🏢</span>
+                <span>3. Vendor Managed Inventory Model</span>
               </h2>
               
               <div className="space-y-6">
-                <div className="bg-emerald-50 border-l-4 border-emerald-400 p-4">
+                <p className="text-gray-700 leading-relaxed">
+                  WAGA operates on a Vendor Managed Inventory (VMI) model where certified distributors handle all blockchain 
+                  operations on behalf of end customers. This ensures a seamless coffee experience without requiring 
+                  customers to interact directly with Web3 technology.
+                </p>
+
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
                   <div className="flex">
                     <div className="flex-shrink-0">
-                      <div className="text-emerald-400 text-xl">ℹ️</div>
+                      <div className="text-blue-400 text-xl">ℹ️</div>
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm text-emerald-700">
-                        <strong>Note:</strong> Currently, coffee token purchases are managed through the WAGA admin portal. 
-                        Consumer purchasing functionality is coming soon!
+                      <p className="text-sm text-blue-700">
+                        <strong>Key Concept:</strong> End customers purchase coffee normally through distributors. 
+                        The blockchain technology operates transparently in the background to ensure quality and traceability.
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Current Process:</h3>
-                  <ol className="space-y-3">
-                    <li className="flex items-start space-x-3">
-                      <span className="flex-shrink-0 w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</span>
-                      <div>
-                        <h4 className="font-semibold text-gray-900">Browse Available Batches</h4>
-                        <p className="text-gray-700">Use the Browse Coffee page to find batches you're interested in.</p>
-                      </div>
-                    </li>
-                    <li className="flex items-start space-x-3">
-                      <span className="flex-shrink-0 w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
-                      <div>
-                        <h4 className="font-semibold text-gray-900">Contact WAGA Admin</h4>
-                        <p className="text-gray-700">Reach out to WAGA administrators to express interest in specific batches.</p>
-                      </div>
-                    </li>
-                    <li className="flex items-start space-x-3">
-                      <span className="flex-shrink-0 w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
-                      <div>
-                        <h4 className="font-semibold text-gray-900">Admin Token Allocation</h4>
-                        <p className="text-gray-700">WAGA admins will mint and transfer appropriate tokens to your connected wallet.</p>
-                      </div>
-                    </li>
-                  </ol>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-emerald-50 p-4 rounded-lg">
+                    <h3 className="font-semibold text-emerald-800 mb-2">🎯 Customer Benefits</h3>
+                    <ul className="text-sm text-emerald-700 space-y-1">
+                      <li>• No need for crypto wallets or technical knowledge</li>
+                      <li>• Traditional payment methods (credit cards, cash)</li>
+                      <li>• Full traceability without complexity</li>
+                      <li>• Guaranteed authentic Ethiopian coffee</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <h3 className="font-semibold text-purple-800 mb-2">� Blockchain Benefits</h3>
+                    <ul className="text-sm text-purple-700 space-y-1">
+                      <li>• Immutable traceability records</li>
+                      <li>• Automated quality verification</li>
+                      <li>• Transparent supply chain</li>
+                      <li>• Proof of authenticity</li>
+                    </ul>
+                  </div>
                 </div>
 
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-blue-800 mb-2">🔮 Coming Soon</h3>
-                  <p className="text-sm text-blue-700">
-                    Direct consumer purchasing with ETH payments, automatic token minting, and integrated payment processing.
-                  </p>
+                <div className="bg-amber-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-amber-800 mb-3">🔄 How It Works</h3>
+                  <div className="space-y-2 text-sm text-amber-700">
+                    <div className="flex items-center space-x-2">
+                      <span className="bg-amber-200 px-2 py-1 rounded text-xs">1</span>
+                      <span>Customer orders coffee through distributor (cafe, roastery, retailer)</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="bg-amber-200 px-2 py-1 rounded text-xs">2</span>
+                      <span>Distributor manages blockchain tokens behind the scenes</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="bg-amber-200 px-2 py-1 rounded text-xs">3</span>
+                      <span>Customer receives verified, traceable coffee</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="bg-amber-200 px-2 py-1 rounded text-xs">4</span>
+                      <span>Full traceability available through QR codes or receipts</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>
 
-            {/* Redeeming for Physical Coffee */}
-            <section id="redeem" className="web3-card">
+            {/* Understanding Distributor Role */}
+            <section id="distributor-role" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>📦</span>
-                <span>5. Redeeming for Physical Coffee</span>
+                <span>🤝</span>
+                <span>4. Understanding Distributor Role</span>
               </h2>
               
               <div className="space-y-6">
                 <p className="text-gray-700 leading-relaxed">
-                  Once you have coffee tokens in your wallet, you can redeem them for physical coffee delivery through the Distributor Portal.
+                  Distributors are the bridge between WAGA's blockchain-verified coffee inventory and end customers. 
+                  They handle all technical aspects while providing familiar customer service.
                 </p>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Distributor Types:</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-coffee-50 p-4 rounded-lg border-l-4 border-coffee-300">
+                      <h4 className="font-semibold text-coffee-800 mb-2">☕ Coffee Shops</h4>
+                      <ul className="text-sm text-coffee-700 space-y-1">
+                        <li>• Serve verified coffee to customers</li>
+                        <li>• Provide traceability information</li>
+                        <li>• Manage inventory tokens</li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-amber-50 p-4 rounded-lg border-l-4 border-amber-300">
+                      <h4 className="font-semibold text-amber-800 mb-2">🔥 Roasteries</h4>
+                      <ul className="text-sm text-amber-700 space-y-1">
+                        <li>• Roast and package verified coffee</li>
+                        <li>• Wholesale to other businesses</li>
+                        <li>• Maintain chain of custody</li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-emerald-50 p-4 rounded-lg border-l-4 border-emerald-300">
+                      <h4 className="font-semibold text-emerald-800 mb-2">🏪 Retailers</h4>
+                      <ul className="text-sm text-emerald-700 space-y-1">
+                        <li>• Sell packaged coffee to consumers</li>
+                        <li>• Provide authenticity guarantees</li>
+                        <li>• Handle customer inquiries</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h3 className="font-semibold text-blue-800 mb-3">🛠️ Distributor Responsibilities</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-700">
+                      <div>
+                        <h4 className="font-semibold mb-2">Blockchain Operations:</h4>
+                        <ul className="space-y-1">
+                          <li>• Manage crypto wallets and transactions</li>
+                          <li>• Redeem tokens for physical coffee</li>
+                          <li>• Track inventory on blockchain</li>
+                          <li>• Handle staking and yield mechanisms</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold mb-2">Customer Service:</h4>
+                        <ul className="space-y-1">
+                          <li>• Process traditional payments</li>
+                          <li>• Provide traceability information</li>
+                          <li>• Handle customer inquiries</li>
+                          <li>• Ensure quality standards</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Customer Experience */}
+            <section id="customer-experience" className="web3-card">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+                <span>�</span>
+                <span>5. Customer Experience</span>
+              </h2>
+              
+              <div className="space-y-6">
+                <p className="text-gray-700 leading-relaxed">
+                  From the customer perspective, purchasing WAGA coffee is as simple as buying any premium coffee, 
+                  with the added benefit of complete traceability and authenticity verification.
+                </p>
+
+                <div className="bg-emerald-50 border-l-4 border-emerald-400 p-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <div className="text-emerald-400 text-xl">✨</div>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-emerald-700">
+                        <strong>Seamless Experience:</strong> Customers enjoy all the benefits of blockchain verification 
+                        without needing to understand or interact with the technology directly.
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 <ol className="space-y-4">
                   <li className="flex items-start space-x-3">
                     <span className="flex-shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</span>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Visit Distributor Portal</h3>
-                      <p className="text-gray-700">Navigate to the Distributor Portal from the main navigation menu.</p>
+                      <h3 className="font-semibold text-gray-900">Visit Distributor Location</h3>
+                      <p className="text-gray-700">Go to any WAGA-certified coffee shop, roastery, or retailer.</p>
                     </div>
                   </li>
                   <li className="flex items-start space-x-3">
                     <span className="flex-shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Connect Your Wallet</h3>
-                      <p className="text-gray-700">Ensure your wallet is connected and contains coffee tokens.</p>
+                      <h3 className="font-semibold text-gray-900">Choose WAGA Coffee</h3>
+                      <p className="text-gray-700">Select from available verified Ethiopian coffee batches.</p>
                     </div>
                   </li>
                   <li className="flex items-start space-x-3">
                     <span className="flex-shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Select Batch for Redemption</h3>
-                      <p className="text-gray-700">Choose which coffee batch tokens you want to redeem from your available balance.</p>
+                      <h3 className="font-semibold text-gray-900">Pay Normally</h3>
+                      <p className="text-gray-700">Use credit card, cash, or any payment method accepted by the distributor.</p>
                     </div>
                   </li>
                   <li className="flex items-start space-x-3">
                     <span className="flex-shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-bold">4</span>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Specify Quantity</h3>
-                      <p className="text-gray-700">Enter the amount of coffee you want to redeem (1 token = 1 unit of coffee).</p>
+                      <h3 className="font-semibold text-gray-900">Receive Traceability Info</h3>
+                      <p className="text-gray-700">Get QR code or receipt with complete farm-to-cup traceability details.</p>
                     </div>
                   </li>
                   <li className="flex items-start space-x-3">
                     <span className="flex-shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-bold">5</span>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Provide Shipping Information</h3>
-                      <p className="text-gray-700">Enter your complete shipping address and contact details.</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start space-x-3">
-                    <span className="flex-shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-bold">6</span>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Submit Redemption Request</h3>
-                      <p className="text-gray-700">Confirm the transaction to burn your tokens and initiate the shipping process.</p>
+                      <h3 className="font-semibold text-gray-900">Enjoy Verified Coffee</h3>
+                      <p className="text-gray-700">Experience authentic Ethiopian coffee with guaranteed provenance.</p>
                     </div>
                   </li>
                 </ol>
 
-                <div className="bg-emerald-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-emerald-800 mb-2">🚚 Shipping & Delivery</h3>
-                  <ul className="text-sm text-emerald-700 space-y-1">
-                    <li>• Processing time: 1-2 business days</li>
-                    <li>• Shipping: 5-10 business days (depends on location)</li>
-                    <li>• Tracking information provided via email</li>
-                    <li>• Fresh roasted coffee delivered to your doorstep</li>
+                <div className="bg-amber-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-amber-800 mb-3">� Traceability Access</h3>
+                  <p className="text-sm text-amber-700 mb-3">
+                    Customers can access complete traceability information without any technical knowledge:
+                  </p>
+                  <ul className="text-sm text-amber-700 space-y-1">
+                    <li>• Scan QR code with smartphone camera</li>
+                    <li>• View farm location and farmer details</li>
+                    <li>• See processing method and roast profile</li>
+                    <li>• Access quality certifications</li>
+                    <li>• View blockchain verification status</li>
                   </ul>
                 </div>
               </div>
@@ -408,12 +445,19 @@ export default function GettingStartedGuide() {
               <Link href="/browse" className="web3-button-outline block text-center">
                 🌱 Browse Coffee Batches
               </Link>
-              <Link href="/distributor" className="web3-button-outline block text-center">
-                📦 Visit Distributor Portal
+              <Link href="/docs/guides/distributor" className="web3-button-outline block text-center">
+                🤝 Become a Distributor
               </Link>
               <Link href="/docs" className="web3-button-outline block text-center">
                 📚 View All Guides
               </Link>
+            </div>
+            
+            <div className="mt-6 bg-coffee-50 p-4 rounded-lg text-center">
+              <p className="text-coffee-700">
+                <strong>Looking for WAGA Coffee?</strong> Find certified distributors in your area through our 
+                <Link href="/browse" className="text-emerald-600 hover:text-emerald-800 font-semibold"> distributor network</Link>.
+              </p>
             </div>
           </div>
         </div>

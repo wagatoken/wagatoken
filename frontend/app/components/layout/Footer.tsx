@@ -33,7 +33,7 @@ export default function Footer() {
             </div>
             <div className="flex space-x-2">
               <div className="web3-badge web3-badge-success">
-                ✅ Base Sepolia
+                ✅ Base Testnet
               </div>
               <div className="web3-badge web3-badge-warning">
                 📦 IPFS Active
@@ -154,14 +154,6 @@ export default function Footer() {
             </div>
             
             <div className="flex items-center space-x-6 text-xs text-green-200">
-              <span className="flex items-center space-x-1">
-                <span>⚡</span>
-                <span>Powered by Chainlink</span>
-              </span>
-              <span className="flex items-center space-x-1">
-                <span>📡</span>
-                <span>Stored on IPFS</span>
-              </span>
               <Link href="/privacy" className="hover:text-amber-300 transition-colors">
                 Privacy Policy
               </Link>

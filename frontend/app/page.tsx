@@ -280,7 +280,7 @@ export default function HomePage() {
                 Decentralized verification of coffee inventory through Chainlink Functions
               </p>
               <div className="web3-badge web3-badge-info">
-                🌐 Base Sepolia Active
+                🌐 Base Testnet Active
               </div>
             </div>
 
