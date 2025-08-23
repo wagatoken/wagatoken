@@ -161,23 +161,23 @@ export default function WalletConnect() {
 
   if ((isConnected && address) || isDisconnecting) {
     return (
-      <div className="flex items-center space-x-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-300 rounded-xl px-4 py-2 shadow-sm">
-        <div className="flex items-center space-x-2">
+      <div className="wallet-component-container flex items-center space-x-2 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-300 rounded-xl px-3 py-1.5 shadow-sm">
+        <div className="flex items-center space-x-1">
           <div className={`w-2 h-2 rounded-full shadow-sm ${isDisconnecting ? 'bg-red-500 animate-pulse' : 'bg-green-500 animate-pulse'}`}></div>
-          <div className="text-sm font-mono font-medium text-gray-700">
+          <div className="wallet-address-display font-mono font-medium text-gray-700">
             {isDisconnecting ? 'Disconnecting...' : formatAddress(address!)}
           </div>
         </div>
         <button
           onClick={disconnectWallet}
           disabled={isDisconnecting}
-          className={`text-sm font-bold transition-all duration-200 px-4 py-2 rounded-lg border-2 shadow-md ${
+          className={`wallet-connected-button font-bold transition-all duration-200 px-2 py-1 rounded-lg border-2 shadow-md ${
             isDisconnecting 
               ? 'bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed'
               : 'bg-red-500 text-white hover:bg-red-600 border-red-500 hover:border-red-600 hover:scale-105 active:scale-95'
           }`}
         >
-          {isDisconnecting ? '⏳ Disconnecting...' : '🔓 Disconnect'}
+          {isDisconnecting ? '⏳' : '🔓'}
         </button>
       </div>
     );

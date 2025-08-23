@@ -67,9 +67,9 @@ export default function Navbar() {
                 </div>
               </div>
             </Link>
-            <div className="web3-blockchain-status ml-3 hidden sm:flex">
-              <div className="bg-blue-500/20 border border-blue-400/40 px-3 py-1 rounded-full backdrop-blur-sm">
-                <span className="text-blue-200 font-medium text-sm">🌐 Live on Base Testnet</span>
+            <div className="web3-blockchain-status ml-2 hidden lg:flex">
+              <div className="bg-blue-500/20 border border-blue-400/40 px-2 py-1 rounded-md backdrop-blur-sm">
+                <span className="text-blue-200 font-medium text-xs">🌐 Base Testnet</span>
               </div>
             </div>
           </div>
@@ -94,9 +94,10 @@ export default function Navbar() {
           </div>
 
           {/* Wallet Connection */}
-          <div className="hidden md:flex items-center space-x-3">
-            {/* Wallet Connect Component */}
-            <WalletConnect />
+          <div className="hidden md:flex items-center">
+            <div className="max-w-xs shrink-0">
+              <WalletConnect />
+            </div>
           </div>
 
           {/* Mobile menu button */}

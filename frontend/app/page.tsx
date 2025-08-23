@@ -113,12 +113,11 @@ export default function HomePage() {
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 web3-hero-title">
               WAGA 
             </h1>
-            <p className="text-lg sm:text-xl md:text-2xl mb-6 sm:mb-8 opacity-90 text-white font-semibold">
+            <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl mb-6 sm:mb-8 opacity-90 web3-hero-subtitle-animated">
               Onchain Coffee - OffChain Impact
             </p>
-            <p className="text-base sm:text-lg mb-8 sm:mb-10 opacity-80 max-w-3xl mx-auto text-white">
-                Fair and Transparent farm to cup with
-              Blockchain Technology, Chainlink oracles, and IPFS Storage.
+            <p className="text-lg sm:text-xl md:text-2xl mb-8 sm:mb-10 opacity-80 max-w-3xl mx-auto text-white">
+                Fair and Transparent farm to cup 
             </p>
             
             <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
