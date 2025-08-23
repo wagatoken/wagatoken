@@ -1,130 +1,112 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import MetaMaskSDK from '@metamask/sdk';
 
 export default function WalletConnect() {
   const [isConnected, setIsConnected] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [sdk, setSdk] = useState<MetaMaskSDK | null>(null);
 
-  // Check if wallet is already connected
+  // Initialize MetaMask SDK
   useEffect(() => {
-    checkConnection();
+    const initSDK = async () => {
+      try {
+        const MMSDK = new MetaMaskSDK({
+          dappMetadata: {
+            name: "WAGA Coffee Platform",
+            url: typeof window !== 'undefined' ? window.location.host : '',
+          },
+          preferDesktop: false,
+        });
 
-    // Listen for account changes
-    if (typeof window !== "undefined" && window.ethereum) {
-      const handleAccountsChanged = (accounts: string[]) => {
-        console.log('Accounts changed:', accounts);
+        setSdk(MMSDK);
         
-        // Check if user manually requested disconnect
-        const disconnectRequested = localStorage.getItem('wallet_disconnect_requested');
-        if (disconnectRequested === 'true') {
-          // User requested disconnect, ignore account changes
-          return;
-        }
+        // Check if already connected
+        await checkConnection(MMSDK);
+      } catch (error) {
+        console.error("Failed to initialize MetaMask SDK:", error);
+      }
+    };
 
-        if (accounts.length === 0) {
-          // User disconnected their wallet from MetaMask
-          setIsConnected(false);
-          setAddress(null);
-        } else {
-          // User switched accounts
-          setAddress(accounts[0]);
-          setIsConnected(true);
-        }
-      };
+    initSDK();
 
-      const handleChainChanged = () => {
-        // Reload the page when network changes to avoid state issues
-        window.location.reload();
-      };
-
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-      window.ethereum.on('chainChanged', handleChainChanged);
-
-      // Cleanup listeners
-      return () => {
-        if (window.ethereum.removeListener) {
-          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-          window.ethereum.removeListener('chainChanged', handleChainChanged);
-        }
-      };
-    }
+    // Cleanup on unmount
+    return () => {
+      if (sdk) {
+        sdk.terminate();
+      }
+    };
   }, []);
 
-  const checkConnection = async () => {
-    if (typeof window !== "undefined" && window.ethereum) {
-      try {
-        // Check if user has requested disconnect
-        const disconnectRequested = localStorage.getItem('wallet_disconnect_requested');
-        if (disconnectRequested === 'true') {
-          // Clear the flag and don't auto-connect
-          localStorage.removeItem('wallet_disconnect_requested');
-          return;
-        }
+  const checkConnection = async (sdkInstance: MetaMaskSDK) => {
+    try {
+      // Check if disconnect was requested
+      const disconnectRequested = localStorage.getItem('wallet_disconnect_requested');
+      if (disconnectRequested === 'true') {
+        localStorage.removeItem('wallet_disconnect_requested');
+        return;
+      }
 
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        if (accounts.length > 0) {
+      const provider = sdkInstance.getProvider();
+      if (provider) {
+        const accounts = await provider.request({ method: 'eth_accounts' }) as string[];
+        
+        if (accounts && accounts.length > 0) {
           setIsConnected(true);
           setAddress(accounts[0]);
         }
-      } catch (error) {
-        console.error("Error checking wallet connection:", error);
       }
+    } catch (error) {
+      console.error("Error checking connection:", error);
     }
   };
 
   const connectWallet = async () => {
-    if (typeof window === "undefined" || !window.ethereum) {
-      alert("Please install MetaMask or another Web3 wallet!");
+    if (!sdk) {
+      alert("MetaMask SDK not initialized");
       return;
     }
 
-    setIsConnecting(true);
-    
     try {
-      // Request account access
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts',
-      });
+      setIsConnecting(true);
+      
+      const provider = sdk.getProvider();
+      if (!provider) {
+        throw new Error("Provider not available");
+      }
 
-      if (accounts.length > 0) {
+      // Request account access
+      const accounts = await provider.request({
+        method: 'eth_requestAccounts',
+      }) as string[];
+
+      if (accounts && accounts.length > 0) {
         setIsConnected(true);
         setAddress(accounts[0]);
         
-        // Clear any disconnect flag since user is now connecting
+        // Clear any previous disconnect flags
         localStorage.removeItem('wallet_disconnect_requested');
-
-        // Switch to Base Sepolia network
-        try {
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0x14A34' }], // Base Sepolia chainId
-          });
-        } catch (switchError: any) {
-          // If the network doesn't exist, add it
-          if (switchError.code === 4902) {
-            await window.ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: '0x14A34',
-                chainName: 'Base Sepolia',
-                nativeCurrency: {
-                  name: 'ETH',
-                  symbol: 'ETH',
-                  decimals: 18,
-                },
-                rpcUrls: ['https://sepolia.base.org'],
-                blockExplorerUrls: ['https://sepolia.basescan.org'],
-              }],
-            });
-          }
-        }
+      } else {
+        throw new Error("No accounts returned");
       }
-    } catch (error) {
-      console.error("Error connecting wallet:", error);
-      alert("Failed to connect wallet. Please try again.");
+
+    } catch (error: any) {
+      console.error("Failed to connect wallet:", error);
+      
+      let errorMessage = "Failed to connect wallet. Please try again.";
+      
+      if (error?.code === 4001) {
+        errorMessage = "Connection rejected by user.";
+      } else if (error?.code === -32002) {
+        errorMessage = "Connection request already pending. Check MetaMask.";
+      } else if (error?.message) {
+        errorMessage = `Connection failed: ${error.message}`;
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsConnecting(false);
     }
@@ -133,6 +115,11 @@ export default function WalletConnect() {
   const disconnectWallet = async () => {
     try {
       setIsDisconnecting(true);
+      
+      // Disconnect using SDK if available
+      if (sdk) {
+        sdk.terminate();
+      }
       
       // Clear local state immediately
       setIsConnected(false);
@@ -186,13 +173,18 @@ export default function WalletConnect() {
   return (
     <button
       onClick={connectWallet}
-      disabled={isConnecting}
+      disabled={isConnecting || !sdk}
       className="web3-gradient-button-secondary text-sm px-5 py-2.5 font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-300"
     >
       {isConnecting ? (
         <span className="flex items-center space-x-2">
           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           <span>Connecting...</span>
+        </span>
+      ) : !sdk ? (
+        <span className="flex items-center space-x-2">
+          <span>⏳</span>
+          <span>Initializing...</span>
         </span>
       ) : (
         <span className="flex items-center space-x-2">
