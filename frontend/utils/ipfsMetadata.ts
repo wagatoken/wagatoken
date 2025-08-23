@@ -1,4 +1,3 @@
-import { pinata } from "./config";
 import QRCode from 'qrcode';
 
 // Coffee Batch Metadata Interface
@@ -69,7 +68,7 @@ export function generateCoffeeMetadata(batchData: BatchCreationData): CoffeeBatc
 }
 
 /**
- * Upload metadata to IPFS using Pinata and return URI and hash
+ * Upload metadata to IPFS via API route (client-safe)
  */
 export async function uploadMetadataToIPFS(metadata: CoffeeBatchMetadata): Promise<{
   uri: string;
@@ -80,44 +79,38 @@ export async function uploadMetadataToIPFS(metadata: CoffeeBatchMetadata): Promi
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`Uploading metadata to IPFS via Pinata (attempt ${attempt}/${maxRetries})...`);
+      console.log(`Uploading metadata to IPFS via API (attempt ${attempt}/${maxRetries})...`);
 
-      // Test Pinata connection first
-      try {
-        await pinata.testAuthentication();
-        console.log("✅ Pinata authentication verified");
-      } catch (authError) {
-        console.error("❌ Pinata authentication failed:", authError);
-        throw new Error("Pinata authentication failed. Please check your API credentials.");
-      }
-
-      // Upload JSON metadata to Pinata with retry logic
-      const upload = await pinata.upload.json(metadata, {
-        metadata: {
-          name: `coffee-metadata-${Date.now()}`,
-          keyvalues: {
-            type: 'coffee-batch-metadata',
-            uploadedAt: new Date().toISOString()
-          }
-        }
+      // Use the API route instead of direct Pinata SDK access
+      const response = await fetch('/api/upload-metadata', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ metadata })
       });
 
-      const ipfsHash = upload.cid; // Use 'cid' property for content identifier
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown API error' }));
+        throw new Error(`API Error ${response.status}: ${errorData.error || response.statusText}`);
+      }
 
-      if (!ipfsHash) {
-        throw new Error("Upload succeeded but no CID returned from Pinata");
+      const result = await response.json();
+      
+      if (!result.success || !result.cid) {
+        throw new Error("Upload succeeded but no CID returned from API");
       }
 
       // IPFS URI format: ipfs://{hash}
-      const ipfsUri = `ipfs://${ipfsHash}`;
+      const ipfsUri = `ipfs://${result.cid}`;
 
       console.log("✅ Metadata uploaded to IPFS successfully");
       console.log("   IPFS URI:", ipfsUri);
-      console.log("   Metadata Hash:", ipfsHash);
+      console.log("   Metadata Hash:", result.cid);
 
       return {
         uri: ipfsUri,
-        metadataHash: ipfsHash
+        metadataHash: result.cid
       };
 
     } catch (error) {
@@ -137,7 +130,67 @@ export async function uploadMetadataToIPFS(metadata: CoffeeBatchMetadata): Promi
 }
 
 /**
- * Complete batch creation workflow with IPFS + smart contract integration
+ * Update IPFS metadata with the actual batch ID from blockchain
+ */
+export async function updateIPFSMetadataWithBatchId(
+  originalCid: string, 
+  batchId: string, 
+  metadata: CoffeeBatchMetadata
+): Promise<{
+  newCid: string;
+  newUri: string;
+}> {
+  try {
+    console.log(`Updating IPFS metadata with batch ID ${batchId}...`);
+
+    // Update metadata with the actual batch ID
+    const updatedMetadata = {
+      ...metadata,
+      name: `${metadata.name} - Batch #${batchId}`,
+      properties: {
+        ...metadata.properties,
+        batchId: batchId,
+        blockchainId: batchId
+      }
+    };
+
+    // Upload updated metadata with proper filename
+    const response = await fetch('/api/upload-metadata', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        metadata: updatedMetadata,
+        filename: `coffee-batch-${batchId}`,
+        batchId: batchId
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown API error' }));
+      throw new Error(`Failed to update IPFS metadata: ${errorData.error || response.statusText}`);
+    }
+
+    const result = await response.json();
+    
+    if (!result.success || !result.cid) {
+      throw new Error("Update succeeded but no CID returned from API");
+    }
+
+    return {
+      newCid: result.cid,
+      newUri: `ipfs://${result.cid}`
+    };
+
+  } catch (error) {
+    console.error("Error updating IPFS metadata with batch ID:", error);
+    throw error;
+  }
+}
+
+/**
+ * Complete batch creation workflow with IPFS + smart contract integration (Blockchain-First)
  */
 export async function createBatchWithIPFS(
   batchData: BatchCreationData,
@@ -149,21 +202,30 @@ export async function createBatchWithIPFS(
   transactionHash: string;
 }> {
   try {
-    console.log("Starting batch creation workflow...");
+    console.log("🚀 Starting blockchain-first batch creation workflow...");
 
     // Step 1: Generate standardized metadata
     const metadata = generateCoffeeMetadata(batchData);
-    console.log("Generated metadata:", metadata);
+    console.log("✅ Generated metadata:", metadata);
 
-    // Step 2: Upload metadata to IPFS
+    // Step 2: Upload metadata to IPFS with temporary filename
+    console.log("📤 Uploading metadata to IPFS...");
     const { uri: ipfsUri, metadataHash } = await uploadMetadataToIPFS(metadata);
+    console.log("✅ Metadata uploaded to IPFS:", ipfsUri);
 
     // Step 3: Prepare smart contract parameters
     const productionDateTimestamp = Math.floor(batchData.productionDate.getTime() / 1000);
     const expiryDateTimestamp = Math.floor(batchData.expiryDate.getTime() / 1000);
     const priceInWei = (parseFloat(batchData.pricePerUnit) * 1e18).toString();
 
-    console.log("Calling smart contract createBatch...");
+    console.log("🔗 Calling smart contract createBatch...");
+    console.log("   IPFS URI:", ipfsUri);
+    console.log("   Production Date:", new Date(productionDateTimestamp * 1000).toISOString());
+    console.log("   Expiry Date:", new Date(expiryDateTimestamp * 1000).toISOString());
+    console.log("   Quantity:", batchData.quantity);
+    console.log("   Price (wei):", priceInWei);
+    console.log("   Packaging:", batchData.packagingInfo);
+    console.log("   Metadata Hash:", metadataHash);
 
     // Step 4: Call smart contract createBatch
     const tx = await createBatchFunction(
@@ -175,6 +237,8 @@ export async function createBatchWithIPFS(
       batchData.packagingInfo,
       metadataHash
     );
+
+    console.log("⏳ Waiting for transaction confirmation...");
 
     // Step 5: Wait for transaction and extract batchId
     const receipt = await tx.wait();
@@ -188,21 +252,31 @@ export async function createBatchWithIPFS(
       throw new Error("BatchCreated event not found in transaction receipt");
     }
 
-    const batchId = batchCreatedEvent.args.batchId.toString();
+    const blockchainBatchId = batchCreatedEvent.args.batchId.toString();
 
-    console.log("Batch created successfully!");
-    console.log("Batch ID:", batchId);
-    console.log("Transaction Hash:", receipt.transactionHash);
+    console.log("🎉 Batch created successfully on blockchain!");
+    console.log("   Blockchain Batch ID:", blockchainBatchId);
+    console.log("   Transaction Hash:", receipt.transactionHash);
+
+    // Step 6: Update IPFS metadata with the actual batch ID
+    try {
+      console.log("🔄 Updating IPFS metadata with blockchain batch ID...");
+      await updateIPFSMetadataWithBatchId(metadataHash, blockchainBatchId, metadata);
+      console.log("✅ IPFS metadata updated with batch ID");
+    } catch (updateError) {
+      console.warn("⚠️ Failed to update IPFS metadata filename, but batch creation succeeded:", updateError);
+      // This is not critical - the batch still exists on blockchain
+    }
 
     return {
-      batchId,
+      batchId: blockchainBatchId,
       ipfsUri,
       metadataHash,
       transactionHash: receipt.transactionHash
     };
 
   } catch (error) {
-    console.error("Error in batch creation workflow:", error);
+    console.error("❌ Error in blockchain-first batch creation workflow:", error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     throw new Error(`Batch creation failed: ${errorMessage}`);
   }
