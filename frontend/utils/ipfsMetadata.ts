@@ -75,29 +75,65 @@ export async function uploadMetadataToIPFS(metadata: CoffeeBatchMetadata): Promi
   uri: string;
   metadataHash: string;
 }> {
-  try {
-    console.log("Uploading metadata to IPFS via Pinata...");
+  const maxRetries = 3;
+  let lastError: Error;
 
-    // Upload JSON metadata to Pinata
-    const upload = await pinata.upload.json(metadata);
-    const ipfsHash = upload.cid; // Use 'cid' property for content identifier
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Uploading metadata to IPFS via Pinata (attempt ${attempt}/${maxRetries})...`);
 
-    // IPFS URI format: ipfs://{hash}
-    const ipfsUri = `ipfs://${ipfsHash}`;
+      // Test Pinata connection first
+      try {
+        await pinata.testAuthentication();
+        console.log("✅ Pinata authentication verified");
+      } catch (authError) {
+        console.error("❌ Pinata authentication failed:", authError);
+        throw new Error("Pinata authentication failed. Please check your API credentials.");
+      }
 
-    console.log("Metadata uploaded to IPFS");
-    console.log("IPFS URI:", ipfsUri);
-    console.log("Metadata Hash:", ipfsHash);
+      // Upload JSON metadata to Pinata with retry logic
+      const upload = await pinata.upload.json(metadata, {
+        metadata: {
+          name: `coffee-metadata-${Date.now()}`,
+          keyvalues: {
+            type: 'coffee-batch-metadata',
+            uploadedAt: new Date().toISOString()
+          }
+        }
+      });
 
-    return {
-      uri: ipfsUri,
-      metadataHash: ipfsHash
-    };
-  } catch (error) {
-    console.error("Error uploading to IPFS:", error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    throw new Error(`Failed to upload metadata to IPFS: ${errorMessage}`);
+      const ipfsHash = upload.cid; // Use 'cid' property for content identifier
+
+      if (!ipfsHash) {
+        throw new Error("Upload succeeded but no CID returned from Pinata");
+      }
+
+      // IPFS URI format: ipfs://{hash}
+      const ipfsUri = `ipfs://${ipfsHash}`;
+
+      console.log("✅ Metadata uploaded to IPFS successfully");
+      console.log("   IPFS URI:", ipfsUri);
+      console.log("   Metadata Hash:", ipfsHash);
+
+      return {
+        uri: ipfsUri,
+        metadataHash: ipfsHash
+      };
+
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.error(`❌ Upload attempt ${attempt}/${maxRetries} failed:`, lastError.message);
+      
+      if (attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
+        console.log(`   Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
   }
+
+  console.error("All IPFS upload attempts failed");
+  throw new Error(`Failed to upload metadata to IPFS: ${lastError!.message}`);
 }
 
 /**

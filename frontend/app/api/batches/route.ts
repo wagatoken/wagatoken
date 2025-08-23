@@ -67,20 +67,49 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date().toISOString()
     };
 
+    // Test Pinata connection first
+    try {
+      console.log("Testing Pinata connection...");
+      const testResult = await pinata.testAuthentication();
+      console.log("✅ Pinata authentication successful:", testResult);
+    } catch (authError) {
+      console.error("❌ Pinata authentication failed:", authError);
+      return NextResponse.json(
+        { error: "IPFS service authentication failed. Please check configuration." },
+        { status: 503 }
+      );
+    }
+
     // Upload to Pinata as JSON - this automatically pins the content
     console.log("Uploading and pinning Ethiopian coffee batch data to IPFS via Pinata...");
-    const upload = await pinata.upload.json(completeBatch, {
-      metadata: {
-        name: `ethiopian-coffee-batch-${batchData.batchId}`,
-        keyvalues: {
-          batchId: batchData.batchId.toString(),
-          packaging: batchData.packaging,
-          type: 'ethiopian-coffee-batch',
-          farmName: batchData.batchDetails.farmName,
-          location: batchData.batchDetails.location
+    let upload;
+    
+    try {
+      upload = await pinata.upload.json(completeBatch, {
+        metadata: {
+          name: `ethiopian-coffee-batch-${batchData.batchId}`,
+          keyvalues: {
+            batchId: batchData.batchId.toString(),
+            packaging: batchData.packaging,
+            type: 'ethiopian-coffee-batch',
+            farmName: batchData.batchDetails.farmName,
+            location: batchData.batchDetails.location,
+            uploadedAt: new Date().toISOString()
+          }
         }
+      });
+
+      if (!upload || !upload.cid) {
+        throw new Error("Upload completed but no CID returned");
       }
-    });
+    } catch (uploadError) {
+      console.error("❌ IPFS upload failed:", uploadError);
+      const errorMessage = uploadError instanceof Error ? uploadError.message : 'Unknown upload error';
+      return NextResponse.json(
+        { error: `Failed to upload to IPFS: ${errorMessage}` },
+        { status: 502 }
+      );
+    }
 
     // Add IPFS URI to the batch data
     completeBatch.ipfsUri = `ipfs://${upload.cid}`;
@@ -101,7 +130,7 @@ export async function POST(request: NextRequest) {
       expiryDate: Math.floor(new Date(batchData.batchDetails.expiryDate).getTime() / 1000),
       pricePerUnit: batchData.price, // Convert to wei in production
       packagingInfo: batchData.packaging,
-      metadataHash: batchData.metadataHash
+      metadataHash: upload.cid
     };
 
     console.log(`📝 Smart contract creation data prepared:`, smartContractData);
@@ -116,8 +145,14 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
   } catch (error) {
     console.error("Error creating and pinning Ethiopian coffee batch:", error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    
     return NextResponse.json(
-      { error: "Failed to create batch" },
+      { 
+        error: "Failed to create batch", 
+        details: errorMessage,
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     );
   }
