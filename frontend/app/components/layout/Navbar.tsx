@@ -61,15 +61,15 @@ export default function Navbar() {
                 />
               </div>
               <div className="flex items-center space-x-1 sm:space-x-2">
-                <span className="text-lg font-bold text-white tracking-wide sm:text-2xl">WAGA</span>
+                <span className="text-lg font-bold web3-navbar-brand tracking-wide sm:text-2xl">WAGA</span>
                 <div className="hidden sm:flex flex-col">
-                  <span className="text-amber-200 font-semibold text-sm tracking-wide">Coffee</span>
+                  <span className="web3-navbar-subtitle font-semibold text-sm tracking-wide">Coffee</span>
                 </div>
               </div>
             </Link>
             <div className="web3-blockchain-status ml-2 hidden lg:flex">
-              <div className="bg-blue-500/20 border border-blue-400/40 px-2 py-1 rounded-md backdrop-blur-sm">
-                <span className="text-blue-200 font-medium text-xs">🌐 Base Testnet</span>
+              <div className="web3-blockchain-badge px-2 py-1 rounded-md backdrop-blur-sm">
+                <span className="font-medium">🌐 Base Testnet</span>
               </div>
             </div>
           </div>
@@ -83,8 +83,8 @@ export default function Navbar() {
                   href={item.href}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center whitespace-nowrap min-w-fit ${
                     ('active' in item && item.active) || pathname === item.href
-                      ? 'bg-amber-500/20 text-amber-200 shadow-sm border border-amber-400/30'
-                      : 'text-green-100 hover:text-amber-300 hover:bg-white/10 border border-transparent'
+                      ? 'web3-nav-link-active'
+                      : 'web3-nav-link'
                   }`}
                 >
                   {item.label}
@@ -104,7 +104,7 @@ export default function Navbar() {
           <div className="md:hidden">
             <button
               onClick={toggleMobileMenu}
-              className="web3-touch-target text-green-100 hover:text-amber-300 hover:bg-white/10 transition-all duration-300"
+              className="web3-touch-target web3-nav-link transition-all duration-300"
             >
               <svg className="h-5 w-5 sm:h-6 sm:w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                 {isMobileMenuOpen ? (
@@ -127,8 +127,8 @@ export default function Navbar() {
                   href={item.href}
                   className={`web3-touch-target justify-start px-3 py-3 rounded-lg text-sm font-medium transition-all duration-300 sm:text-base ${
                     ('active' in item && item.active) || pathname === item.href
-                      ? 'bg-amber-500/20 text-amber-200 border border-amber-400/30'
-                      : 'text-green-100 hover:text-amber-300 hover:bg-white/10'
+                      ? 'web3-mobile-nav-link-active'
+                      : 'web3-mobile-nav-link'
                   }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
@@ -138,7 +138,7 @@ export default function Navbar() {
               
               {/* Mobile Wallet Section */}
               <div className="px-3 py-3 border-t border-emerald-700/50 mt-4">
-                <div className="text-xs font-medium text-white mb-2 sm:text-sm">Wallet Connection</div>
+                <div className="text-xs font-medium web3-navbar-subtitle mb-2 sm:text-sm">Wallet Connection</div>
                 <div className="mb-2">
                   <WalletConnect />
                 </div>

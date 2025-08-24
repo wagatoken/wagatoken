@@ -5,6 +5,12 @@
 /* Import WAGA Custom Icons */
 @import './components/icons/waga-icons.css';
 
+/* Import modern Web3 fonts */
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
 @layer base {
   body {
     background: linear-gradient(135deg, #fef7ec 0%, #ecfdf5 50%, #ecfccb 100%);
@@ -167,6 +173,365 @@
     font-weight: 800;
     text-shadow: 0 4px 8px rgba(6, 95, 70, 0.3);
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  }
+
+  /* Web3 Futuristic Hero Title - Brand-aligned holographic effect */
+  .web3-hero-title-futuristic {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    background: linear-gradient(
+      45deg,
+      #047857 0%,    /* WAGA emerald */
+      #d97706 25%,   /* WAGA amber/coffee */
+      #059669 50%,   /* WAGA teal */
+      #10b981 75%,   /* WAGA light emerald */
+      #047857 100%   /* Back to emerald */
+    );
+    background-size: 400% 400%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: holographic-shift 3s ease-in-out infinite;
+    text-shadow: 
+      0 0 10px rgba(4, 120, 87, 0.4),
+      0 0 20px rgba(217, 119, 6, 0.3),
+      0 0 30px rgba(5, 150, 105, 0.2);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  @keyframes holographic-shift {
+    0%, 100% { background-position: 0% 50%; }
+    25% { background-position: 100% 50%; }
+    50% { background-position: 0% 100%; }
+    75% { background-position: 100% 0%; }
+  }
+
+  /* Web3 Cyberpunk Title - Coffee-inspired green matrix */
+  .web3-hero-title-cyberpunk {
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    color: #059669; /* WAGA brand green instead of electric green */
+    text-shadow: 
+      0 0 5px #059669,
+      0 0 10px #047857,
+      0 0 15px #065f46,
+      0 0 20px #059669,
+      0 0 35px #10b981,
+      0 0 40px #d97706; /* Coffee accent */
+    animation: neon-flicker 2s ease-in-out infinite alternate;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  @keyframes neon-flicker {
+    0%, 18%, 22%, 25%, 53%, 57%, 100% {
+      text-shadow: 
+        0 0 5px #059669,
+        0 0 10px #047857,
+        0 0 15px #065f46,
+        0 0 20px #059669,
+        0 0 35px #10b981,
+        0 0 40px #d97706;
+    }
+    20%, 24%, 55% {
+      text-shadow: 
+        0 0 3px #047857,
+        0 0 8px #d97706;
+    }
+  }
+
+  /* Web3 Glitch Title - Coffee bean inspired earth tones */
+  .web3-hero-title-glitch {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800;
+    color: #fef7ec; /* Warm cream base */
+    position: relative;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .web3-hero-title-glitch::before,
+  .web3-hero-title-glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .web3-hero-title-glitch::before {
+    animation: glitch-1 0.5s infinite;
+    color: #d97706; /* Coffee brown */
+    z-index: -1;
+  }
+
+  .web3-hero-title-glitch::after {
+    animation: glitch-2 0.5s infinite;
+    color: #047857; /* WAGA emerald */
+    z-index: -2;
+  }
+
+  @keyframes glitch-1 {
+    0%, 14%, 15%, 49%, 50%, 99%, 100% { transform: translate(0); }
+    15% { transform: translate(-2px, 2px); }
+    50% { transform: translate(2px, -2px); }
+  }
+
+  @keyframes glitch-2 {
+    0%, 20%, 21%, 62%, 63%, 99%, 100% { transform: translate(0); }
+    21% { transform: translate(2px, -2px); }
+    63% { transform: translate(-2px, 2px); }
+  }
+
+  /* Web3 Modern Title - WAGA brand gradient with earth tones */
+  .web3-hero-title-modern {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    background: linear-gradient(
+      135deg,
+      #065f46 0%,    /* Deep forest green */
+      #047857 15%,   /* WAGA primary emerald */
+      #059669 30%,   /* Bright emerald */
+      #10b981 45%,   /* Light emerald */
+      #d97706 60%,   /* Coffee amber */
+      #f59e0b 75%,   /* Golden amber */
+      #92400e 90%,   /* Deep coffee brown */
+      #065f46 100%   /* Back to forest green */
+    );
+    background-size: 300% 300%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradient-wave 4s ease-in-out infinite;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    position: relative;
+  }
+
+  .web3-hero-title-modern::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(
+      90deg, 
+      transparent, 
+      #d97706, /* Coffee amber */
+      #047857, /* WAGA emerald */
+      #d97706, /* Coffee amber */
+      transparent
+    );
+    animation: underline-glow 2s ease-in-out infinite;
+    border-radius: 2px;
+  }
+
+  @keyframes gradient-wave {
+    0%, 100% { background-position: 0% 50%; }
+    25% { background-position: 100% 25%; }
+    50% { background-position: 0% 75%; }
+    75% { background-position: 100% 50%; }
+  }
+
+  @keyframes underline-glow {
+    0%, 100% { 
+      opacity: 0.4; 
+      transform: scaleX(0.8);
+      box-shadow: 0 0 8px rgba(217, 119, 6, 0.3);
+    }
+    50% { 
+      opacity: 1; 
+      transform: scaleX(1.2);
+      box-shadow: 0 0 16px rgba(4, 120, 87, 0.5);
+    }
+  }
+
+  /* Web3 Subtitle styles with brand colors */
+  .web3-subtitle-futuristic {
+    font-family: 'Orbitron', monospace;
+    font-weight: 500;
+    background: linear-gradient(90deg, #047857, #10b981, #d97706);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 10px rgba(4, 120, 87, 0.2);
+    letter-spacing: 0.1em;
+  }
+
+  .web3-subtitle-cyberpunk {
+    font-family: 'Space Mono', monospace;
+    font-weight: 400;
+    color: rgba(5, 150, 105, 0.8); /* WAGA emerald with transparency */
+    text-shadow: 0 0 5px rgba(217, 119, 6, 0.3); /* Coffee glow */
+    letter-spacing: 0.05em;
+  }
+
+  .web3-subtitle-glitch {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    color: rgba(254, 247, 236, 0.9); /* Warm cream */
+    letter-spacing: 0.03em;
+    text-shadow: 0 1px 2px rgba(147, 64, 14, 0.3); /* Subtle coffee shadow */
+  }
+
+  .web3-subtitle-modern {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 500;
+    background: linear-gradient(
+      90deg, 
+      #047857 0%,   /* WAGA emerald start */
+      #059669 30%,  /* Bright emerald */
+      #d97706 70%,  /* Coffee amber */
+      #92400e 100%  /* Deep coffee brown */
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 0.05em;
+    animation: subtle-gradient-shift 3s ease-in-out infinite;
+  }
+
+  @keyframes subtle-gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* Navbar Brand Typography - Harmonized with Hero */
+  .web3-navbar-brand {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    background: linear-gradient(
+      90deg,
+      #fbbf24 0%,   /* Golden amber */
+      #f59e0b 30%,  /* Bright amber */
+      #d97706 70%,  /* Coffee amber */
+      #92400e 100%  /* Deep coffee */
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 0.08em;
+    text-shadow: 0 2px 4px rgba(217, 119, 6, 0.3);
+    animation: navbar-brand-glow 3s ease-in-out infinite;
+  }
+
+  @keyframes navbar-brand-glow {
+    0%, 100% { 
+      filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.4));
+    }
+    50% { 
+      filter: drop-shadow(0 0 12px rgba(217, 119, 6, 0.6));
+    }
+  }
+
+  .web3-navbar-subtitle {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 500;
+    background: linear-gradient(90deg, #10b981, #059669);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 0.05em;
+  }
+
+  /* Enhanced Navigation Links - Web3 Style */
+  .web3-nav-link {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 500;
+    color: rgba(254, 247, 236, 0.9); /* Warm cream */
+    letter-spacing: 0.03em;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .web3-nav-link::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+    transition: width 0.3s ease;
+  }
+
+  .web3-nav-link:hover {
+    color: #fbbf24; /* Golden amber on hover */
+    text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .web3-nav-link:hover::before {
+    width: 100%;
+  }
+
+  .web3-nav-link-active {
+    background: linear-gradient(
+      135deg,
+      rgba(251, 191, 36, 0.2) 0%,
+      rgba(217, 119, 6, 0.1) 100%
+    );
+    color: #fbbf24; /* Golden amber */
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+    box-shadow: 
+      0 4px 8px rgba(217, 119, 6, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .web3-nav-link-active::before {
+    width: 100%;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  }
+
+  /* Mobile Navigation Enhancements with Web3 Typography */
+  .web3-mobile-nav-link {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 500;
+    color: rgba(254, 247, 236, 0.9);
+    letter-spacing: 0.03em;
+    transition: all 0.3s ease;
+  }
+
+  .web3-mobile-nav-link:hover {
+    color: #fbbf24;
+    background: linear-gradient(
+      135deg,
+      rgba(251, 191, 36, 0.15) 0%,
+      rgba(217, 119, 6, 0.1) 100%
+    );
+    text-shadow: 0 0 6px rgba(251, 191, 36, 0.3);
+  }
+
+  .web3-mobile-nav-link-active {
+    background: linear-gradient(
+      135deg,
+      rgba(251, 191, 36, 0.25) 0%,
+      rgba(217, 119, 6, 0.15) 100%
+    );
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+  }
+
+  /* Blockchain Status Badge Typography */
+  .web3-blockchain-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 0.75rem;
+    background: linear-gradient(
+      135deg,
+      rgba(59, 130, 246, 0.2) 0%,
+      rgba(37, 99, 235, 0.1) 100%
+    );
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    color: #93c5fd; /* Light blue */
+    text-shadow: 0 0 6px rgba(59, 130, 246, 0.3);
+    letter-spacing: 0.05em;
   }
 
   /* Fallback for browsers that don't support background-clip */
