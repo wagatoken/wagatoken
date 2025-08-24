@@ -61,7 +61,7 @@ export async function GET() {
               ipfsUri: `ipfs://${file.cid}`,
               verification: {
                 lastVerified: file.keyvalues?.uploadedAt || new Date().toISOString(),
-                verificationStatus: 'verified' as const,
+                verificationStatus: 'pending' as const,
                 inventoryActual: batchData.properties.batchSize || 100
               },
               batchDetails: {
@@ -92,7 +92,7 @@ export async function GET() {
               ipfsUri: `ipfs://${file.cid}`,
               verification: {
                 lastVerified: new Date().toISOString(),
-                verificationStatus: 'verified' as const,
+                verificationStatus: 'pending' as const,
                 inventoryActual: 100
               },
               batchDetails: {

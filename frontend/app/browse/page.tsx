@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { CoffeeBatch } from "@/utils/types";
-import { MdCoffee, MdVerified, MdShoppingCart, MdHourglassTop } from "react-icons/md";
+import { MdCoffee, MdVerified, MdShoppingCart, MdHourglassTop, MdOutlineAssignment } from "react-icons/md";
 import Breadcrumbs from "../components/layout/Breadcrumbs";
 
 export default function BrowsePage() {
@@ -43,10 +43,10 @@ export default function BrowsePage() {
     const status = batch.verification.verificationStatus;
     const colors = {
       verified: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      pending: 'bg-amber-100 text-amber-800 border-amber-200',
+      pending: 'bg-blue-100 text-blue-800 border-blue-200',
       failed: 'bg-red-100 text-red-800 border-red-200'
     };
-    return colors[status] || colors.failed;
+    return colors[status] || colors.pending;
   };
 
   return (
@@ -122,7 +122,7 @@ export default function BrowsePage() {
                   </div>
                   <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(batch)}`}>
                     <MdVerified size={12} />
-                    {batch.verification.verificationStatus}
+                    {batch.verification.verificationStatus === 'pending' ? 'Available for Request' : batch.verification.verificationStatus}
                   </span>
                 </div>
 
@@ -153,21 +153,11 @@ export default function BrowsePage() {
 
                 <div className="border-t border-amber-200/50 pt-4">
                   <button
-                    onClick={() => window.location.href = '/consumer'}
+                    onClick={() => window.location.href = '/distributor'}
                     className="w-full web3-gradient-button-secondary text-sm py-2 flex items-center justify-center gap-2"
-                    disabled={batch.verification.verificationStatus !== 'verified'}
                   >
-                    {batch.verification.verificationStatus === 'verified' ? (
-                      <>
-                        <MdShoppingCart size={16} />
-                        Purchase Tokens
-                      </>
-                    ) : (
-                      <>
-                        <MdHourglassTop size={16} />
-                        Pending Verification
-                      </>
-                    )}
+                    <MdOutlineAssignment size={16} />
+                    Request Tokens
                   </button>
                 </div>
               </div>
