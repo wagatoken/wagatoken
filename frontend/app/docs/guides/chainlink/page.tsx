@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SiChainlink } from 'react-icons/si';
 
 export default function ChainlinkGuide() {
   return (
@@ -17,7 +18,7 @@ export default function ChainlinkGuide() {
           {/* Header */}
           <div className="mb-12">
             <div className="flex items-center space-x-4 mb-6">
-              <div className="text-4xl">⚡</div>
+              <SiChainlink className="text-4xl text-blue-500" />
               <h1 className="text-4xl font-bold web3-gradient-text">Chainlink Integration Guide</h1>
             </div>
             <p className="text-xl text-gray-600">

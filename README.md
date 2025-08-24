@@ -2,18 +2,18 @@
 
 *Onchain Coffee, OffChain Impact* ☕
 
-This is the complete WAGA Coffee traceability platform - a professional Web3 application bringing transparency and authenticity to Ethiopian coffee supply chains.
+This is the complete WAGA Coffee traceability platform - a professional Web3 application bringing transparency and authenticity to coffee supply chains.
 
 ## About WAGA Coffee
 
 WAGA Coffee is a cutting-edge blockchain-based coffee traceability system that provides complete transparency from farm to cup. Built on Base Sepolia network with Chainlink oracles and IPFS integration, WAGA ensures every coffee batch is verified, tracked, and authenticated on-chain.
 
-**Mission**: Fair and transparent coffee trading through decentralized technology, empowering Ethiopian coffee farmers and ensuring quality for consumers worldwide.
+**Mission**: Fair and transparent coffee trading through decentralized technology, empowering coffee farmers and ensuring quality for consumers worldwide.
 
 ## ✨ Key Features
 
 ### 🌾 **Complete Coffee Ecosystem**
-- **Farm-to-Cup Traceability**: Every batch tracked from Ethiopian farms to your cup
+- **Farm-to-Cup Traceability**: Every batch tracked from farms to your cup
 - **ERC-1155 NFT Certificates**: Unique digital certificates for each verified batch
 - **Smart Redemption System**: Token holders can redeem for physical coffee delivery
 - **Real-time Inventory**: Live tracking of coffee stock and availability
@@ -21,7 +21,7 @@ WAGA Coffee is a cutting-edge blockchain-based coffee traceability system that p
 ### 🎛️ **Professional Portals**
 - **Admin Portal**: Comprehensive batch management and verification system for WAGA staff
 - **Distributor Portal**: Request verified coffee batches and manage token redemptions
-- **Browse Coffee**: Explore verified Ethiopian coffee batches with detailed information
+- **Browse Coffee**: Explore verified coffee batches with detailed information
 - **Documentation Hub**: Complete technical documentation and user guides
 
 ### 🎨 **Enhanced User Experience**
@@ -260,7 +260,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Base**: Layer 2 scaling solution
 - **Pinata**: IPFS hosting and management
 - **OpenZeppelin**: Secure smart contract standards
-- **Ethiopian Coffee Farmers**: The heart of our mission
+- **Coffee Farmers**: The heart of our mission
 
 ---
 
@@ -269,4 +269,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-*Built with ❤️ for the Ethiopian coffee community*
+*Built with ❤️ for the coffee community*

@@ -1,6 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { SiChainlink } from 'react-icons/si';
+import { MdCheck, MdClose, MdSync, MdWifi, MdAnalytics, MdAccountBalanceWallet, MdHelp, MdInventory } from 'react-icons/md';
+import { TokenETH } from '@web3icons/react';
+import { FaCircle } from 'react-icons/fa';
 
 interface ChainlinkVerificationProps {
   batchId: number;
@@ -103,11 +107,11 @@ export default function ChainlinkVerification({ batchId, onVerificationComplete 
 
   const getStatusIcon = (currentStatus: string) => {
     switch (currentStatus) {
-      case 'completed': return '✅';
-      case 'failed': return '❌';
-      case 'pending': return '🔄';
-      case 'requesting': return '📡';
-      default: return '⚪';
+      case 'completed': return <MdCheck className="text-green-600" />;
+      case 'failed': return <MdClose className="text-red-600" />;
+      case 'pending': return <MdSync className="text-yellow-600 animate-spin" />;
+      case 'requesting': return <MdWifi className="text-blue-600" />;
+      default: return <FaCircle className="text-gray-400" />;
     }
   };
 
@@ -115,13 +119,14 @@ export default function ChainlinkVerification({ batchId, onVerificationComplete 
     <div className="web3-card-dark">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-xl font-bold web3-gradient-text mb-1">
-            ⛓️ Chainlink Functions Verification
+          <h3 className="text-xl font-bold web3-gradient-text mb-1 flex items-center">
+            <SiChainlink className="mr-2 text-blue-400" />
+            Chainlink Functions Verification
           </h3>
           <p className="text-gray-400 text-sm">Decentralized verification powered by Chainlink oracles</p>
         </div>
         <div className="text-right">
-          <div className="text-sm text-purple-300 font-semibold">Ethiopian Batch #{batchId}</div>
+          <div className="text-sm text-purple-300 font-semibold"> Batch #{batchId}</div>
           <div className="text-xs text-gray-500">On-chain verification</div>
         </div>
       </div>
@@ -142,7 +147,17 @@ export default function ChainlinkVerification({ batchId, onVerificationComplete 
                 </svg>
                 Requesting...
               </span>
-            ) : verifying ? '🔄 Verifying...' : '📊 Verify Inventory'}
+            ) : verifying ? (
+              <span className="flex items-center justify-center">
+                <MdSync className="animate-spin mr-2" />
+                Verifying...
+              </span>
+            ) : (
+              <span className="flex items-center justify-center">
+                <MdAnalytics className="mr-2" />
+                Verify Inventory
+              </span>
+            )}
           </button>
           
           <button
@@ -150,7 +165,22 @@ export default function ChainlinkVerification({ batchId, onVerificationComplete 
             disabled={verifying}
             className={`${verifying ? 'opacity-50 cursor-not-allowed' : 'web3-gradient-button-secondary'} relative overflow-hidden`}
           >
-            {verifying && status === 'requesting' ? '🔄 Requesting...' : verifying ? '⚡ Verifying...' : '🪙 Verify & Mint Tokens'}
+            {verifying && status === 'requesting' ? (
+              <span className="flex items-center justify-center">
+                <MdSync className="animate-spin mr-2" />
+                Requesting...
+              </span>
+            ) : verifying ? (
+              <span className="flex items-center justify-center">
+                <TokenETH className="mr-2" />
+                Verifying...
+              </span>
+            ) : (
+              <span className="flex items-center justify-center">
+                <TokenETH className="mr-2" />
+                Verify & Mint Tokens
+              </span>
+            )}
           </button>
         </div>
 
@@ -172,7 +202,10 @@ export default function ChainlinkVerification({ batchId, onVerificationComplete 
         {/* Request ID */}
         {requestId && (
           <div className="bg-gray-800/50 p-4 rounded-xl border border-purple-500/20">
-            <div className="font-semibold text-purple-300 mb-2">🆔 Request ID:</div>
+            <div className="font-semibold text-purple-300 mb-2 flex items-center">
+              <MdHelp className="mr-2" />
+              Request ID:
+            </div>
             <div className="font-mono text-xs text-gray-300 break-all bg-gray-900/50 p-2 rounded">{requestId}</div>
           </div>
         )}
@@ -180,7 +213,7 @@ export default function ChainlinkVerification({ batchId, onVerificationComplete 
         {/* Status Display */}
         {status !== 'idle' && (
           <div className="flex items-center space-x-2">
-            <span className="text-lg">{getStatusIcon(status)}</span>
+            {getStatusIcon(status)}
             <div className={`text-sm font-medium ${getStatusColor(status)}`}>
               Status: {status.charAt(0).toUpperCase() + status.slice(1)}
             </div>
@@ -195,7 +228,10 @@ export default function ChainlinkVerification({ batchId, onVerificationComplete 
         {/* Error Display */}
         {error && (
           <div className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-md">
-            <div className="font-medium mb-1">❌ Verification Failed</div>
+            <div className="font-medium mb-1 flex items-center">
+              <MdClose className="mr-2" />
+              Verification Failed
+            </div>
             <div>{error}</div>
             <button
               onClick={() => {
@@ -214,7 +250,10 @@ export default function ChainlinkVerification({ batchId, onVerificationComplete 
         {/* Success Result */}
         {result && status === 'completed' && (
           <div className="text-sm bg-green-50 border border-green-200 p-4 rounded-md">
-            <div className="font-medium text-green-800 mb-2">✅ Verification Successful!</div>
+            <div className="font-medium text-green-800 mb-2 flex items-center">
+              <MdCheck className="mr-2" />
+              Verification Successful!
+            </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
                 <span className="font-medium">Quantity:</span> {result.verifiedQuantity}
@@ -240,18 +279,21 @@ export default function ChainlinkVerification({ batchId, onVerificationComplete 
 
         {/* Help Text */}
         <div className="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 p-4 rounded-xl border border-purple-400/20">
-          <div className="font-semibold mb-2 text-purple-300">⚡ How Chainlink Functions Works:</div>
+          <div className="font-semibold mb-2 text-purple-300 flex items-center">
+            <TokenETH className="mr-2" />
+            How Chainlink Functions Works:
+          </div>
           <ul className="space-y-2 text-sm text-gray-300">
             <li className="flex items-start">
-              <span className="text-purple-400 mr-2">📊</span>
-              <span><strong>Verify Inventory:</strong> Checks current Ethiopian coffee stock without minting tokens</span>
+              <MdAnalytics className="text-purple-400 mr-2 mt-0.5" />
+              <span><strong>Verify Inventory:</strong> Checks current coffee stock without minting tokens</span>
             </li>
             <li className="flex items-start">
-              <span className="text-emerald-400 mr-2">🪙</span>
+              <TokenETH className="text-emerald-400 mr-2 mt-0.5" />
               <span><strong>Verify & Mint:</strong> Verifies inventory and mints tokens to recipient wallet</span>
             </li>
             <li className="flex items-start">
-              <span className="text-cyan-400 mr-2">⛓️</span>
+              <SiChainlink className="text-cyan-400 mr-2 mt-0.5" />
               <span>Uses decentralized Chainlink oracles to fetch data from your IPFS-stored batch information</span>
             </li>
           </ul>

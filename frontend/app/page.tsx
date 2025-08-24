@@ -4,13 +4,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { NetworkEthereum, TokenETH } from '@web3icons/react';
 import { 
-  CoffeeBeanIcon,
-  VerificationIcon,
-  CoffeeStorageIcon,
-  DistributorNetworkIcon,
-  TraceabilityIcon,
-  BatchCreationIcon
-} from './components/icons/WagaIcons';
+  SiIpfs,
+  SiChainlink
+} from 'react-icons/si';
+import { MdCheck, MdAdminPanelSettings, MdLibraryBooks, MdStorefront, MdSearch, MdCoffee, MdVerified, MdStorage } from 'react-icons/md';
 import { CoffeeBatch } from "@/utils/types";
 
 export default function HomePage() {
@@ -18,37 +15,37 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState([
     { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" />, theme: "blockchain" },
-    { label: "Coffee Batches Tracked", value: "Loading...", icon: <CoffeeBeanIcon size={24} className="waga-icon-coffee" />, theme: "coffee" },
-    { label: "Verified Batches", value: "Loading...", icon: <VerificationIcon size={24} className="waga-icon-verification" />, theme: "verification" },
-    { label: "IPFS Storage", value: "Active", icon: <CoffeeStorageIcon size={24} className="waga-icon-storage" />, theme: "storage" },
+    { label: "Coffee Batches Tracked", value: "Loading...", icon: <MdCoffee size={24} />, theme: "coffee" },
+    { label: "Verified Batches", value: "Loading...", icon: <MdVerified size={24} />, theme: "verification" },
+    { label: "IPFS Storage", value: "Active", icon: <MdStorage size={24} />, theme: "storage" },
   ]);
 
   const features = [
     {
       title: "Admin Portal",
       description: "Administrative interface for WAGA staff to create, verify, and manage coffee batches",
-      icon: <BatchCreationIcon size={32} className="waga-icon-batch" />,
+      icon: <MdAdminPanelSettings size={32} />,
       href: "/admin",
       color: "emerald"
     },
     {
       title: "Distributor Portal",
       description: "Request verified coffee batches and redeem tokens for physical coffee delivery",
-      icon: <DistributorNetworkIcon size={32} className="waga-icon-network" />,
+      icon: <MdStorefront size={32} />,
       href: "/distributor",
       color: "blue"
     },
     {
       title: "Browse Coffee",
-      description: "Explore verified Ethiopian coffee batches managed by WAGA",
-      icon: <CoffeeBeanIcon size={32} className="waga-icon-coffee" />,
+      description: "Explore verified coffee batches",
+      icon: <MdCoffee size={32} />,
       href: "/browse",
       color: "green"
     },
     {
       title: "Documentation",
       description: "Learn about our blockchain coffee traceability system",
-      icon: <TraceabilityIcon size={32} className="waga-icon-trace" />,
+      icon: <MdLibraryBooks size={32} />,
       href: "/docs",
       color: "purple"
     }
@@ -72,9 +69,9 @@ export default function HomePage() {
         
         setStats([
           { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" />, theme: "blockchain" },
-          { label: "Coffee Batches Tracked", value: `${totalBatches}`, icon: <CoffeeBeanIcon size={24} className="waga-icon-coffee" />, theme: "coffee" },
-          { label: "Verification Rate", value: `${verificationRate}%`, icon: <VerificationIcon size={24} className="waga-icon-verification" />, theme: "verification" },
-          { label: "IPFS Storage", value: "Active", icon: <CoffeeStorageIcon size={24} className="waga-icon-storage" />, theme: "storage" },
+          { label: "Coffee Batches Tracked", value: `${totalBatches}`, icon: <MdCoffee size={24} />, theme: "coffee" },
+          { label: "Verification Rate", value: `${verificationRate}%`, icon: <MdVerified size={24} />, theme: "verification" },
+          { label: "IPFS Storage", value: "Active", icon: <MdStorage size={24} />, theme: "storage" },
         ]);
       }
     } catch (error) {
@@ -82,9 +79,9 @@ export default function HomePage() {
       // Keep default stats if fetch fails
       setStats([
         { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" />, theme: "blockchain" },
-        { label: "Coffee Batches Tracked", value: "12+", icon: <CoffeeBeanIcon size={24} className="waga-icon-coffee" />, theme: "coffee" },
-        { label: "Verification Rate", value: "85%", icon: <VerificationIcon size={24} className="waga-icon-verification" />, theme: "verification" },
-        { label: "IPFS Storage", value: "Active", icon: <CoffeeStorageIcon size={24} className="waga-icon-storage" />, theme: "storage" },
+        { label: "Coffee Batches Tracked", value: "12+", icon: <MdCoffee size={24} />, theme: "coffee" },
+        { label: "Verification Rate", value: "85%", icon: <MdVerified size={24} />, theme: "verification" },
+        { label: "IPFS Storage", value: "Active", icon: <MdStorage size={24} />, theme: "storage" },
       ]);
     } finally {
       setLoading(false);
@@ -165,7 +162,7 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="text-center mb-8 sm:mb-12">
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 web3-text-stable">Featured Coffee Batches</h2>
-              <p className="text-lg sm:text-xl text-gray-600">Discover the latest verified coffee from our partner farms</p>
+              <p className="text-lg sm:text-xl text-gray-600">Discover the latest verified coffee from our global network</p>
             </div>
 
             {loading ? (
@@ -282,14 +279,15 @@ export default function HomePage() {
               <p className="text-gray-600 mb-4">
                 ERC-1155 tokens represent verified coffee batches 
               </p>
-              <div className="web3-badge web3-badge-success">
-                ✅ Deployed & Verified
+              <div className="web3-badge web3-badge-success flex items-center gap-1">
+                <MdCheck size={16} />
+                <span>Deployed & Verified</span>
               </div>
             </div>
 
             <div className="web3-card text-center web3-glass-morphism web3-card-stable" style={{ animationDelay: '0.2s' }}>
               <div className="flex justify-center mb-4 web3-subtle-glow">
-                <NetworkEthereum size={48} variant="branded" />
+                <SiChainlink size={48} />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Chainlink Oracles</h3>
               <p className="text-gray-600 mb-4">
@@ -301,7 +299,9 @@ export default function HomePage() {
             </div>
 
             <div className="web3-card text-center web3-glass-morphism web3-card-stable" style={{ animationDelay: '0.4s' }}>
-              <div className="text-4xl mb-4 web3-subtle-glow">📦</div>
+              <div className="flex justify-center mb-4 web3-subtle-glow">
+                <SiIpfs size={48} />
+              </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">IPFS Storage</h3>
               <p className="text-gray-600 mb-4">
                 Immutable metadata storage via Pinata for complete transparency
@@ -326,15 +326,17 @@ export default function HomePage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
             <Link 
               href="/producer" 
-              className="web3-button-outline text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 web3-holographic-border web3-clickable-stable min-h-[44px]"
+              className="web3-button-outline text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 web3-holographic-border web3-clickable-stable min-h-[44px] flex items-center justify-center"
             >
-              🏛️ WAGA Admin Access
+              <MdAdminPanelSettings className="mr-2" />
+              WAGA Admin Access
             </Link>
             <Link 
               href="/docs" 
-              className="web3-gradient-button text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 web3-clickable-stable min-h-[44px]"
+              className="web3-gradient-button text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 web3-clickable-stable min-h-[44px] flex items-center justify-center"
             >
-              📚 Read Documentation
+              <MdLibraryBooks className="mr-2" />
+              Read Documentation
             </Link>
           </div>
         </div>

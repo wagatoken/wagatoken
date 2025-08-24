@@ -29,7 +29,7 @@ export default function TermsOfService() {
             
             <p>WAGA is a platform that:</p>
             <ul className="space-y-2 mt-4">
-              <li>Enables traceability of Ethiopian coffee from farm to cup</li>
+              <li>Enables traceability of coffee from farm to cup</li>
               <li>Uses blockchain technology to create transparent supply chains</li>
               <li>Connects coffee farmers, distributors, and consumers</li>
               <li>Facilitates token-based transactions for coffee batches</li>
@@ -75,7 +75,7 @@ export default function TermsOfService() {
             <h2 className="text-2xl font-semibold text-white mt-8 mb-4">Platform Features</h2>
             
             <h3 className="text-xl font-medium text-amber-200 mt-6 mb-3">Coffee Traceability</h3>
-            <p>Our platform tracks coffee from Ethiopian farms through the supply chain. While we strive for accuracy, we can't guarantee the completeness or accuracy of all supply chain data.</p>
+            <p>Our platform tracks coffee from farms through the supply chain. While we strive for accuracy, we can't guarantee the completeness or accuracy of all supply chain data.</p>
 
             <h3 className="text-xl font-medium text-amber-200 mt-6 mb-3">Token Transactions</h3>
             <p>WAGA tokens represent claims to physical coffee batches. Token transactions are processed on the blockchain and are generally irreversible. Make sure you understand what you're buying before transacting.</p>
@@ -166,7 +166,7 @@ export default function TermsOfService() {
             
             <p>Questions about these terms? Reach out:</p>
             <ul className="space-y-2 mt-4">
-              <li><strong>Email:</strong> legal@wagacoffee.com</li>
+              <li><strong>Email:</strong> team@wagatoken.io</li>
               <li><strong>Telegram:</strong> @wagatoken</li>
               <li><strong>LinkedIn:</strong> WAGA Protocol</li>
             </ul>
@@ -184,7 +184,7 @@ export default function TermsOfService() {
 
             <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mt-8">
               <p className="text-green-200 font-medium mb-2">☕ Our Mission</p>
-              <p className="text-sm">WAGA exists to bring transparency and fairness to coffee supply chains while empowering Ethiopian farmers. These terms support that mission by creating a framework for honest, transparent interactions between all platform participants.</p>
+              <p className="text-sm">WAGA exists to bring transparency and fairness to coffee supply chains while empowering farmers. These terms support that mission by creating a framework for honest, transparent interactions between all platform participants.</p>
             </div>
 
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mt-6">

@@ -2,16 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { TokenETH, WalletMetamask, NetworkEthereum } from '@web3icons/react';
-import { 
-  CoffeeBeanIcon,
-  VerificationIcon,
-  BatchCreationIcon,
-  TraceabilityIcon,
-  FarmOriginIcon,
-  QualityGradeIcon,
-  CoffeeStorageIcon,
-  DistributorNetworkIcon
-} from '../components/icons/WagaIcons';
+import { MdCheck, MdClose, MdCoffee, MdVerified, MdCreate, MdAnalytics, MdLocationOn, MdGrade, MdStorage, MdStorefront, MdTimeline } from 'react-icons/md';
 import { 
   createBatchWithIPFS, 
   generateBatchQRCode,
@@ -284,7 +275,7 @@ export default function AdminPage() {
             </div>
             <div className="web3-enhanced-stat-card web3-blockchain-pulse web3-coffee-particles group" style={{ animationDelay: '200ms' }}>
               <div className="flex justify-center mb-4 group-hover:animate-pulse">
-                <CoffeeBeanIcon size={48} className="waga-icon-coffee waga-icon-glow" />
+                <MdCoffee size={48} className="text-emerald-600" />
               </div>
               <div className="text-4xl font-bold text-emerald-700 mb-2">
                 {batches.reduce((sum, b) => sum + b.quantity, 0)}
@@ -341,17 +332,17 @@ export default function AdminPage() {
               <TabButton 
                 tab="create" 
                 label="Create Batch" 
-                icon={<BatchCreationIcon size={20} className="waga-icon-blockchain" />} 
+                icon={<MdCreate size={20} />} 
               />
               <TabButton 
                 tab="manage" 
                 label="Manage Batches" 
-                icon={<TraceabilityIcon size={20} className="waga-icon-trace" />} 
+                icon={<MdTimeline size={20} />} 
               />
               <TabButton 
                 tab="verify" 
                 label="Verify & Mint" 
-                icon={<VerificationIcon size={20} className="waga-icon-success" />} 
+                icon={<MdVerified size={20} />} 
               />
             </div>
 
@@ -359,7 +350,7 @@ export default function AdminPage() {
             {error && (
               <div className="web3-card bg-red-50 border border-red-200 mb-6 animate-card-entrance">
                 <div className="flex items-center space-x-2">
-                  <span className="text-red-500 text-xl">❌</span>
+                  <MdClose size={20} className="text-red-500" />
                   <span className="text-red-700">{error}</span>
                 </div>
               </div>
@@ -368,7 +359,7 @@ export default function AdminPage() {
             {success && (
               <div className="web3-card bg-green-50 border border-green-200 mb-6 animate-card-entrance">
                 <div className="flex items-center space-x-2">
-                  <span className="text-green-500 text-xl">✅</span>
+                  <MdCheck size={20} className="text-green-500" />
                   <span className="text-green-700">{success}</span>
                 </div>
               </div>
@@ -382,26 +373,27 @@ export default function AdminPage() {
                 {/* Basic Information Section */}
                 <div className="web3-form-section">
                   <h3 className="flex items-center gap-2">
-                    <FarmOriginIcon size={20} className="waga-icon-farm" />
+                    <MdLocationOn size={20} />
                     Basic Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="web3-form-label">
-                        ☕ Batch Name<span className="required">*</span>
+                      <label className="web3-form-label flex items-center gap-2">
+                        <MdCoffee size={16} />
+                        Batch Name<span className="required">*</span>
                       </label>
                       <input
                         type="text"
                         value={batchForm.name || ''}
                         onChange={(e) => handleInputChange('name', e.target.value)}
                         className="web3-ethereum-input w-full"
-                        placeholder="e.g., Sidama Ethiopia Coffee Batch #1001"
+                        placeholder="e.g., Sidama Coffee Batch #1001"
                       />
                     </div>
 
                     <div>
                       <label className="web3-form-label flex items-center gap-2">
-                        <FarmOriginIcon size={16} className="waga-icon-farm" />
+                        <MdLocationOn size={16} />
                         Origin/Region<span className="required">*</span>
                       </label>
                       <input
@@ -415,7 +407,7 @@ export default function AdminPage() {
 
                     <div>
                       <label className="web3-form-label flex items-center gap-2">
-                        <FarmOriginIcon size={16} className="waga-icon-farm" />
+                        <MdLocationOn size={16} />
                         Farmer/Cooperative<span className="required">*</span>
                       </label>
                       <input
@@ -445,7 +437,7 @@ export default function AdminPage() {
                 {/* Processing & Production Section */}
                 <div className="web3-form-section">
                   <h3 className="flex items-center gap-2">
-                    <CoffeeBeanIcon size={20} className="waga-icon-coffee" />
+                    <MdCoffee size={20} />
                     Processing & Production
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -510,13 +502,13 @@ export default function AdminPage() {
                 {/* Quality & Certifications Section */}
                 <div className="web3-form-section">
                   <h3 className="flex items-center gap-2">
-                    <QualityGradeIcon size={20} className="waga-icon-quality" />
+                    <MdGrade size={20} />
                     Quality & Certifications
                   </h3>
                   <div className="grid grid-cols-1 gap-6">
                     <div>
                       <label className="web3-form-label flex items-center gap-2">
-                        <QualityGradeIcon size={16} className="waga-icon-quality" />
+                        <MdGrade size={16} />
                         Certifications (comma-separated)
                       </label>
                       <input
@@ -530,7 +522,7 @@ export default function AdminPage() {
 
                     <div>
                       <label className="web3-form-label flex items-center gap-2">
-                        <CoffeeBeanIcon size={16} className="waga-icon-coffee" />
+                        <MdCoffee size={16} />
                         Cupping Notes (comma-separated)
                       </label>
                       <input
@@ -547,13 +539,13 @@ export default function AdminPage() {
                 {/* Inventory & Pricing Section */}
                 <div className="web3-form-section">
                   <h3 className="flex items-center gap-2">
-                    <CoffeeStorageIcon size={20} className="waga-icon-storage" />
+                    <MdStorage size={20} />
                     Inventory & Pricing
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="web3-form-label flex items-center gap-2">
-                        <CoffeeStorageIcon size={16} className="waga-icon-storage" />
+                        <MdStorage size={16} />
                         Quantity (bags)<span className="required">*</span>
                       </label>
                       <input
@@ -582,7 +574,7 @@ export default function AdminPage() {
                         max="500.00"
                       />
                       <p className="text-sm text-gray-600 mt-1">
-                        💡 Enter price in USD (e.g., $25.00 for a coffee bag)
+                        Enter price in USD (e.g., $25.00 for a coffee bag)
                       </p>
                     </div>
                   </div>
@@ -591,7 +583,7 @@ export default function AdminPage() {
                 {/* Dates Section */}
                 <div className="web3-form-section">
                   <h3 className="flex items-center gap-2">
-                    <TraceabilityIcon size={20} className="waga-icon-trace" />
+                    <MdTimeline size={20} />
                     Important Dates
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -623,7 +615,7 @@ export default function AdminPage() {
 
                 {/* Description Section */}
                 <div className="web3-form-section">
-                  <h3>📝 Description</h3>
+                  <h3>Description</h3>
                   <div>
                     <label className="web3-form-label">
                       📖 Batch Description<span className="required">*</span>
@@ -654,7 +646,7 @@ export default function AdminPage() {
                     </div>
                   ) : (
                     <div className="flex items-center justify-center gap-2">
-                      <BatchCreationIcon size={20} className="waga-icon-batch" />
+                      <MdCreate size={20} />
                       Create Batch & Generate QR Codes
                     </div>
                   )}
@@ -665,7 +657,7 @@ export default function AdminPage() {
             {activeTab === 'manage' && (
               <div className="web3-card animate-card-entrance">
                 <h2 className="flex items-center gap-3 text-2xl font-bold text-gray-900 mb-6">
-                  <CoffeeStorageIcon size={24} className="waga-icon-storage" />
+                  <MdStorage size={24} />
                   Manage Coffee Batches
                 </h2>
                 
@@ -685,14 +677,14 @@ export default function AdminPage() {
                         <div className="flex justify-between items-start">
                           <div>
                             <div className="flex items-center space-x-2 mb-2">
-                              <CoffeeBeanIcon size={18} className="waga-icon-coffee" />
+                              <MdCoffee size={18} />
                               <h3 className="font-semibold text-lg">Batch #{batch.batchId}</h3>
                               <span className={`web3-status-indicator ${
                                 batch.isVerified 
                                   ? 'web3-status-verified' 
                                   : 'web3-status-pending'
                               }`}>
-                                {batch.isVerified ? '✅ Verified' : '🔄 Pending'}
+                                {batch.isVerified ? 'Verified' : 'Pending'}
                               </span>
                             </div>
                             <p className="text-gray-600 mb-2">{batch.name}</p>
@@ -722,13 +714,13 @@ export default function AdminPage() {
             {activeTab === 'verify' && (
               <div className="web3-card animate-card-entrance">
                 <h2 className="flex items-center gap-3 text-2xl font-bold text-gray-900 mb-6">
-                  <VerificationIcon size={24} className="waga-icon-verification" />
+                  <MdVerified size={24} />
                   Verify Batches & Mint Tokens
                 </h2>
                 
                 <div className="mb-6">
                   <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    <CoffeeBeanIcon size={16} className="waga-icon-coffee" />
+                    <MdCoffee size={16} />
                     Select Batch to Verify
                   </label>
                   <select
@@ -774,7 +766,7 @@ export default function AdminPage() {
                     </div>
                   ) : (
                     <div className="flex items-center justify-center gap-2">
-                      <VerificationIcon size={20} className="waga-icon-verification" />
+                      <MdVerified size={20} />
                       Verify Batch & Mint Tokens
                     </div>
                   )}
@@ -786,7 +778,7 @@ export default function AdminPage() {
             {generatedQRs && (
               <div className="web3-card animate-card-entrance">
                 <h2 className="flex items-center gap-3 text-2xl font-bold text-gray-900 mb-6">
-                  <TraceabilityIcon size={24} className="waga-icon-trace" />
+                  <MdTimeline size={24} />
                   Generated QR Codes
                 </h2>
                 
@@ -804,7 +796,7 @@ export default function AdminPage() {
                       Contains complete batch information, verification URL, and IPFS metadata
                     </p>
                     <button className="web3-gradient-button flex items-center gap-2 mx-auto">
-                      <DistributorNetworkIcon size={16} className="waga-icon-network" />
+                      <MdStorefront size={16} />
                       Download QR Code
                     </button>
                   </div>
@@ -822,7 +814,7 @@ export default function AdminPage() {
                       Simple verification URL for quick batch lookup
                     </p>
                     <button className="web3-gradient-button flex items-center gap-2 mx-auto">
-                      <VerificationIcon size={16} className="waga-icon-verification" />
+                      <MdVerified size={16} />
                       Download QR Code
                     </button>
                   </div>

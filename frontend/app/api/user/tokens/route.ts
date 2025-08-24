@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch actual Ethiopian coffee batches from IPFS
+    // Fetch actual  coffee batches from IPFS
     const batchesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'}/api/batches`);
     
     if (!batchesResponse.ok) {
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const { batches } = await batchesResponse.json();
     
     // In production, this would query the smart contract for actual token balances
-    // For now, simulate based on existing verified Ethiopian coffee batches
+    // For now, simulate based on existing verified coffee batches
     const userBalances: UserTokenBalance[] = batches
       .filter((batch: any) => batch.verification.verificationStatus === 'verified')
       .slice(0, 3) // Limit for demo
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         }
       }));
 
-    console.log(`Fetched ${userBalances.length} Ethiopian coffee token balances for ${userAddress}`);
+    console.log(`Fetched ${userBalances.length} coffee token balances for ${userAddress}`);
 
     return NextResponse.json({ 
       balances: userBalances,

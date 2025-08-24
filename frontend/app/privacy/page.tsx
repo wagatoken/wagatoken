@@ -18,7 +18,7 @@ export default function PrivacyPolicy() {
 
             <h2 className="text-2xl font-semibold text-white mt-8 mb-4">Who We Are</h2>
             <p>
-              WAGA Coffee Platform is a blockchain-based coffee traceability system connecting Ethiopian coffee farmers, distributors, and consumers. We're building something meaningful - a platform that brings transparency to coffee supply chains while respecting your privacy.
+              WAGA Coffee Platform is a blockchain-based coffee traceability system connecting coffee farmers, distributors, and consumers. We're building something meaningful - a platform that brings transparency to coffee supply chains while respecting your privacy.
             </p>
 
             <h2 className="text-2xl font-semibold text-white mt-8 mb-4">What Information We Collect</h2>
@@ -95,7 +95,7 @@ export default function PrivacyPolicy() {
               <li><strong>Objection:</strong> Object to certain uses of your data</li>
             </ul>
 
-            <p className="mt-4">To exercise these rights, contact us at privacy@wagacoffee.com</p>
+            <p className="mt-4">To exercise these rights, contact us at team@wagatoken.io</p>
 
             <h2 className="text-2xl font-semibold text-white mt-8 mb-4">International Transfers</h2>
             
@@ -130,14 +130,14 @@ export default function PrivacyPolicy() {
             
             <p>Questions about this privacy policy? We're here to help:</p>
             <ul className="space-y-2 mt-4">
-              <li><strong>Email:</strong> privacy@wagacoffee.com</li>
+              <li><strong>Email:</strong> team@wagatoken.io</li>
               <li><strong>Telegram:</strong> @wagatoken</li>
               <li><strong>LinkedIn:</strong> WAGA Protocol</li>
             </ul>
 
             <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mt-8">
               <p className="text-green-200 font-medium mb-2">🌱 Our Commitment</p>
-              <p className="text-sm">We're building WAGA to empower Ethiopian coffee farmers and create transparency in coffee supply chains. Your privacy and trust are fundamental to this mission. We'll always be straight with you about how we handle your data.</p>
+              <p className="text-sm">We're building WAGA to empower  coffee farmers and create transparency in coffee supply chains. Your privacy and trust are fundamental to this mission. We'll always be straight with you about how we handle your data.</p>
             </div>
           </div>
         </div>

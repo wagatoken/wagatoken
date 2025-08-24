@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { contractService, VerificationRequest } from "@/app/services/contractService";
+import { MdCheck, MdClose, MdAccessTime, MdWarning, MdError } from 'react-icons/md';
+import { FaClipboardList } from 'react-icons/fa';
 
 interface BatchVerificationProps {
   batchId: number;
@@ -51,7 +53,7 @@ export default function BatchVerification({
       setVerificationStatus(status);
 
       if (status.completed) {
-        setProgress(status.verified ? '✅ Verification completed successfully!' : '❌ Verification failed');
+        setProgress(status.verified ? 'Verification completed successfully!' : 'Verification failed');
         setIsVerifying(false);
         onVerificationComplete?.(status.verified);
       }
@@ -68,7 +70,7 @@ export default function BatchVerification({
 
     setIsVerifying(true);
     setError('');
-    setProgress('🔍 Requesting batch verification...');
+    setProgress('Requesting batch verification...');
 
     try {
       await contractService.initialize();
@@ -79,7 +81,7 @@ export default function BatchVerification({
       );
 
       setRequestId(result.requestId);
-      setProgress('⏳ Verification request submitted. Waiting for Chainlink response...');
+      setProgress('Verification request submitted. Waiting for Chainlink response...');
       
     } catch (error: any) {
       console.error('Error starting verification:', error);
@@ -92,8 +94,9 @@ export default function BatchVerification({
   return (
     <div className="web3-card">
       <div className="text-center mb-6">
-        <h3 className="text-2xl font-bold web3-gradient-text mb-2">
-          ✅ Batch Verification
+                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+          <MdCheck size={20} />
+          <span>Batch Verification</span>
         </h3>
         <p className="text-gray-400">
           Verify coffee batch #{batchId} using Chainlink Functions
@@ -109,7 +112,10 @@ export default function BatchVerification({
       {!hasVerifierRole && (
         <div className="mb-4 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
           <p className="text-yellow-400 text-sm">
-            ⚠️ You need VERIFIER role to request batch verification. Please contact an admin.
+            <span className="flex items-center">
+              <MdWarning className="mr-2" />
+              You need VERIFIER role to request batch verification. Please contact an admin.
+            </span>
           </p>
         </div>
       )}
@@ -117,7 +123,10 @@ export default function BatchVerification({
       <div className="space-y-4">
         {/* Verification Request Section */}
         <div className="p-4 bg-gray-800/50 rounded-lg">
-          <h4 className="text-lg font-semibold text-white mb-3">📋 Verification Process</h4>
+          <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+            <FaClipboardList size={16} />
+            <span>Verification Process</span>
+          </h4>
           <div className="space-y-2 text-sm text-gray-300">
             <div className="flex justify-between">
               <span>Batch ID:</span>
@@ -149,8 +158,18 @@ export default function BatchVerification({
                     </div>
                     <div className="flex justify-between">
                       <span>Status:</span>
-                      <span className={verificationStatus.verified ? 'text-green-300' : 'text-red-300'}>
-                        {verificationStatus.verified ? '✅ Verified' : '❌ Failed'}
+                      <span className={verificationStatus.verified ? 'text-green-300 flex items-center gap-1' : 'text-red-300 flex items-center gap-1'}>
+                        {verificationStatus.verified ? (
+                          <>
+                            <MdCheck size={16} />
+                            <span>Verified</span>
+                          </>
+                        ) : (
+                          <>
+                            <MdClose size={16} />
+                            <span>Failed</span>
+                          </>
+                        )}
                       </span>
                     </div>
                   </>
@@ -183,9 +202,22 @@ export default function BatchVerification({
               Verifying...
             </div>
           ) : verificationStatus?.completed ? (
-            verificationStatus.verified ? '✅ Verification Complete' : '❌ Verification Failed'
+            verificationStatus.verified ? (
+              <div className="flex items-center justify-center gap-2">
+                <MdCheck size={16} />
+                <span>Verification Complete</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2">
+                <MdClose size={16} />
+                <span>Verification Failed</span>
+              </div>
+            )
           ) : (
-            '🔍 Start Verification'
+            <div className="flex items-center justify-center gap-2">
+              <MdCheck size={16} />
+              <span>Start Verification</span>
+            </div>
           )}
         </button>
 

@@ -1,6 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { 
+  NetworkEthereum, 
+  NetworkBase, 
+  TokenETH, 
+  WalletMetamask
+} from '@web3icons/react';
+import { 
+  FaTwitter, 
+  FaTelegram, 
+  FaLinkedin 
+} from 'react-icons/fa';
+import { 
+  SiChainlink, 
+  SiIpfs 
+} from 'react-icons/si';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -25,18 +40,20 @@ export default function Footer() {
               </div>
             </div>
             <p className="text-green-100 text-sm mb-4">
-              Tokenizing premium roasted coffee from the highlands of Ethiopia. Farm-to-cup traceability powered by blockchain technology.
+              Tokenizing premium roasted coffee from highland regions. Farm-to-cup traceability powered by blockchain technology.
             </p>
             <div className="flex items-center space-x-2 text-xs text-amber-200 mb-4">
               <span>🇪🇹</span>
               <span>Proudly Ethiopian</span>
             </div>
             <div className="flex space-x-2">
-              <div className="web3-badge web3-badge-success">
-                ✅ Base Testnet
+              <div className="web3-badge web3-badge-success flex items-center gap-1">
+                <NetworkBase size={14} variant="branded" />
+                <span>Base Testnet</span>
               </div>
-              <div className="web3-badge web3-badge-warning">
-                📦 IPFS Active
+              <div className="web3-badge web3-badge-warning flex items-center gap-1">
+                <NetworkEthereum size={14} variant="branded" />
+                <span>IPFS Active</span>
               </div>
             </div>
           </div>
@@ -88,7 +105,7 @@ export default function Footer() {
                 rel="noopener noreferrer"
                 className="flex items-center space-x-2 text-green-100 hover:text-amber-300 text-sm transition-colors"
               >
-                <span>🐦</span>
+                <FaTwitter size={16} />
                 <span>Twitter</span>
               </a>
               <a
@@ -97,7 +114,7 @@ export default function Footer() {
                 rel="noopener noreferrer"
                 className="flex items-center space-x-2 text-green-100 hover:text-amber-300 text-sm transition-colors"
               >
-                <span>📱</span>
+                <FaTelegram size={16} />
                 <span>Telegram</span>
               </a>
               <a
@@ -106,7 +123,7 @@ export default function Footer() {
                 rel="noopener noreferrer"
                 className="flex items-center space-x-2 text-green-100 hover:text-amber-300 text-sm transition-colors"
               >
-                <span>💼</span>
+                <FaLinkedin size={16} />
                 <span>LinkedIn</span>
               </a>
             </div>
@@ -120,7 +137,7 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   className="flex items-center space-x-1 hover:text-amber-300 transition-colors"
                 >
-                  <span>⚡</span>
+                  <SiChainlink size={12} />
                   <span>Powered by Chainlink</span>
                 </a>
                 <a
@@ -129,7 +146,7 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   className="flex items-center space-x-1 hover:text-amber-300 transition-colors"
                 >
-                  <span>📡</span>
+                  <SiIpfs size={12} />
                   <span>Stored on IPFS</span>
                 </a>
                 <a
@@ -138,7 +155,7 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   className="flex items-center space-x-1 hover:text-amber-300 transition-colors"
                 >
-                  <span>🔗</span>
+                  <NetworkBase size={12} variant="branded" />
                   <span>Base Network</span>
                 </a>
               </div>

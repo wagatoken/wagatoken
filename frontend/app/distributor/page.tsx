@@ -9,12 +9,9 @@ import {
   requestCoffeeRedemption,
   getUserRoles
 } from "@/utils/smartContracts";
-import { 
-  CoffeeBeanIcon,
-  VerificationIcon,
-  DistributorNetworkIcon,
-  CoffeeStorageIcon
-} from "../components/icons/WagaIcons";
+import { SiIpfs } from 'react-icons/si';
+import { FaLink } from 'react-icons/fa';
+import { MdCheck, MdClose, MdCoffee, MdVerified, MdStorefront, MdStorage, MdOutlineAssignment, MdLocalShipping, MdToken } from 'react-icons/md';
 import { CoffeeBatchMetadata } from "@/utils/ipfsMetadata";
 
 interface BatchDisplay {
@@ -232,7 +229,7 @@ export default function DistributorPage() {
     }
   }, [userAddress]);
 
-  const TabButton = ({ tab, label, icon }: { tab: string; label: string; icon: string }) => (
+  const TabButton = ({ tab, label, icon }: { tab: string; label: string; icon: React.ReactNode }) => (
     <button
       onClick={() => setActiveTab(tab as any)}
       className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
@@ -252,7 +249,9 @@ export default function DistributorPage() {
         {/* Header */}
         <div className="mb-12 animate-card-entrance">
           <div className="text-center mb-8">
-            <div className="text-6xl mb-4 animate-float web3-cyber-glow">🚚</div>
+            <div className="text-6xl mb-4 animate-float web3-cyber-glow flex justify-center">
+              <MdLocalShipping size={96} className="text-emerald-600" />
+            </div>
             <h1 className="text-5xl font-bold web3-gradient-text mb-4">
               WAGA Distributor Portal
             </h1>
@@ -265,7 +264,9 @@ export default function DistributorPage() {
           {/* Enhanced Quick Stats */}
           <div className="web3-stats-grid">
             <div className="web3-enhanced-stat-card group">
-              <div className="text-5xl mb-4 group-hover:animate-pulse">📦</div>
+              <div className="flex justify-center mb-4 group-hover:animate-pulse">
+                <SiIpfs size={48} />
+              </div>
               <div className="text-4xl font-bold web3-gradient-text mb-2">
                 {batches.filter(b => b.isVerified).length}
               </div>
@@ -275,7 +276,9 @@ export default function DistributorPage() {
               </div>
             </div>
             <div className="web3-enhanced-stat-card group" style={{ animationDelay: '100ms' }}>
-              <div className="text-5xl mb-4 group-hover:animate-pulse">🪙</div>
+              <div className="flex justify-center mb-4 group-hover:animate-pulse">
+                <MdToken size={80} className="text-emerald-600" />
+              </div>
               <div className="text-4xl font-bold text-emerald-600 mb-2">
                 {batches.reduce((sum, b) => sum + b.userBalance, 0)}
               </div>
@@ -285,7 +288,9 @@ export default function DistributorPage() {
               </div>
             </div>
             <div className="web3-enhanced-stat-card group" style={{ animationDelay: '200ms' }}>
-              <div className="text-5xl mb-4 group-hover:animate-pulse">☕</div>
+              <div className="flex justify-center mb-4 group-hover:animate-pulse">
+                <MdCoffee size={48} className="text-emerald-600" />
+              </div>
               <div className="text-4xl font-bold text-emerald-700 mb-2">
                 {batches.filter(b => b.userBalance > 0).length}
               </div>
@@ -301,7 +306,9 @@ export default function DistributorPage() {
         {!userAddress && (
           <div className="web3-card text-center animate-card-entrance">
             <div className="mb-4">
-              <div className="text-4xl mb-2">🔗</div>
+              <div className="flex justify-center mb-2">
+                <FaLink size={48} />
+              </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Connect Wallet</h3>
               <p className="text-gray-600 mb-4">
                 Connect your wallet to access distributor functions
@@ -339,21 +346,21 @@ export default function DistributorPage() {
                     )}
                   </div>
                 </div>
-                <div className="text-2xl">🚚</div>
+                <MdLocalShipping size={32} className="text-emerald-600" />
               </div>
             </div>
 
             {/* Tab Navigation */}
             <div className="flex flex-wrap gap-2 justify-center mb-8 animate-card-entrance">
-              <TabButton tab="request" label="Request Batches" icon="📋" />
-              <TabButton tab="redeem" label="Redeem Tokens" icon="☕" />
+              <TabButton tab="request" label="Request Batches" icon={<MdOutlineAssignment />} />
+              <TabButton tab="redeem" label="Redeem Tokens" icon={<MdCoffee />} />
             </div>
 
             {/* Error/Success Messages */}
             {error && (
               <div className="web3-card bg-red-50 border border-red-200 mb-6 animate-card-entrance">
                 <div className="flex items-center space-x-2">
-                  <span className="text-red-500 text-xl">❌</span>
+                  <MdClose size={20} className="text-red-500" />
                   <span className="text-red-700">{error}</span>
                 </div>
               </div>
@@ -362,7 +369,7 @@ export default function DistributorPage() {
             {success && (
               <div className="web3-card bg-green-50 border border-green-200 mb-6 animate-card-entrance">
                 <div className="flex items-center space-x-2">
-                  <span className="text-green-500 text-xl">✅</span>
+                  <MdCheck size={20} className="text-green-500" />
                   <span className="text-green-700">{success}</span>
                 </div>
               </div>
@@ -374,7 +381,7 @@ export default function DistributorPage() {
                 {/* Batch Request Form */}
                 <div className="web3-card animate-card-entrance">
                   <h2 className="flex items-center gap-3 text-2xl font-bold text-gray-900 mb-6">
-                    <VerificationIcon size={24} className="waga-icon-verification" />
+                    <MdVerified size={24} />
                     Request Coffee Batch Verification
                   </h2>
                   <p className="text-gray-600 mb-6">
@@ -424,14 +431,14 @@ export default function DistributorPage() {
                         : 'web3-gradient-button hover:scale-105'
                     }`}
                   >
-                    {loading ? 'Requesting Verification...' : '📋 Request Batch Verification & Minting'}
+                    {loading ? 'Requesting Verification...' : 'Request Batch Verification & Minting'}
                   </button>
                 </div>
 
                 {/* Available Batches Display */}
                 <div className="web3-card animate-card-entrance">
                   <h3 className="flex items-center gap-2 text-xl font-bold text-gray-900 mb-4">
-                    <CoffeeBeanIcon size={20} className="waga-icon-coffee" />
+                    <MdCoffee size={20} />
                     Available Coffee Batches
                   </h3>
                   
@@ -494,7 +501,7 @@ export default function DistributorPage() {
             {activeTab === 'redeem' && (
               <div className="web3-card animate-card-entrance">
                 <h2 className="flex items-center gap-3 text-2xl font-bold text-gray-900 mb-6">
-                  <CoffeeStorageIcon size={24} className="waga-icon-storage" />
+                  <MdStorage size={24} />
                   Redeem Tokens for Physical Coffee
                 </h2>
                 <p className="text-gray-600 mb-6">
@@ -569,7 +576,7 @@ export default function DistributorPage() {
                       : 'web3-gradient-button hover:scale-105'
                   }`}
                 >
-                  {loading ? 'Processing Redemption...' : '☕ Redeem Tokens for Physical Coffee'}
+                  {loading ? 'Processing Redemption...' : 'Redeem Tokens for Physical Coffee'}
                 </button>
               </div>
             )}

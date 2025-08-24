@@ -2,11 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { 
+  MdHome, 
+  MdCoffee, 
+  MdFactory, 
+  MdPerson, 
+  MdInfo, 
+  MdLibraryBooks 
+} from "react-icons/md";
+import { ReactElement } from "react";
 
 interface BreadcrumbItem {
   label: string;
   href: string;
-  icon?: string;
+  icon?: ReactElement;
 }
 
 export default function Breadcrumbs() {
@@ -15,24 +24,24 @@ export default function Breadcrumbs() {
   const getBreadcrumbs = (path: string): BreadcrumbItem[] => {
     const segments = path.split('/').filter(Boolean);
     const breadcrumbs: BreadcrumbItem[] = [
-      { label: 'Home', href: '/', icon: '🏠' }
+      { label: 'Home', href: '/', icon: <MdHome size={16} /> }
     ];
 
     if (segments.length === 0) return breadcrumbs;
 
     if (segments[0] === 'browse') {
-      breadcrumbs.push({ label: 'Browse Batches', href: '/browse', icon: '🌱' });
+      breadcrumbs.push({ label: 'Browse Batches', href: '/browse', icon: <MdCoffee size={16} /> });
     } else if (segments[0] === 'producer') {
-      breadcrumbs.push({ label: 'Producer Dashboard', href: '/producer', icon: '🏭' });
+      breadcrumbs.push({ label: 'Producer Dashboard', href: '/producer', icon: <MdFactory size={16} /> });
     } else if (segments[0] === 'consumer') {
-      breadcrumbs.push({ label: 'Consumer Portal', href: '/consumer', icon: '👤' });
+      breadcrumbs.push({ label: 'Consumer Portal', href: '/consumer', icon: <MdPerson size={16} /> });
     } else if (segments[0] === 'dashboard' && segments[1] === 'user') {
       // Redirect old route
-      breadcrumbs.push({ label: 'Consumer Portal', href: '/consumer', icon: '👤' });
+      breadcrumbs.push({ label: 'Consumer Portal', href: '/consumer', icon: <MdPerson size={16} /> });
     } else if (segments[0] === 'about') {
-      breadcrumbs.push({ label: 'About', href: '/about', icon: 'ℹ️' });
+      breadcrumbs.push({ label: 'About', href: '/about', icon: <MdInfo size={16} /> });
     } else if (segments[0] === 'docs') {
-      breadcrumbs.push({ label: 'Documentation', href: '/docs', icon: '📚' });
+      breadcrumbs.push({ label: 'Documentation', href: '/docs', icon: <MdLibraryBooks size={16} /> });
     }
 
     return breadcrumbs;
@@ -53,7 +62,7 @@ export default function Breadcrumbs() {
               index === breadcrumbs.length - 1 ? 'text-purple-300 font-medium' : ''
             }`}
           >
-            {crumb.icon && <span>{crumb.icon}</span>}
+            {crumb.icon && <span className="flex items-center">{crumb.icon}</span>}
             <span>{crumb.label}</span>
           </Link>
         </div>

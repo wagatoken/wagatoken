@@ -94,7 +94,7 @@ export const FarmOriginIcon: React.FC<IconProps> = ({
       fill={color}
       opacity="0.3"
     />
-    {/* Ethiopian highlands */}
+    {/* Coffee highlands */}
     <path
       d="M6 16l2-4 2 4M14 16l2-4 2 4"
       stroke={color}

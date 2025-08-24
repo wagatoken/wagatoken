@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import MetaMaskSDK from '@metamask/sdk';
+import { WalletMetamask, NetworkEthereum } from '@web3icons/react';
+import { FaLink } from 'react-icons/fa';
+import { MdAccessTime } from 'react-icons/md';
 
 export default function WalletConnect() {
   const [isConnected, setIsConnected] = useState(false);
@@ -183,12 +186,12 @@ export default function WalletConnect() {
         </span>
       ) : !sdk ? (
         <span className="flex items-center space-x-2">
-          <span>⏳</span>
+          <MdAccessTime size={16} />
           <span>Initializing...</span>
         </span>
       ) : (
         <span className="flex items-center space-x-2">
-          <span>🔗</span>
+          <FaLink size={16} />
           <span>Connect Wallet</span>
         </span>
       )}

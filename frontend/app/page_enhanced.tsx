@@ -25,14 +25,14 @@ export default function HomePage() {
     },
     {
       title: "Consumer Portal",
-      description: "Browse, purchase, and redeem tokenized coffee from Ethiopian farms",
+      description: "Browse, purchase, and redeem tokenized coffee from farms",
       icon: "👤",
       href: "/consumer",
       color: "blue"
     },
     {
       title: "Browse Coffee",
-      description: "Explore verified Ethiopian coffee batches managed by WAGA",
+      description: "Explore verified coffee batches managed by WAGA",
       icon: "🌱",
       href: "/browse",
       color: "green"

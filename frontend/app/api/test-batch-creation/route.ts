@@ -6,8 +6,8 @@ export async function POST() {
 
     // Create realistic coffee batch data
     const testBatchData = {
-      name: "Premium Ethiopian Sidama Coffee",
-      description: "Single-origin coffee from the Sidama region with floral notes and bright acidity",
+      name: "Premium Sidama Coffee",
+      description: "High-quality single-origin coffee with notes of chocolate and citrus",
       origin: "Sidama, Ethiopia", 
       farmer: "Abebe Bekele Cooperative",
       altitude: "1,800-2,100m",
@@ -43,7 +43,7 @@ export async function POST() {
       },
       body: JSON.stringify({ 
         metadata,
-        filename: `premium-ethiopian-sidama-${Date.now()}`
+        filename: `premium-sidama-${Date.now()}`
       })
     });
 

@@ -1,6 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { MdAdminPanelSettings, MdSecurity, MdOutlineAssignment, MdBarChart, MdTrendingUp, MdSettings, MdSearch, MdEdit, MdWarning, MdGpsFixed, MdSync, MdLink } from 'react-icons/md';
+import { NetworkEthereum } from '@web3icons/react';
+import { SiChainlink } from 'react-icons/si';
+import { CoffeeBeanIcon } from '../../../components/icons/WagaIcons';
 
 export default function AdminGuide() {
   return (
@@ -17,7 +21,7 @@ export default function AdminGuide() {
           {/* Header */}
           <div className="mb-12">
             <div className="flex items-center space-x-4 mb-6">
-              <div className="text-4xl">🏭</div>
+              <MdAdminPanelSettings className="text-4xl text-blue-600" />
               <h1 className="text-4xl font-bold web3-gradient-text">WAGA Admin Guide</h1>
             </div>
             <p className="text-xl text-gray-600">
@@ -28,7 +32,7 @@ export default function AdminGuide() {
           <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-8">
             <div className="flex">
               <div className="flex-shrink-0">
-                <div className="text-red-400 text-xl">🔒</div>
+                <MdSecurity className="text-red-400 text-xl" />
               </div>
               <div className="ml-3">
                 <p className="text-sm text-red-700">
@@ -41,7 +45,10 @@ export default function AdminGuide() {
 
           {/* Table of Contents */}
           <div className="web3-card mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">📋 Table of Contents</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+              <MdOutlineAssignment className="mr-2" />
+              Table of Contents
+            </h2>
             <ul className="space-y-2">
               <li><a href="#access" className="text-emerald-600 hover:text-emerald-800">1. Admin Access & Permissions</a></li>
               <li><a href="#dashboard" className="text-emerald-600 hover:text-emerald-800">2. Admin Dashboard Overview</a></li>
@@ -106,7 +113,7 @@ export default function AdminGuide() {
             {/* Dashboard Overview */}
             <section id="dashboard" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>📊</span>
+                <MdBarChart className="mr-1" />
                 <span>2. Admin Dashboard Overview</span>
               </h2>
               
@@ -117,7 +124,10 @@ export default function AdminGuide() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-emerald-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-emerald-800 mb-2">📈 Quick Stats</h3>
+                    <h3 className="font-semibold text-emerald-800 mb-2 flex items-center">
+                      <MdTrendingUp className="mr-2" />
+                      Quick Stats
+                    </h3>
                     <ul className="text-sm text-emerald-700 space-y-1">
                       <li>• Total coffee batches created</li>
                       <li>• Verification status summary</li>

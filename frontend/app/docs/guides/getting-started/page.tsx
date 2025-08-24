@@ -1,6 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { MdRocket, MdAnalytics, MdPerson, MdLocationOn, MdSecurity, MdQrCode, MdLibraryBooks } from 'react-icons/md';
+import { SiChainlink } from 'react-icons/si';
+import { CoffeeBeanIcon, FarmOriginIcon } from '../../../components/icons/WagaIcons';
+import { NetworkEthereum } from '@web3icons/react';
 
 export default function GettingStartedGuide() {
   return (
@@ -17,7 +21,7 @@ export default function GettingStartedGuide() {
           {/* Header */}
           <div className="mb-12">
             <div className="flex items-center space-x-4 mb-6">
-              <div className="text-4xl">🚀</div>
+              <MdRocket className="text-4xl text-emerald-600" />
               <h1 className="text-4xl font-bold web3-gradient-text">Getting Started with WAGA Coffee</h1>
             </div>
             <p className="text-xl text-gray-600">
@@ -60,7 +64,10 @@ export default function GettingStartedGuide() {
                     </p>
                   </div>
                   <div className="bg-amber-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-amber-800 mb-2">☕ Premium Coffee</h3>
+                    <h3 className="font-semibold text-amber-800 mb-2 flex items-center">
+                      <CoffeeBeanIcon size={16} className="mr-2 waga-icon-coffee" />
+                      Premium Coffee
+                    </h3>
                     <p className="text-sm text-amber-700">
                       Directly sourced from Ethiopian highlands with complete traceability documentation.
                     </p>
@@ -143,7 +150,7 @@ export default function GettingStartedGuide() {
               
               <div className="space-y-6">
                 <p className="text-gray-700 leading-relaxed">
-                  WAGA operates on a Vendor Managed Inventory (VMI) model where certified distributors handle all blockchain 
+                  WAGA operates on a Vendor Managed Inventory (VMI) model where verified distributors handle all blockchain 
                   operations on behalf of end customers. This ensures a seamless coffee experience without requiring 
                   customers to interact directly with Web3 technology.
                 </p>
@@ -171,7 +178,10 @@ export default function GettingStartedGuide() {
                   </div>
 
                   <div className="bg-purple-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-purple-800 mb-2">� Blockchain Benefits</h3>
+                    <h3 className="font-semibold text-purple-800 mb-2 flex items-center">
+                      <NetworkEthereum size={16} variant="branded" className="mr-2" />
+                      Blockchain Benefits
+                    </h3>
                     <ul className="text-sm text-purple-700 space-y-1">
                       <li>• Immutable traceability records</li>
                       <li>• Automated quality verification</li>
@@ -222,7 +232,10 @@ export default function GettingStartedGuide() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-coffee-50 p-4 rounded-lg border-l-4 border-coffee-300">
-                      <h4 className="font-semibold text-coffee-800 mb-2">☕ Coffee Shops</h4>
+                      <h4 className="font-semibold text-coffee-800 mb-2 flex items-center">
+                        <CoffeeBeanIcon size={16} className="mr-2 waga-icon-coffee" />
+                        Coffee Shops
+                      </h4>
                       <ul className="text-sm text-coffee-700 space-y-1">
                         <li>• Serve verified coffee to customers</li>
                         <li>• Provide traceability information</li>
@@ -292,7 +305,7 @@ export default function GettingStartedGuide() {
                 <div className="bg-emerald-50 border-l-4 border-emerald-400 p-4">
                   <div className="flex">
                     <div className="flex-shrink-0">
-                      <div className="text-emerald-400 text-xl">✨</div>
+                      <MdSecurity className="text-emerald-400 text-xl" />
                     </div>
                     <div className="ml-3">
                       <p className="text-sm text-emerald-700">
@@ -401,7 +414,10 @@ export default function GettingStartedGuide() {
                   </div>
 
                   <div className="bg-amber-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-amber-800 mb-3">🔐 Smart Contract</h3>
+                    <h3 className="font-semibold text-amber-800 mb-3 flex items-center">
+                      <MdSecurity className="mr-2" />
+                      Smart Contract
+                    </h3>
                     <ul className="text-sm text-amber-700 space-y-1">
                       <li>• On-chain verification status</li>
                       <li>• Immutable audit trail</li>
@@ -440,13 +456,14 @@ export default function GettingStartedGuide() {
                 Become a Distributor
               </Link>
               <Link href="/docs" className="web3-button-outline block text-center">
-                📚 View All Guides
+                <MdLibraryBooks className="mr-2" />
+                View All Guides
               </Link>
             </div>
             
             <div className="mt-6 bg-coffee-50 p-4 rounded-lg text-center">
               <p className="text-coffee-700">
-                <strong>Looking for WAGA Coffee?</strong> Find certified distributors in your area through our 
+                <strong>Looking for WAGA Coffee?</strong> Find verified distributors in your area through our 
                 <Link href="/browse" className="text-emerald-600 hover:text-emerald-800 font-semibold"> distributor network</Link>.
               </p>
             </div>

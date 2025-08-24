@@ -9,15 +9,15 @@ export async function GET(
   try {
     const batchId = parseInt(params.batchId);
     
-    // Search for the Ethiopian coffee batch in Pinata files
+    // Search for the coffee batch in Pinata files
     const files = await pinata.files.list();
     const batchFile = files.files.find(file => 
-      file.name === `ethiopian-coffee-batch-${batchId}`
+      file.name === `coffee-batch-${batchId}`
     );
 
     if (!batchFile) {
       return NextResponse.json(
-        { error: `Ethiopian coffee batch ${batchId} not found` },
+        { error: `Coffee batch ${batchId} not found` },
         { status: 404 }
       );
     }
@@ -34,11 +34,11 @@ export async function GET(
       metadataHash: batchData.metadataHash
     };
 
-    console.log(`📦 Retrieved Ethiopian coffee batch ${batchId} for verification`);
+    console.log(`📦 Retrieved coffee batch ${batchId} for verification`);
 
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    console.error("Error fetching Ethiopian coffee batch:", error);
+    console.error("Error fetching coffee batch:", error);
     return NextResponse.json(
       { error: "Failed to fetch batch" },
       { status: 500 }
@@ -57,7 +57,7 @@ export async function PUT(
     // Find existing batch
     const files = await pinata.files.list();
     const batchFile = files.files.find(file => 
-      file.name === `ethiopian-coffee-batch-${batchId}`
+      file.name === `coffee-batch-${batchId}`
     );
 
     if (!batchFile) {
@@ -81,7 +81,7 @@ export async function PUT(
     // Upload updated version using the correct SDK method
     const upload = await pinata.upload.json(updatedBatch, {
       metadata: {
-        name: `ethiopian-coffee-batch-${batchId}`
+        name: `coffee-batch-${batchId}`
       }
     });
 

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { contractService, BatchInfo } from "@/app/services/contractService";
+import { CoffeeBeanIcon } from "./icons/WagaIcons";
+import { MdAnalytics, MdWarning, MdBlock } from 'react-icons/md';
 
 interface BatchRedemptionProps {
   batchId: number;
@@ -78,12 +80,12 @@ export default function BatchRedemption({
 
     setIsRedeeming(true);
     setError('');
-    setProgress('☕ Preparing redemption request...');
+    setProgress('Preparing redemption request...');
 
     try {
       await contractService.initialize();
       
-      setProgress('📝 Submitting redemption transaction...');
+      setProgress('Submitting redemption transaction...');
       
       // Combine shipping address and contact info
       const fullDeliveryAddress = `${shippingAddress}\n\nContact: ${contactInfo}`;
@@ -95,7 +97,7 @@ export default function BatchRedemption({
       );
 
       setTxHash(result.txHash);
-      setProgress('✅ Redemption request submitted successfully!');
+      setProgress('Redemption request submitted successfully!');
       setIsRedeeming(false);
       
       // Reload user balance to show updated tokens
@@ -119,8 +121,9 @@ export default function BatchRedemption({
   return (
     <div className="web3-card">
       <div className="text-center mb-6">
-        <h3 className="text-2xl font-bold web3-gradient-text mb-2">
-          ☕ Coffee Redemption
+        <h3 className="text-2xl font-bold web3-gradient-text mb-2 flex items-center justify-center">
+          <CoffeeBeanIcon size={28} className="mr-2 waga-icon-coffee" />
+          Coffee Redemption
         </h3>
         <p className="text-gray-400">
           Redeem your ERC-1155 tokens for physical coffee delivery
@@ -135,8 +138,9 @@ export default function BatchRedemption({
 
       {userBalance === 0 && (
         <div className="mb-4 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
-          <p className="text-yellow-400 text-sm">
-            ⚠️ You don't own any tokens for this batch. You need to mint or purchase tokens first.
+          <p className="text-yellow-400 text-sm flex items-center">
+            <MdWarning className="mr-2" />
+            You don't own any tokens for this batch. You need to mint or purchase tokens first.
           </p>
         </div>
       )}
@@ -145,7 +149,10 @@ export default function BatchRedemption({
         {/* Batch & User Info Section */}
         {batchInfo && (
           <div className="p-4 bg-gray-800/50 rounded-lg">
-            <h4 className="text-lg font-semibold text-white mb-3">📊 Batch & Token Info</h4>
+            <h4 className="text-lg font-semibold text-white mb-3 flex items-center">
+              <MdAnalytics className="mr-2" />
+              Batch & Token Info
+            </h4>
             <div className="space-y-2 text-sm text-gray-300">
               <div className="flex justify-between">
                 <span>Batch ID:</span>
@@ -184,7 +191,10 @@ export default function BatchRedemption({
         {/* Redemption Form */}
         {userBalance > 0 && batchInfo && (
           <div className="p-4 bg-gray-800/30 rounded-lg">
-            <h4 className="text-lg font-semibold text-white mb-3">☕ Redemption Request</h4>
+            <h4 className="text-lg font-semibold text-white mb-3 flex items-center">
+              <CoffeeBeanIcon size={20} className="mr-2 waga-icon-coffee" />
+              Redemption Request
+            </h4>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -288,9 +298,15 @@ export default function BatchRedemption({
               Processing Redemption...
             </div>
           ) : userBalance === 0 ? (
-            '🚫 No Tokens to Redeem'
+            <span className="flex items-center justify-center">
+              <MdBlock className="mr-2" />
+              No Tokens to Redeem
+            </span>
           ) : (
-            `☕ Redeem ${redemptionQuantity} Tokens`
+            <span className="flex items-center justify-center">
+              <CoffeeBeanIcon size={20} className="mr-2 waga-icon-coffee" />
+              Redeem {redemptionQuantity} Tokens
+            </span>
           )}
         </button>
 

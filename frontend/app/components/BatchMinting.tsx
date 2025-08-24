@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { contractService, BatchInfo } from "@/app/services/contractService";
+import { TokenETH } from '@web3icons/react';
+import { MdCheck, MdClose, MdWarning, MdAnalytics, MdInventory, MdAccessTime } from 'react-icons/md';
+import { FaEthereum } from 'react-icons/fa';
 
 interface BatchMintingProps {
   batchId: number;
@@ -81,12 +84,12 @@ export default function BatchMinting({
 
     setIsMinting(true);
     setError('');
-    setProgress('🪙 Preparing to mint tokens...');
+    setProgress('Preparing to mint tokens...');
 
     try {
       await contractService.initialize();
       
-      setProgress('📝 Submitting minting transaction...');
+      setProgress('Submitting minting transaction...');
       const result = await contractService.mintTokens(
         userAddress,
         batchId,
@@ -94,9 +97,9 @@ export default function BatchMinting({
       );
 
       setTxHash(result.txHash);
-      setProgress('⏳ Waiting for transaction confirmation...');
+      setProgress('Waiting for transaction confirmation...');
       
-      setProgress('✅ Tokens minted successfully!');
+      setProgress('Tokens minted successfully!');
       setIsMinting(false);
       
       // Reload batch info to show updated quantities
@@ -124,8 +127,9 @@ export default function BatchMinting({
   return (
     <div className="web3-card">
       <div className="text-center mb-6">
-        <h3 className="text-2xl font-bold web3-gradient-text mb-2">
-          🪙 Token Minting
+        <h3 className="text-2xl font-bold web3-gradient-text mb-2 flex items-center justify-center">
+          <TokenETH className="mr-2" />
+          Token Minting
         </h3>
         <p className="text-gray-400">
           Mint ERC-1155 coffee tokens for batch #{batchId}
@@ -140,24 +144,27 @@ export default function BatchMinting({
 
       {!hasMinterRole && (
         <div className="mb-4 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
-          <p className="text-yellow-400 text-sm">
-            ⚠️ You need MINTER role to mint tokens. Please contact an admin.
+          <p className="text-yellow-400 text-sm flex items-center">
+            <MdWarning className="mr-2" />
+            You need MINTER role to mint tokens. Please contact an admin.
           </p>
         </div>
       )}
 
       {batchInfo && !batchInfo.isVerified && (
         <div className="mb-4 p-4 bg-orange-500/20 border border-orange-500/30 rounded-lg">
-          <p className="text-orange-400 text-sm">
-            ⚠️ Batch must be verified before tokens can be minted.
+          <p className="text-orange-400 text-sm flex items-center">
+            <MdWarning className="mr-2" />
+            Batch must be verified before tokens can be minted.
           </p>
         </div>
       )}
 
       {isFullyMinted && (
         <div className="mb-4 p-4 bg-green-500/20 border border-green-500/30 rounded-lg">
-          <p className="text-green-400 text-sm">
-            ✅ This batch is fully minted! All expected tokens have been created.
+          <p className="text-green-400 text-sm flex items-center">
+            <MdCheck className="mr-2" />
+            This batch is fully minted! All expected tokens have been created.
           </p>
         </div>
       )}
@@ -166,7 +173,10 @@ export default function BatchMinting({
         {/* Batch Status Section */}
         {batchInfo && (
           <div className="p-4 bg-gray-800/50 rounded-lg">
-            <h4 className="text-lg font-semibold text-white mb-3">📊 Batch Status</h4>
+            <h4 className="text-lg font-semibold text-white mb-3 flex items-center">
+              <MdAnalytics className="mr-2" />
+              Batch Status
+            </h4>
             <div className="space-y-2 text-sm text-gray-300">
               <div className="flex justify-between">
                 <span>Batch ID:</span>
@@ -174,8 +184,18 @@ export default function BatchMinting({
               </div>
               <div className="flex justify-between">
                 <span>Verification Status:</span>
-                <span className={batchInfo.isVerified ? 'text-green-300' : 'text-red-300'}>
-                  {batchInfo.isVerified ? '✅ Verified' : '❌ Not Verified'}
+                <span className={`flex items-center ${batchInfo.isVerified ? 'text-green-300' : 'text-red-300'}`}>
+                  {batchInfo.isVerified ? (
+                    <>
+                      <MdCheck className="mr-1" />
+                      Verified
+                    </>
+                  ) : (
+                    <>
+                      <MdClose className="mr-1" />
+                      Not Verified
+                    </>
+                  )}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -203,7 +223,10 @@ export default function BatchMinting({
         {/* Minting Form */}
         {batchInfo && batchInfo.isVerified && !isFullyMinted && hasMinterRole && (
           <div className="p-4 bg-gray-800/30 rounded-lg">
-            <h4 className="text-lg font-semibold text-white mb-3">🪙 Mint Configuration</h4>
+            <h4 className="text-lg font-semibold text-white mb-3 flex items-center">
+              <TokenETH className="mr-2" />
+              Mint Configuration
+            </h4>
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -273,11 +296,20 @@ export default function BatchMinting({
               Minting...
             </div>
           ) : isFullyMinted ? (
-            '✅ Fully Minted'
+            <span className="flex items-center justify-center">
+              <MdCheck className="mr-2" />
+              Fully Minted
+            </span>
           ) : !batchInfo?.isVerified ? (
-            '⚠️ Verification Required'
+            <span className="flex items-center justify-center">
+              <MdWarning className="mr-2" />
+              Verification Required
+            </span>
           ) : (
-            `🪙 Mint ${mintQuantity} Tokens`
+            <span className="flex items-center justify-center">
+              <TokenETH className="mr-2" />
+              Mint {mintQuantity} Tokens
+            </span>
           )}
         </button>
 

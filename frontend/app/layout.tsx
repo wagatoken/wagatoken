@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'WAGA  - Blockchain Coffee Traceability',
-  description: 'Track Ethiopian coffee from farm to cup with complete transparency using blockchain technology, Chainlink oracles, and IPFS storage.',
+  description: 'Track coffee from farm to cup with complete transparency using blockchain technology, Chainlink oracles, and IPFS storage.',
   keywords: [
     'coffee',
     'blockchain',

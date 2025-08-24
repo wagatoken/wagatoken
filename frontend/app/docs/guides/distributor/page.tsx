@@ -1,6 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { MdBusiness, MdGpsFixed, MdOutlineAssignment, MdAttachMoney, MdDiamond, MdWarning, MdSecurity, MdSearch, MdAccessTime, MdSettings, MdLightbulb, MdSync, MdPayment, MdLanguage, MdPhone, MdBarChart, MdBalance, MdGroup, MdLibraryBooks } from 'react-icons/md';
+import { SiChainlink } from 'react-icons/si';
+import { DistributorNetworkIcon } from '../../../components/icons/WagaIcons';
+import { TokenETH } from '@web3icons/react';
 
 export default function DistributorGuide() {
   return (
@@ -17,7 +21,7 @@ export default function DistributorGuide() {
           {/* Header */}
           <div className="mb-12">
             <div className="flex items-center space-x-4 mb-6">
-              <div className="text-4xl">🏢</div>
+              <DistributorNetworkIcon size={48} className="waga-icon-network" />
               <h1 className="text-4xl font-bold web3-gradient-text">Distributor Guide</h1>
             </div>
             <p className="text-xl text-gray-600">
@@ -28,7 +32,7 @@ export default function DistributorGuide() {
           <div className="bg-emerald-50 border-l-4 border-emerald-400 p-4 mb-8">
             <div className="flex">
               <div className="flex-shrink-0">
-                <div className="text-emerald-400 text-xl">🎯</div>
+                <MdGpsFixed className="text-emerald-400 text-xl" />
               </div>
               <div className="ml-3">
                 <p className="text-sm text-emerald-700">
@@ -41,7 +45,10 @@ export default function DistributorGuide() {
 
           {/* Table of Contents */}
           <div className="web3-card mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">📋 Table of Contents</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+              <MdOutlineAssignment className="mr-2" />
+              Table of Contents
+            </h2>
             <ul className="space-y-2">
               <li><a href="#overview" className="text-emerald-600 hover:text-emerald-800">1. Distributor Model Overview</a></li>
               <li><a href="#requirements" className="text-emerald-600 hover:text-emerald-800">2. Distributor Requirements</a></li>
@@ -61,7 +68,7 @@ export default function DistributorGuide() {
             {/* Overview */}
             <section id="overview" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>🎯</span>
+                <MdGpsFixed className="text-emerald-400" />
                 <span>1. Distributor Model Overview</span>
               </h2>
               
@@ -85,7 +92,7 @@ export default function DistributorGuide() {
 
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h3 className="font-semibold text-blue-800 mb-2 flex items-center space-x-2">
-                      <span>💰</span>
+                      <MdAttachMoney className="text-blue-600" />
                       <span>Pay on Redemption</span>
                     </h3>
                     <p className="text-sm text-blue-700">
@@ -95,7 +102,7 @@ export default function DistributorGuide() {
 
                   <div className="bg-purple-50 p-4 rounded-lg">
                     <h3 className="font-semibold text-purple-800 mb-2 flex items-center space-x-2">
-                      <span>🔒</span>
+                      <MdSecurity className="mr-1" />
                       <span>Staking Commitment</span>
                     </h3>
                     <p className="text-sm text-purple-700">
@@ -105,7 +112,10 @@ export default function DistributorGuide() {
                 </div>
 
                 <div className="bg-amber-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-amber-800 mb-3">🎯 Key Benefits for Distributors</h3>
+                  <h3 className="font-semibold text-amber-800 mb-3 flex items-center">
+                    <MdGpsFixed className="mr-2" />
+                    Key Benefits for Distributors
+                  </h3>
                   <ul className="text-sm text-amber-700 space-y-1">
                     <li>• <strong>Zero Inventory Risk:</strong> No physical storage or spoilage concerns</li>
                     <li>• <strong>Minimal Capital Requirements:</strong> Only stake WAGA utility tokens, no inventory investment</li>
@@ -122,7 +132,7 @@ export default function DistributorGuide() {
             {/* Requirements */}
             <section id="requirements" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>📋</span>
+                <MdOutlineAssignment className="text-purple-400" />
                 <span>2. Distributor Requirements</span>
               </h2>
               
@@ -156,7 +166,10 @@ export default function DistributorGuide() {
                 </div>
 
                 <div className="bg-purple-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-purple-800 mb-3">💎 Financial Requirements</h3>
+                  <h3 className="font-semibold text-purple-800 mb-3 flex items-center">
+                    <MdDiamond className="mr-2" />
+                    Financial Requirements
+                  </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                       <h4 className="font-medium text-purple-800 mb-2">Minimum Staking (TBD)</h4>
@@ -178,7 +191,10 @@ export default function DistributorGuide() {
                 </div>
 
                 <div className="bg-red-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-red-800 mb-2">⚠️ Compliance Requirements</h3>
+                  <h3 className="font-semibold text-red-800 mb-2 flex items-center">
+                    <MdWarning className="mr-2" />
+                    Compliance Requirements
+                  </h3>
                   <ul className="text-sm text-red-700 space-y-1">
                     <li>• ERC3643 compliant identity verification</li>
                     <li>• KYC/AML documentation submitted</li>
@@ -193,7 +209,7 @@ export default function DistributorGuide() {
             {/* Staking */}
             <section id="staking" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>🔒</span>
+                <MdSecurity className="mr-1" />
                 <span>3. WAGA Token Staking</span>
               </h2>
               
@@ -203,7 +219,10 @@ export default function DistributorGuide() {
                 </p>
 
                 <div className="bg-emerald-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-emerald-800 mb-2">🎯 Why Staking is Required</h3>
+                  <h3 className="font-semibold text-emerald-800 mb-2 flex items-center">
+                    <MdGpsFixed className="mr-2" />
+                    Why Staking is Required
+                  </h3>
                   <ul className="text-sm text-emerald-700 space-y-1">
                     <li>• <strong>Commitment Guarantee:</strong> Financial stake ensures serious participation</li>
                     <li>• <strong>Network Security:</strong> Aligned incentives protect all participants</li>
@@ -249,7 +268,10 @@ export default function DistributorGuide() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-blue-800 mb-2">🎁 Staking Benefits</h3>
+                    <h3 className="font-semibold text-blue-800 mb-2 flex items-center">
+                      <MdDiamond className="mr-2" />
+                      Staking Benefits
+                    </h3>
                     <ul className="text-sm text-blue-700 space-y-1">
                       <li>• Access to distributor dashboard</li>
                       <li>• Reduced transaction fees</li>
@@ -261,7 +283,10 @@ export default function DistributorGuide() {
                   </div>
 
                   <div className="bg-amber-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-amber-800 mb-2">⚠️ Staking Considerations</h3>
+                    <h3 className="font-semibold text-amber-800 mb-2 flex items-center">
+                      <MdWarning className="mr-2" />
+                      Staking Considerations
+                    </h3>
                     <ul className="text-sm text-amber-700 space-y-1">
                       <li>• Tokens locked for minimum period</li>
                       <li>• Slashing risk for policy violations</li>
@@ -277,7 +302,7 @@ export default function DistributorGuide() {
             {/* ERC3643 Verification */}
             <section id="verification" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>🛡️</span>
+                <MdSecurity className="text-blue-400" />
                 <span>4. ERC3643 Verification Process</span>
               </h2>
               
@@ -288,7 +313,10 @@ export default function DistributorGuide() {
                 </p>
 
                 <div className="bg-emerald-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-emerald-800 mb-2">🔍 What is ERC3643?</h3>
+                  <h3 className="font-semibold text-emerald-800 mb-2 flex items-center">
+                    <MdSearch className="mr-2" />
+                    What is ERC3643?
+                  </h3>
                   <p className="text-sm text-emerald-700">
                     ERC3643 is a standard for compliant tokenization that includes built-in compliance rules, 
                     identity verification, and regulatory reporting capabilities. It ensures only verified entities 
@@ -332,7 +360,10 @@ export default function DistributorGuide() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-blue-800 mb-3">📋 Required Documentation</h3>
+                    <h3 className="font-semibold text-blue-800 mb-3 flex items-center">
+                      <MdOutlineAssignment className="mr-2" />
+                      Required Documentation
+                    </h3>
                     <ul className="text-sm text-blue-700 space-y-1">
                       <li>• Business Plan</li>
                       <li>• Tax identification documents</li>
@@ -357,7 +388,10 @@ export default function DistributorGuide() {
                 </div>
 
                 <div className="bg-amber-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-amber-800 mb-2">⏱️ Verification Timeline</h3>
+                  <h3 className="font-semibold text-amber-800 mb-2 flex items-center">
+                    <MdAccessTime className="mr-2" />
+                    Verification Timeline
+                  </h3>
                   <ul className="text-sm text-amber-700 space-y-1">
                     <li>• Application submission: 1-2 hours</li>
                     <li>• Document review: 3-5 business days</li>
@@ -372,7 +406,7 @@ export default function DistributorGuide() {
             {/* Operations */}
             <section id="operations" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>⚙️</span>
+                <MdSettings className="text-amber-400" />
                 <span>5. Inventory-Free Operations</span>
               </h2>
               
@@ -395,7 +429,7 @@ export default function DistributorGuide() {
 
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h3 className="font-semibold text-blue-800 mb-2 flex items-center space-x-2">
-                      <span>💰</span>
+                      <MdAttachMoney className="text-blue-600" />
                       <span>No Advance Payments</span>
                     </h3>
                     <p className="text-sm text-blue-700">
@@ -458,7 +492,10 @@ export default function DistributorGuide() {
                 </div>
 
                 <div className="bg-amber-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-amber-800 mb-2">💡 Operational Advantages</h3>
+                  <h3 className="font-semibold text-amber-800 mb-2 flex items-center">
+                    <MdLightbulb className="mr-2" />
+                    Operational Advantages
+                  </h3>
                   <ul className="text-sm text-amber-700 space-y-1">
                     <li>• <strong>Scalability:</strong> Serve unlimited customers without infrastructure scaling</li>
                     <li>• <strong>Risk Reduction:</strong> No spoilage, theft, or storage insurance costs</li>
@@ -473,7 +510,7 @@ export default function DistributorGuide() {
             {/* Customer Flow */}
             <section id="customer-flow" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>👥</span>
+                <MdGroup className="mr-1" />
                 <span>6. Customer Fulfillment Process</span>
               </h2>
               
@@ -486,7 +523,10 @@ export default function DistributorGuide() {
 
                 <div className="space-y-6">
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-blue-800 mb-3">🔄 Customer Order Process</h3>
+                    <h3 className="font-semibold text-blue-800 mb-3 flex items-center">
+                      <MdSync className="mr-2" />
+                      Customer Order Process
+                    </h3>
                     <div className="space-y-3 text-sm">
                       <div className="flex items-start space-x-3">
                         <span className="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">1</span>
@@ -535,7 +575,10 @@ export default function DistributorGuide() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-emerald-50 p-4 rounded-lg">
-                      <h3 className="font-semibold text-emerald-800 mb-3">🎯 Distributor Responsibilities</h3>
+                      <h3 className="font-semibold text-emerald-800 mb-3 flex items-center">
+                        <MdGpsFixed className="mr-2" />
+                        Distributor Responsibilities
+                      </h3>
                       <ul className="text-sm text-emerald-700 space-y-1">
                         <li>• Customer sales and relationship management</li>
                         <li>• Coffee selection and recommendations</li>
@@ -561,7 +604,10 @@ export default function DistributorGuide() {
                 </div>
 
                 <div className="bg-amber-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-amber-800 mb-2">📞 Customer Support Best Practices</h3>
+                  <h3 className="font-semibold text-amber-800 mb-2 flex items-center">
+                    <MdPhone className="mr-2" />
+                    Customer Support Best Practices
+                  </h3>
                   <ul className="text-sm text-amber-700 space-y-1">
                     <li>• Provide clear product information and traceability benefits</li>
                     <li>• Create educational content about coffee origins and quality</li>
@@ -577,7 +623,7 @@ export default function DistributorGuide() {
             {/* Payments */}
             <section id="payments" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>💳</span>
+                <MdPayment className="mr-1" />
                 <span>7. Payment & Redemption System</span>
               </h2>
               
@@ -588,7 +634,10 @@ export default function DistributorGuide() {
                 </p>
 
                 <div className="bg-emerald-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-emerald-800 mb-2">💡 Payment Model Innovation</h3>
+                  <h3 className="font-semibold text-emerald-800 mb-2 flex items-center">
+                    <MdLightbulb className="mr-2" />
+                    Payment Model Innovation
+                  </h3>
                   <p className="text-sm text-emerald-700">
                     This model eliminates distributor cash flow risks by only requiring payment to WAGA when distributors 
                     redeem tokens after customers have already ordered and paid them. Distributors maintain positive cash flow.
@@ -652,7 +701,10 @@ export default function DistributorGuide() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-blue-800 mb-3">💰 Accepted Payment Methods</h3>
+                    <h3 className="font-semibold text-blue-800 mb-3 flex items-center">
+                      <MdAttachMoney className="mr-2" />
+                      Accepted Payment Methods
+                    </h3>
                     <ul className="text-sm text-blue-700 space-y-1">
                       <li>• <strong>USDC:</strong> Preferred stablecoin for price stability</li>
                       <li>• <strong>ETH:</strong> Native Ethereum token</li>
@@ -662,7 +714,10 @@ export default function DistributorGuide() {
                   </div>
 
                   <div className="bg-amber-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-amber-800 mb-3">⚠️ Payment Considerations</h3>
+                    <h3 className="font-semibold text-amber-800 mb-3 flex items-center">
+                      <MdWarning className="mr-2" />
+                      Payment Considerations
+                    </h3>
                     <ul className="text-sm text-amber-700 space-y-1">
                       <li>• Payment required within specified timeframe</li>
                       <li>• Failed payments may forfeit customer order</li>
@@ -674,7 +729,10 @@ export default function DistributorGuide() {
                 </div>
 
                 <div className="bg-purple-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-purple-800 mb-2">💎 Financial Benefits</h3>
+                  <h3 className="font-semibold text-purple-800 mb-2 flex items-center">
+                    <MdDiamond className="mr-2" />
+                    Financial Benefits
+                  </h3>
                   <ul className="text-sm text-purple-700 space-y-1">
                     <li>• <strong>Positive Cash Flow:</strong> Customers pay you before you pay WAGA for token redemption</li>
                     <li>• <strong>No Inventory Risk:</strong> Zero financial exposure to unsold inventory</li>
@@ -702,7 +760,7 @@ export default function DistributorGuide() {
                 <div className="bg-emerald-50 border-l-4 border-emerald-400 p-4">
                   <div className="flex">
                     <div className="flex-shrink-0">
-                      <div className="text-emerald-400 text-xl">💡</div>
+                      <MdLightbulb className="text-emerald-400 text-xl" />
                     </div>
                     <div className="ml-3">
                       <h3 className="text-sm font-semibold text-emerald-800">Distributor-Managed Model</h3>
@@ -720,7 +778,7 @@ export default function DistributorGuide() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-blue-50 p-4 rounded-lg">
                       <h4 className="font-semibold text-blue-800 mb-3 flex items-center space-x-2">
-                        <span>🌐</span>
+                        <MdLanguage className="text-emerald-400" />
                         <span>WAGA Platform Dashboard</span>
                       </h4>
                       <ul className="text-sm text-blue-700 space-y-1">
@@ -735,7 +793,7 @@ export default function DistributorGuide() {
 
                     <div className="bg-purple-50 p-4 rounded-lg">
                       <h4 className="font-semibold text-purple-800 mb-3 flex items-center space-x-2">
-                        <span>🔍</span>
+                        <MdSearch className="text-blue-400" />
                         <span>Blockchain Verification</span>
                       </h4>
                       <ul className="text-sm text-purple-700 space-y-1">
@@ -755,7 +813,10 @@ export default function DistributorGuide() {
                   
                   <div className="space-y-3">
                     <div className="bg-gray-50 p-3 rounded-lg">
-                      <h4 className="font-medium text-gray-900 mb-2">📱 No Blockchain Knowledge Required</h4>
+                      <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                        <MdPhone className="mr-2" />
+                        No Blockchain Knowledge Required
+                      </h4>
                       <p className="text-sm text-gray-700">
                         Customers order coffee through normal channels without needing to understand blockchain technology.
                       </p>
@@ -769,7 +830,10 @@ export default function DistributorGuide() {
                     </div>
 
                     <div className="bg-gray-50 p-3 rounded-lg">
-                      <h4 className="font-medium text-gray-900 mb-2">🎯 Traditional Shopping Experience</h4>
+                      <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                        <MdGpsFixed className="mr-2" />
+                        Traditional Shopping Experience
+                      </h4>
                       <p className="text-sm text-gray-700">
                         Customers enjoy familiar ordering, payment, and delivery processes while getting verified coffee.
                       </p>
@@ -778,7 +842,10 @@ export default function DistributorGuide() {
                 </div>
 
                 <div className="bg-amber-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-amber-800 mb-2">💡 Best Practices for Token Management</h3>
+                  <h3 className="font-semibold text-amber-800 mb-2 flex items-center">
+                    <MdLightbulb className="mr-2" />
+                    Best Practices for Token Management
+                  </h3>
                   <ul className="text-sm text-amber-700 space-y-1">
                     <li>• Monitor token allocation to ensure adequate inventory</li>
                     <li>• Track customer orders against available token batches</li>
@@ -882,7 +949,10 @@ export default function DistributorGuide() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-emerald-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-emerald-800 mb-3">🎯 HORECA Benefits</h3>
+                    <h3 className="font-semibold text-emerald-800 mb-3 flex items-center">
+                      <MdGpsFixed className="mr-2" />
+                      HORECA Benefits
+                    </h3>
                     <ul className="text-sm text-emerald-700 space-y-1">
                       <li>• Guaranteed coffee quality and traceability</li>
                       <li>• Just-in-time inventory management</li>
@@ -894,7 +964,10 @@ export default function DistributorGuide() {
                   </div>
 
                   <div className="bg-purple-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-purple-800 mb-3">💰 Dual Revenue Model</h3>
+                    <h3 className="font-semibold text-purple-800 mb-3 flex items-center">
+                      <MdAttachMoney className="mr-2" />
+                      Dual Revenue Model
+                    </h3>
                     <ul className="text-sm text-purple-700 space-y-1">
                       <li>• Resell tokens to other businesses</li>
                       <li>• Use tokens for own coffee needs</li>
@@ -907,7 +980,10 @@ export default function DistributorGuide() {
                 </div>
 
                 <div className="bg-amber-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-amber-800 mb-2">💡 HORECA Best Practices</h3>
+                  <h3 className="font-semibold text-amber-800 mb-2 flex items-center">
+                    <MdLightbulb className="mr-2" />
+                    HORECA Best Practices
+                  </h3>
                   <ul className="text-sm text-amber-700 space-y-1">
                     <li>• Plan redemptions based on seasonal demand patterns</li>
                     <li>• Use coffee origin stories as marketing content</li>
@@ -923,7 +999,7 @@ export default function DistributorGuide() {
             {/* Compliance */}
             <section id="compliance" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>⚖️</span>
+                <MdBalance className="text-amber-400" />
                 <span>10. Compliance & Reporting</span>
               </h2>
               
@@ -934,7 +1010,10 @@ export default function DistributorGuide() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-blue-800 mb-3">📋 Reporting Requirements</h3>
+                    <h3 className="font-semibold text-blue-800 mb-3 flex items-center">
+                      <MdOutlineAssignment className="mr-2" />
+                      Reporting Requirements
+                    </h3>
                     <ul className="text-sm text-blue-700 space-y-1">
                       <li>• Monthly transaction reports</li>
                       <li>• Customer onboarding logs</li>
@@ -959,7 +1038,10 @@ export default function DistributorGuide() {
                 </div>
 
                 <div className="bg-purple-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-purple-800 mb-3">⚖️ Regulatory Compliance Framework</h3>
+                  <h3 className="font-semibold text-purple-800 mb-3 flex items-center">
+                    <MdBalance className="mr-2" />
+                    Regulatory Compliance Framework
+                  </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                       <h4 className="font-medium text-purple-800 mb-2">Financial Regulations</h4>
@@ -983,7 +1065,10 @@ export default function DistributorGuide() {
                 </div>
 
                 <div className="bg-amber-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-amber-800 mb-2">📊 Automated Compliance Tools</h3>
+                  <h3 className="font-semibold text-amber-800 mb-2 flex items-center">
+                    <MdBarChart className="mr-2" />
+                    Automated Compliance Tools
+                  </h3>
                   <ul className="text-sm text-amber-700 space-y-1">
                     <li>• Blockchain transaction monitoring</li>
                     <li>• Automated reporting generation</li>
@@ -1000,7 +1085,7 @@ export default function DistributorGuide() {
           {/* Quick Actions */}
           <div className="mt-12 web3-card">
             <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-              <span>⚡</span>
+              <SiChainlink className="mr-1" />
               <span>Distributor Quick Actions</span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1008,13 +1093,15 @@ export default function DistributorGuide() {
                 🏢 Apply Now
               </Link>
               <Link href="/docs/guides/admin" className="web3-button-outline block text-center">
-                ⚙️ Admin Guide
+                <MdSettings className="mr-2" />
+                Admin Guide
               </Link>
               <Link href="/docs/guides/smart-contracts" className="web3-button-outline block text-center">
                 📄 Smart Contracts
               </Link>
               <Link href="/docs" className="web3-button-outline block text-center">
-                📚 All Guides
+                <MdLibraryBooks className="mr-2" />
+                All Guides
               </Link>
             </div>
           </div>

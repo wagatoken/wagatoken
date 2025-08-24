@@ -1,12 +1,12 @@
 import { NetworkEthereum, TokenETH, WalletMetamask } from '@web3icons/react';
 import { 
-  CoffeeBeanIcon,
-  VerificationIcon,
-  FarmOriginIcon,
-  TraceabilityIcon,
-  QualityGradeIcon,
-  CoffeeStorageIcon
-} from '../components/icons/WagaIcons';
+  MdCoffee,
+  MdVerified,
+  MdAgriculture,
+  MdTimeline,
+  MdGrade,
+  MdStorage
+} from 'react-icons/md';
 
 export default function About() {
   return (
@@ -28,20 +28,20 @@ export default function About() {
           
           <div className="space-y-6 text-gray-700">
             <p className="text-lg leading-relaxed">
-              WAGA Coffee Platform revolutionizes the coffee supply chain by tokenizing premium roasted coffee from the highlands of Ethiopia. 
-              Our blockchain-powered platform ensures complete traceability from farm to cup, managed by WAGA administrators who work directly with Ethiopian farmers.
+              WAGA Coffee Platform revolutionizes the coffee supply chain by tokenizing premium roasted coffee from highland regions. 
+              Our blockchain-powered platform ensures complete traceability from farm to cup, managed by WAGA administrators who work directly with local farmers.
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
               <div className="space-y-4 animate-card-entrance" style={{ animationDelay: '200ms' }}>
                 <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-                  <FarmOriginIcon size={24} className="waga-icon-farm" />
+                  <MdAgriculture size={24} className="text-emerald-600" />
                   <span>Our Mission</span>
                 </h2>
                 <p className="text-gray-700 leading-relaxed">
-                  To connect coffee lovers directly with Ethiopian farmers while ensuring transparency, 
+                  To connect coffee lovers directly with farmers while ensuring transparency, 
                   fair pricing, and authentic origin verification through blockchain technology. WAGA serves as the trusted intermediary, 
-                  working with local cooperatives to bring you the finest Ethiopian coffee.
+                  working with local cooperatives to bring you the finest coffee.
                 </p>
               </div>
               
@@ -59,7 +59,7 @@ export default function About() {
 
               <div className="space-y-4 animate-card-entrance" style={{ animationDelay: '600ms' }}>
                 <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-                  <CoffeeBeanIcon size={24} className="waga-icon-coffee" />
+                  <MdCoffee size={24} className="text-amber-600" />
                   <span>Ethiopian Heritage</span>
                 </h2>
                 <p className="text-gray-700 leading-relaxed">
@@ -71,12 +71,12 @@ export default function About() {
 
               <div className="space-y-4 animate-card-entrance" style={{ animationDelay: '800ms' }}>
                 <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-                  <QualityGradeIcon size={24} className="waga-icon-quality" />
+                  <MdGrade size={24} className="text-yellow-600" />
                   <span>Quality Assurance</span>
                 </h2>
                 <p className="text-gray-700 leading-relaxed">
                   Every coffee batch undergoes rigorous quality testing and verification before being tokenized. 
-                  Our WAGA administrators work closely with certified roasters and quality control experts 
+                  Our WAGA administrators work closely with verified roasters and quality control experts 
                   to ensure only the finest coffee reaches our platform.
                 </p>
               </div>
@@ -84,7 +84,7 @@ export default function About() {
 
             <div className="mt-12 p-6 web3-card-dark animate-card-entrance" style={{ animationDelay: '1000ms' }}>
               <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
-                <TraceabilityIcon size={24} className="waga-icon-trace" />
+                <MdTimeline size={24} className="text-blue-600" />
                 <span>Platform Statistics</span>
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
@@ -94,17 +94,17 @@ export default function About() {
                   <div className="text-sm text-gray-600">Smart Contracts</div>
                 </div>
                 <div className="flex flex-col items-center space-y-2">
-                  <CoffeeBeanIcon size={32} className="waga-icon-coffee" />
+                  <MdCoffee size={32} className="text-amber-600" />
                   <div className="text-2xl font-bold web3-gradient-text">12+</div>
                   <div className="text-sm text-gray-600">Coffee Batches</div>
                 </div>
                 <div className="flex flex-col items-center space-y-2">
-                  <VerificationIcon size={32} className="waga-icon-verification" />
+                  <MdVerified size={32} className="text-emerald-600" />
                   <div className="text-2xl font-bold web3-gradient-text">100%</div>
                   <div className="text-sm text-gray-600">Verification Rate</div>
                 </div>
                 <div className="flex flex-col items-center space-y-2">
-                  <CoffeeStorageIcon size={32} className="waga-icon-storage" />
+                  <MdStorage size={32} className="text-purple-600" />
                   <div className="text-2xl font-bold web3-gradient-text">Active</div>
                   <div className="text-sm text-gray-600">IPFS Storage</div>
                 </div>

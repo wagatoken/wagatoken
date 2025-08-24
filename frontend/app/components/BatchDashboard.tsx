@@ -3,6 +3,9 @@
 import { CoffeeBatch } from "@/utils/types";
 import ChainlinkVerification from "./ChainlinkVerification";
 import { useState } from "react";
+import { CoffeeBeanIcon } from './icons/WagaIcons';
+import { MdVerified, MdLock } from 'react-icons/md';
+import { FaLink } from 'react-icons/fa';
 
 interface BatchDashboardProps {
   batches: CoffeeBatch[];
@@ -68,9 +71,11 @@ export default function BatchDashboard({ batches, onRefresh }: BatchDashboardPro
 
       {batches.length === 0 ? (
         <div className="text-center py-16">
-          <div className="text-6xl mb-6">☕</div>
+          <div className="flex justify-center mb-6">
+            <CoffeeBeanIcon size={64} className="waga-icon-coffee" />
+          </div>
           <h3 className="text-xl font-bold text-white mb-3">No Coffee Batches Yet</h3>
-          <p className="text-gray-400 max-w-md mx-auto">Create your first batch of premium Ethiopian coffee to start tokenizing your inventory.</p>
+          <p className="text-gray-400 max-w-md mx-auto">Create your first batch of premium coffee to start tokenizing your inventory.</p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl">
@@ -108,7 +113,7 @@ export default function BatchDashboard({ batches, onRefresh }: BatchDashboardPro
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-semibold text-white">#{batch.batchId}</div>
-                    <div className="text-sm text-gray-400">Ethiopian ID: {batch.batchId}</div>
+                    <div className="text-sm text-gray-400">Batch ID: {batch.batchId}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-semibold text-white">{batch.batchDetails.farmName}</div>
@@ -141,7 +146,17 @@ export default function BatchDashboard({ batches, onRefresh }: BatchDashboardPro
                           : 'web3-gradient-button'
                       }`}
                     >
-                      {selectedBatch === batch.batchId && showVerificationPanel ? '🔒 Hide' : '🔗 Verify'}
+                      {selectedBatch === batch.batchId && showVerificationPanel ? (
+                        <>
+                          <MdLock size={16} />
+                          <span>Hide</span>
+                        </>
+                      ) : (
+                        <>
+                          <FaLink size={16} />
+                          <span>Verify</span>
+                        </>
+                      )}
                     </button>
                   </td>
                 </tr>

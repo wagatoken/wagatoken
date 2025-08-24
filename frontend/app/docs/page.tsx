@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import { NetworkEthereum, TokenETH, WalletMetamask } from '@web3icons/react';
+import { SiChainlink, SiIpfs } from 'react-icons/si';
+import { MdLanguage } from 'react-icons/md';
+import { CoffeeBeanIcon } from '../components/icons/WagaIcons';
 import DynamicPlatformStats from '../components/DynamicPlatformStats';
 
 export default function Docs() {
@@ -18,7 +21,7 @@ export default function Docs() {
                 <span>Getting Started</span>
               </h3>
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
-                Learn how to navigate the WAGA platform, connect your wallet, and start trading tokenized Ethiopian coffee.
+                Learn how to navigate the WAGA platform, connect your wallet, and start trading tokenized coffee.
               </p>
               <Link href="/docs/guides/getting-started" className="web3-button-outline text-sm">
                 Read Guide →
@@ -51,7 +54,7 @@ export default function Docs() {
             
             <div className="web3-card-feature animate-card-entrance" style={{ animationDelay: '400ms' }}>
               <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center space-x-2">
-                <span className="text-2xl">🔗</span>
+                <SiChainlink className="text-blue-500" />
                 <span>Chainlink Integration</span>
               </h3>
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
@@ -64,6 +67,7 @@ export default function Docs() {
             
             <div className="web3-card-feature animate-card-entrance" style={{ animationDelay: '500ms' }}>
               <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center space-x-2">
+                <SiIpfs className="text-purple-500" />
                 <span>IPFS Storage</span>
               </h3>
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
@@ -76,6 +80,7 @@ export default function Docs() {
             
             <div className="web3-card-feature animate-card-entrance" style={{ animationDelay: '600ms' }}>
               <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center space-x-2">
+                <NetworkEthereum size={20} variant="branded" />
                 <span>Smart Contracts</span>
               </h3>
               <p className="text-gray-800 text-sm mb-4 leading-relaxed">
@@ -153,9 +158,11 @@ export default function Docs() {
             
             <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="web3-stat-card">
-                <div className="text-3xl mb-2">☕</div>
-                <div className="text-2xl font-bold text-emerald-600">Ethiopian</div>
-                <div className="text-sm text-gray-800">Premium Coffee</div>
+                <div className="flex justify-center mb-2">
+                  <CoffeeBeanIcon size={32} className="waga-icon-coffee" />
+                </div>
+                <div className="text-2xl font-bold text-emerald-600">Premium</div>
+                <div className="text-sm text-gray-800">Coffee Beans</div>
               </div>
               <div className="web3-stat-card">
                 <div className="flex justify-center mb-2">
@@ -165,7 +172,9 @@ export default function Docs() {
                 <div className="text-sm text-gray-800">Verified Batches</div>
               </div>
               <div className="web3-stat-card">
-                <div className="text-3xl mb-2">🌍</div>
+                <div className="flex justify-center mb-2">
+                  <MdLanguage size={32} className="text-emerald-600" />
+                </div>
                 <div className="text-2xl font-bold text-emerald-600">Global</div>
                 <div className="text-sm text-gray-800">Distribution</div>
               </div>

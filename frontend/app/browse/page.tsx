@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { CoffeeBatch } from "@/utils/types";
-import { CoffeeBeanIcon, VerificationIcon } from "../components/icons/WagaIcons";
+import { MdCoffee, MdVerified, MdShoppingCart, MdHourglassTop } from "react-icons/md";
 import Breadcrumbs from "../components/layout/Breadcrumbs";
 
 export default function BrowsePage() {
@@ -13,10 +13,13 @@ export default function BrowsePage() {
 
   const fetchBatches = async () => {
     try {
-      const response = await fetch('/api/batches');
+      const response = await fetch('/api/batches/');
       if (response.ok) {
         const data = await response.json();
+        console.log('Fetched batches:', data.batches?.length || 0, 'batches');
         setBatches(data.batches || []);
+      } else {
+        console.error('Failed to fetch batches:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('Error fetching batches:', error);
@@ -54,11 +57,11 @@ export default function BrowsePage() {
         {/* Header */}
         <div className="mb-8 animate-card-entrance">
           <h1 className="flex items-center gap-3 text-4xl font-bold web3-gradient-text mb-2">
-            <CoffeeBeanIcon size={36} className="waga-icon-coffee" />
+            <MdCoffee size={36} className="text-amber-600" />
             Browse Coffee Batches
           </h1>
           <p className="text-gray-600">
-            Discover premium roasted coffee from verified farms across Ethiopia
+            Discover premium roasted coffee from verified farms
           </p>
         </div>
 
@@ -110,7 +113,7 @@ export default function BrowsePage() {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-1">
-                      <CoffeeBeanIcon size={18} className="waga-icon-coffee" />
+                      <MdCoffee size={18} className="text-amber-600" />
                       Batch #{batch.batchId}
                     </h3>
                     <div className="text-amber-700 text-sm font-medium">
@@ -118,7 +121,7 @@ export default function BrowsePage() {
                     </div>
                   </div>
                   <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(batch)}`}>
-                    <VerificationIcon size={12} className="waga-icon-verification" />
+                    <MdVerified size={12} />
                     {batch.verification.verificationStatus}
                   </span>
                 </div>
@@ -151,10 +154,20 @@ export default function BrowsePage() {
                 <div className="border-t border-amber-200/50 pt-4">
                   <button
                     onClick={() => window.location.href = '/consumer'}
-                    className="w-full web3-gradient-button-secondary text-sm py-2"
+                    className="w-full web3-gradient-button-secondary text-sm py-2 flex items-center justify-center gap-2"
                     disabled={batch.verification.verificationStatus !== 'verified'}
                   >
-                    {batch.verification.verificationStatus === 'verified' ? '🛒 Purchase Tokens' : '⏳ Pending Verification'}
+                    {batch.verification.verificationStatus === 'verified' ? (
+                      <>
+                        <MdShoppingCart size={16} />
+                        Purchase Tokens
+                      </>
+                    ) : (
+                      <>
+                        <MdHourglassTop size={16} />
+                        Pending Verification
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -164,7 +177,9 @@ export default function BrowsePage() {
 
         {filteredBatches.length === 0 && !loading && (
           <div className="text-center py-12 animate-card-entrance">
-            <div className="text-6xl mb-4 animate-coffee-bounce">☕</div>
+            <div className="text-6xl mb-4 animate-coffee-bounce">
+              <MdCoffee size={72} className="text-amber-600 mx-auto" />
+            </div>
             <h3 className="text-xl font-bold text-gray-900 mb-3">No Batches Found</h3>
             <p className="text-gray-600">Try adjusting your search or filter criteria.</p>
           </div>
