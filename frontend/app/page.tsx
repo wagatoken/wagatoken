@@ -161,7 +161,7 @@ export default function HomePage() {
         <section className="py-12 sm:py-16 web3-section-alt web3-matrix-rain">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="text-center mb-8 sm:mb-12">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 web3-hero-title-modern">Featured Coffee Batches</h2>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 web3-hero-title-static">Featured Coffee Batches</h2>
               <p className="text-lg sm:text-xl web3-subtitle-modern">Discover the latest verified coffee from our global network</p>
             </div>
 
@@ -215,7 +215,7 @@ export default function HomePage() {
       <section className="py-16 sm:py-20 web3-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 web3-hero-title-modern">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 web3-hero-title-static">
               Complete Coffee Ecosystem
             </h2>
             <p className="text-lg sm:text-xl max-w-3xl mx-auto web3-subtitle-modern">
@@ -317,7 +317,7 @@ export default function HomePage() {
       {/* Call to Action */}
       <section className="py-16 sm:py-20 web3-hero web3-data-grid-subtle">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6 web3-hero-title-modern">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6 web3-hero-title-static">
             Ready to Transform the Coffee Value Chain?
           </h2>
           <p className="text-lg sm:text-xl mb-8 sm:mb-10 web3-subtitle-modern">
