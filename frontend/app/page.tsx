@@ -113,7 +113,7 @@ export default function HomePage() {
             <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl mb-6 sm:mb-8 opacity-90 web3-subtitle-modern">
               Onchain Coffee - OffChain Impact
             </p>
-            <p className="text-lg sm:text-xl md:text-2xl mb-8 sm:mb-10 opacity-80 max-w-3xl mx-auto text-white">
+            <p className="text-lg sm:text-xl md:text-2xl mb-8 sm:mb-10 opacity-80 max-w-3xl mx-auto web3-subtitle-modern">
                 Fair and Transparent From farm to cup 
             </p>
             
@@ -161,8 +161,8 @@ export default function HomePage() {
         <section className="py-12 sm:py-16 web3-section-alt web3-matrix-rain">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="text-center mb-8 sm:mb-12">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 web3-text-stable">Featured Coffee Batches</h2>
-              <p className="text-lg sm:text-xl text-gray-600">Discover the latest verified coffee from our global network</p>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 web3-hero-title-modern">Featured Coffee Batches</h2>
+              <p className="text-lg sm:text-xl web3-subtitle-modern">Discover the latest verified coffee from our global network</p>
             </div>
 
             {loading ? (
@@ -174,7 +174,7 @@ export default function HomePage() {
                 {featuredBatches.map((batch, index) => (
                   <div key={batch.batchId} className="web3-card web3-holographic-border-enhanced web3-card-stable web3-coffee-particles" style={{ animationDelay: `${index * 200}ms` }}>
                     <div className="mb-4">
-                      <h3 className="text-lg font-bold text-gray-900 mb-1">
+                      <h3 className="text-lg font-bold mb-1 web3-gradient-text">
                         {batch.batchDetails.farmName}
                       </h3>
                       <div className="text-emerald-600 text-sm font-medium">
@@ -182,18 +182,18 @@ export default function HomePage() {
                       </div>
                     </div>
 
-                    <div className="space-y-2 mb-6 text-sm">
+                    <div className="space-y-2 mb-6 text-sm web3-text-stable">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Batch:</span>
-                        <span className="text-gray-900 font-medium">#{batch.batchId}</span>
+                        <span>Batch:</span>
+                        <span className="font-medium">#{batch.batchId}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Packaging:</span>
+                        <span>Packaging:</span>
                         <span className="text-emerald-600 font-medium">{batch.packaging}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Price:</span>
-                        <span className="text-gray-900 font-bold">${batch.price}/bag</span>
+                        <span>Price:</span>
+                        <span className="font-bold web3-gradient-text">${batch.price}/bag</span>
                       </div>
                     </div>
 
@@ -215,10 +215,10 @@ export default function HomePage() {
       <section className="py-16 sm:py-20 web3-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 web3-text-stable">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 web3-hero-title-modern">
               Complete Coffee Ecosystem
             </h2>
-            <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-lg sm:text-xl max-w-3xl mx-auto web3-subtitle-modern">
               From production to consumption, every step is verified and transparent 
               through our decentralized platform.
             </p>
@@ -233,10 +233,10 @@ export default function HomePage() {
                   <div className="text-5xl mb-6">
                     {feature.icon}
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">
+                  <h3 className="text-xl font-bold mb-3 web3-gradient-text">
                     {feature.title}
                   </h3>
-                  <p className="text-gray-600 mb-6">
+                  <p className="mb-6 web3-text-stable">
                     {feature.description}
                   </p>
                   <div className="text-emerald-600 font-medium group-hover:text-emerald-700 transition-colors">
@@ -265,7 +265,7 @@ export default function HomePage() {
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 web3-gradient-text-harmonized">
               Powered by Web3 Technology
             </h2>
-            <p className="text-lg sm:text-xl text-gray-600">
+            <p className="text-lg sm:text-xl web3-subtitle-modern">
               Built on cutting-edge blockchain infrastructure for maximum security and transparency
             </p>
           </div>
@@ -275,8 +275,8 @@ export default function HomePage() {
               <div className="flex justify-center mb-4 web3-subtle-glow">
                 <NetworkEthereum size={48} variant="branded" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Smart Contracts</h3>
-              <p className="text-gray-600 mb-4">
+              <h3 className="text-xl font-bold mb-3 web3-gradient-text">Smart Contracts</h3>
+              <p className="mb-4 web3-text-stable">
                 ERC-1155 tokens represent verified coffee batches 
               </p>
               <div className="web3-badge web3-badge-success flex items-center gap-1">
@@ -289,8 +289,8 @@ export default function HomePage() {
               <div className="flex justify-center mb-4 web3-subtle-glow">
                 <SiChainlink size={48} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Chainlink Oracles</h3>
-              <p className="text-gray-600 mb-4">
+              <h3 className="text-xl font-bold mb-3 web3-gradient-text">Chainlink Oracles</h3>
+              <p className="mb-4 web3-text-stable">
                 Decentralized verification of coffee inventory through Chainlink Functions
               </p>
               <div className="web3-badge web3-badge-info">
@@ -302,8 +302,8 @@ export default function HomePage() {
               <div className="flex justify-center mb-4 web3-subtle-glow">
                 <SiIpfs size={48} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">IPFS Storage</h3>
-              <p className="text-gray-600 mb-4">
+              <h3 className="text-xl font-bold mb-3 web3-gradient-text">IPFS Storage</h3>
+              <p className="mb-4 web3-text-stable">
                 Immutable metadata storage via Pinata for complete transparency
               </p>
               <div className="web3-badge web3-badge-warning">
@@ -317,10 +317,10 @@ export default function HomePage() {
       {/* Call to Action */}
       <section className="py-16 sm:py-20 web3-hero web3-data-grid-subtle">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6 web3-text-stable">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6 web3-hero-title-modern">
             Ready to Transform the Coffee Value Chain?
           </h2>
-          <p className="text-lg sm:text-xl mb-8 sm:mb-10 opacity-90">
+          <p className="text-lg sm:text-xl mb-8 sm:mb-10 web3-subtitle-modern">
             Join the future of coffee supply chain management with decentralized technology
           </p>
           <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
