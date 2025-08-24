@@ -117,7 +117,7 @@ export default function HomePage() {
               Onchain Coffee - OffChain Impact
             </p>
             <p className="text-lg sm:text-xl md:text-2xl mb-8 sm:mb-10 opacity-80 max-w-3xl mx-auto text-white">
-                Fair and Transparent farm to cup 
+                Fair and Transparent From farm to cup 
             </p>
             
             <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">

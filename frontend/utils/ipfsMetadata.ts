@@ -16,7 +16,7 @@ export interface CoffeeBatchMetadata {
     cupping_notes: string[];
     batchSize: number; // Number of bags (matches quantity in smart contract)
     packagingInfo: string; // Must be "250g" or "500g" to match smart contract validation
-    pricePerUnit: string; // Price in wei as string
+    pricePerUnit: string; // Price in USD cents as string
   };
 }
 
@@ -34,7 +34,7 @@ export interface BatchCreationData {
   cupping_notes: string[];
   quantity: number; // Number of bags
   packagingInfo: "250g" | "500g";
-  pricePerUnit: string; // Price in ETH, will be converted to wei
+  pricePerUnit: string; // Price in USD, will be converted to cents
   productionDate: Date;
   expiryDate: Date;
   image?: string; // Optional image IPFS hash
@@ -44,8 +44,8 @@ export interface BatchCreationData {
  * Generate standardized coffee batch metadata
  */
 export function generateCoffeeMetadata(batchData: BatchCreationData): CoffeeBatchMetadata {
-  // Convert price from ETH to wei
-  const priceInWei = (parseFloat(batchData.pricePerUnit) * 1e18).toString();
+  // Store USD price in cents to avoid decimals (e.g., $42.50 becomes 4250)
+  const priceInCents = Math.round(parseFloat(batchData.pricePerUnit) * 100).toString();
 
   return {
     name: batchData.name,
@@ -62,7 +62,7 @@ export function generateCoffeeMetadata(batchData: BatchCreationData): CoffeeBatc
       cupping_notes: batchData.cupping_notes,
       batchSize: batchData.quantity,
       packagingInfo: batchData.packagingInfo,
-      pricePerUnit: priceInWei
+      pricePerUnit: priceInCents
     }
   };
 }
@@ -216,14 +216,15 @@ export async function createBatchWithIPFS(
     // Step 3: Prepare smart contract parameters
     const productionDateTimestamp = Math.floor(batchData.productionDate.getTime() / 1000);
     const expiryDateTimestamp = Math.floor(batchData.expiryDate.getTime() / 1000);
-    const priceInWei = (parseFloat(batchData.pricePerUnit) * 1e18).toString();
+    // Store USD price in cents to avoid decimals (e.g., $42.50 becomes 4250)
+    const priceInCents = Math.round(parseFloat(batchData.pricePerUnit) * 100).toString();
 
     console.log("🔗 Calling smart contract createBatch...");
     console.log("   IPFS URI:", ipfsUri);
     console.log("   Production Date:", new Date(productionDateTimestamp * 1000).toISOString());
     console.log("   Expiry Date:", new Date(expiryDateTimestamp * 1000).toISOString());
     console.log("   Quantity:", batchData.quantity);
-    console.log("   Price (wei):", priceInWei);
+    console.log("   Price (USD cents):", priceInCents);
     console.log("   Packaging:", batchData.packagingInfo);
     console.log("   Metadata Hash:", metadataHash);
 
@@ -233,7 +234,7 @@ export async function createBatchWithIPFS(
       productionDateTimestamp,
       expiryDateTimestamp,
       batchData.quantity,
-      priceInWei,
+      priceInCents,
       batchData.packagingInfo,
       metadataHash
     );
@@ -325,6 +326,12 @@ export function validateBatchData(batchData: Partial<BatchCreationData>): string
   }
   if (!batchData.pricePerUnit || parseFloat(batchData.pricePerUnit) <= 0) {
     errors.push("Price per unit must be greater than 0");
+  }
+  if (batchData.pricePerUnit && parseFloat(batchData.pricePerUnit) > 100) {
+    errors.push("Price per unit cannot exceed $100 (seems too high for coffee)");
+  }
+  if (batchData.pricePerUnit && parseFloat(batchData.pricePerUnit) < 0.01) {
+    errors.push("Price per unit must be at least $0.01");
   }
   if (!batchData.productionDate) errors.push("Production date is required");
   if (!batchData.expiryDate) errors.push("Expiry date is required");

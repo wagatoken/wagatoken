@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ethers } from "ethers";
 import { TokenETH, WalletMetamask, NetworkEthereum } from '@web3icons/react';
 import { 
   CoffeeBeanIcon,
@@ -69,9 +68,9 @@ export default function AdminPage() {
     cupping_notes: [],
     quantity: 0,
     packagingInfo: '250g',
-    pricePerUnit: '',
-    productionDate: new Date(),
-    expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+    pricePerUnit: '0.045',
+    productionDate: new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)), // 7 days ago (past date)
+    expiryDate: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 days from now
   });
 
   // Connect wallet
@@ -171,9 +170,9 @@ export default function AdminPage() {
         cupping_notes: [],
         quantity: 0,
         packagingInfo: '250g',
-        pricePerUnit: '',
-        productionDate: new Date(),
-        expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        pricePerUnit: '0.045',
+        productionDate: new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)), // 7 days ago (past date)
+        expiryDate: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 days from now
       });
 
       // Reload batches
@@ -570,17 +569,21 @@ export default function AdminPage() {
                     <div>
                       <label className="web3-form-label flex items-center gap-2">
                         <TokenETH size={16} variant="branded" />
-                        Price per Unit (ETH)<span className="required">*</span>
+                        Price per Unit (USD)<span className="required">*</span>
                       </label>
                       <input
                         type="number"
-                        step="0.001"
+                        step="0.01"
                         value={batchForm.pricePerUnit || ''}
                         onChange={(e) => handleInputChange('pricePerUnit', e.target.value)}
                         className="web3-ethereum-input w-full"
-                        placeholder="e.g., 0.045"
-                        min="0.001"
+                        placeholder="e.g., 25.00"
+                        min="0.01"
+                        max="500.00"
                       />
+                      <p className="text-sm text-gray-600 mt-1">
+                        💡 Enter price in USD (e.g., $25.00 for a coffee bag)
+                      </p>
                     </div>
                   </div>
                 </div>
