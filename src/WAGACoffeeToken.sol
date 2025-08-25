@@ -179,7 +179,6 @@ contract WAGACoffeeToken is
      * @param quantity Number of coffee bags in batch
      * @param pricePerUnit Price per unit in wei
      * @param packagingInfo Must be "250g" or "500g"
-     * @param metadataHash Hash of off-chain metadata
      * @return batchId The newly created batch ID
      */
     function createBatch(
@@ -187,8 +186,7 @@ contract WAGACoffeeToken is
         uint256 expiryDate,
         uint256 quantity,
         uint256 pricePerUnit,
-        string memory packagingInfo,
-        string memory metadataHash
+        string memory packagingInfo
     ) external onlyRole(ADMIN_ROLE) onlyInitialized returns (uint256) {
         uint256 batchId = _nextBatchId;
         _nextBatchId++; // Increment after assignment
@@ -200,10 +198,7 @@ contract WAGACoffeeToken is
         if (expiryDate <= productionDate) {
             revert WAGACoffeeToken__InvalidBatchDates_createBatch();
         }
-        if (
-            bytes(packagingInfo).length == 0 ||
-            bytes(metadataHash).length == 0
-        ) {
+        if (bytes(packagingInfo).length == 0) {
             revert WAGACoffeeToken__InvalidIPFSUri_createBatch();
         }
         if (
@@ -220,7 +215,7 @@ contract WAGACoffeeToken is
             quantity: quantity, // Number of coffee bags in batch
             pricePerUnit: pricePerUnit,
             packagingInfo: packagingInfo,
-            metadataHash: metadataHash,
+            metadataHash: "", // Empty initially - will be set via updateBatchIPFS
             isMetadataVerified: false,
             lastVerifiedTimestamp: 0 // Initialize to zero
         });
@@ -328,24 +323,29 @@ contract WAGACoffeeToken is
     }
 
     /**
-     * @notice Updates the IPFS URI for an existing batch
+     * @notice Updates the IPFS URI and metadata hash for an existing batch
      * @dev This function supports the blockchain-first workflow where batch is created first,
      *      then IPFS metadata is uploaded and the contract is updated with the real IPFS hash
      * @param batchId ID of the batch to update
      * @param ipfsUri New IPFS URI for batch metadata
+     * @param metadataHash Hash of the IPFS metadata
      */
     function updateBatchIPFS(
         uint256 batchId,
-        string memory ipfsUri
+        string memory ipfsUri,
+        string memory metadataHash
     ) external onlyRole(ADMIN_ROLE) onlyInitialized {
         if (!isBatchCreated(batchId)) {
             revert WAGACoffeeToken__BatchDoesNotExist_updateBatchIPFS();
         }
-        if (bytes(ipfsUri).length == 0) {
+        if (bytes(ipfsUri).length == 0 || bytes(metadataHash).length == 0) {
             revert WAGACoffeeToken__InvalidIPFSUri_createBatch();
         }
 
+        // Update both IPFS URI and metadata hash
         _setURI(batchId, ipfsUri);
+        s_batchInfo[batchId].metadataHash = metadataHash;
+        
         emit BatchIPFSUpdated(batchId, ipfsUri);
     }
 

@@ -89,12 +89,11 @@ contract EnhancedBaseForkTest is Test {
             block.timestamp + 365 days, // expiryDate
             1000, // quantity
             75 * 1e18, // pricePerUnit (75 WAGA per unit)
-            "250g", // packagingInfo
-            "forkTestMetadata" // metadataHash
+            "250g" // packagingInfo
         );
         
-        // Step 2: Update batch with IPFS URI (blockchain-first workflow)
-        coffeeToken.updateBatchIPFS(testBatchId, "QmForkTestHash123");
+        // Step 2: Update batch with IPFS URI and metadata hash (blockchain-first workflow)
+        coffeeToken.updateBatchIPFS(testBatchId, "QmForkTestHash123", "forkTestMetadata");
         
         console.log("Created batch ID on fork:", testBatchId);
         
@@ -152,13 +151,12 @@ contract EnhancedBaseForkTest is Test {
             block.timestamp + 365 days,
             1000, // quantity
             50 * 1e18,
-            "500g",
-            "verificationTestMetadata"
+            "500g"
         );
         
-        // Update batch with IPFS URI (blockchain-first workflow)
+        // Update batch with IPFS URI and metadata hash (blockchain-first workflow)
         vm.prank(ADMIN_USER);
-        coffeeToken.updateBatchIPFS(batchId, "QmVerificationTest");
+        coffeeToken.updateBatchIPFS(batchId, "QmVerificationTest", "verificationTestMetadata");
         
         console.log("Created batch for verification test:", batchId);
         
@@ -202,12 +200,15 @@ contract EnhancedBaseForkTest is Test {
                 block.timestamp + 365 days,
                 1000, // quantity
                 (50 + i * 10) * 1e18, // Different prices
-                i % 2 == 0 ? "250g" : "500g", // Alternate packaging
-                string.concat("persistenceMetadata", vm.toString(i))
+                i % 2 == 0 ? "250g" : "500g" // Alternate packaging
             );
             
-            // Update batch with IPFS URI (blockchain-first workflow)
-            coffeeToken.updateBatchIPFS(batchIds[i], string.concat("QmPersistenceTest", vm.toString(i)));
+            // Update batch with IPFS URI and metadata hash (blockchain-first workflow)
+            coffeeToken.updateBatchIPFS(
+                batchIds[i], 
+                string.concat("QmPersistenceTest", vm.toString(i)),
+                string.concat("persistenceMetadata", vm.toString(i))
+            );
             
             console.log("Created batch", i, "with ID:", batchIds[i]);
         }
@@ -267,13 +268,12 @@ contract EnhancedBaseForkTest is Test {
             block.timestamp + 365 days,
             1000, // quantity
             100 * 1e18,
-            "250g",
-            "roleTestMetadata"
+            "250g"
         );
         
-        // Update batch with IPFS URI (blockchain-first workflow)
+        // Update batch with IPFS URI and metadata hash (blockchain-first workflow)
         vm.prank(ADMIN_USER);
-        coffeeToken.updateBatchIPFS(batchId, "QmRoleTest");
+        coffeeToken.updateBatchIPFS(batchId, "QmRoleTest", "roleTestMetadata");
         
         console.log("Admin successfully created batch:", batchId);
         
@@ -285,8 +285,7 @@ contract EnhancedBaseForkTest is Test {
             block.timestamp + 365 days,
             1000, // quantity
             100 * 1e18,
-            "250g",
-            "shouldFailMetadata"
+            "250g"
         );
         
         console.log(" Role-based access control verified on Base Sepolia fork");
@@ -319,8 +318,7 @@ contract EnhancedBaseForkTest is Test {
             block.timestamp + 365 days,
             1000, // quantity
             60 * 1e18,
-            "250g",
-            "gasTestMetadata"
+            "250g"
         );
         gasUsed = gasStart - gasleft();
         
@@ -328,7 +326,7 @@ contract EnhancedBaseForkTest is Test {
         
         // Test IPFS update gas usage
         gasStart = gasleft();
-        coffeeToken.updateBatchIPFS(batchId, "QmGasTest");
+        coffeeToken.updateBatchIPFS(batchId, "QmGasTest", "gasTestMetadata");
         uint256 ipfsUpdateGasUsed = gasStart - gasleft();
         
         console.log("=== Gas Usage Results ===");

@@ -3,7 +3,11 @@ import {
   createBatchWithQRCode, 
   BatchCreationData, 
   fetchMetadataFromIPFS, 
-  CoffeeBatchMetadata 
+  CoffeeBatchMetadata,
+  generateCoffeeMetadata,
+  uploadMetadataToIPFS,
+  generateBatchQRCode,
+  generateSimpleVerificationQR
 } from './ipfsMetadata';
 
 // Contract addresses from environment
@@ -16,9 +20,16 @@ const REDEMPTION_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_WAGA_REDEMPTION_CONT
 const CHAINLINK_DON_ID = process.env.NEXT_PUBLIC_CHAINLINK_DON_ID!;
 const CHAINLINK_SUBSCRIPTION_ID = process.env.NEXT_PUBLIC_CHAINLINK_SUBSCRIPTION_ID!;
 
-// Simplified ABIs for the functions we need
+// Simplified ABIs for the functions we need - Updated with blockchain-first workflow
 const COFFEE_TOKEN_ABI = [
+  // Blockchain-first workflow functions
+  "function createBatch() external returns (uint256)",
+  "function updateBatchIPFS(uint256 batchId, string memory ipfsUri, uint256 productionDate, uint256 expiryDate, uint256 quantity, uint256 pricePerUnit, string memory packagingInfo, string memory metadataHash) external",
+  
+  // Legacy function (kept for compatibility)
   "function createBatch(string memory ipfsUri, uint256 productionDate, uint256 expiryDate, uint256 quantity, uint256 pricePerUnit, string memory packagingInfo, string memory metadataHash) external returns (uint256)",
+  
+  // View functions
   "function s_batchInfo(uint256 batchId) external view returns (uint256 productionDate, uint256 expiryDate, bool isVerified, uint256 quantity, uint256 pricePerUnit, string memory packagingInfo, string memory metadataHash, bool isMetadataVerified, uint256 lastVerifiedTimestamp)",
   "function getActiveBatchIds() external view returns (uint256[] memory)",
   "function balanceOf(address account, uint256 id) external view returns (uint256)",
@@ -110,7 +121,181 @@ export function getContract(
 }
 
 // ===========================
-// ADMIN FUNCTIONS
+// BLOCKCHAIN-FIRST WORKFLOW FUNCTIONS
+// ===========================
+
+/**
+ * Create batch on blockchain first (step 1 of blockchain-first workflow)
+ */
+export async function createBatchOnBlockchain(): Promise<{
+  batchId: string;
+  transactionHash: string;
+}> {
+  try {
+    const signer = await getSigner();
+    const coffeeTokenContract = getContract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, signer);
+
+    // Check if user has admin role
+    const adminRole = await coffeeTokenContract.ADMIN_ROLE();
+    const hasAdminRole = await coffeeTokenContract.hasRole(adminRole, await signer.getAddress());
+    
+    if (!hasAdminRole) {
+      throw new Error('User does not have ADMIN_ROLE required to create batches');
+    }
+
+    console.log('Creating batch on blockchain (step 1)...');
+    const tx = await coffeeTokenContract.createBatch();
+    const receipt = await tx.wait();
+
+    // Find the batch creation event to get the batch ID
+    const batchCreatedEvent = receipt.events?.find(
+      (event: any) => event.event === "BatchCreated"
+    );
+
+    if (!batchCreatedEvent) {
+      throw new Error("BatchCreated event not found");
+    }
+
+    const batchId = batchCreatedEvent.args.batchId.toString();
+    
+    console.log(`✅ Batch created on blockchain: ID ${batchId}`);
+    return {
+      batchId,
+      transactionHash: receipt.transactionHash
+    };
+
+  } catch (error) {
+    console.error('Error creating batch on blockchain:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    throw new Error(`Failed to create batch on blockchain: ${errorMessage}`);
+  }
+}
+
+/**
+ * Update batch with IPFS data (step 2 of blockchain-first workflow)
+ */
+export async function updateBatchWithIPFS(
+  batchId: string,
+  ipfsUri: string,
+  batchData: BatchCreationData
+): Promise<{
+  transactionHash: string;
+  batchId: string;
+}> {
+  try {
+    const signer = await getSigner();
+    const coffeeTokenContract = getContract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, signer);
+
+    // Check if user has admin role
+    const adminRole = await coffeeTokenContract.ADMIN_ROLE();
+    const hasAdminRole = await coffeeTokenContract.hasRole(adminRole, await signer.getAddress());
+    
+    if (!hasAdminRole) {
+      throw new Error('User does not have ADMIN_ROLE required to update batches');
+    }
+
+    console.log(`Updating batch ${batchId} with IPFS data (step 2)...`);
+    
+    // Convert dates to Unix timestamps
+    const productionDate = Math.floor(batchData.productionDate.getTime() / 1000);
+    const expiryDate = Math.floor(batchData.expiryDate.getTime() / 1000);
+    
+    // Extract CID from IPFS URI
+    const metadataHash = ipfsUri.replace('ipfs://', '');
+    
+    // Convert price to cents
+    const priceInCents = Math.round(parseFloat(batchData.pricePerUnit) * 100).toString();
+    
+    const tx = await coffeeTokenContract.updateBatchIPFS(
+      batchId,
+      ipfsUri,
+      productionDate,
+      expiryDate,
+      batchData.quantity,
+      priceInCents,
+      batchData.packagingInfo,
+      metadataHash
+    );
+
+    const receipt = await tx.wait();
+    
+    console.log(`✅ Batch ${batchId} updated with IPFS data`);
+    return {
+      transactionHash: receipt.transactionHash,
+      batchId
+    };
+
+  } catch (error) {
+    console.error('Error updating batch with IPFS:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    throw new Error(`Failed to update batch with IPFS: ${errorMessage}`);
+  }
+}
+
+/**
+ * Complete blockchain-first batch creation workflow
+ */
+export async function createBatchBlockchainFirst(batchData: BatchCreationData): Promise<{
+  batchId: string;
+  ipfsUri: string;
+  metadataHash: string;
+  transactionHash: string;
+  qrCodeDataUrl: string;
+  verificationQR: string;
+}> {
+  try {
+    console.log('🚀 Starting blockchain-first batch creation workflow...');
+    
+    // Step 1: Create batch on blockchain first
+    const { batchId, transactionHash: createTxHash } = await createBatchOnBlockchain();
+    
+    // Step 2: Upload to IPFS with the blockchain-generated batch ID
+    const batchDataWithId = {
+      ...batchData,
+      batchId: parseInt(batchId)
+    };
+    
+    console.log('📤 Uploading batch data to IPFS...');
+    
+    // Generate standardized metadata
+    const metadata = generateCoffeeMetadata(batchData);
+    
+    // Upload metadata to IPFS
+    const { uri: ipfsUri, metadataHash } = await uploadMetadataToIPFS(metadata);
+    
+    // Step 3: Update blockchain with IPFS data
+    console.log('📝 Updating blockchain with IPFS data...');
+    const { transactionHash: updateTxHash } = await updateBatchWithIPFS(
+      batchId, 
+      ipfsUri, 
+      batchData
+    );
+    
+    // Step 4: Generate QR codes
+    console.log('🔳 Generating QR codes...');
+    const qrCodeDataUrl = await generateBatchQRCode(batchId, metadata, ipfsUri);
+    const verificationQR = await generateSimpleVerificationQR(batchId);
+    
+    console.log('✅ Blockchain-first workflow completed successfully!');
+    
+    return {
+      batchId,
+      ipfsUri,
+      metadataHash,
+      transactionHash: updateTxHash, // Return the final update transaction
+      qrCodeDataUrl,
+      verificationQR
+    };
+
+  } catch (error) {
+    console.error('Error in blockchain-first workflow:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    throw new Error(`Blockchain-first workflow failed: ${errorMessage}`);
+  }
+}
+
+// ===========================
+// ADMIN FUNCTIONS (LEGACY - KEEP FOR COMPATIBILITY)
 // ===========================
 
 /**

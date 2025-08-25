@@ -91,12 +91,11 @@ contract WAGAIntegrationTest is Test {
             block.timestamp + 365 days, // expiryDate
             1000, // quantity
             50 * 1e18, // pricePerUnit
-            "250g", // packagingInfo - must be "250g" or "500g"
-            "metadataHash123" // metadataHash
+            "250g" // packagingInfo - must be "250g" or "500g"
         );
         
-        // Update batch with IPFS URI (blockchain-first workflow)
-        coffeeToken.updateBatchIPFS(batchId, "QmTestHash123");
+        // Update batch with IPFS URI and metadata hash (blockchain-first workflow)
+        coffeeToken.updateBatchIPFS(batchId, "QmTestHash123", "metadataHash123");
         
         console.log("Created batch ID:", batchId);
         
@@ -152,12 +151,11 @@ contract WAGAIntegrationTest is Test {
             block.timestamp + 365 days, // expiryDate
             500, // quantity
             50 * 1e18, // pricePerUnit
-            "500g", // packagingInfo - using different valid size for this test
-            "metadataHashFail" // metadataHash
+            "500g" // packagingInfo - using different valid size for this test
         );
         
-        // Update batch with IPFS URI (blockchain-first workflow)
-        coffeeToken.updateBatchIPFS(batchId, "QmTestFailHash");
+        // Update batch with IPFS URI and metadata hash (blockchain-first workflow)
+        coffeeToken.updateBatchIPFS(batchId, "QmTestFailHash", "metadataHashFail");
         
         vm.stopPrank();
 
