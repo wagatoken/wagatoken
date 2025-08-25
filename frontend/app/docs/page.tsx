@@ -106,45 +106,45 @@ export default function Docs() {
                   <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
                     <span className="text-gray-800 font-medium">WAGA Coffee Token:</span>
                     <a 
-                      href="https://sepolia.basescan.org/address/0xe69bdd3e783212d11522e7f0057c9f52fc4d0a39"
+                      href="https://sepolia.basescan.org/address/0xB1D14D241028bFbbA1eEA928B451Cb1d10DfA016"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-emerald-600 font-mono text-xs hover:text-emerald-800 hover:underline transition-colors"
                     >
-                      0xe69b...0a39
-                    </a>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">Proof of Reserve:</span>
-                    <a 
-                      href="https://sepolia.basescan.org/address/0xaa42a460107a61d34d461fb59c46343b1a8fadc5"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-emerald-600 font-mono text-xs hover:text-emerald-800 hover:underline transition-colors"
-                    >
-                      0xaa42...adc5
+                      0xB1D1...A016
                     </a>
                   </div>
                   <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
                     <span className="text-gray-800 font-medium">Inventory Manager:</span>
                     <a 
-                      href="https://sepolia.basescan.org/address/0xe882dcd6f1283f83ab19f954d70fc024ee70a908"
+                      href="https://sepolia.basescan.org/address/0x03dd8b6C292c8c0Da412d0944E0f11Fb08393F33"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-emerald-600 font-mono text-xs hover:text-emerald-800 hover:underline transition-colors"
                     >
-                      0xe882...a908
+                      0x03dd...3F33
                     </a>
                   </div>
                   <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
                     <span className="text-gray-800 font-medium">Coffee Redemption:</span>
                     <a 
-                      href="https://sepolia.basescan.org/address/0xc235c005202a9ec26d59120b8e9c2cc6ab432fc4"
+                      href="https://sepolia.basescan.org/address/0x2770c93E0C2bf9e15e32319b3A8eFf7560B75E0C"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-emerald-600 font-mono text-xs hover:text-emerald-800 hover:underline transition-colors"
                     >
-                      0xc235...2fc4
+                      0x2770...5E0C
+                    </a>
+                  </div>
+                  <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
+                    <span className="text-gray-800 font-medium">Proof of Reserve:</span>
+                    <a 
+                      href="https://sepolia.basescan.org/address/0x4e7164E037464fFccF45b69E3c6246482E024A89"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-600 font-mono text-xs hover:text-emerald-800 hover:underline transition-colors"
+                    >
+                      0x4e71...4A89
                     </a>
                   </div>
                   <div className="flex justify-between items-center p-2 bg-amber-50 rounded-lg">
