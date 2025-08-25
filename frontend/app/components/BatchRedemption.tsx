@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { contractService, BatchInfo } from "@/app/services/contractService";
+import { getBatchInfo, getUserBatchBalance, requestCoffeeRedemption, BatchInfo } from "@/utils/smartContracts";
 import { CoffeeBeanIcon } from "./icons/WagaIcons";
 import { MdAnalytics, MdWarning, MdBlock } from 'react-icons/md';
 
@@ -17,6 +17,7 @@ export default function BatchRedemption({
   onRedemptionComplete 
 }: BatchRedemptionProps) {
   const [isRedeeming, setIsRedeeming] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [redemptionQuantity, setRedemptionQuantity] = useState<number>(1);
   const [batchInfo, setBatchInfo] = useState<BatchInfo | null>(null);
   const [userBalance, setUserBalance] = useState<number>(0);
@@ -33,22 +34,26 @@ export default function BatchRedemption({
 
   const loadBatchInfo = async () => {
     try {
-      await contractService.initialize();
-      const info = await contractService.getBatchInfo(batchId);
+      setLoading(true);
+      const info = await getBatchInfo(batchId.toString());
       setBatchInfo(info);
     } catch (error) {
       console.error('Error loading batch info:', error);
       setError('Failed to load batch information');
+    } finally {
+      setLoading(false);
     }
   };
 
   const loadUserBalance = async () => {
+    if (!userAddress) return;
+    
     try {
-      await contractService.initialize();
-      const balance = await contractService.getTokenBalance(userAddress, batchId);
+      const balance = await getUserBatchBalance(batchId.toString(), userAddress);
       setUserBalance(balance);
     } catch (error) {
       console.error('Error loading user balance:', error);
+      setError('Failed to load user balance');
     }
   };
 
@@ -83,27 +88,25 @@ export default function BatchRedemption({
     setProgress('Preparing redemption request...');
 
     try {
-      await contractService.initialize();
-      
       setProgress('Submitting redemption transaction...');
       
       // Combine shipping address and contact info
       const fullDeliveryAddress = `${shippingAddress}\n\nContact: ${contactInfo}`;
       
-      const result = await contractService.requestRedemption(
-        batchId,
+      const txHash = await requestCoffeeRedemption(
+        batchId.toString(),
         redemptionQuantity,
         fullDeliveryAddress
       );
 
-      setTxHash(result.txHash);
+      setTxHash(txHash);
       setProgress('Redemption request submitted successfully!');
       setIsRedeeming(false);
       
       // Reload user balance to show updated tokens
       await loadUserBalance();
       
-      onRedemptionComplete?.(true, result.txHash);
+      onRedemptionComplete?.(true, txHash);
       
     } catch (error: any) {
       console.error('Error requesting redemption:', error);

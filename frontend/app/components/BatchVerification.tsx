@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { contractService, VerificationRequest } from "@/app/services/contractService";
+import { requestBatchVerification, getVerificationRequest, getUserRoles, VerificationRequest } from "@/utils/smartContracts";
 import { MdCheck, MdClose, MdAccessTime, MdWarning, MdError } from 'react-icons/md';
 import { FaClipboardList } from 'react-icons/fa';
 
@@ -37,9 +37,8 @@ export default function BatchVerification({
 
   const checkUserRole = async () => {
     try {
-      await contractService.initialize();
-      const hasRole = await contractService.hasRole('VERIFIER', userAddress);
-      setHasVerifierRole(hasRole);
+      const roles = await getUserRoles(userAddress);
+      setHasVerifierRole(roles.isVerifier);
     } catch (error) {
       console.error('Error checking user role:', error);
     }
@@ -49,7 +48,7 @@ export default function BatchVerification({
     if (!requestId) return;
 
     try {
-      const status = await contractService.getVerificationStatus(requestId);
+      const status = await getVerificationRequest(requestId);
       setVerificationStatus(status);
 
       if (status.completed) {
@@ -73,14 +72,12 @@ export default function BatchVerification({
     setProgress('Requesting batch verification...');
 
     try {
-      await contractService.initialize();
-      
-      const result = await contractService.requestBatchVerification(
-        batchId,
+      const requestId = await requestBatchVerification(
+        batchId.toString(),
         userAddress
       );
 
-      setRequestId(result.requestId);
+      setRequestId(requestId);
       setProgress('Verification request submitted. Waiting for Chainlink response...');
       
     } catch (error: any) {
@@ -145,8 +142,8 @@ export default function BatchVerification({
                   <span className="text-blue-300">{verificationStatus.requestQuantity} bags</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Expected Packaging:</span>
-                  <span className="text-blue-300">{verificationStatus.expectedPackaging}</span>
+                  <span>Expected Price:</span>
+                  <span className="text-blue-300">{verificationStatus.requestPrice} ETH</span>
                 </div>
                 {verificationStatus.completed && (
                   <>

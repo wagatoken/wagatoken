@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import { TokenETH, WalletMetamask, NetworkEthereum } from '@web3icons/react';
 import { MdCheck, MdClose, MdCoffee, MdVerified, MdCreate, MdAnalytics, MdLocationOn, MdGrade, MdStorage, MdStorefront, MdTimeline } from 'react-icons/md';
 import { 
-  createBatchWithIPFS, 
-  generateBatchQRCode,
+  generateCoffeeMetadata,
   BatchCreationData, 
   validateBatchData,
   CoffeeBatchMetadata
@@ -14,7 +13,7 @@ import {
   getBatchInfoWithMetadata, 
   getActiveBatchIds,
   requestBatchVerification,
-  createCoffeeBatch,
+  createBatchBlockchainFirst,
   getUserRoles
 } from "@/utils/smartContracts";
 import EnvironmentStatus from "@/app/components/EnvironmentStatus";
@@ -138,8 +137,8 @@ export default function AdminPage() {
         return;
       }
 
-      // Create batch using existing smart contract utility
-      const result = await createCoffeeBatch(batchForm as BatchCreationData);
+      // Create batch using blockchain-first workflow
+      const result = await createBatchBlockchainFirst(batchForm as BatchCreationData);
 
       setGeneratedQRs({
         comprehensive: result.qrCodeDataUrl,

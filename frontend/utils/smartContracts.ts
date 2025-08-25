@@ -1,6 +1,9 @@
 import { ethers } from 'ethers';
 import { 
-  createBatchWithQRCode, 
+  generateCoffeeMetadata,
+  uploadMetadataToIPFS,
+  generateBatchQRCode,
+  generateSimpleVerificationQR,
   BatchCreationData, 
   fetchMetadataFromIPFS, 
   CoffeeBatchMetadata 
@@ -16,17 +19,25 @@ const REDEMPTION_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_WAGA_REDEMPTION_CONT
 const CHAINLINK_DON_ID = process.env.NEXT_PUBLIC_CHAINLINK_DON_ID!;
 const CHAINLINK_SUBSCRIPTION_ID = process.env.NEXT_PUBLIC_CHAINLINK_SUBSCRIPTION_ID!;
 
-// Simplified ABIs for the functions we need
+// Updated ABIs for the actual deployed contracts
 const COFFEE_TOKEN_ABI = [
-  "function createBatch(string memory ipfsUri, uint256 productionDate, uint256 expiryDate, uint256 quantity, uint256 pricePerUnit, string memory packagingInfo, string memory metadataHash) external returns (uint256)",
-  "function s_batchInfo(uint256 batchId) external view returns (uint256 productionDate, uint256 expiryDate, bool isVerified, uint256 quantity, uint256 pricePerUnit, string memory packagingInfo, string memory metadataHash, bool isMetadataVerified, uint256 lastVerifiedTimestamp)",
-  "function getActiveBatchIds() external view returns (uint256[] memory)",
+  "function createBatch(uint256 productionDate, uint256 expiryDate, uint256 quantity, uint256 pricePerUnit, string calldata packagingInfo) external returns (uint256)",
+  "function updateBatchIPFS(uint256 batchId, string calldata ipfsUri, string calldata metadataHash) external",
+  "function getbatchInfo(uint256 batchId) external view returns (uint256 productionDate, uint256 expiryDate, bool isVerified, uint256 quantity, uint256 pricePerUnit, string memory packagingInfo, string memory metadataHash, bool isMetadataVerified, uint256 lastVerifiedTimestamp)",
+  "function getActiveBatchIds() external view returns (uint256[])",
   "function balanceOf(address account, uint256 id) external view returns (uint256)",
   "function hasRole(bytes32 role, address account) external view returns (bool)",
+  "function mintBatch(address to, uint256 batchId, uint256 amount) external",
+  "function burnForRedemption(address account, uint256 batchId, uint256 amount) external",
   "function ADMIN_ROLE() external view returns (bytes32)",
   "function VERIFIER_ROLE() external view returns (bytes32)",
-  "function DISTRIBUTOR_ROLE() external view returns (bytes32)",
-  "event BatchCreated(uint256 indexed batchId, address indexed creator, uint256 quantity)"
+  "function MINTER_ROLE() external view returns (bytes32)",
+  "function REDEMPTION_ROLE() external view returns (bytes32)",
+  "function FULFILLER_ROLE() external view returns (bytes32)",
+  "event BatchCreated(uint256 indexed batchId, string ipfsUri)",
+  "event BatchIPFSUpdated(uint256 indexed batchId, string newIpfsUri)",
+  "event TokensMinted(address indexed to, uint256 indexed batchId, uint256 amount)",
+  "function uri(uint256 tokenId) external view returns (string memory)"
 ];
 
 const PROOF_OF_RESERVE_ABI = [
@@ -37,10 +48,14 @@ const PROOF_OF_RESERVE_ABI = [
 ];
 
 const REDEMPTION_CONTRACT_ABI = [
-  "function requestRedemption(uint256 batchId, uint256 quantity, string memory deliveryDetails) external returns (uint256)",
-  "function fulfillRedemption(uint256 redemptionId) external",
-  "function getRedemptionDetails(uint256 redemptionId) external view returns (uint256 batchId, address requester, uint256 quantity, string memory deliveryDetails, uint8 status, uint256 requestTime, uint256 fulfillmentTime)",
-  "event RedemptionRequested(uint256 indexed redemptionId, uint256 indexed batchId, address indexed requester, uint256 quantity)"
+  "function requestRedemption(uint256 batchId, uint256 quantity, string calldata deliveryAddress) external",
+  "function updateRedemptionStatus(uint256 redemptionId, uint8 status) external",
+  "function getRedemptionDetails(uint256 redemptionId) external view returns (tuple(address consumer, uint256 batchId, uint256 quantity, string deliveryAddress, uint256 requestDate, uint8 status, uint256 fulfillmentDate))",
+  "function getConsumerRedemptions(address consumer) external view returns (uint256[])",
+  "function nextRedemptionId() external view returns (uint256)",
+  "event RedemptionRequested(uint256 indexed redemptionId, address indexed consumer, uint256 batchId, uint256 quantity, string packagingInfo)",
+  "event RedemptionFulfilled(uint256 indexed redemptionId, uint256 fulfillmentDate)",
+  "event RedemptionStatusUpdated(uint256 indexed redemptionId, uint8 status)"
 ];
 
 // Batch information interface
@@ -73,16 +88,16 @@ export interface VerificationRequest {
   shouldMint: boolean;
 }
 
-// Redemption request interface
+// Redemption request interface (matching actual contract structure)
 export interface RedemptionRequest {
   redemptionId: string;
+  consumer: string;
   batchId: string;
-  requester: string;
   quantity: number;
-  deliveryDetails: string;
+  deliveryAddress: string;
+  requestDate: number;
   status: number; // 0: Pending, 1: Fulfilled, 2: Cancelled
-  requestTime: number;
-  fulfillmentTime: number;
+  fulfillmentDate: number;
 }
 
 /**
@@ -110,19 +125,15 @@ export function getContract(
 }
 
 // ===========================
-// ADMIN FUNCTIONS
+// ADMIN FUNCTIONS - BLOCKCHAIN-FIRST WORKFLOW
 // ===========================
 
 /**
- * Create a new coffee batch (Admin only)
+ * Step 1: Create batch on blockchain first (no IPFS dependencies)
  */
-export async function createCoffeeBatch(batchData: BatchCreationData): Promise<{
+export async function createBatchOnBlockchain(batchData: BatchCreationData): Promise<{
   batchId: string;
-  ipfsUri: string;
-  metadataHash: string;
   transactionHash: string;
-  qrCodeDataUrl: string;
-  verificationQR: string;
 }> {
   try {
     const signer = await getSigner();
@@ -136,38 +147,176 @@ export async function createCoffeeBatch(batchData: BatchCreationData): Promise<{
       throw new Error('User does not have ADMIN_ROLE required to create batches');
     }
 
-    // Create batch creation function
-    const createBatchFunction = async (
-      ipfsUri: string,
-      productionDate: number,
-      expiryDate: number,
-      quantity: number,
-      pricePerUnit: string,
-      packagingInfo: string,
-      metadataHash: string
-    ) => {
-      return coffeeTokenContract.createBatch(
-        ipfsUri,
-        productionDate,
-        expiryDate,
-        quantity,
-        pricePerUnit,
-        packagingInfo,
-        metadataHash
-      );
+    // Prepare smart contract parameters
+    const productionDateTimestamp = Math.floor(batchData.productionDate.getTime() / 1000);
+    const expiryDateTimestamp = Math.floor(batchData.expiryDate.getTime() / 1000);
+    // Store USD price in cents to avoid decimals (e.g., $42.50 becomes 4250)
+    const priceInCents = Math.round(parseFloat(batchData.pricePerUnit) * 100);
+
+    console.log('🔗 Creating batch on blockchain first...');
+    console.log('   Production Date:', new Date(productionDateTimestamp * 1000).toISOString());
+    console.log('   Expiry Date:', new Date(expiryDateTimestamp * 1000).toISOString());
+    console.log('   Quantity:', batchData.quantity);
+    console.log('   Price (USD cents):', priceInCents);
+    console.log('   Packaging:', batchData.packagingInfo);
+
+    // Call smart contract createBatch (blockchain-first)
+    const tx = await coffeeTokenContract.createBatch(
+      productionDateTimestamp,
+      expiryDateTimestamp,
+      batchData.quantity,
+      priceInCents,
+      batchData.packagingInfo
+    );
+
+    console.log('⏳ Waiting for transaction confirmation...');
+    const receipt = await tx.wait();
+    
+    // Find BatchCreated event to get the actual batchId
+    const batchCreatedEvent = receipt.events?.find(
+      (event: any) => event.event === "BatchCreated"
+    );
+
+    if (!batchCreatedEvent) {
+      throw new Error("BatchCreated event not found in transaction receipt");
+    }
+
+    const blockchainBatchId = batchCreatedEvent.args.batchId.toString();
+
+    console.log('✅ Batch created on blockchain successfully!');
+    console.log('   Blockchain Batch ID:', blockchainBatchId);
+    console.log('   Transaction Hash:', receipt.transactionHash);
+
+    return {
+      batchId: blockchainBatchId,
+      transactionHash: receipt.transactionHash
     };
 
-    // Create batch with IPFS and QR code
-    const result = await createBatchWithQRCode(batchData, createBatchFunction);
+  } catch (error) {
+    console.error('❌ Error creating batch on blockchain:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    throw new Error(`Failed to create batch on blockchain: ${errorMessage}`);
+  }
+}
 
-    console.log('Batch created successfully:', result);
-    return result;
+/**
+ * Step 2: Update batch with IPFS metadata
+ */
+export async function updateBatchWithIPFS(
+  batchId: string, 
+  ipfsUri: string, 
+  metadataHash: string
+): Promise<{
+  transactionHash: string;
+}> {
+  try {
+    const signer = await getSigner();
+    const coffeeTokenContract = getContract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, signer);
+
+    console.log('🔄 Updating batch with IPFS data...');
+    console.log('   Batch ID:', batchId);
+    console.log('   IPFS URI:', ipfsUri);
+    console.log('   Metadata Hash:', metadataHash);
+
+    // Call smart contract updateBatchIPFS
+    const tx = await coffeeTokenContract.updateBatchIPFS(
+      batchId,
+      ipfsUri,
+      metadataHash
+    );
+
+    console.log('⏳ Waiting for IPFS update transaction confirmation...');
+    const receipt = await tx.wait();
+
+    console.log('✅ Batch IPFS data updated successfully!');
+    console.log('   Transaction Hash:', receipt.transactionHash);
+
+    return {
+      transactionHash: receipt.transactionHash
+    };
 
   } catch (error) {
-    console.error('Error creating coffee batch:', error);
+    console.error('❌ Error updating batch with IPFS data:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    throw new Error(`Failed to create coffee batch: ${errorMessage}`);
+    throw new Error(`Failed to update batch with IPFS data: ${errorMessage}`);
   }
+}
+
+/**
+ * Complete blockchain-first workflow orchestrator
+ */
+export async function createBatchBlockchainFirst(batchData: BatchCreationData): Promise<{
+  batchId: string;
+  ipfsUri: string;
+  metadataHash: string;
+  transactionHash: string;
+  qrCodeDataUrl: string;
+  verificationQR: string;
+}> {
+  try {
+    console.log('🚀 Starting blockchain-first batch creation workflow...');
+
+    // Step 1: Create batch on blockchain first
+    const { batchId, transactionHash: createTxHash } = await createBatchOnBlockchain(batchData);
+
+    // Step 2: Generate standardized metadata with batchId
+    console.log('📝 Generating metadata with batch ID...');
+    const metadata = generateCoffeeMetadata(batchData);
+    
+    // Update metadata with the actual batch ID
+    const updatedMetadata = {
+      ...metadata,
+      name: `${metadata.name} - Batch #${batchId}`,
+      properties: {
+        ...metadata.properties,
+        batchId: batchId,
+        blockchainId: batchId
+      }
+    };
+
+    // Step 3: Upload metadata to IPFS with batch ID
+    console.log('📤 Uploading metadata to IPFS...');
+    const { uri: ipfsUri, metadataHash } = await uploadMetadataToIPFS(updatedMetadata);
+
+    // Step 4: Update blockchain with IPFS data
+    const { transactionHash: updateTxHash } = await updateBatchWithIPFS(batchId, ipfsUri, metadataHash);
+
+    // Step 5: Generate QR codes
+    console.log('🔍 Generating QR codes...');
+    const qrCodeDataUrl = await generateBatchQRCode(batchId, updatedMetadata, ipfsUri);
+    const verificationQR = await generateSimpleVerificationQR(batchId);
+
+    console.log('🎉 Blockchain-first batch creation completed successfully!');
+
+    return {
+      batchId,
+      ipfsUri,
+      metadataHash,
+      transactionHash: updateTxHash, // Return the final transaction hash
+      qrCodeDataUrl,
+      verificationQR
+    };
+
+  } catch (error) {
+    console.error('❌ Error in blockchain-first batch creation workflow:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    throw new Error(`Blockchain-first batch creation failed: ${errorMessage}`);
+  }
+}
+
+/**
+ * Legacy function - now delegates to blockchain-first workflow
+ */
+export async function createCoffeeBatch(batchData: BatchCreationData): Promise<{
+  batchId: string;
+  ipfsUri: string;
+  metadataHash: string;
+  transactionHash: string;
+  qrCodeDataUrl: string;
+  verificationQR: string;
+}> {
+  // Delegate to the new blockchain-first workflow
+  return createBatchBlockchainFirst(batchData);
 }
 
 /**
@@ -196,7 +345,7 @@ export async function getBatchInfo(batchId: string): Promise<BatchInfo> {
     const signer = await getSigner();
     const coffeeTokenContract = getContract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, signer);
 
-    const batchInfo = await coffeeTokenContract.s_batchInfo(batchId);
+    const batchInfo = await coffeeTokenContract.getbatchInfo(batchId);
     
     const [
       productionDate,
@@ -235,25 +384,43 @@ export async function getBatchInfo(batchId: string): Promise<BatchInfo> {
  */
 export async function getBatchInfoWithMetadata(batchId: string): Promise<BatchInfo> {
   try {
+    const signer = await getSigner();
+    const coffeeTokenContract = getContract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, signer);
+    
+    // Get basic batch info
     const batchInfo = await getBatchInfo(batchId);
     
-    // Try to construct IPFS URI from metadata hash
-    const ipfsUri = `ipfs://${batchInfo.metadataHash}`;
-    
+    // Get IPFS URI from the contract
+    let ipfsUri: string | undefined;
     try {
-      const metadata = await fetchMetadataFromIPFS(ipfsUri);
-      return {
-        ...batchInfo,
-        ipfsUri,
-        metadata
-      };
-    } catch (ipfsError) {
-      console.warn('Could not fetch IPFS metadata:', ipfsError);
-      return {
-        ...batchInfo,
-        ipfsUri
-      };
+      ipfsUri = await coffeeTokenContract.uri(batchId);
+    } catch (uriError) {
+      console.warn('Could not fetch IPFS URI from contract:', uriError);
+      // Try to construct from metadata hash if available
+      if (batchInfo.metadataHash) {
+        ipfsUri = `ipfs://${batchInfo.metadataHash}`;
+      }
     }
+    
+    // Try to fetch metadata from IPFS if URI is available
+    if (ipfsUri && ipfsUri !== "") {
+      try {
+        const metadata = await fetchMetadataFromIPFS(ipfsUri);
+        return {
+          ...batchInfo,
+          ipfsUri,
+          metadata
+        };
+      } catch (ipfsError) {
+        console.warn('Could not fetch IPFS metadata:', ipfsError);
+        return {
+          ...batchInfo,
+          ipfsUri
+        };
+      }
+    }
+
+    return batchInfo;
 
   } catch (error) {
     console.error('Error fetching batch info with metadata:', error);
@@ -336,30 +503,22 @@ export async function requestBatchVerification(
 export async function requestCoffeeRedemption(
   batchId: string,
   quantity: number,
-  deliveryDetails: string
+  deliveryAddress: string
 ): Promise<string> {
   try {
     const signer = await getSigner();
     const redemptionContract = getContract(REDEMPTION_CONTRACT_ADDRESS, REDEMPTION_CONTRACT_ABI, signer);
 
     console.log(`Requesting redemption for ${quantity} units of batch ${batchId}`);
-    const tx = await redemptionContract.requestRedemption(batchId, quantity, deliveryDetails);
-
+    
+    // Get the next redemption ID before making the request
+    const nextRedemptionId = await redemptionContract.nextRedemptionId();
+    
+    const tx = await redemptionContract.requestRedemption(batchId, quantity, deliveryAddress);
     const receipt = await tx.wait();
     
-    // Find the redemption request event
-    const redemptionEvent = receipt.events?.find(
-      (event: any) => event.event === "RedemptionRequested"
-    );
-
-    if (!redemptionEvent) {
-      throw new Error("RedemptionRequested event not found");
-    }
-
-    const redemptionId = redemptionEvent.args.redemptionId.toString();
-    console.log('Redemption request submitted:', redemptionId);
-
-    return redemptionId;
+    console.log('Redemption request submitted with ID:', nextRedemptionId.toString());
+    return tx.hash; // Return transaction hash instead of redemption ID
 
   } catch (error) {
     console.error('Error requesting coffee redemption:', error);
@@ -394,7 +553,9 @@ export async function getUserBatchBalance(batchId: string, userAddress?: string)
 export async function getUserRoles(userAddress?: string): Promise<{
   isAdmin: boolean;
   isVerifier: boolean;
-  isDistributor: boolean;
+  isMinter: boolean;
+  isRedemption: boolean;
+  isFulfiller: boolean;
 }> {
   try {
     const signer = await getSigner();
@@ -402,23 +563,27 @@ export async function getUserRoles(userAddress?: string): Promise<{
 
     const address = userAddress || await signer.getAddress();
     
-    const [adminRole, verifierRole, distributorRole] = await Promise.all([
+    const [adminRole, verifierRole, minterRole, redemptionRole, fulfillerRole] = await Promise.all([
       coffeeTokenContract.ADMIN_ROLE(),
       coffeeTokenContract.VERIFIER_ROLE(),
-      coffeeTokenContract.DISTRIBUTOR_ROLE()
+      coffeeTokenContract.MINTER_ROLE(),
+      coffeeTokenContract.REDEMPTION_ROLE(),
+      coffeeTokenContract.FULFILLER_ROLE()
     ]);
 
-    const [isAdmin, isVerifier, isDistributor] = await Promise.all([
+    const [isAdmin, isVerifier, isMinter, isRedemption, isFulfiller] = await Promise.all([
       coffeeTokenContract.hasRole(adminRole, address),
       coffeeTokenContract.hasRole(verifierRole, address),
-      coffeeTokenContract.hasRole(distributorRole, address)
+      coffeeTokenContract.hasRole(minterRole, address),
+      coffeeTokenContract.hasRole(redemptionRole, address),
+      coffeeTokenContract.hasRole(fulfillerRole, address)
     ]);
 
-    return { isAdmin, isVerifier, isDistributor };
+    return { isAdmin, isVerifier, isMinter, isRedemption, isFulfiller };
 
   } catch (error) {
     console.error('Error checking user roles:', error);
-    return { isAdmin: false, isVerifier: false, isDistributor: false };
+    return { isAdmin: false, isVerifier: false, isMinter: false, isRedemption: false, isFulfiller: false };
   }
 }
 
@@ -479,25 +644,26 @@ export async function getRedemptionRequest(redemptionId: string): Promise<Redemp
 
     const redemption = await redemptionContract.getRedemptionDetails(redemptionId);
     
-    const [
+    // The contract returns: (address consumer, uint256 batchId, uint256 quantity, string deliveryAddress, uint256 requestDate, uint8 status, uint256 fulfillmentDate)
+    const {
+      consumer,
       batchId,
-      requester,
       quantity,
-      deliveryDetails,
+      deliveryAddress,
+      requestDate,
       status,
-      requestTime,
-      fulfillmentTime
-    ] = redemption;
+      fulfillmentDate
+    } = redemption;
 
     return {
       redemptionId,
+      consumer,
       batchId: batchId.toString(),
-      requester,
       quantity: quantity.toNumber(),
-      deliveryDetails,
+      deliveryAddress,
+      requestDate: requestDate.toNumber(),
       status: status.toNumber(),
-      requestTime: requestTime.toNumber(),
-      fulfillmentTime: fulfillmentTime.toNumber()
+      fulfillmentDate: fulfillmentDate.toNumber()
     };
 
   } catch (error) {

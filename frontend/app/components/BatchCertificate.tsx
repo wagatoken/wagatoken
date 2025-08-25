@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import QRCode from 'qrcode';
-import { contractService, BatchInfo } from "@/app/services/contractService";
+import { getSigner, getContract, getBatchInfo, BatchInfo } from "@/utils/smartContracts";
 
 interface BatchCertificateProps {
   batchId: number;
@@ -23,8 +23,7 @@ export default function BatchCertificate({ batchId, userAddress }: BatchCertific
   const loadBatchInfo = async () => {
     try {
       setLoading(true);
-      await contractService.initialize();
-      const info = await contractService.getBatchInfo(batchId);
+      const info = await getBatchInfo(batchId.toString());
       setBatchInfo(info);
       
       // Generate QR code for the batch
@@ -43,8 +42,7 @@ export default function BatchCertificate({ batchId, userAddress }: BatchCertific
       const verificationData = {
         batchId: batchId,
         verified: info.isVerified,
-        expectedQuantity: info.expectedQuantity,
-        currentQuantity: info.currentQuantity,
+        quantity: info.quantity,
         productionDate: info.productionDate,
         expiryDate: info.expiryDate,
         pricePerUnit: info.pricePerUnit,
@@ -52,7 +50,7 @@ export default function BatchCertificate({ batchId, userAddress }: BatchCertific
         metadataHash: info.metadataHash,
         timestamp: Date.now(),
         network: 'Base Sepolia',
-        contractAddress: process.env.NEXT_PUBLIC_COFFEE_TOKEN_ADDRESS
+        contractAddress: process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS
       };
 
       // For demo, create a verification URL
@@ -117,8 +115,7 @@ export default function BatchCertificate({ batchId, userAddress }: BatchCertific
     ctx.font = '18px Arial';
     const details = [
       `Verification Status: ${batchInfo.isVerified ? '✅ Verified' : '❌ Not Verified'}`,
-      `Expected Quantity: ${batchInfo.expectedQuantity} bags`,
-      `Current Quantity: ${batchInfo.currentQuantity} tokens`,
+      `Batch Quantity: ${batchInfo.quantity} bags`,
       `Production Date: ${new Date(batchInfo.productionDate * 1000).toLocaleDateString()}`,
       `Expiry Date: ${new Date(batchInfo.expiryDate * 1000).toLocaleDateString()}`,
       `Price per Unit: ${batchInfo.pricePerUnit} ETH`,
@@ -219,12 +216,8 @@ export default function BatchCertificate({ batchId, userAddress }: BatchCertific
                 </span>
               </div>
               <div className="flex justify-between py-2 border-b border-gray-200">
-                <span className="font-medium text-gray-600">Expected Quantity:</span>
-                <span className="text-gray-800">{batchInfo.expectedQuantity} bags</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-gray-200">
-                <span className="font-medium text-gray-600">Current Tokens:</span>
-                <span className="text-gray-800">{batchInfo.currentQuantity} tokens</span>
+                <span className="font-medium text-gray-600">Batch Quantity:</span>
+                <span className="text-gray-800">{batchInfo.quantity} bags</span>
               </div>
               <div className="flex justify-between py-2 border-b border-gray-200">
                 <span className="font-medium text-gray-600">Price per Unit:</span>

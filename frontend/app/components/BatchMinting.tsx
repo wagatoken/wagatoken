@@ -1,8 +1,108 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { contractService, BatchInfo } from "@/app/services/contractService";
-import { TokenETH } from '@web3icons/react';
+import { getBatchInfo, BatchInfo } from "@/utils/smartContracts";
+import { MdCheck, MdAnalytics, MdInventory } from 'react-icons/md';
+
+// NOTE: This component shows the deprecated minting interface
+// In the new blockchain-first architecture, tokens are created automatically with batches
+
+interface BatchMintingProps {
+  batchId: number;
+  userAddress: string;
+  onMintComplete?: (success: boolean, txHash?: string) => void;
+}
+
+export default function BatchMinting({ batchId }: BatchMintingProps) {
+  const [batchInfo, setBatchInfo] = useState<BatchInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadBatchInfo();
+  }, [batchId]);
+
+  const loadBatchInfo = async () => {
+    try {
+      setLoading(true);
+      const info = await getBatchInfo(batchId.toString());
+      setBatchInfo(info);
+    } catch (error) {
+      console.error('Error loading batch info:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="web3-card">
+      <div className="text-center mb-6">
+        <h3 className="text-2xl font-bold web3-gradient-text mb-2 flex items-center justify-center">
+          <MdInventory size={28} className="mr-2" />
+          Token Status
+        </h3>
+        <p className="text-gray-400">Batch #{batchId}</p>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="text-gray-400 mt-2">Loading...</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <MdAnalytics className="text-blue-400" />
+              <h4 className="text-blue-400 font-semibold">Blockchain-First Architecture</h4>
+            </div>
+            <p className="text-gray-300 text-sm">
+              Tokens are created automatically when batches are created. No separate minting required.
+            </p>
+          </div>
+
+          {batchInfo && (
+            <div className="web3-card-section">
+              <h4 className="text-lg font-semibold mb-3 flex items-center">
+                <MdInventory className="mr-2 text-blue-400" />
+                Batch Information
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="flex justify-between">
+                  <span>Batch ID:</span>
+                  <span className="text-blue-300">{batchInfo.batchId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Quantity:</span>
+                  <span className="text-blue-300">{batchInfo.quantity} tokens</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Price:</span>
+                  <span className="text-blue-300">{batchInfo.pricePerUnit} ETH</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Status:</span>
+                  <span className={batchInfo.isVerified ? 'text-green-300' : 'text-yellow-300'}>
+                    {batchInfo.isVerified ? 'Verified' : 'Pending'}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="mt-4 p-4 bg-green-500/20 border border-green-500/30 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <MdCheck className="text-green-400" />
+                  <span className="text-green-400 text-sm font-semibold">Tokens Ready</span>
+                </div>
+                <p className="text-gray-300 text-sm mt-1">
+                  {batchInfo.quantity} tokens created and available for distribution.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 import { MdCheck, MdClose, MdWarning, MdAnalytics, MdInventory, MdAccessTime } from 'react-icons/md';
 import { FaEthereum } from 'react-icons/fa';
 
@@ -32,9 +132,8 @@ export default function BatchMinting({
 
   const checkUserRole = async () => {
     try {
-      await contractService.initialize();
-      const hasRole = await contractService.hasRole('MINTER', userAddress);
-      setHasMinterRole(hasRole);
+      const roles = await getUserRoles(userAddress);
+      setHasMinterRole(roles.isAdmin); // In new system, only admin can perform admin functions
     } catch (error) {
       console.error('Error checking user role:', error);
     }
@@ -42,12 +141,11 @@ export default function BatchMinting({
 
   const loadBatchInfo = async () => {
     try {
-      await contractService.initialize();
-      const info = await contractService.getBatchInfo(batchId);
+      const info = await getBatchInfo(batchId.toString());
       setBatchInfo(info);
       
-      // Set default mint quantity to remaining quantity (expectedQuantity - currentQuantity)
-      const remainingQuantity = info.expectedQuantity - info.currentQuantity;
+      // In new system, tokens are pre-created with batch, set default to current available quantity
+      const remainingQuantity = info.quantity;
       setMintQuantity(remainingQuantity > 0 ? remainingQuantity : 0);
     } catch (error) {
       console.error('Error loading batch info:', error);

@@ -1,52 +1,81 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CoffeeBatch } from "@/utils/types";
+import { BatchInfo } from "@/utils/smartContracts";
+import { 
+  getActiveBatchIds,
+  getBatchInfoWithMetadata
+} from "@/utils/smartContracts";
 import { MdCoffee, MdVerified, MdShoppingCart, MdHourglassTop, MdOutlineAssignment } from "react-icons/md";
 import Breadcrumbs from "../components/layout/Breadcrumbs";
 
+interface BlockchainBatch extends BatchInfo {
+  priceInUSD: string;
+}
+
 export default function BrowsePage() {
-  const [batches, setBatches] = useState<CoffeeBatch[]>([]);
+  const [batches, setBatches] = useState<BlockchainBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPackaging, setFilterPackaging] = useState<string>("all");
 
-  const fetchBatches = async () => {
+  const fetchBlockchainBatches = async () => {
     try {
-      const response = await fetch('/api/batches/');
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Fetched batches:', data.batches?.length || 0, 'batches');
-        setBatches(data.batches || []);
-      } else {
-        console.error('Failed to fetch batches:', response.status, response.statusText);
-      }
+      console.log('Fetching batches from blockchain...');
+      const batchIds = await getActiveBatchIds();
+      console.log('Found batch IDs:', batchIds);
+      
+      const batchPromises = batchIds.map(async (id) => {
+        const batchInfo = await getBatchInfoWithMetadata(id);
+        
+        // Convert price from cents to USD
+        const priceInCents = parseInt(batchInfo.pricePerUnit) || 0;
+        const priceInUSD = (priceInCents / 100).toFixed(2);
+        
+        return {
+          ...batchInfo,
+          priceInUSD
+        };
+      });
+      
+      const blockchainBatches = await Promise.all(batchPromises);
+      console.log('Successfully fetched', blockchainBatches.length, 'batches from blockchain');
+      setBatches(blockchainBatches);
     } catch (error) {
-      console.error('Error fetching batches:', error);
+      console.error('Error fetching blockchain batches:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchBatches();
+    fetchBlockchainBatches();
   }, []);
 
   const filteredBatches = batches.filter(batch => {
-    const matchesSearch = batch.batchDetails.farmName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         batch.batchDetails.location.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPackaging = filterPackaging === "all" || batch.packaging === filterPackaging;
+    const farmName = batch.metadata?.properties.farmer || 'Unknown Farm';
+    const location = batch.metadata?.properties.origin || 'Unknown Location';
+    
+    const matchesSearch = farmName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         location.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesPackaging = filterPackaging === "all" || batch.packagingInfo === filterPackaging;
     return matchesSearch && matchesPackaging;
   });
 
-  const getStatusBadge = (batch: CoffeeBatch) => {
-    const status = batch.verification.verificationStatus;
-    const colors = {
-      verified: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      pending: 'bg-blue-100 text-blue-800 border-blue-200',
-      failed: 'bg-red-100 text-red-800 border-red-200'
-    };
-    return colors[status] || colors.pending;
+  const getStatusBadge = (batch: BlockchainBatch) => {
+    if (batch.isVerified) {
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+    } else {
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    }
+  };
+
+  const getStatusText = (batch: BlockchainBatch) => {
+    if (batch.isVerified) {
+      return 'Verified & Available';
+    } else {
+      return 'Available for Request';
+    }
   };
 
   return (
@@ -117,47 +146,47 @@ export default function BrowsePage() {
                       Batch #{batch.batchId}
                     </h3>
                     <div className="text-amber-700 text-sm font-medium">
-                      {batch.batchDetails.farmName}
+                      {batch.metadata?.properties.farmer || 'Unknown Farm'}
                     </div>
                   </div>
                   <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(batch)}`}>
                     <MdVerified size={12} />
-                    {batch.verification.verificationStatus === 'pending' ? 'Available for Request' : batch.verification.verificationStatus}
+                    {getStatusText(batch)}
                   </span>
                 </div>
 
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Location:</span>
-                    <span className="text-gray-900 font-medium">{batch.batchDetails.location}</span>
+                    <span className="text-gray-900 font-medium">{batch.metadata?.properties.origin || 'Unknown Location'}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Packaging:</span>
-                    <span className="text-amber-700 font-medium">{batch.packaging}</span>
+                    <span className="text-amber-700 font-medium">{batch.packagingInfo}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Price:</span>
-                    <span className="text-emerald-700 font-bold">${batch.price}/bag</span>
+                    <span className="text-emerald-700 font-bold">${batch.priceInUSD}/bag</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Available:</span>
-                    <span className="text-amber-600 font-medium">{batch.verification.inventoryActual} bags</span>
+                    <span className="text-amber-600 font-medium">{batch.quantity} bags</span>
                   </div>
-                  {batch.batchDetails.qualityScore && (
+                  {batch.metadata?.properties.cupping_notes && batch.metadata.properties.cupping_notes.length > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Quality Score:</span>
-                      <span className="text-gray-900 font-bold">{batch.batchDetails.qualityScore}/100</span>
+                      <span className="text-gray-600">Tasting Notes:</span>
+                      <span className="text-gray-900 font-medium">{batch.metadata.properties.cupping_notes.slice(0, 2).join(', ')}</span>
                     </div>
                   )}
                 </div>
 
                 <div className="border-t border-amber-200/50 pt-4">
                   <button
-                    onClick={() => window.location.href = '/distributor'}
+                    onClick={() => window.location.href = `/distributor?batchId=${batch.batchId}`}
                     className="w-full web3-gradient-button-secondary text-sm py-2 flex items-center justify-center gap-2"
                   >
                     <MdOutlineAssignment size={16} />
-                    Request Tokens
+                    {batch.isVerified ? 'View & Redeem' : 'Request Verification'}
                   </button>
                 </div>
               </div>

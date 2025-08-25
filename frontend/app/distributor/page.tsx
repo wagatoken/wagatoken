@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from 'next/navigation';
 import { 
   getActiveBatchIds,
   getBatchInfoWithMetadata,
@@ -28,17 +29,26 @@ interface BatchDisplay {
   metadata?: CoffeeBatchMetadata;
 }
 
-export default function DistributorPage() {
+function DistributorPageContent() {
+  const searchParams = useSearchParams();
+  const selectedBatchFromBrowse = searchParams.get('batchId');
+  
   const [activeTab, setActiveTab] = useState<'request' | 'redeem'>('request');
   const [userAddress, setUserAddress] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [batches, setBatches] = useState<BatchDisplay[]>([]);
-  const [userRoles, setUserRoles] = useState({ isAdmin: false, isVerifier: false, isDistributor: false });
+  const [userRoles, setUserRoles] = useState({ 
+    isAdmin: false, 
+    isVerifier: false, 
+    isMinter: false, 
+    isRedemption: false, 
+    isFulfiller: false 
+  });
   
   // Request form state
-  const [selectedBatchForRequest, setSelectedBatchForRequest] = useState<string>('');
+  const [selectedBatchForRequest, setSelectedBatchForRequest] = useState<string>(selectedBatchFromBrowse || '');
   
   // Redemption form state
   const [selectedBatchForRedemption, setSelectedBatchForRedemption] = useState<string>('');
@@ -334,14 +344,14 @@ export default function DistributorPage() {
                     {userAddress.substring(0, 6)}...{userAddress.substring(userAddress.length - 4)}
                   </p>
                   <div className="flex items-center space-x-2 mt-2">
-                    {userRoles.isDistributor && (
-                      <span className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-medium">
-                        Distributor
-                      </span>
-                    )}
                     {userRoles.isVerifier && (
                       <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
                         Verifier
+                      </span>
+                    )}
+                    {userRoles.isFulfiller && (
+                      <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+                        Fulfiller
                       </span>
                     )}
                   </div>
@@ -387,6 +397,11 @@ export default function DistributorPage() {
                   <p className="text-gray-600 mb-6">
                     Select a batch to request verification. Upon successful verification via Chainlink Functions, 
                     tokens will be automatically minted to your address.
+                    {selectedBatchFromBrowse && (
+                      <span className="block mt-2 text-emerald-600 font-medium">
+                        ✨ Pre-selected Batch #{selectedBatchFromBrowse} from Browse page
+                      </span>
+                    )}
                   </p>
                   
                   <div className="mb-6">
@@ -584,5 +599,28 @@ export default function DistributorPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// Loading component for Suspense fallback
+function DistributorPageLoading() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 p-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto"></div>
+          <p className="text-gray-600 mt-4">Loading distributor portal...</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Main export with Suspense wrapper
+export default function DistributorPage() {
+  return (
+    <Suspense fallback={<DistributorPageLoading />}>
+      <DistributorPageContent />
+    </Suspense>
   );
 }
