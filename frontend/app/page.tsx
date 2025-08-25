@@ -107,7 +107,7 @@ export default function HomePage() {
                 />
               </div>
             </div>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 web3-hero-title-modern">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 web3-navbar-brand-hero">
               WAGA 
             </h1>
             <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl mb-6 sm:mb-8 opacity-90 web3-subtitle-modern">
