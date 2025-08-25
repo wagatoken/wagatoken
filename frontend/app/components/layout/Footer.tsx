@@ -35,14 +35,14 @@ export default function Footer() {
                 />
               </div>
               <div>
-                <div className="text-white text-xl font-bold tracking-wide">WAGA</div>
-                <div className="text-amber-200 text-sm font-semibold tracking-wide">Coffee</div>
+                <div className="text-xl font-bold web3-navbar-brand tracking-wide">WAGA</div>
+                <div className="web3-navbar-subtitle text-sm font-semibold tracking-wide">Coffee</div>
               </div>
             </div>
-            <p className="text-green-100 text-sm mb-4">
+            <p className="web3-footer-description text-sm mb-4">
               Tokenizing premium roasted coffee from highland regions. Farm-to-cup traceability powered by blockchain technology.
             </p>
-            <div className="flex items-center space-x-2 text-xs text-amber-200 mb-4">
+            <div className="flex items-center space-x-2 text-xs web3-navbar-subtitle mb-4">
               <span>🇪🇹</span>
               <span>Proudly Ethiopian</span>
             </div>
@@ -60,35 +60,35 @@ export default function Footer() {
 
           {/* Navigation & Resources */}
           <div className="col-span-1">
-            <h3 className="text-white font-semibold mb-4">Platform</h3>
+            <h3 className="web3-footer-heading font-semibold mb-4">Platform</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/browse" className="text-green-100 hover:text-amber-300 text-sm transition-colors">
+                <Link href="/browse" className="web3-footer-link text-sm transition-colors">
                   Browse Coffee Batches
                 </Link>
               </li>
               <li>
-                <Link href="/distributor" className="text-green-100 hover:text-amber-300 text-sm transition-colors">
+                <Link href="/distributor" className="web3-footer-link text-sm transition-colors">
                   Distributor Portal
                 </Link>
               </li>
               <li>
-                <Link href="/admin" className="text-green-100 hover:text-amber-300 text-sm transition-colors">
+                <Link href="/admin" className="web3-footer-link text-sm transition-colors">
                   Admin Tools
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="text-green-100 hover:text-amber-300 text-sm transition-colors">
+                <Link href="/about" className="web3-footer-link text-sm transition-colors">
                   About Us
                 </Link>
               </li>
               <li>
-                <Link href="/docs" className="text-green-100 hover:text-amber-300 text-sm transition-colors">
+                <Link href="/docs" className="web3-footer-link text-sm transition-colors">
                   Documentation
                 </Link>
               </li>
               <li>
-                <Link href="/docs/guides/distributor" className="text-green-100 hover:text-amber-300 text-sm transition-colors">
+                <Link href="/docs/guides/distributor" className="web3-footer-link text-sm transition-colors">
                   Distributor Guide
                 </Link>
               </li>
@@ -97,13 +97,13 @@ export default function Footer() {
 
           {/* Community & Contact */}
           <div className="col-span-1">
-            <h3 className="text-white font-semibold mb-4">Community</h3>
+            <h3 className="web3-footer-heading font-semibold mb-4">Community</h3>
             <div className="space-y-3 mb-6">
               <a
                 href="https://x.com/Wagatoken?t=DJ-g5RE824iE4dpeTUHc7w&s=09"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center space-x-2 text-green-100 hover:text-amber-300 text-sm transition-colors"
+                className="flex items-center space-x-2 web3-footer-link text-sm transition-colors"
               >
                 <FaTwitter size={16} />
                 <span>Twitter</span>
@@ -112,7 +112,7 @@ export default function Footer() {
                 href="https://t.me/wagatoken"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center space-x-2 text-green-100 hover:text-amber-300 text-sm transition-colors"
+                className="flex items-center space-x-2 web3-footer-link text-sm transition-colors"
               >
                 <FaTelegram size={16} />
                 <span>Telegram</span>
@@ -121,7 +121,7 @@ export default function Footer() {
                 href="https://www.linkedin.com/company/wagaprotocol/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center space-x-2 text-green-100 hover:text-amber-300 text-sm transition-colors"
+                className="flex items-center space-x-2 web3-footer-link text-sm transition-colors"
               >
                 <FaLinkedin size={16} />
                 <span>LinkedIn</span>
@@ -129,13 +129,13 @@ export default function Footer() {
             </div>
             
             <div className="border-t border-amber-500/20 pt-4">
-              <h4 className="text-white font-medium mb-2 text-sm">Technology</h4>
-              <div className="space-y-1 text-xs text-green-200">
+              <h4 className="web3-footer-heading font-medium mb-2 text-sm">Technology</h4>
+              <div className="space-y-1 text-xs">
                 <a
                   href="https://docs.chain.link/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center space-x-1 hover:text-amber-300 transition-colors"
+                  className="flex items-center space-x-1 web3-footer-tech-link transition-colors"
                 >
                   <SiChainlink size={12} />
                   <span>Powered by Chainlink</span>
@@ -144,7 +144,7 @@ export default function Footer() {
                   href="https://pinata.cloud/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center space-x-1 hover:text-amber-300 transition-colors"
+                  className="flex items-center space-x-1 web3-footer-tech-link transition-colors"
                 >
                   <SiIpfs size={12} />
                   <span>Stored on IPFS</span>
@@ -153,7 +153,7 @@ export default function Footer() {
                   href="https://docs.base.org/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center space-x-1 hover:text-amber-300 transition-colors"
+                  className="flex items-center space-x-1 web3-footer-tech-link transition-colors"
                 >
                   <NetworkBase size={12} variant="branded" />
                   <span>Base Network</span>
@@ -166,15 +166,15 @@ export default function Footer() {
         {/* Bottom Section */}
         <div className="mt-12 pt-8 border-t border-amber-500/20">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="text-green-100 text-sm mb-4 md:mb-0">
+            <div className="web3-footer-copyright text-sm mb-4 md:mb-0">
               © {currentYear} WAGA Coffee Platform. All rights reserved.
             </div>
             
-            <div className="flex items-center space-x-6 text-xs text-green-200">
-              <Link href="/privacy" className="hover:text-amber-300 transition-colors">
+            <div className="flex items-center space-x-6 text-xs">
+              <Link href="/privacy" className="web3-footer-legal transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="/terms" className="hover:text-amber-300 transition-colors">
+              <Link href="/terms" className="web3-footer-legal transition-colors">
                 Terms of Service
               </Link>
             </div>

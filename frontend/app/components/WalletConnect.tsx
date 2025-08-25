@@ -151,20 +151,20 @@ export default function WalletConnect() {
 
   if ((isConnected && address) || isDisconnecting) {
     return (
-      <div className="wallet-component-container flex items-center space-x-2 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-300 rounded-xl px-3 py-1.5 shadow-sm">
+      <div className="web3-wallet-container flex items-center space-x-2 rounded-xl px-3 py-1.5 shadow-sm">
         <div className="flex items-center space-x-1">
-          <div className={`w-2 h-2 rounded-full shadow-sm ${isDisconnecting ? 'bg-red-500 animate-pulse' : 'bg-green-500 animate-pulse'}`}></div>
-          <div className="wallet-address-display font-mono font-medium text-gray-700">
+          <div className={`w-2 h-2 rounded-full web3-wallet-status-dot ${isDisconnecting ? 'bg-red-500 animate-pulse' : 'bg-green-500 animate-pulse'}`}></div>
+          <div className="web3-wallet-address text-sm">
             {isDisconnecting ? 'Disconnecting...' : formatAddress(address!)}
           </div>
         </div>
         <button
           onClick={disconnectWallet}
           disabled={isDisconnecting}
-          className={`wallet-connected-button font-bold transition-all duration-200 px-2 py-1 rounded-lg border-2 shadow-md ${
+          className={`web3-wallet-disconnect-btn font-bold transition-all duration-200 px-2 py-1 rounded-lg border-2 shadow-md ${
             isDisconnecting 
               ? 'bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed'
-              : 'bg-red-500 text-white hover:bg-red-600 border-red-500 hover:border-red-600 hover:scale-105 active:scale-95'
+              : 'text-white hover:scale-105 active:scale-95'
           }`}
         >
           {isDisconnecting ? '⏳' : '🔓'}
@@ -177,7 +177,13 @@ export default function WalletConnect() {
     <button
       onClick={connectWallet}
       disabled={isConnecting || !sdk}
-      className="web3-gradient-button-secondary text-sm px-5 py-2.5 font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-300"
+      className={`text-sm px-5 py-2.5 font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-300 ${
+        isConnecting 
+          ? 'web3-wallet-connecting' 
+          : !sdk 
+            ? 'web3-wallet-initializing'
+            : 'web3-wallet-connect-btn'
+      }`}
     >
       {isConnecting ? (
         <span className="flex items-center space-x-2">
