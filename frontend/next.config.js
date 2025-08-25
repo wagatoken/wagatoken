@@ -12,15 +12,30 @@ const nextConfig = {
       },
     ],
   },
-  // Configure for Netlify deployment
+  // Enhanced configuration for Netlify deployment
   webpack: (config, { isServer }) => {
     // Fix for potential module resolution issues
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
     };
+    
+    // Ensure styled-jsx is properly handled
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'styled-jsx/style': require.resolve('styled-jsx/style'),
+      };
+    }
+    
     return config;
   },
+  // Experimental features for better compatibility
+  experimental: {
+    esmExternals: false,
+  },
+  // Optimize for serverless functions
+  output: 'standalone',
 }
 
 module.exports = nextConfig
