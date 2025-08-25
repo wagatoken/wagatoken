@@ -28,19 +28,38 @@ interface IWAGACoffeeToken {
     function isBatchCreated(uint256 batchId) external view returns (bool);
 
     /**
-     * @dev Creates a new batch of coffee tokens with associated metadata
-     * @param ipfsUri IPFS URI containing detailed batch metadata
+     * @dev Creates a new batch for blockchain-first workflow
      * @param productionDate Timestamp when the batch was produced
      * @param expiryDate Timestamp when the batch expires
+     * @param quantity Number of coffee bags in the batch
+     * @param pricePerUnit Price per unit in wei
+     * @param packagingInfo Packaging size ("250g" or "500g")
+     * @param metadataHash Placeholder hash for metadata
      * @return uint256 The ID of the newly created batch
      * Requirements:
      * - Caller must have ADMIN_ROLE
-     * - IPFS URI must not be empty
      */
     function createBatch(
-        string memory ipfsUri,
         uint256 productionDate,
-        uint256 expiryDate
+        uint256 expiryDate,
+        uint256 quantity,
+        uint256 pricePerUnit,
+        string memory packagingInfo,
+        string memory metadataHash
     ) external returns (uint256);
+
+    /**
+     * @dev Updates the IPFS URI for an existing batch
+     * @param batchId ID of the batch to update
+     * @param ipfsUri New IPFS URI for batch metadata
+     * Requirements:
+     * - Caller must have ADMIN_ROLE
+     * - Batch must exist
+     * - IPFS URI must not be empty
+     */
+    function updateBatchIPFS(
+        uint256 batchId,
+        string memory ipfsUri
+    ) external;
 }
 

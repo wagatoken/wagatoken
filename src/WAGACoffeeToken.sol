@@ -42,6 +42,7 @@ contract WAGACoffeeToken is
     error WAGACoffeeToken__ZeroMetaDataValues_createBatch();
     error WAGACoffeeToken__InvalidBatchDates_createBatch();
     error WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+    error WAGACoffeeToken__BatchDoesNotExist_updateBatchIPFS();
     error WAGACoffeeToken__BatchDoesNotExist_updateInventory();
     error WAGACoffeeToken__BatchDoesNotExist_setPricePerUint();
     error WAGACoffeeToken__BatchIsInactive_setPricePerUint(
@@ -82,6 +83,7 @@ contract WAGACoffeeToken is
     /* -------------------------------------------------------------------------- */
 
     event BatchCreated(uint256 indexed batchId, string ipfsUri);
+    event BatchIPFSUpdated(uint256 indexed batchId, string newIpfsUri);
     event BatchStatusUpdated(uint256 indexed batchId, bool isVerified);
     event InventoryUpdated(uint256 indexed batchId, uint256 newQuantity);
     event BatchExpired(
@@ -170,18 +172,17 @@ contract WAGACoffeeToken is
     /*                              EXTERNAL FUNCTIONS                            */
     /* -------------------------------------------------------------------------- */
 
-    /**
-     * @notice Creates a new coffee batch with metadata
-     * @param ipfsUri IPFS URI for batch metadata
+        /**
+     * @notice Creates a new coffee batch on-chain first (blockchain-first workflow)
      * @param productionDate Batch production timestamp
      * @param expiryDate Batch expiry timestamp
+     * @param quantity Number of coffee bags in batch
      * @param pricePerUnit Price per unit in wei
      * @param packagingInfo Must be "250g" or "500g"
      * @param metadataHash Hash of off-chain metadata
      * @return batchId The newly created batch ID
      */
     function createBatch(
-        string memory ipfsUri,
         uint256 productionDate,
         uint256 expiryDate,
         uint256 quantity,
@@ -189,19 +190,17 @@ contract WAGACoffeeToken is
         string memory packagingInfo,
         string memory metadataHash
     ) external onlyRole(ADMIN_ROLE) onlyInitialized returns (uint256) {
-        // uint256 batchId = _nextBatchId++;
         uint256 batchId = _nextBatchId;
         _nextBatchId++; // Increment after assignment
 
         if (expiryDate == 0 || pricePerUnit == 0 || productionDate == 0 || quantity == 0) {
             revert WAGACoffeeToken__ZeroMetaDataValues_createBatch();
         }
-        // Fixed: Allow past production dates for already produced coffee
-        if (productionDate <= block.timestamp || expiryDate <= productionDate) {
+        // Allow past production dates for already produced coffee, but ensure expiry is after production
+        if (expiryDate <= productionDate) {
             revert WAGACoffeeToken__InvalidBatchDates_createBatch();
         }
         if (
-            bytes(ipfsUri).length == 0 ||
             bytes(packagingInfo).length == 0 ||
             bytes(metadataHash).length == 0
         ) {
@@ -226,14 +225,17 @@ contract WAGACoffeeToken is
             lastVerifiedTimestamp: 0 // Initialize to zero
         });
 
-        _setURI(batchId, ipfsUri);
-        emit BatchCreated(batchId, ipfsUri);
+        // Note: No URI set initially for blockchain-first workflow
+        // URI will be set later via updateBatchIPFS()
+        emit BatchCreated(batchId, ""); // Empty IPFS URI initially
 
         _addToActiveBatches(batchId);
         allBatchIds.push(batchId);
 
         return batchId;
     }
+
+
 
     /**
      * @notice Updates batch verification status
@@ -323,6 +325,28 @@ contract WAGACoffeeToken is
 
         // Emit event for tracking
         emit BatchStatusUpdated(batchId, false);
+    }
+
+    /**
+     * @notice Updates the IPFS URI for an existing batch
+     * @dev This function supports the blockchain-first workflow where batch is created first,
+     *      then IPFS metadata is uploaded and the contract is updated with the real IPFS hash
+     * @param batchId ID of the batch to update
+     * @param ipfsUri New IPFS URI for batch metadata
+     */
+    function updateBatchIPFS(
+        uint256 batchId,
+        string memory ipfsUri
+    ) external onlyRole(ADMIN_ROLE) onlyInitialized {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchIPFS();
+        }
+        if (bytes(ipfsUri).length == 0) {
+            revert WAGACoffeeToken__InvalidIPFSUri_createBatch();
+        }
+
+        _setURI(batchId, ipfsUri);
+        emit BatchIPFSUpdated(batchId, ipfsUri);
     }
 
     /**

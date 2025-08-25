@@ -87,7 +87,6 @@ contract WAGAIntegrationTest is Test {
         vm.startPrank(ADMIN_USER);
         
         uint256 batchId = coffeeToken.createBatch(
-            "QmTestHash123", // ipfsUri
             block.timestamp + 1 days, // productionDate (future date as required by contract validation)
             block.timestamp + 365 days, // expiryDate
             1000, // quantity
@@ -95,6 +94,9 @@ contract WAGAIntegrationTest is Test {
             "250g", // packagingInfo - must be "250g" or "500g"
             "metadataHash123" // metadataHash
         );
+        
+        // Update batch with IPFS URI (blockchain-first workflow)
+        coffeeToken.updateBatchIPFS(batchId, "QmTestHash123");
         
         console.log("Created batch ID:", batchId);
         
@@ -146,7 +148,6 @@ contract WAGAIntegrationTest is Test {
         vm.startPrank(ADMIN_USER);
         
         uint256 batchId = coffeeToken.createBatch(
-            "QmTestFailHash", // ipfsUri
             block.timestamp + 1 days, // productionDate (future date)
             block.timestamp + 365 days, // expiryDate
             500, // quantity
@@ -154,6 +155,9 @@ contract WAGAIntegrationTest is Test {
             "500g", // packagingInfo - using different valid size for this test
             "metadataHashFail" // metadataHash
         );
+        
+        // Update batch with IPFS URI (blockchain-first workflow)
+        coffeeToken.updateBatchIPFS(batchId, "QmTestFailHash");
         
         vm.stopPrank();
 

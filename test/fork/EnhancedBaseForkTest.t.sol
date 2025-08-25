@@ -85,7 +85,6 @@ contract EnhancedBaseForkTest is Test {
         vm.startPrank(ADMIN_USER);
         
         testBatchId = coffeeToken.createBatch(
-            "QmForkTestHash123", // ipfsUri
             block.timestamp + 1 days, // productionDate
             block.timestamp + 365 days, // expiryDate
             1000, // quantity
@@ -93,6 +92,9 @@ contract EnhancedBaseForkTest is Test {
             "250g", // packagingInfo
             "forkTestMetadata" // metadataHash
         );
+        
+        // Step 2: Update batch with IPFS URI (blockchain-first workflow)
+        coffeeToken.updateBatchIPFS(testBatchId, "QmForkTestHash123");
         
         console.log("Created batch ID on fork:", testBatchId);
         
@@ -129,7 +131,7 @@ contract EnhancedBaseForkTest is Test {
         // Verify initial state
         assertFalse(isVerified, "Batch should not be verified initially");
         assertFalse(isMetadataVerified, "Metadata should not be verified initially");
-        assertEq(currentQuantity, 0, "Initial quantity should be zero");
+        assertEq(currentQuantity, 1000, "Initial quantity should match what was set during creation");
         assertEq(pricePerUnit, 75 * 1e18, "Price should match");
         
         console.log(" Batch workflow test completed successfully on Base Sepolia fork");
@@ -146,7 +148,6 @@ contract EnhancedBaseForkTest is Test {
         // First create a batch
         vm.prank(ADMIN_USER);
         uint256 batchId = coffeeToken.createBatch(
-            "QmVerificationTest",
             block.timestamp + 1 days,
             block.timestamp + 365 days,
             1000, // quantity
@@ -154,6 +155,10 @@ contract EnhancedBaseForkTest is Test {
             "500g",
             "verificationTestMetadata"
         );
+        
+        // Update batch with IPFS URI (blockchain-first workflow)
+        vm.prank(ADMIN_USER);
+        coffeeToken.updateBatchIPFS(batchId, "QmVerificationTest");
         
         console.log("Created batch for verification test:", batchId);
         
@@ -193,7 +198,6 @@ contract EnhancedBaseForkTest is Test {
         
         for (uint256 i = 0; i < 3; i++) {
             batchIds[i] = coffeeToken.createBatch(
-                string.concat("QmPersistenceTest", vm.toString(i)),
                 block.timestamp + 1 days,
                 block.timestamp + 365 days,
                 1000, // quantity
@@ -201,6 +205,9 @@ contract EnhancedBaseForkTest is Test {
                 i % 2 == 0 ? "250g" : "500g", // Alternate packaging
                 string.concat("persistenceMetadata", vm.toString(i))
             );
+            
+            // Update batch with IPFS URI (blockchain-first workflow)
+            coffeeToken.updateBatchIPFS(batchIds[i], string.concat("QmPersistenceTest", vm.toString(i)));
             
             console.log("Created batch", i, "with ID:", batchIds[i]);
         }
@@ -256,7 +263,6 @@ contract EnhancedBaseForkTest is Test {
         // Test role-based access control
         vm.prank(ADMIN_USER);
         uint256 batchId = coffeeToken.createBatch(
-            "QmRoleTest",
             block.timestamp + 1 days,
             block.timestamp + 365 days,
             1000, // quantity
@@ -265,13 +271,16 @@ contract EnhancedBaseForkTest is Test {
             "roleTestMetadata"
         );
         
+        // Update batch with IPFS URI (blockchain-first workflow)
+        vm.prank(ADMIN_USER);
+        coffeeToken.updateBatchIPFS(batchId, "QmRoleTest");
+        
         console.log("Admin successfully created batch:", batchId);
         
         // Test that non-admin cannot create batches
         vm.prank(CONSUMER_USER);
         vm.expectRevert();
         coffeeToken.createBatch(
-            "QmShouldFail",
             block.timestamp + 1 days,
             block.timestamp + 365 days,
             1000, // quantity
@@ -306,7 +315,6 @@ contract EnhancedBaseForkTest is Test {
         
         gasStart = gasleft();
         uint256 batchId = coffeeToken.createBatch(
-            "QmGasTest",
             block.timestamp + 1 days,
             block.timestamp + 365 days,
             1000, // quantity
@@ -315,6 +323,13 @@ contract EnhancedBaseForkTest is Test {
             "gasTestMetadata"
         );
         gasUsed = gasStart - gasleft();
+        
+        console.log("Batch creation gas used:", gasUsed);
+        
+        // Test IPFS update gas usage
+        gasStart = gasleft();
+        coffeeToken.updateBatchIPFS(batchId, "QmGasTest");
+        uint256 ipfsUpdateGasUsed = gasStart - gasleft();
         
         console.log("=== Gas Usage Results ===");
         console.log("Batch creation gas used:", gasUsed);
