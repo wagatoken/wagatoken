@@ -8,10 +8,16 @@ import {
   SiChainlink
 } from 'react-icons/si';
 import { MdCheck, MdAdminPanelSettings, MdLibraryBooks, MdStorefront, MdSearch, MdCoffee, MdVerified, MdStorage } from 'react-icons/md';
-import { CoffeeBatch } from "@/utils/types";
+import { BatchInfo, getActiveBatchIds, getBatchInfoWithMetadata } from "@/utils/smartContracts";
+
+interface FeaturedBatch extends BatchInfo {
+  priceInUSD: string;
+  farmName: string;
+  location: string;
+}
 
 export default function HomePage() {
-  const [featuredBatches, setFeaturedBatches] = useState<CoffeeBatch[]>([]);
+  const [featuredBatches, setFeaturedBatches] = useState<FeaturedBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState([
     { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" />, theme: "blockchain" },
@@ -53,27 +59,44 @@ export default function HomePage() {
 
   const fetchFeaturedBatches = async () => {
     try {
-      const response = await fetch('/api/batches');
-      if (response.ok) {
-        const data = await response.json();
-        const allBatches = data.batches || [];
+      console.log('🔗 Fetching batches from blockchain contracts...');
+      const batchIds = await getActiveBatchIds();
+      console.log('Found batch IDs:', batchIds);
+      
+      const batchPromises = batchIds.map(async (id) => {
+        const batchInfo = await getBatchInfoWithMetadata(id);
         
-        // Show only verified batches as featured
-        const verified = allBatches.filter((b: CoffeeBatch) => b.verification.verificationStatus === 'verified').slice(0, 3);
-        setFeaturedBatches(verified);
+        // Convert price from cents to USD
+        const priceInCents = parseInt(batchInfo.pricePerUnit) || 0;
+        const priceInUSD = (priceInCents / 100).toFixed(2);
         
-        // Update stats with real data
-        const totalBatches = allBatches.length;
-        const verifiedBatches = allBatches.filter((b: CoffeeBatch) => b.verification.verificationStatus === 'verified').length;
-        const verificationRate = totalBatches > 0 ? Math.round((verifiedBatches / totalBatches) * 100) : 0;
+        return {
+          ...batchInfo,
+          priceInUSD,
+          farmName: batchInfo.metadata?.properties.farmer || 'Unknown Farm',
+          location: batchInfo.metadata?.properties.origin || 'Unknown Location'
+        };
+      });
+      
+      const blockchainBatches = await Promise.all(batchPromises);
+      console.log('Successfully fetched', blockchainBatches.length, 'batches from blockchain');
+      
+      // Show only verified batches as featured
+      const verified = blockchainBatches.filter(b => b.isVerified).slice(0, 3);
+      setFeaturedBatches(verified);
+      
+      // Update stats with real blockchain data
+      const totalBatches = blockchainBatches.length;
+      const verifiedBatches = blockchainBatches.filter(b => b.isVerified).length;
+      const verificationRate = totalBatches > 0 ? Math.round((verifiedBatches / totalBatches) * 100) : 0;
         
-        setStats([
-          { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" />, theme: "blockchain" },
-          { label: "Coffee Batches Tracked", value: `${totalBatches}`, icon: <MdCoffee size={24} />, theme: "coffee" },
-          { label: "Verification Rate", value: `${verificationRate}%`, icon: <MdVerified size={24} />, theme: "verification" },
-          { label: "IPFS Storage", value: "Active", icon: <MdStorage size={24} />, theme: "storage" },
-        ]);
-      }
+      setStats([
+        { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" />, theme: "blockchain" },
+        { label: "Coffee Batches Tracked", value: `${totalBatches}`, icon: <MdCoffee size={24} />, theme: "coffee" },
+        { label: "Verification Rate", value: `${verificationRate}%`, icon: <MdVerified size={24} />, theme: "verification" },
+        { label: "IPFS Storage", value: "Active", icon: <MdStorage size={24} />, theme: "storage" },
+      ]);
+
     } catch (error) {
       console.error('Error fetching featured batches:', error);
       // Keep default stats if fetch fails
@@ -175,10 +198,10 @@ export default function HomePage() {
                   <div key={batch.batchId} className="web3-card web3-holographic-border-enhanced web3-card-stable web3-coffee-particles" style={{ animationDelay: `${index * 200}ms` }}>
                     <div className="mb-4">
                       <h3 className="text-lg font-bold mb-1 web3-gradient-text">
-                        {batch.batchDetails.farmName}
+                        {batch.farmName}
                       </h3>
                       <div className="text-emerald-600 text-sm font-medium">
-                        {batch.batchDetails.location}
+                        {batch.location}
                       </div>
                     </div>
 
@@ -189,11 +212,11 @@ export default function HomePage() {
                       </div>
                       <div className="flex justify-between">
                         <span>Packaging:</span>
-                        <span className="text-emerald-600 font-medium">{batch.packaging}</span>
+                        <span className="text-emerald-600 font-medium">{batch.packagingInfo}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Price:</span>
-                        <span className="font-bold web3-gradient-text">${batch.price}/bag</span>
+                        <span className="font-bold web3-gradient-text">${batch.priceInUSD}/bag</span>
                       </div>
                     </div>
 
