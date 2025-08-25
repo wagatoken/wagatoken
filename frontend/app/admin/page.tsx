@@ -17,6 +17,7 @@ import {
   createCoffeeBatch,
   getUserRoles
 } from "@/utils/smartContracts";
+import EnvironmentStatus from "@/app/components/EnvironmentStatus";
 
 interface BatchDisplay {
   batchId: string;
@@ -243,6 +244,9 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen web3-section">
       <div className="max-w-7xl mx-auto web3-page-spacing relative z-10">
+        {/* Environment Status Check */}
+        <EnvironmentStatus />
+        
         {/* Header */}
         <div className="mb-12 animate-card-entrance">
           <div className="text-center mb-8">

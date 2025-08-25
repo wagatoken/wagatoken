@@ -10,6 +10,48 @@ export async function GET() {
   try {
     console.log("Fetching all pinned coffee batches from Pinata...");
     
+    // Check environment variables first
+    if (!process.env.PINATA_JWT) {
+      console.error("❌ PINATA_JWT environment variable not set");
+      return NextResponse.json({
+        error: "IPFS service not configured",
+        details: "Missing PINATA_JWT environment variable",
+        batches: []
+      }, { status: 503 });
+    }
+
+    if (!process.env.NEXT_PUBLIC_GATEWAY_URL) {
+      console.error("❌ NEXT_PUBLIC_GATEWAY_URL environment variable not set");
+      return NextResponse.json({
+        error: "IPFS gateway not configured",
+        details: "Missing NEXT_PUBLIC_GATEWAY_URL environment variable",
+        batches: []
+      }, { status: 503 });
+    }
+
+    // Test Pinata authentication first
+    try {
+      console.log("Testing Pinata authentication...");
+      const authTest = await fetch('https://api.pinata.cloud/data/testAuthentication', {
+        headers: {
+          'Authorization': `Bearer ${process.env.PINATA_JWT}`
+        }
+      });
+      
+      if (!authTest.ok) {
+        throw new Error(`Pinata auth failed with status ${authTest.status}`);
+      }
+      
+      console.log("✅ Pinata authentication successful");
+    } catch (authError) {
+      console.error("❌ Pinata authentication failed:", authError);
+      return NextResponse.json({
+        error: "IPFS service authentication failed",
+        details: authError instanceof Error ? authError.message : 'Unknown auth error',
+        batches: []
+      }, { status: 503 });
+    }
+    
     // Get all pinned files from Pinata
     const files = await pinata.files.list();
     const batches: CoffeeBatch[] = [];
