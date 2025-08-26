@@ -186,7 +186,7 @@ export default function BrowsePage() {
                     className="w-full web3-gradient-button-secondary text-sm py-2 flex items-center justify-center gap-2"
                   >
                     <MdOutlineAssignment size={16} />
-                    {batch.isVerified ? 'View & Redeem' : 'Request Verification'}
+                    {batch.isVerified ? 'View & Request' : 'Request Verification'}
                   </button>
                 </div>
               </div>

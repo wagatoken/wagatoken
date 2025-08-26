@@ -67,3 +67,5 @@ coverage/
 *.tar.gz
 documentation/
 docs/
+# Local Netlify folder
+.netlify
