@@ -1,272 +1,104 @@
-# WAGA Coffee - Blockchain Coffee Traceability Platform
+# WAGA Coffee - Blockchain Coffee Traceability
 
-*Onchain Coffee, OffChain Impact* ☕
+*Track every bean. Trust every cup.* ☕
 
-This is the complete WAGA Coffee traceability platform - a professional Web3 application bringing transparency and authenticity to coffee supply chains.
+Coffee traceability that actually works. No BS, just blockchain.
 
-## About WAGA Coffee
+## What WAGA Does
 
-WAGA Coffee is a cutting-edge blockchain-based coffee traceability system that provides complete transparency from farm to cup. Built on Base Sepolia network with Chainlink oracles and IPFS integration, WAGA ensures every coffee batch is verified, tracked, and authenticated on-chain.
+We built a system that tracks coffee from farm to your cup using blockchain technology. Every batch gets verified, stored on-chain, and turned into NFT certificates that distributors can redeem for real coffee.
 
-**Mission**: Fair and transparent coffee trading through decentralized technology, empowering coffee farmers and ensuring quality for consumers worldwide.
+**Simple mission**: Make coffee trading transparent and fair for farmers.
 
-## ✨ Key Features
+## Features
 
-### 🌾 **Complete Coffee Ecosystem**
-- **Farm-to-Cup Traceability**: Every batch tracked from farms to your cup
-- **ERC-1155 NFT Certificates**: Unique digital certificates for each verified batch
-- **Smart Redemption System**: Token holders can redeem for physical coffee delivery
-- **Real-time Inventory**: Live tracking of coffee stock and availability
+### Core System
+- **Farm-to-Cup Tracking**: Every batch gets an ID, metadata stored on IPFS
+- **NFT Certificates**: ERC-1155 tokens for verified batches
+- **Physical Redemption**: Token holders get real coffee delivered
+- **Live Inventory**: Real-time stock tracking
 
-### 🎛️ **Professional Portals**
-- **Admin Portal**: Comprehensive batch management and verification system for WAGA staff
-- **Distributor Portal**: Request verified coffee batches and manage token redemptions
-- **Browse Coffee**: Explore verified coffee batches with detailed information
-- **Documentation Hub**: Complete technical documentation and user guides
+### User Interfaces
+- **Admin Portal**: Create batches, manage verification (with progressive forms)
+- **Distributor Portal**: Request batches, redeem tokens
+- **Browse Coffee**: Find verified batches
+- **Documentation**: Actually useful guides
 
-### 🎨 **Enhanced User Experience**
-- **Custom WAGA Icons**: Professional coffee-specific iconography throughout the platform
-- **Color-Themed Interface**: Intuitive color coding using color theory principles
-- **Gentle Animations**: Subtle sideways swaying animations for enhanced visual appeal
-- **Web3 Aesthetics**: Professional blockchain-inspired design with glass morphism effects
-- **Responsive Design**: Optimized for desktop, tablet, and mobile devices
+### Tech Stack
+- **Blockchain**: Base Sepolia (cheap, fast)
+- **Verification**: Chainlink Functions
+- **Storage**: IPFS via Pinata
+- **Frontend**: Next.js 14 with TypeScript
 
-### 🔗 **Blockchain Integration**
-- **Chainlink Functions**: Decentralized verification of coffee inventory and quality
-- **IPFS Metadata**: Immutable storage of batch details, certificates, and farm information
-- **Multi-Contract Architecture**: Modular smart contract system for scalability
-- **Gas Optimization**: Efficient contract interactions and batch operations
+## Current Status
 
-## 📊 Live Platform Statistics
+- **4 Smart Contracts** deployed on Base Sepolia
+- **7+ Coffee Batches** tracked and verified
+- **Progressive Form System** - new step-by-step batch creation
+- **Active IPFS Storage** via Pinata
+- **Working QR Code Generation** for each batch
 
-Our real-time dashboard displays:
-- **4 Smart Contracts** deployed and verified on Base Sepolia
-- **7+ Coffee Batches** currently tracked and verified
-- **85%+ Verification Rate** for submitted batches
-- **Active IPFS Storage** via Pinata integration
+## Smart Contracts (Base Sepolia)
 
-## 🔗 Smart Contracts (Base Sepolia)
+- **WAGACoffeeToken**: `0xB1D14D241028bFbbA1eEA928B451Cb1d10DfA016`
+- **WAGAProofOfReserve**: `0x4e7164E037464fFccF45b69E3c6246482E024A89`
+- **WAGAInventoryManager**: `0x03dd8b6C292c8c0Da412d0944E0f11Fb08393F33`
+- **WAGARedemption**: `0x2770c93E0C2bf9e15e32319b3A8eFf7560B75E0C`
 
-- **WAGACoffeeToken**: `0xE69bdd3E783212D11522E7f0057c9F52FC4D0A39`
-- **WAGAInventoryManager**: `0xe882dcD6F1283F83Ab19F954d70fC024eE70A908`
-- **WAGACoffeeRedemption**: `0xc235C005202a9ec26d59120B8e9c2cc6AB432fC4`
-- **WAGAProofOfReserve**: `0xaA42A460107A61D34D461fb59c46343b1a8FAdc5`
+All verified on [Basescan](https://sepolia.basescan.org/).
 
-All contracts are verified on [Basescan](https://sepolia.basescan.org/).
+## Quick Start
 
-## 🛠️ Technology Stack
+### What You Need
+- Node.js 18+
+- MetaMask wallet
+- Base Sepolia testnet setup
 
-### Frontend & UI
-- **Framework**: Next.js 14.2.5 with TypeScript for type-safe development
-- **Styling**: Tailwind CSS with custom Web3 components and animations
-- **Icons**: @web3icons/react library + custom WAGA coffee iconography
-- **Components**: Modular React components with professional Web3 aesthetics
-- **Animations**: CSS keyframes for gentle sideways swaying and slide effects
-
-### Blockchain & Web3
-- **Network**: Base Sepolia (Ethereum L2) for fast, low-cost transactions
-- **Oracles**: Chainlink Functions for decentralized data verification
-- **Storage**: IPFS via Pinata for immutable metadata and certificates
-- **Wallet Integration**: Web3 wallet connection with MetaMask support
-- **Contract Interaction**: Ethers.js for blockchain interactions
-
-### Infrastructure
-- **Deployment**: Netlify with optimized build pipeline
-- **API**: RESTful endpoints for batch data and IPFS integration
-- **Environment**: Secure environment variable management
-- **Monitoring**: Real-time batch tracking and verification status
-
-## 🚀 Getting Started
-
-### Prerequisites
-- **Node.js 18+** and npm for development
-- **Web3 Wallet** (MetaMask recommended) for blockchain interactions
-- **Base Sepolia Testnet** configured in your wallet
-- **Git** for repository management
-
-### 🔧 Local Development Setup
-
-1. **Clone the Repository**
+### Run Locally
 ```bash
-git clone https://github.com/wagatoken/wagatoken.git
-cd wagatoken
-```
-
-2. **Install Dependencies**
-```bash
-cd frontend
+git clone https://github.com/team-waga/wagatoken.git
+cd wagatoken/frontend
 npm install
-```
-
-3. **Environment Configuration**
-Create your environment file:
-```bash
-cp .env.example .env.local
-```
-
-Configure your `.env.local` with the required values:
-```env
-# Pinata IPFS Configuration
-PINATA_JWT=your_pinata_jwt_token
-NEXT_PUBLIC_GATEWAY_URL=your_pinata_gateway_url
-
-# Smart Contract Addresses (Base Sepolia)
-NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS=0xE69bdd3E783212D11522E7f0057c9F52FC4D0A39
-NEXT_PUBLIC_WAGA_INVENTORY_MANAGER_ADDRESS=0xe882dcD6F1283F83Ab19F954d70fC024eE70A908
-NEXT_PUBLIC_WAGA_REDEMPTION_CONTRACT_ADDRESS=0xc235C005202a9ec26d59120B8e9c2cc6AB432fC4
-NEXT_PUBLIC_WAGA_PROOF_OF_RESERVE_ADDRESS=0xaA42A460107A61D34D461fb59c46343b1a8FAdc5
-
-# Chainlink Functions Configuration
-NEXT_PUBLIC_CHAINLINK_FUNCTIONS_ROUTER=0xf9B8fc078197181C841c296C876945aaa425B278
-NEXT_PUBLIC_CHAINLINK_DON_ID=fun-base-sepolia-1
-NEXT_PUBLIC_CHAINLINK_SUBSCRIPTION_ID=your_subscription_id
-
-# API Configuration
-NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
-WAGA_API_KEY=your_development_api_key
-```
-
-4. **Start Development Server**
-```bash
 npm run dev
 ```
 
-5. **Access the Application**
-Navigate to [http://localhost:3001](http://localhost:3001)
+Open http://localhost:3001
 
-### 🏗️ Building for Production
+### Environment Setup
+Copy `.env.example` to `.env.local` and fill in:
+- Pinata JWT for IPFS
+- Contract addresses (already configured)
+- Chainlink subscription ID
 
-```bash
-# Build the application
-npm run build
+That's it. The app works.
 
-# Start production server
-npm start
+## Deployment
 
-# Optional: Preview the build locally
-npm run preview
-```
+For production, deploy to Netlify or Vercel. 
 
-## 🌐 Deployment
+**Build**: `cd frontend && npm run build`
 
-### Netlify Deployment (Recommended)
+Configure these environment variables:
+- Pinata JWT and gateway URL
+- Smart contract addresses (already set for Base Sepolia)
+- Chainlink subscription ID
+- API base URL
 
-This application is optimized for Netlify deployment with the following configuration:
+## Contributing
 
-**Build Settings:**
-- **Build command**: `cd frontend && npm run build`
-- **Publish directory**: `frontend/dist` or `frontend/.next`
-- **Node version**: 18.x or higher
+1. Fork it
+2. Create feature branch
+3. Make changes
+4. Submit PR
 
-**Environment Variables** (Configure in Netlify Dashboard):
-```env
-# Production Pinata Configuration
-PINATA_JWT=your_production_pinata_jwt
-NEXT_PUBLIC_GATEWAY_URL=your_production_gateway_url
+## Status
 
-# Smart Contract Addresses (Base Sepolia)
-NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS=0xE69bdd3E783212D11522E7f0057c9F52FC4D0A39
-NEXT_PUBLIC_WAGA_INVENTORY_MANAGER_ADDRESS=0xe882dcD6F1283F83Ab19F954d70fC024eE70A908
-NEXT_PUBLIC_WAGA_REDEMPTION_CONTRACT_ADDRESS=0xc235C005202a9ec26d59120B8e9c2cc6AB432fC4
-NEXT_PUBLIC_WAGA_PROOF_OF_RESERVE_ADDRESS=0xaA42A460107A61D34D461fb59c46343b1a8FAdc5
+See [STATUS.md](STATUS.md) for detailed functionality report.
 
-# Chainlink Production Configuration
-NEXT_PUBLIC_CHAINLINK_FUNCTIONS_ROUTER=0xf9B8fc078197181C841c296C876945aaa425B278
-NEXT_PUBLIC_CHAINLINK_DON_ID=fun-base-sepolia-1
-NEXT_PUBLIC_CHAINLINK_SUBSCRIPTION_ID=your_production_subscription_id
+## License
 
-# Production API
-NEXT_PUBLIC_API_BASE_URL=https://your-production-domain.com
-WAGA_API_KEY=your_production_api_key
-```
-
-### Alternative Deployment Options
-- **Vercel**: Full Next.js support with automatic deployments
-- **Railway**: Docker-based deployment with database integration
-- **AWS Amplify**: Scalable hosting with CI/CD pipelines
-
-## ⚙️ Network Configuration
-
-### Base Sepolia Testnet Setup
-The application is configured for Base Sepolia testnet with the following parameters:
-
-- **Network Name**: Base Sepolia
-- **RPC URL**: `https://sepolia.base.org`
-- **Chain ID**: `84532`
-- **Currency Symbol**: `ETH`
-- **Block Explorer**: `https://sepolia.basescan.org/`
-
-### MetaMask Configuration
-Add Base Sepolia to your MetaMask:
-1. Open MetaMask → Networks → Add Network
-2. Enter the network details above
-3. Get testnet ETH from [Base Sepolia Faucet](https://www.alchemy.com/faucets/base-sepolia)
-
-## 📁 Project Structure
-
-```
-WAGA_MVP_V2/
-├── frontend/                    # Next.js application
-│   ├── app/                    # App router pages and components
-│   │   ├── components/         # Reusable React components
-│   │   │   └── icons/         # Custom WAGA iconography
-│   │   ├── admin/             # Admin portal pages
-│   │   ├── distributor/       # Distributor portal pages
-│   │   ├── browse/            # Coffee browsing interface
-│   │   └── docs/              # Documentation pages
-│   ├── utils/                 # Utility functions and configurations
-│   └── public/                # Static assets
-├── src/                       # Smart contracts (Solidity)
-├── script/                    # Deployment and interaction scripts
-├── test/                      # Smart contract tests
-└── lib/                       # External libraries and dependencies
-```
-
-## 🎨 Design System
-
-### Color Themes
-- **Blockchain** (Blue/Purple): Trust, technology, smart contracts
-- **Coffee** (Amber/Orange): Warmth, energy, coffee essence
-- **Verification** (Green): Security, success, authenticity
-- **Storage** (Purple): Data, innovation, IPFS integration
-
-### Custom Animations
-- **Gentle Sway**: Subtle left-right movement for stat cards
-- **Slide Animations**: Smooth entrance effects for feature cards
-- **Glass Morphism**: Professional Web3 aesthetic with backdrop blur
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📞 Support & Contact
-
-- **Documentation**: Visit our [comprehensive docs](/docs)
-- **Issues**: Report bugs via GitHub Issues
-- **Email**: contact@wagacoffee.io
-- **Discord**: Join our developer community
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **Chainlink**: Decentralized oracle infrastructure
-- **Base**: Layer 2 scaling solution
-- **Pinata**: IPFS hosting and management
-- **OpenZeppelin**: Secure smart contract standards
-- **Coffee Farmers**: The heart of our mission
+MIT License
 
 ---
 
-**WAGA Coffee - Bringing transparency to every cup** ☕  
-*Onchain Coffee OffChain Impact*
-
----
-
-*Built with ❤️ for the coffee community*
+**WAGA Coffee** - Every bean tracked, every cup trusted. ☕

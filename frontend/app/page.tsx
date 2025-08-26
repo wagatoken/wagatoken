@@ -99,11 +99,11 @@ export default function HomePage() {
 
     } catch (error) {
       console.error('Error fetching featured batches:', error);
-      // Keep default stats if fetch fails
+      // Show actual blockchain data even if zero - no fake fallback values
       setStats([
         { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" />, theme: "blockchain" },
-        { label: "Coffee Batches Tracked", value: "12+", icon: <MdCoffee size={24} />, theme: "coffee" },
-        { label: "Verification Rate", value: "85%", icon: <MdVerified size={24} />, theme: "verification" },
+        { label: "Coffee Batches Tracked", value: "0", icon: <MdCoffee size={24} />, theme: "coffee" },
+        { label: "Verification Rate", value: "0%", icon: <MdVerified size={24} />, theme: "verification" },
         { label: "IPFS Storage", value: "Active", icon: <MdStorage size={24} />, theme: "storage" },
       ]);
     } finally {

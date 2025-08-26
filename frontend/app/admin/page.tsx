@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { TokenETH, WalletMetamask, NetworkEthereum } from '@web3icons/react';
-import { MdCheck, MdClose, MdCoffee, MdVerified, MdCreate, MdAnalytics, MdLocationOn, MdGrade, MdStorage, MdStorefront, MdTimeline } from 'react-icons/md';
+import { MdCheck, MdClose, MdCoffee, MdVerified, MdCreate, MdAnalytics, MdLocationOn, MdGrade, MdStorage, MdStorefront, MdTimeline, MdSwapHoriz } from 'react-icons/md';
 import { 
   generateCoffeeMetadata,
   BatchCreationData, 
@@ -17,6 +17,7 @@ import {
   getUserRoles
 } from "@/utils/smartContracts";
 import EnvironmentStatus from "@/app/components/EnvironmentStatus";
+import ProgressiveForm from "@/app/components/ProgressiveForm";
 
 interface BatchDisplay {
   batchId: string;
@@ -38,6 +39,7 @@ export default function AdminPage() {
   const [success, setSuccess] = useState<string>('');
   const [batches, setBatches] = useState<BatchDisplay[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<string>('');
+  const [isProgressiveMode, setIsProgressiveMode] = useState<boolean>(true);
   
   // QR Code state
   const [generatedQRs, setGeneratedQRs] = useState<{
@@ -370,8 +372,31 @@ export default function AdminPage() {
 
             {/* Tab Content */}
             {activeTab === 'create' && (
-              <div className="web3-premium-card animate-card-entrance">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Coffee Batch</h2>
+              <div>
+                {/* Mode Toggle Button */}
+                <div className="mb-6 flex justify-end">
+                  <button
+                    onClick={() => setIsProgressiveMode(!isProgressiveMode)}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all duration-300 shadow-md hover:shadow-lg"
+                  >
+                    <MdSwapHoriz size={20} />
+                    {isProgressiveMode ? 'Switch to Traditional Form' : 'Switch to Step-by-Step Form'}
+                  </button>
+                </div>
+
+                {/* Progressive Form */}
+                {isProgressiveMode ? (
+                  <ProgressiveForm
+                    batchForm={batchForm}
+                    handleInputChange={handleInputChange}
+                    handleArrayInputChange={handleArrayInputChange}
+                    onSubmit={createBatch}
+                    loading={loading}
+                  />
+                ) : (
+                  /* Traditional Form */
+                  <div className="web3-premium-card animate-card-entrance">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Coffee Batch</h2>
                 
                 {/* Basic Information Section */}
                 <div className="web3-form-section">
@@ -654,6 +679,8 @@ export default function AdminPage() {
                     </div>
                   )}
                 </button>
+                  </div>
+                )}
               </div>
             )}
 
