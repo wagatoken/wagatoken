@@ -1,22 +1,36 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TokenETH, WalletMetamask, NetworkEthereum } from '@web3icons/react';
-import { MdCheck, MdClose, MdCoffee, MdVerified, MdCreate, MdAnalytics, MdLocationOn, MdGrade, MdStorage, MdStorefront, MdTimeline, MdSwapHoriz } from 'react-icons/md';
-import { 
+import { TokenETH, WalletMetamask, NetworkEthereum } from "@web3icons/react";
+import {
+  MdCheck,
+  MdClose,
+  MdCoffee,
+  MdVerified,
+  MdCreate,
+  MdAnalytics,
+  MdLocationOn,
+  MdGrade,
+  MdStorage,
+  MdStorefront,
+  MdTimeline,
+  MdSwapHoriz,
+} from "react-icons/md";
+import {
   generateCoffeeMetadata,
-  BatchCreationData, 
+  BatchCreationData,
   validateBatchData,
-  CoffeeBatchMetadata
+  CoffeeBatchMetadata,
 } from "@/utils/ipfsMetadata";
-import { 
-  getBatchInfoWithMetadata, 
+import {
+  getBatchInfoWithMetadata,
   getActiveBatchIds,
   requestBatchVerification,
   createBatchBlockchainFirst,
-  getUserRoles
+  getUserRoles,
 } from "@/utils/smartContracts";
 import EnvironmentStatus from "@/app/components/EnvironmentStatus";
+import { useWallet } from "@/app/components/WalletProvider";
 import ProgressiveForm from "@/app/components/ProgressiveForm";
 
 interface BatchDisplay {
@@ -32,13 +46,15 @@ interface BatchDisplay {
 }
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'verify'>('create');
-  const [userAddress, setUserAddress] = useState<string>('');
+  const { isConnected, address } = useWallet();
+  const [activeTab, setActiveTab] = useState<"create" | "manage" | "verify">(
+    "create"
+  );
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<string>('');
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
   const [batches, setBatches] = useState<BatchDisplay[]>([]);
-  const [selectedBatch, setSelectedBatch] = useState<string>('');
+  const [selectedBatch, setSelectedBatch] = useState<string>("");
   const [isProgressiveMode, setIsProgressiveMode] = useState<boolean>(true);
   
   // QR Code state
@@ -65,23 +81,6 @@ export default function AdminPage() {
     productionDate: new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)), // 7 days ago (past date)
     expiryDate: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 days from now
   });
-
-  // Connect wallet
-  const connectWallet = async () => {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({ 
-          method: 'eth_requestAccounts' 
-        });
-        setUserAddress(accounts[0]);
-      } catch (error) {
-        setError('Error connecting wallet');
-        console.error('Error connecting wallet:', error);
-      }
-    } else {
-      setError('MetaMask not found. Please install MetaMask.');
-    }
-  };
 
   // Load batches
   const loadBatches = async () => {
@@ -226,9 +225,10 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    connectWallet();
-    loadBatches();
-  }, []);
+    if (isConnected && address) {
+      loadBatches();
+    }
+  }, [isConnected, address]);
 
   const TabButton = ({ tab, label, icon }: { tab: string; label: string; icon: React.ReactNode }) => (
     <button
@@ -294,7 +294,7 @@ export default function AdminPage() {
         </div>
 
         {/* Wallet Connection */}
-        {!userAddress && (
+        {!isConnected && (
           <div className="web3-card text-center animate-card-entrance">
             <div className="mb-4">
               <div className="flex justify-center mb-3">
@@ -305,17 +305,10 @@ export default function AdminPage() {
                 Connect your wallet to access admin functions
               </p>
             </div>
-            <button
-              onClick={connectWallet}
-              className="web3-metamask-button flex items-center justify-center gap-2 mx-auto"
-            >
-              <WalletMetamask size={20} variant="branded" />
-              Connect MetaMask
-            </button>
           </div>
         )}
 
-        {userAddress && (
+        {isConnected && address && (
           <>
             {/* Connected Wallet Info */}
             <div className="web3-card-wallet animate-card-entrance mb-8">
@@ -325,7 +318,7 @@ export default function AdminPage() {
                   <div>
                     <h3 className="text-lg font-bold text-emerald-900">Connected Wallet</h3>
                     <p className="text-emerald-700 font-mono text-sm">
-                      {userAddress.substring(0, 6)}...{userAddress.substring(userAddress.length - 4)}
+                      {address.substring(0, 6)}...{address.substring(address.length - 4)}
                     </p>
                   </div>
                 </div>
