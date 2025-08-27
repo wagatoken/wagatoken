@@ -17,9 +17,11 @@ import {
 } from "react-icons/md";
 import {
   generateCoffeeMetadata,
+ 
   BatchCreationData,
   validateBatchData,
   CoffeeBatchMetadata,
+  
 } from "@/utils/ipfsMetadata";
 import {
   getBatchInfoWithMetadata,
@@ -29,7 +31,6 @@ import {
   getUserRoles,
 } from "@/utils/smartContracts";
 import EnvironmentStatus from "@/app/components/EnvironmentStatus";
-import { useWallet } from "@/app/components/WalletProvider";
 
 interface BatchDisplay {
   batchId: string;
@@ -48,12 +49,13 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<"create" | "manage" | "verify">(
     "create"
   );
+ 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
   const [batches, setBatches] = useState<BatchDisplay[]>([]);
-  const [selectedBatch, setSelectedBatch] = useState<string>("");
-
+  const [selectedBatch, setSelectedBatch] = useState<string>('');
+  
   // QR Code state
   const [generatedQRs, setGeneratedQRs] = useState<{
     comprehensive: string;
@@ -409,12 +411,10 @@ export default function AdminPage() {
             )}
 
             {/* Tab Content */}
-            {activeTab === "create" && (
+            {activeTab === 'create' && (
               <div className="web3-premium-card animate-card-entrance">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                  Create New Coffee Batch
-                </h2>
-
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Coffee Batch</h2>
+                
                 {/* Basic Information Section */}
                 <div className="web3-form-section">
                   <h3 className="flex items-center gap-2">
@@ -744,6 +744,8 @@ export default function AdminPage() {
                     </div>
                   )}
                 </button>
+                  </div>
+                )}
               </div>
             )}
 

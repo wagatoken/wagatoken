@@ -286,6 +286,23 @@ export async function createBatchBlockchainFirst(batchData: BatchCreationData): 
     const qrCodeDataUrl = await generateBatchQRCode(batchId, updatedMetadata, ipfsUri);
     const verificationQR = await generateSimpleVerificationQR(batchId);
 
+    // Step 6: Sync to database (non-blocking - preserves blockchain-first integrity)
+    console.log('💾 Database sync status: initiating...');
+    const { syncBatchToDatabase } = await import('./databaseSync');
+    const syncResult = await syncBatchToDatabase({
+      batchId,
+      transactionHash: updateTxHash,
+      ipfsUri,
+      metadataHash,
+      batchData
+    });
+
+    if (syncResult.success) {
+      console.log('💾 Database sync status: ✅ completed');
+    } else {
+      console.log('💾 Database sync status: ❌ failed (non-blocking)');
+    }
+
     console.log('🎉 Blockchain-first batch creation completed successfully!');
 
     return {
