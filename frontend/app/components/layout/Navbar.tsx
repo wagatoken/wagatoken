@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import WalletConnect from "../WalletConnect";
+import WalletConnectButton from "../WalletConnect";
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -15,32 +15,32 @@ export default function Navbar() {
 
   const getNavItems = () => {
     const baseItems = [
-      { href: '/browse', label: 'Browse Coffee', public: true },
-      { href: '/about', label: 'About', public: true },
-      { href: '/docs', label: 'Docs', public: true }
+      { href: "/browse", label: "Browse Coffee", public: true },
+      { href: "/about", label: "About", public: true },
+      { href: "/docs", label: "Docs", public: true },
     ];
 
-    if (pathname.startsWith('/admin')) {
+    if (pathname.startsWith("/admin")) {
       return [
-        { href: '/admin', label: 'Admin Portal', active: true },
-        { href: '/distributor', label: 'Distributor Portal' },
-        ...baseItems
+        { href: "/admin", label: "Admin Portal", active: true },
+        { href: "/distributor", label: "Distributor Portal" },
+        ...baseItems,
       ];
     }
-    
-    if (pathname.startsWith('/distributor')) {
+
+    if (pathname.startsWith("/distributor")) {
       return [
-        { href: '/distributor', label: 'Distributor Portal', active: true },
-        { href: '/admin', label: 'Admin Portal' },
-        ...baseItems
+        { href: "/distributor", label: "Distributor Portal", active: true },
+        { href: "/admin", label: "Admin Portal" },
+        ...baseItems,
       ];
     }
 
     // Default navigation for home and other pages
     return [
-      { href: '/admin', label: 'Admin Portal' },
-      { href: '/distributor', label: 'Distributor Portal' },
-      ...baseItems
+      { href: "/admin", label: "Admin Portal" },
+      { href: "/distributor", label: "Distributor Portal" },
+      ...baseItems,
     ];
   };
 
@@ -52,18 +52,25 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16 md:h-18 gap-6">
           {/* Logo and Brand */}
           <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-2 group sm:space-x-3">
+            <Link
+              href="/"
+              className="flex items-center space-x-2 group sm:space-x-3"
+            >
               <div className="waga-logo-mobile transition-all duration-300 group-hover:scale-105">
-                <img 
-                  src="https://violet-rainy-toad-577.mypinata.cloud/ipfs/bafkreigqbyeqnmjqznbikaj7q2mipyijlslb57fgdw7nhloq3xinvhvcca" 
-                  alt="WAGA Logo" 
+                <img
+                  src="https://violet-rainy-toad-577.mypinata.cloud/ipfs/bafkreigqbyeqnmjqznbikaj7q2mipyijlslb57fgdw7nhloq3xinvhvcca"
+                  alt="WAGA Logo"
                   className="w-8 h-8 object-contain rounded-lg sm:w-10 sm:h-10"
                 />
               </div>
               <div className="flex items-center space-x-1 sm:space-x-2">
-                <span className="text-lg font-bold web3-navbar-brand tracking-wide sm:text-2xl">WAGA</span>
+                <span className="text-lg font-bold web3-navbar-brand tracking-wide sm:text-2xl">
+                  WAGA
+                </span>
                 <div className="hidden sm:flex flex-col">
-                  <span className="web3-navbar-subtitle font-semibold text-sm tracking-wide">Coffee</span>
+                  <span className="web3-navbar-subtitle font-semibold text-sm tracking-wide">
+                    Coffee
+                  </span>
                 </div>
               </div>
             </Link>
@@ -82,9 +89,9 @@ export default function Navbar() {
                   key={item.href}
                   href={item.href}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center whitespace-nowrap min-w-fit ${
-                    ('active' in item && item.active) || pathname === item.href
-                      ? 'web3-nav-link-active'
-                      : 'web3-nav-link'
+                    ("active" in item && item.active) || pathname === item.href
+                      ? "web3-nav-link-active"
+                      : "web3-nav-link"
                   }`}
                 >
                   {item.label}
@@ -96,7 +103,7 @@ export default function Navbar() {
           {/* Wallet Connection */}
           <div className="hidden md:flex items-center">
             <div className="max-w-xs shrink-0">
-              <WalletConnect />
+              <WalletConnectButton />
             </div>
           </div>
 
@@ -106,11 +113,26 @@ export default function Navbar() {
               onClick={toggleMobileMenu}
               className="web3-touch-target web3-nav-link transition-all duration-300"
             >
-              <svg className="h-5 w-5 sm:h-6 sm:w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+              <svg
+                className="h-5 w-5 sm:h-6 sm:w-6"
+                stroke="currentColor"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
                 {isMobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
                 )}
               </svg>
             </button>
@@ -126,21 +148,23 @@ export default function Navbar() {
                   key={item.href}
                   href={item.href}
                   className={`web3-touch-target justify-start px-3 py-3 rounded-lg text-sm font-medium transition-all duration-300 sm:text-base ${
-                    ('active' in item && item.active) || pathname === item.href
-                      ? 'web3-mobile-nav-link-active'
-                      : 'web3-mobile-nav-link'
+                    ("active" in item && item.active) || pathname === item.href
+                      ? "web3-mobile-nav-link-active"
+                      : "web3-mobile-nav-link"
                   }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {item.label}
                 </Link>
               ))}
-              
+
               {/* Mobile Wallet Section */}
               <div className="px-3 py-3 border-t border-emerald-700/50 mt-4">
-                <div className="text-xs font-medium web3-navbar-subtitle mb-2 sm:text-sm">Wallet Connection</div>
+                <div className="text-xs font-medium web3-navbar-subtitle mb-2 sm:text-sm">
+                  Wallet Connection
+                </div>
                 <div className="mb-2">
-                  <WalletConnect />
+                  <WalletConnectButton />
                 </div>
               </div>
             </div>

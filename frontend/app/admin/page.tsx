@@ -1,22 +1,35 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TokenETH, WalletMetamask, NetworkEthereum } from '@web3icons/react';
-import { MdCheck, MdClose, MdCoffee, MdVerified, MdCreate, MdAnalytics, MdLocationOn, MdGrade, MdStorage, MdStorefront, MdTimeline } from 'react-icons/md';
-import { 
+import { TokenETH, WalletMetamask, NetworkEthereum } from "@web3icons/react";
+import {
+  MdCheck,
+  MdClose,
+  MdCoffee,
+  MdVerified,
+  MdCreate,
+  MdAnalytics,
+  MdLocationOn,
+  MdGrade,
+  MdStorage,
+  MdStorefront,
+  MdTimeline,
+} from "react-icons/md";
+import {
   generateCoffeeMetadata,
-  BatchCreationData, 
+  BatchCreationData,
   validateBatchData,
-  CoffeeBatchMetadata
+  CoffeeBatchMetadata,
 } from "@/utils/ipfsMetadata";
-import { 
-  getBatchInfoWithMetadata, 
+import {
+  getBatchInfoWithMetadata,
   getActiveBatchIds,
   requestBatchVerification,
   createBatchBlockchainFirst,
-  getUserRoles
+  getUserRoles,
 } from "@/utils/smartContracts";
 import EnvironmentStatus from "@/app/components/EnvironmentStatus";
+import { useWallet } from "@/app/components/WalletProvider";
 
 interface BatchDisplay {
   batchId: string;
@@ -31,14 +44,16 @@ interface BatchDisplay {
 }
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'verify'>('create');
-  const [userAddress, setUserAddress] = useState<string>('');
+  const { isConnected, address } = useWallet();
+  const [activeTab, setActiveTab] = useState<"create" | "manage" | "verify">(
+    "create"
+  );
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<string>('');
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
   const [batches, setBatches] = useState<BatchDisplay[]>([]);
-  const [selectedBatch, setSelectedBatch] = useState<string>('');
-  
+  const [selectedBatch, setSelectedBatch] = useState<string>("");
+
   // QR Code state
   const [generatedQRs, setGeneratedQRs] = useState<{
     comprehensive: string;
@@ -47,65 +62,48 @@ export default function AdminPage() {
 
   // Batch creation form
   const [batchForm, setBatchForm] = useState<Partial<BatchCreationData>>({
-    name: '',
-    description: '',
-    origin: '',
-    farmer: '',
-    altitude: '',
-    process: '',
-    roastProfile: 'Medium',
-    roastDate: new Date().toISOString().split('T')[0],
+    name: "",
+    description: "",
+    origin: "",
+    farmer: "",
+    altitude: "",
+    process: "",
+    roastProfile: "Medium",
+    roastDate: new Date().toISOString().split("T")[0],
     certifications: [],
     cupping_notes: [],
     quantity: 0,
-    packagingInfo: '250g',
-    pricePerUnit: '0.045',
-    productionDate: new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)), // 7 days ago (past date)
-    expiryDate: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 days from now
+    packagingInfo: "250g",
+    pricePerUnit: "0.045",
+    productionDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago (past date)
+    expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
   });
-
-  // Connect wallet
-  const connectWallet = async () => {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({ 
-          method: 'eth_requestAccounts' 
-        });
-        setUserAddress(accounts[0]);
-      } catch (error) {
-        setError('Error connecting wallet');
-        console.error('Error connecting wallet:', error);
-      }
-    } else {
-      setError('MetaMask not found. Please install MetaMask.');
-    }
-  };
 
   // Load batches
   const loadBatches = async () => {
     try {
       setLoading(true);
       const batchIds = await getActiveBatchIds();
-      
+
       const batchInfoPromises = batchIds.map(async (id) => {
         const batchInfo = await getBatchInfoWithMetadata(id);
         return {
           batchId: id,
           name: batchInfo.metadata?.name || `Batch ${id}`,
-          origin: batchInfo.metadata?.properties.origin || 'Unknown',
+          origin: batchInfo.metadata?.properties.origin || "Unknown",
           quantity: batchInfo.quantity,
           packagingInfo: batchInfo.packagingInfo,
           pricePerUnit: (parseFloat(batchInfo.pricePerUnit) / 1e18).toFixed(4),
           isVerified: batchInfo.isVerified,
           isMetadataVerified: batchInfo.isMetadataVerified,
-          metadata: batchInfo.metadata
+          metadata: batchInfo.metadata,
         };
       });
-      
+
       const batchDisplays = await Promise.all(batchInfoPromises);
       setBatches(batchDisplays);
     } catch (err) {
-      setError('Failed to load batches');
+      setError("Failed to load batches");
       console.error(err);
     } finally {
       setLoading(false);
@@ -114,64 +112,76 @@ export default function AdminPage() {
 
   // Handle form input changes
   const handleInputChange = (field: keyof BatchCreationData, value: any) => {
-    setBatchForm(prev => ({ ...prev, [field]: value }));
-    setError('');
+    setBatchForm((prev) => ({ ...prev, [field]: value }));
+    setError("");
   };
 
-  const handleArrayInputChange = (field: 'certifications' | 'cupping_notes', value: string) => {
-    const items = value.split(',').map(item => item.trim()).filter(item => item);
-    setBatchForm(prev => ({ ...prev, [field]: items }));
+  const handleArrayInputChange = (
+    field: "certifications" | "cupping_notes",
+    value: string
+  ) => {
+    const items = value
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item);
+    setBatchForm((prev) => ({ ...prev, [field]: items }));
   };
 
   // Create batch
   const createBatch = async () => {
+    if (!isConnected || !address) {
+      setError("Please connect your wallet first.");
+      return;
+    }
+
     try {
       setLoading(true);
-      setError('');
-      setSuccess('');
+      setError("");
+      setSuccess("");
 
       // Validate form
       const validationErrors = validateBatchData(batchForm);
       if (validationErrors.length > 0) {
-        setError(`Validation errors: ${validationErrors.join(', ')}`);
+        setError(`Validation errors: ${validationErrors.join(", ")}`);
         return;
       }
 
       // Create batch using blockchain-first workflow
-      const result = await createBatchBlockchainFirst(batchForm as BatchCreationData);
+      const result = await createBatchBlockchainFirst(
+        batchForm as BatchCreationData
+      );
 
       setGeneratedQRs({
         comprehensive: result.qrCodeDataUrl,
-        verification: result.verificationQR
+        verification: result.verificationQR,
       });
-      
+
       setSuccess(`Batch created successfully! Batch ID: ${result.batchId}`);
 
       // Reset form
       setBatchForm({
-        name: '',
-        description: '',
-        origin: '',
-        farmer: '',
-        altitude: '',
-        process: '',
-        roastProfile: 'Medium',
-        roastDate: new Date().toISOString().split('T')[0],
+        name: "",
+        description: "",
+        origin: "",
+        farmer: "",
+        altitude: "",
+        process: "",
+        roastProfile: "Medium",
+        roastDate: new Date().toISOString().split("T")[0],
         certifications: [],
         cupping_notes: [],
         quantity: 0,
-        packagingInfo: '250g',
-        pricePerUnit: '0.045',
-        productionDate: new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)), // 7 days ago (past date)
-        expiryDate: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 days from now
+        packagingInfo: "250g",
+        pricePerUnit: "0.045",
+        productionDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago (past date)
+        expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
       });
 
       // Reload batches
       await loadBatches();
-
     } catch (err) {
-      console.error('Error creating batch:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create batch');
+      console.error("Error creating batch:", err);
+      setError(err instanceof Error ? err.message : "Failed to create batch");
     } finally {
       setLoading(false);
     }
@@ -179,13 +189,17 @@ export default function AdminPage() {
 
   // Verify batch
   const verifyBatch = async () => {
+    if (!isConnected || !address) {
+      setError("Please connect your wallet first.");
+      return;
+    }
     try {
       setLoading(true);
-      setError('');
-      setSuccess('');
+      setError("");
+      setSuccess("");
 
       if (!selectedBatch) {
-        setError('Please select a batch to verify');
+        setError("Please select a batch to verify");
         return;
       }
 
@@ -211,28 +225,36 @@ export default function AdminPage() {
       `;
 
       await requestBatchVerification(selectedBatch, javascriptSource);
-      
+
       setSuccess(`Verification request submitted for Batch ${selectedBatch}`);
       await loadBatches(); // Refresh batch list
-
     } catch (err) {
-      console.error('Error verifying batch:', err);
-      setError(err instanceof Error ? err.message : 'Failed to verify batch');
+      console.error("Error verifying batch:", err);
+      setError(err instanceof Error ? err.message : "Failed to verify batch");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    connectWallet();
-    loadBatches();
-  }, []);
+    if (isConnected && address) {
+      loadBatches();
+    }
+  }, [isConnected, address]);
 
-  const TabButton = ({ tab, label, icon }: { tab: string; label: string; icon: React.ReactNode }) => (
+  const TabButton = ({
+    tab,
+    label,
+    icon,
+  }: {
+    tab: string;
+    label: string;
+    icon: React.ReactNode;
+  }) => (
     <button
       onClick={() => setActiveTab(tab as any)}
       className={`web3-neon-tab flex items-center space-x-3 font-semibold transition-all duration-300 ${
-        activeTab === tab ? 'active' : ''
+        activeTab === tab ? "active" : ""
       }`}
     >
       {icon && <span className="waga-icon">{icon}</span>}
@@ -245,7 +267,7 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto web3-page-spacing relative z-10">
         {/* Environment Status Check */}
         <EnvironmentStatus />
-        
+
         {/* Header */}
         <div className="mb-12 animate-card-entrance">
           <div className="text-center mb-8">
@@ -253,37 +275,57 @@ export default function AdminPage() {
               WAGA Admin Portal
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Create coffee batches, upload to IPFS, verify with Chainlink Functions, 
-              and generate QR codes for complete blockchain traceability
+              Create coffee batches, upload to IPFS, verify with Chainlink
+              Functions, and generate QR codes for complete blockchain
+              traceability
             </p>
           </div>
 
           {/* Enhanced Quick Stats */}
           <div className="web3-stats-grid">
             <div className="web3-enhanced-stat-card web3-blockchain-pulse group">
-              <div className="text-4xl font-bold web3-gradient-text mb-2">{batches.length}</div>
+              <div className="text-4xl font-bold web3-gradient-text mb-2">
+                {batches.length}
+              </div>
               <div className="text-gray-600 font-semibold">Total Batches</div>
               <div className="mt-2 text-sm text-emerald-600">
-                {batches.filter(b => b.isVerified).length} verified
+                {batches.filter((b) => b.isVerified).length} verified
               </div>
             </div>
-            <div className="web3-enhanced-stat-card web3-blockchain-pulse group" style={{ animationDelay: '100ms' }}>
+            <div
+              className="web3-enhanced-stat-card web3-blockchain-pulse group"
+              style={{ animationDelay: "100ms" }}
+            >
               <div className="text-4xl font-bold text-emerald-600 mb-2">
-                {batches.filter(b => b.isVerified).length}
+                {batches.filter((b) => b.isVerified).length}
               </div>
-              <div className="text-emerald-600 font-semibold">Verified Batches</div>
+              <div className="text-emerald-600 font-semibold">
+                Verified Batches
+              </div>
               <div className="mt-2 text-sm text-gray-600">
-                {batches.length > 0 ? Math.round((batches.filter(b => b.isVerified).length / batches.length) * 100) : 0}% success rate
+                {batches.length > 0
+                  ? Math.round(
+                      (batches.filter((b) => b.isVerified).length /
+                        batches.length) *
+                        100
+                    )
+                  : 0}
+                % success rate
               </div>
             </div>
-            <div className="web3-enhanced-stat-card web3-blockchain-pulse web3-coffee-particles group" style={{ animationDelay: '200ms' }}>
+            <div
+              className="web3-enhanced-stat-card web3-blockchain-pulse web3-coffee-particles group"
+              style={{ animationDelay: "200ms" }}
+            >
               <div className="flex justify-center mb-4 group-hover:animate-pulse">
                 <MdCoffee size={48} className="text-emerald-600" />
               </div>
               <div className="text-4xl font-bold text-emerald-700 mb-2">
                 {batches.reduce((sum, b) => sum + b.quantity, 0)}
               </div>
-              <div className="text-emerald-700 font-semibold">Total Coffee Bags</div>
+              <div className="text-emerald-700 font-semibold">
+                Total Coffee Bags
+              </div>
               <div className="mt-2 text-sm text-gray-600">
                 Ready for distribution
               </div>
@@ -292,28 +334,23 @@ export default function AdminPage() {
         </div>
 
         {/* Wallet Connection */}
-        {!userAddress && (
+        {!isConnected && (
           <div className="web3-card text-center animate-card-entrance">
             <div className="mb-4">
               <div className="flex justify-center mb-3">
                 <WalletMetamask size={48} variant="branded" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Connect Wallet</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Connect Wallet
+              </h3>
               <p className="text-gray-600 mb-4">
                 Connect your wallet to access admin functions
               </p>
             </div>
-            <button
-              onClick={connectWallet}
-              className="web3-metamask-button flex items-center justify-center gap-2 mx-auto"
-            >
-              <WalletMetamask size={20} variant="branded" />
-              Connect MetaMask
-            </button>
           </div>
         )}
 
-        {userAddress && (
+        {isConnected && address && (
           <>
             {/* Connected Wallet Info */}
             <div className="web3-card-wallet animate-card-entrance mb-8">
@@ -321,9 +358,12 @@ export default function AdminPage() {
                 <div className="flex items-center gap-3">
                   <NetworkEthereum size={24} variant="branded" />
                   <div>
-                    <h3 className="text-lg font-bold text-emerald-900">Connected Wallet</h3>
+                    <h3 className="text-lg font-bold text-emerald-900">
+                      Connected Wallet
+                    </h3>
                     <p className="text-emerald-700 font-mono text-sm">
-                      {userAddress.substring(0, 6)}...{userAddress.substring(userAddress.length - 4)}
+                      {address.substring(0, 6)}...
+                      {address.substring(address.length - 4)}
                     </p>
                   </div>
                 </div>
@@ -332,20 +372,20 @@ export default function AdminPage() {
 
             {/* Tab Navigation */}
             <div className="flex flex-wrap gap-2 justify-center mb-8 animate-card-entrance">
-              <TabButton 
-                tab="create" 
-                label="Create Batch" 
-                icon={<MdCreate size={20} />} 
+              <TabButton
+                tab="create"
+                label="Create Batch"
+                icon={<MdCreate size={20} />}
               />
-              <TabButton 
-                tab="manage" 
-                label="Manage Batches" 
-                icon={<MdTimeline size={20} />} 
+              <TabButton
+                tab="manage"
+                label="Manage Batches"
+                icon={<MdTimeline size={20} />}
               />
-              <TabButton 
-                tab="verify" 
-                label="Verify & Mint" 
-                icon={<MdVerified size={20} />} 
+              <TabButton
+                tab="verify"
+                label="Verify & Mint"
+                icon={<MdVerified size={20} />}
               />
             </div>
 
@@ -369,10 +409,12 @@ export default function AdminPage() {
             )}
 
             {/* Tab Content */}
-            {activeTab === 'create' && (
+            {activeTab === "create" && (
               <div className="web3-premium-card animate-card-entrance">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Coffee Batch</h2>
-                
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                  Create New Coffee Batch
+                </h2>
+
                 {/* Basic Information Section */}
                 <div className="web3-form-section">
                   <h3 className="flex items-center gap-2">
@@ -387,8 +429,10 @@ export default function AdminPage() {
                       </label>
                       <input
                         type="text"
-                        value={batchForm.name || ''}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        value={batchForm.name || ""}
+                        onChange={(e) =>
+                          handleInputChange("name", e.target.value)
+                        }
                         className="web3-ethereum-input w-full"
                         placeholder="e.g., Sidama Coffee Batch #1001"
                       />
@@ -401,8 +445,10 @@ export default function AdminPage() {
                       </label>
                       <input
                         type="text"
-                        value={batchForm.origin || ''}
-                        onChange={(e) => handleInputChange('origin', e.target.value)}
+                        value={batchForm.origin || ""}
+                        onChange={(e) =>
+                          handleInputChange("origin", e.target.value)
+                        }
                         className="web3-ethereum-input w-full"
                         placeholder="e.g., Sidama, Ethiopia"
                       />
@@ -415,8 +461,10 @@ export default function AdminPage() {
                       </label>
                       <input
                         type="text"
-                        value={batchForm.farmer || ''}
-                        onChange={(e) => handleInputChange('farmer', e.target.value)}
+                        value={batchForm.farmer || ""}
+                        onChange={(e) =>
+                          handleInputChange("farmer", e.target.value)
+                        }
                         className="web3-ethereum-input w-full"
                         placeholder="e.g., Abebe Bekele Cooperative"
                       />
@@ -428,8 +476,10 @@ export default function AdminPage() {
                       </label>
                       <input
                         type="text"
-                        value={batchForm.altitude || ''}
-                        onChange={(e) => handleInputChange('altitude', e.target.value)}
+                        value={batchForm.altitude || ""}
+                        onChange={(e) =>
+                          handleInputChange("altitude", e.target.value)
+                        }
                         className="web3-ethereum-input w-full"
                         placeholder="e.g., 1,800-2,100m"
                       />
@@ -450,20 +500,22 @@ export default function AdminPage() {
                       </label>
                       <input
                         type="text"
-                        value={batchForm.process || ''}
-                        onChange={(e) => handleInputChange('process', e.target.value)}
+                        value={batchForm.process || ""}
+                        onChange={(e) =>
+                          handleInputChange("process", e.target.value)
+                        }
                         className="web3-ethereum-input w-full"
                         placeholder="e.g., Washed, Natural, Honey"
                       />
                     </div>
 
                     <div>
-                      <label className="web3-form-label">
-                        Roast Profile
-                      </label>
+                      <label className="web3-form-label">Roast Profile</label>
                       <select
-                        value={batchForm.roastProfile || 'Medium'}
-                        onChange={(e) => handleInputChange('roastProfile', e.target.value)}
+                        value={batchForm.roastProfile || "Medium"}
+                        onChange={(e) =>
+                          handleInputChange("roastProfile", e.target.value)
+                        }
                         className="web3-ethereum-input w-full"
                       >
                         <option value="Light">Light Roast</option>
@@ -475,13 +527,13 @@ export default function AdminPage() {
                     </div>
 
                     <div>
-                      <label className="web3-form-label">
-                        Roast Date
-                      </label>
+                      <label className="web3-form-label">Roast Date</label>
                       <input
                         type="date"
-                        value={batchForm.roastDate || ''}
-                        onChange={(e) => handleInputChange('roastDate', e.target.value)}
+                        value={batchForm.roastDate || ""}
+                        onChange={(e) =>
+                          handleInputChange("roastDate", e.target.value)
+                        }
                         className="web3-ethereum-input w-full"
                       />
                     </div>
@@ -491,8 +543,10 @@ export default function AdminPage() {
                         Package Size<span className="required">*</span>
                       </label>
                       <select
-                        value={batchForm.packagingInfo || '250g'}
-                        onChange={(e) => handleInputChange('packagingInfo', e.target.value)}
+                        value={batchForm.packagingInfo || "250g"}
+                        onChange={(e) =>
+                          handleInputChange("packagingInfo", e.target.value)
+                        }
                         className="web3-ethereum-input w-full"
                       >
                         <option value="250g">250g Bags</option>
@@ -516,8 +570,13 @@ export default function AdminPage() {
                       </label>
                       <input
                         type="text"
-                        value={batchForm.certifications?.join(', ') || ''}
-                        onChange={(e) => handleArrayInputChange('certifications', e.target.value)}
+                        value={batchForm.certifications?.join(", ") || ""}
+                        onChange={(e) =>
+                          handleArrayInputChange(
+                            "certifications",
+                            e.target.value
+                          )
+                        }
                         className="web3-ethereum-input w-full"
                         placeholder="e.g., Organic, Fair Trade, Rainforest Alliance"
                       />
@@ -530,8 +589,13 @@ export default function AdminPage() {
                       </label>
                       <input
                         type="text"
-                        value={batchForm.cupping_notes?.join(', ') || ''}
-                        onChange={(e) => handleArrayInputChange('cupping_notes', e.target.value)}
+                        value={batchForm.cupping_notes?.join(", ") || ""}
+                        onChange={(e) =>
+                          handleArrayInputChange(
+                            "cupping_notes",
+                            e.target.value
+                          )
+                        }
                         className="web3-ethereum-input w-full"
                         placeholder="e.g., Citrus, Chocolate, Floral, Bright acidity"
                       />
@@ -553,8 +617,13 @@ export default function AdminPage() {
                       </label>
                       <input
                         type="number"
-                        value={batchForm.quantity || ''}
-                        onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 0)}
+                        value={batchForm.quantity || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "quantity",
+                            parseInt(e.target.value) || 0
+                          )
+                        }
                         className="web3-ethereum-input w-full"
                         placeholder="e.g., 100"
                         min="1"
@@ -569,8 +638,10 @@ export default function AdminPage() {
                       <input
                         type="number"
                         step="0.01"
-                        value={batchForm.pricePerUnit || ''}
-                        onChange={(e) => handleInputChange('pricePerUnit', e.target.value)}
+                        value={batchForm.pricePerUnit || ""}
+                        onChange={(e) =>
+                          handleInputChange("pricePerUnit", e.target.value)
+                        }
                         className="web3-ethereum-input w-full"
                         placeholder="e.g., 25.00"
                         min="0.01"
@@ -596,8 +667,17 @@ export default function AdminPage() {
                       </label>
                       <input
                         type="date"
-                        value={batchForm.productionDate?.toISOString().split('T')[0] || ''}
-                        onChange={(e) => handleInputChange('productionDate', new Date(e.target.value))}
+                        value={
+                          batchForm.productionDate
+                            ?.toISOString()
+                            .split("T")[0] || ""
+                        }
+                        onChange={(e) =>
+                          handleInputChange(
+                            "productionDate",
+                            new Date(e.target.value)
+                          )
+                        }
                         className="web3-ethereum-input w-full"
                       />
                     </div>
@@ -608,8 +688,16 @@ export default function AdminPage() {
                       </label>
                       <input
                         type="date"
-                        value={batchForm.expiryDate?.toISOString().split('T')[0] || ''}
-                        onChange={(e) => handleInputChange('expiryDate', new Date(e.target.value))}
+                        value={
+                          batchForm.expiryDate?.toISOString().split("T")[0] ||
+                          ""
+                        }
+                        onChange={(e) =>
+                          handleInputChange(
+                            "expiryDate",
+                            new Date(e.target.value)
+                          )
+                        }
                         className="web3-ethereum-input w-full"
                       />
                     </div>
@@ -624,8 +712,10 @@ export default function AdminPage() {
                       📖 Batch Description<span className="required">*</span>
                     </label>
                     <textarea
-                      value={batchForm.description || ''}
-                      onChange={(e) => handleInputChange('description', e.target.value)}
+                      value={batchForm.description || ""}
+                      onChange={(e) =>
+                        handleInputChange("description", e.target.value)
+                      }
                       rows={4}
                       className="web3-ethereum-input w-full"
                       placeholder="Describe this coffee batch - origin story, flavor profile, processing details, and what makes it special..."
@@ -637,9 +727,9 @@ export default function AdminPage() {
                   onClick={createBatch}
                   disabled={loading}
                   className={`w-full py-4 px-6 rounded-lg font-semibold text-lg transition-all duration-300 ${
-                    loading 
-                      ? 'bg-gray-400 cursor-not-allowed' 
-                      : 'web3-gradient-button hover:scale-105'
+                    loading
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "web3-gradient-button hover:scale-105"
                   }`}
                 >
                   {loading ? (
@@ -657,13 +747,13 @@ export default function AdminPage() {
               </div>
             )}
 
-            {activeTab === 'manage' && (
+            {activeTab === "manage" && (
               <div className="web3-card animate-card-entrance">
                 <h2 className="flex items-center gap-3 text-2xl font-bold text-gray-900 mb-6">
                   <MdStorage size={24} />
                   Manage Coffee Batches
                 </h2>
-                
+
                 {loading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
@@ -671,38 +761,51 @@ export default function AdminPage() {
                   </div>
                 ) : batches.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
-                    <p className="text-lg">No batches found. Create your first batch!</p>
+                    <p className="text-lg">
+                      No batches found. Create your first batch!
+                    </p>
                   </div>
                 ) : (
                   <div className="grid gap-4">
                     {batches.map((batch) => (
-                      <div key={batch.batchId} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div
+                        key={batch.batchId}
+                        className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                      >
                         <div className="flex justify-between items-start">
                           <div>
                             <div className="flex items-center space-x-2 mb-2">
                               <MdCoffee size={18} />
-                              <h3 className="font-semibold text-lg">Batch #{batch.batchId}</h3>
-                              <span className={`web3-status-indicator ${
-                                batch.isVerified 
-                                  ? 'web3-status-verified' 
-                                  : 'web3-status-pending'
-                              }`}>
-                                {batch.isVerified ? 'Verified' : 'Pending'}
+                              <h3 className="font-semibold text-lg">
+                                Batch #{batch.batchId}
+                              </h3>
+                              <span
+                                className={`web3-status-indicator ${
+                                  batch.isVerified
+                                    ? "web3-status-verified"
+                                    : "web3-status-pending"
+                                }`}
+                              >
+                                {batch.isVerified ? "Verified" : "Pending"}
                               </span>
                             </div>
                             <p className="text-gray-600 mb-2">{batch.name}</p>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                               <div>
-                                <span className="font-medium">Origin:</span> {batch.origin}
+                                <span className="font-medium">Origin:</span>{" "}
+                                {batch.origin}
                               </div>
                               <div>
-                                <span className="font-medium">Quantity:</span> {batch.quantity} bags
+                                <span className="font-medium">Quantity:</span>{" "}
+                                {batch.quantity} bags
                               </div>
                               <div>
-                                <span className="font-medium">Package:</span> {batch.packagingInfo}
+                                <span className="font-medium">Package:</span>{" "}
+                                {batch.packagingInfo}
                               </div>
                               <div>
-                                <span className="font-medium">Price:</span> {batch.pricePerUnit} ETH
+                                <span className="font-medium">Price:</span>{" "}
+                                {batch.pricePerUnit} ETH
                               </div>
                             </div>
                           </div>
@@ -714,13 +817,13 @@ export default function AdminPage() {
               </div>
             )}
 
-            {activeTab === 'verify' && (
+            {activeTab === "verify" && (
               <div className="web3-card animate-card-entrance">
                 <h2 className="flex items-center gap-3 text-2xl font-bold text-gray-900 mb-6">
                   <MdVerified size={24} />
                   Verify Batches & Mint Tokens
                 </h2>
-                
+
                 <div className="mb-6">
                   <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                     <MdCoffee size={16} />
@@ -732,11 +835,14 @@ export default function AdminPage() {
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     <option value="">Choose a batch...</option>
-                    {batches.filter(b => !b.isVerified).map((batch) => (
-                      <option key={batch.batchId} value={batch.batchId}>
-                        Batch #{batch.batchId} - {batch.name} ({batch.quantity} bags)
-                      </option>
-                    ))}
+                    {batches
+                      .filter((b) => !b.isVerified)
+                      .map((batch) => (
+                        <option key={batch.batchId} value={batch.batchId}>
+                          Batch #{batch.batchId} - {batch.name} (
+                          {batch.quantity} bags)
+                        </option>
+                      ))}
                   </select>
                 </div>
 
@@ -747,8 +853,9 @@ export default function AdminPage() {
                       Verification Process
                     </h3>
                     <p className="text-blue-800 text-sm">
-                      This will use Chainlink Functions to verify the batch data against external APIs, 
-                      and automatically mint tokens to the distributor upon successful verification.
+                      This will use Chainlink Functions to verify the batch data
+                      against external APIs, and automatically mint tokens to
+                      the distributor upon successful verification.
                     </p>
                   </div>
                 )}
@@ -758,8 +865,8 @@ export default function AdminPage() {
                   disabled={loading || !selectedBatch}
                   className={`w-full py-4 px-6 rounded-lg font-semibold text-lg transition-all duration-300 ${
                     loading || !selectedBatch
-                      ? 'bg-gray-400 cursor-not-allowed' 
-                      : 'web3-gradient-button hover:scale-105'
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "web3-gradient-button hover:scale-105"
                   }`}
                 >
                   {loading ? (
@@ -784,19 +891,22 @@ export default function AdminPage() {
                   <MdTimeline size={24} />
                   Generated QR Codes
                 </h2>
-                
+
                 <div className="grid md:grid-cols-2 gap-8">
                   <div className="text-center">
-                    <h3 className="font-semibold mb-4">Comprehensive Batch QR Code</h3>
+                    <h3 className="font-semibold mb-4">
+                      Comprehensive Batch QR Code
+                    </h3>
                     <div className="bg-white p-4 rounded-lg border mb-4">
-                      <img 
-                        src={generatedQRs.comprehensive} 
-                        alt="Comprehensive Batch QR Code" 
+                      <img
+                        src={generatedQRs.comprehensive}
+                        alt="Comprehensive Batch QR Code"
                         className="mx-auto max-w-64"
                       />
                     </div>
                     <p className="text-sm text-gray-600 mb-4">
-                      Contains complete batch information, verification URL, and IPFS metadata
+                      Contains complete batch information, verification URL, and
+                      IPFS metadata
                     </p>
                     <button className="web3-gradient-button flex items-center gap-2 mx-auto">
                       <MdStorefront size={16} />
@@ -805,11 +915,13 @@ export default function AdminPage() {
                   </div>
 
                   <div className="text-center">
-                    <h3 className="font-semibold mb-4">Simple Verification QR Code</h3>
+                    <h3 className="font-semibold mb-4">
+                      Simple Verification QR Code
+                    </h3>
                     <div className="bg-white p-4 rounded-lg border mb-4">
-                      <img 
-                        src={generatedQRs.verification} 
-                        alt="Verification QR Code" 
+                      <img
+                        src={generatedQRs.verification}
+                        alt="Verification QR Code"
                         className="mx-auto max-w-48"
                       />
                     </div>
