@@ -1,0 +1,123 @@
+CREATE TABLE "batch_token_balances" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "batch_token_balances_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"batch_id" bigint NOT NULL,
+	"holderAddress" varchar(42) NOT NULL,
+	"balance" integer DEFAULT 0 NOT NULL,
+	"lastTransactionHash" varchar(66),
+	"lastTransactionAt" timestamp,
+	"isRedeemed" boolean DEFAULT false NOT NULL,
+	"redeemedAt" timestamp,
+	"redemptionTxHash" varchar(66),
+	"cachedFarmName" varchar(255),
+	"cachedLocation" varchar(255),
+	"cachedPackaging" varchar(20),
+	"cachedPricePerUnit" numeric(10, 2),
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "inventory_audits" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "inventory_audits_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"batch_id" bigint NOT NULL,
+	"auditType" varchar(50) NOT NULL,
+	"auditorAddress" varchar(42) NOT NULL,
+	"physicalQuantity" numeric(10, 2) NOT NULL,
+	"discrepancy" numeric(10, 2) DEFAULT '0' NOT NULL,
+	"auditNotes" text,
+	"auditPhotos" json,
+	"location" varchar(255),
+	"auditedAt" timestamp DEFAULT now() NOT NULL,
+	"isResolved" boolean DEFAULT false NOT NULL,
+	"resolutionNotes" text
+);
+--> statement-breakpoint
+CREATE TABLE "redemption_requests" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "redemption_requests_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"redemptionId" integer,
+	"consumer" varchar(42) NOT NULL,
+	"batch_id" bigint NOT NULL,
+	"quantity" integer NOT NULL,
+	"deliveryAddress" text NOT NULL,
+	"deliveryCity" varchar(100),
+	"deliveryState" varchar(50),
+	"deliveryZip" varchar(20),
+	"deliveryCountry" varchar(50) DEFAULT 'USA' NOT NULL,
+	"specialInstructions" text,
+	"status" varchar(20) DEFAULT 'Requested' NOT NULL,
+	"requestDate" timestamp DEFAULT now() NOT NULL,
+	"fulfillmentDate" timestamp,
+	"packagingInfo" varchar(20),
+	"trackingNumber" varchar(100),
+	"processedBy" varchar(42),
+	"processedAt" timestamp,
+	CONSTRAINT "redemption_requests_redemptionId_unique" UNIQUE("redemptionId")
+);
+--> statement-breakpoint
+CREATE TABLE "user_roles" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "user_roles_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"userAddress" varchar(42) NOT NULL,
+	"role" varchar(50) NOT NULL,
+	"permissions" json,
+	"isActive" boolean DEFAULT true NOT NULL,
+	"assignedBy" varchar(42) NOT NULL,
+	"assignedAt" timestamp DEFAULT now() NOT NULL,
+	"lastLoginAt" timestamp,
+	"metadata" json,
+	CONSTRAINT "user_roles_userAddress_unique" UNIQUE("userAddress")
+);
+--> statement-breakpoint
+CREATE TABLE "verification_requests" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "verification_requests_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"requestId" varchar(255) NOT NULL,
+	"batch_id" bigint NOT NULL,
+	"verificationType" varchar(20) DEFAULT 'reserve' NOT NULL,
+	"status" varchar(20) DEFAULT 'pending' NOT NULL,
+	"submittedAt" timestamp DEFAULT now() NOT NULL,
+	"completedAt" timestamp,
+	"verifiedQuantity" integer,
+	"verifiedPrice" numeric(10, 2),
+	"verifiedPackaging" varchar(20),
+	"verifiedMetadataHash" varchar(64),
+	"verified" boolean,
+	"error" text,
+	"transactionHash" varchar(66),
+	"gas_used" bigint,
+	"requestData" json,
+	"responseData" json,
+	CONSTRAINT "verification_requests_requestId_unique" UNIQUE("requestId")
+);
+--> statement-breakpoint
+CREATE TABLE "waga_coffee_batches" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "waga_coffee_batches_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"batch_id" bigint NOT NULL,
+	"quantity" integer NOT NULL,
+	"price" numeric(10, 2) NOT NULL,
+	"packaging" varchar(20) NOT NULL,
+	"metadataHash" varchar(64) NOT NULL,
+	"ipfsUri" varchar(500) NOT NULL,
+	"lastVerified" timestamp,
+	"verificationStatus" varchar(20) DEFAULT 'pending' NOT NULL,
+	"inventoryActual" integer DEFAULT 0 NOT NULL,
+	"isVerified" boolean DEFAULT false NOT NULL,
+	"isMetadataVerified" boolean DEFAULT false NOT NULL,
+	"last_verified_timestamp" bigint,
+	"farmName" varchar(255) NOT NULL,
+	"location" varchar(255) NOT NULL,
+	"productionDate" timestamp NOT NULL,
+	"expiryDate" timestamp NOT NULL,
+	"processingMethod" varchar(100),
+	"qualityScore" integer,
+	"name" varchar(255) NOT NULL,
+	"description" text,
+	"farmer" varchar(255),
+	"altitude" varchar(100),
+	"process" varchar(100),
+	"roastProfile" varchar(100),
+	"roastDate" varchar(50),
+	"certifications" json,
+	"cuppingNotes" json,
+	"image" varchar(255),
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "waga_coffee_batches_batch_id_unique" UNIQUE("batch_id")
+);
