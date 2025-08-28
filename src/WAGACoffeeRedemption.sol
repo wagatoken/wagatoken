@@ -36,7 +36,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     // Redemption status enum
     enum RedemptionStatus {
         Requested,
-        Processing,
+        Processing, // Picking => Packing => Shipping (Tracking Number)
         Fulfilled,
         Cancelled
     }
@@ -46,7 +46,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         address consumer;
         uint256 batchId;
         uint256 quantity;
-        string deliveryAddress;
+        string deliveryAddress; // We do not need this onchain 
         uint256 requestDate;
         RedemptionStatus status;
         uint256 fulfillmentDate;
