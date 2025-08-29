@@ -9,20 +9,19 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {WAGAConfigManager} from "./WAGAConfigManager.sol";
 import {WAGAViewFunctions} from "./WAGAViewFunctions.sol";
 import {WAGACoffeeRedemption} from "./WAGACoffeeRedemption.sol";
+import {WAGAZKManager} from "./ZKIntegration/WAGAZKManager.sol";
 
 /**
  * @title WAGACoffeeToken
  * @author WAGA Coffee Team
- * @notice ERC1155 token contract for WAGA Coffee batch-based token system
- * @dev Implements role-based access control, supply tracking, and optimized active batch management
+ * @notice ERC1155 token contract for WAGA Coffee batch-based token system with ZK privacy
+ * @dev Implements role-based access control, supply tracking, ZK proof verification, and privacy management
  *
  * Each token ID (batchId) represents a unique coffee batch with production details,
- * verification status, and metadata. Features gas-efficient active batch tracking
- * for scalable batch management operations.
+ * verification status, metadata, and privacy-protected competitive intelligence.
  */
 contract WAGACoffeeToken is
     ERC1155,
-    // AccessControl,
     ERC1155Supply,
     ERC1155URIStorage,
     WAGAConfigManager,
@@ -67,6 +66,8 @@ contract WAGACoffeeToken is
     error WAGACoffeeToken__BatchHasActiveRedemptions_resetBatchVerificationFlags();
     error WAGACoffeeToken__ContractNotInitialized();
     error WAGACoffeeToken__ContractAlreadyInitialized_initialize();
+    error WAGACoffeeToken__ZKProofVerificationFailed();
+    error WAGACoffeeToken__InvalidZKManagerAddress();
 
     /* -------------------------------------------------------------------------- */
     /*                               STATE VARIABLES                              
@@ -74,9 +75,37 @@ contract WAGACoffeeToken is
 
     // Reference to redemption contract for safety checks
     address private s_redemptionContract;
+    
+    // ZK Manager for privacy and proof verification
+    WAGAZKManager public zkManager;
+    
+    // Privacy configuration for each batch
+    mapping(uint256 => PrivacyConfig) public batchPrivacyConfig;
 
     // Initialization flag
     bool public isInitialized;
+
+    /* -------------------------------------------------------------------------- */
+    /*                              TYPE DECLARATIONS                             */
+    /* -------------------------------------------------------------------------- */
+
+    // Privacy configuration structure
+    struct PrivacyConfig {
+        bool pricingPrivate;
+        bool qualityPrivate;
+        bool supplyChainPrivate;
+        bytes32 pricingProofHash;
+        bytes32 qualityProofHash;
+        bytes32 supplyChainProofHash;
+        PrivacyLevel level;
+    }
+
+    // Privacy levels enum
+    enum PrivacyLevel {
+        Public,     // Show all data
+        Selective,  // Show ZK proof results only
+        Private     // Show minimal verified data
+    }
 
     /* -------------------------------------------------------------------------- */
     /*                                   EVENTS                                   */
@@ -97,6 +126,19 @@ contract WAGACoffeeToken is
         uint256 newPrice
     );
     event BatchMetadataVerified(uint256 indexed batchId);
+    event BatchPrivacyConfigured(
+        uint256 indexed batchId,
+        PrivacyLevel level,
+        bool pricingPrivate,
+        bool qualityPrivate,
+        bool supplyChainPrivate
+    );
+    event ZKProofsVerified(
+        uint256 indexed batchId,
+        bool pricingVerified,
+        bool qualityVerified,
+        bool supplyChainVerified
+    );
 
     event TokensMinted(
         address indexed to,
@@ -127,6 +169,13 @@ contract WAGACoffeeToken is
         _;
     }
 
+    modifier onlyZKManager() {
+        if (msg.sender != address(zkManager)) {
+            revert WAGACoffeeToken__UnauthorizedCaller_updateBatchStatus(msg.sender);
+        }
+        _;
+    }
+
     /* -------------------------------------------------------------------------- */
     /*                                 CONSTRUCTOR                                */
     /* -------------------------------------------------------------------------- */
@@ -144,19 +193,27 @@ contract WAGACoffeeToken is
      * @param _inventoryManager Address for inventory management
      * @param _redemptionContract Address for token redemption
      * @param _proofOfReserveManager Address for proof of reserve operations
+     * @param _zkManager Address for ZK proof management
      */
     function initialize(
         address _inventoryManager,
         address _redemptionContract,
-        address _proofOfReserveManager
+        address _proofOfReserveManager,
+        address _zkManager
     ) external onlyRole(ADMIN_ROLE) {
         if (isInitialized) {
             revert WAGACoffeeToken__ContractAlreadyInitialized_initialize();
         }
 
+        if (_zkManager == address(0)) {
+            revert WAGACoffeeToken__InvalidZKManagerAddress();
+        }
+
         setInventoryManager(_inventoryManager);
         setRedemptionManager(_redemptionContract);
         setProofOfReserveManager(_proofOfReserveManager);
+        setZKManager(_zkManager);
+        
         _grantRole(MINTER_ROLE, _proofOfReserveManager);
         _grantRole(REDEMPTION_ROLE, _redemptionContract);
         _grantRole(VERIFIER_ROLE, msg.sender);
@@ -172,13 +229,14 @@ contract WAGACoffeeToken is
     /*                              EXTERNAL FUNCTIONS                            */
     /* -------------------------------------------------------------------------- */
 
-        /**
-     * @notice Creates a new coffee batch on-chain first (blockchain-first workflow)
+    /**
+     * @notice Creates a new coffee batch with ZK privacy protection
      * @param productionDate Batch production timestamp
      * @param expiryDate Batch expiry timestamp
      * @param quantity Number of coffee bags in batch
      * @param pricePerUnit Price per unit in wei
      * @param packagingInfo Must be "250g" or "500g"
+     * @param privacyLevel Initial privacy level for the batch
      * @return batchId The newly created batch ID
      */
     function createBatch(
@@ -186,7 +244,8 @@ contract WAGACoffeeToken is
         uint256 expiryDate,
         uint256 quantity,
         uint256 pricePerUnit,
-        string memory packagingInfo
+        string memory packagingInfo,
+        PrivacyLevel privacyLevel
     ) external onlyRole(ADMIN_ROLE) onlyInitialized returns (uint256) {
         uint256 batchId = _nextBatchId;
         _nextBatchId++; // Increment after assignment
@@ -220,9 +279,27 @@ contract WAGACoffeeToken is
             lastVerifiedTimestamp: 0 // Initialize to zero
         });
 
+        // Initialize privacy configuration
+        batchPrivacyConfig[batchId] = PrivacyConfig({
+            pricingPrivate: privacyLevel == PrivacyLevel.Private || privacyLevel == PrivacyLevel.Selective,
+            qualityPrivate: privacyLevel == PrivacyLevel.Private || privacyLevel == PrivacyLevel.Selective,
+            supplyChainPrivate: privacyLevel == PrivacyLevel.Private || privacyLevel == PrivacyLevel.Selective,
+            pricingProofHash: bytes32(0),
+            qualityProofHash: bytes32(0),
+            supplyChainProofHash: bytes32(0),
+            level: privacyLevel
+        });
+
         // Note: No URI set initially for blockchain-first workflow
         // URI will be set later via updateBatchIPFS()
         emit BatchCreated(batchId, ""); // Empty IPFS URI initially
+        emit BatchPrivacyConfigured(
+            batchId,
+            privacyLevel,
+            batchPrivacyConfig[batchId].pricingPrivate,
+            batchPrivacyConfig[batchId].qualityPrivate,
+            batchPrivacyConfig[batchId].supplyChainPrivate
+        );
 
         _addToActiveBatches(batchId);
         allBatchIds.push(batchId);
@@ -230,7 +307,186 @@ contract WAGACoffeeToken is
         return batchId;
     }
 
+    /**
+     * @notice Creates a new coffee batch without ZK privacy (backward compatibility)
+     * @param productionDate Batch production timestamp
+     * @param expiryDate Batch expiry timestamp
+     * @param quantity Number of coffee bags in batch
+     * @param pricePerUnit Price per unit in wei
+     * @param packagingInfo Must be "250g" or "500g"
+     * @return batchId The newly created batch ID
+     */
+    function createBatch(
+        uint256 productionDate,
+        uint256 expiryDate,
+        uint256 quantity,
+        uint256 pricePerUnit,
+        string memory packagingInfo
+    ) external onlyRole(ADMIN_ROLE) onlyInitialized returns (uint256) {
+        return createBatch(
+            productionDate,
+            expiryDate,
+            quantity,
+            pricePerUnit,
+            packagingInfo,
+            PrivacyLevel.Public
+        );
+    }
 
+    /**
+     * @notice Updates batch IPFS metadata with ZK proof verification
+     * @param batchId ID of the batch to update
+     * @param ipfsUri New IPFS URI for batch metadata
+     * @param metadataHash Hash of the IPFS metadata
+     * @param pricingProof ZK proof for price privacy (optional)
+     * @param qualityProof ZK proof for quality privacy (optional)
+     * @param supplyChainProof ZK proof for supply chain privacy (optional)
+     */
+    function updateBatchIPFSWithZKProofs(
+        uint256 batchId,
+        string memory ipfsUri,
+        string memory metadataHash,
+        bytes calldata pricingProof,
+        bytes calldata qualityProof,
+        bytes calldata supplyChainProof
+    ) external onlyRole(ADMIN_ROLE) onlyInitialized {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchIPFS();
+        }
+        if (bytes(ipfsUri).length == 0 || bytes(metadataHash).length == 0) {
+            revert WAGACoffeeToken__InvalidIPFSUri_createBatch();
+        }
+
+        // Update IPFS data first
+        _setURI(batchId, ipfsUri);
+        s_batchInfo[batchId].metadataHash = metadataHash;
+        
+        emit BatchIPFSUpdated(batchId, ipfsUri);
+
+        // Verify ZK proofs if provided
+        if (pricingProof.length > 0 || qualityProof.length > 0 || supplyChainProof.length > 0) {
+            bool verified = zkManager.verifyBatchPrivacyProofs(
+                batchId,
+                pricingProof,
+                qualityProof,
+                supplyChainProof
+            );
+            
+            if (!verified) {
+                revert WAGACoffeeToken__ZKProofVerificationFailed();
+            }
+
+            // Update privacy configuration from ZK manager
+            PrivacyConfig memory config = zkManager.getPrivacyConfig(batchId);
+            batchPrivacyConfig[batchId] = config;
+
+            emit ZKProofsVerified(
+                batchId,
+                config.pricingPrivate,
+                config.qualityPrivate,
+                config.supplyChainPrivate
+            );
+        }
+    }
+
+    /**
+     * @notice Updates the IPFS URI and metadata hash for an existing batch (backward compatibility)
+     * @dev This function supports the blockchain-first workflow where batch is created first,
+     *      then IPFS metadata is uploaded and the contract is updated with the real IPFS hash
+     * @param batchId ID of the batch to update
+     * @param ipfsUri New IPFS URI for batch metadata
+     * @param metadataHash Hash of the IPFS metadata
+     */
+    function updateBatchIPFS(
+        uint256 batchId,
+        string memory ipfsUri,
+        string memory metadataHash
+    ) external onlyRole(ADMIN_ROLE) onlyInitialized {
+        updateBatchIPFSWithZKProofs(
+            batchId,
+            ipfsUri,
+            metadataHash,
+            "", // No pricing proof
+            "", // No quality proof
+            ""  // No supply chain proof
+        );
+    }
+
+    /**
+     * @notice Sets the ZK manager address
+     * @param _zkManager New ZK manager address
+     */
+    function setZKManager(address _zkManager) public onlyRole(ADMIN_ROLE) {
+        if (_zkManager == address(0)) {
+            revert WAGACoffeeToken__InvalidZKManagerAddress();
+        }
+        zkManager = WAGAZKManager(_zkManager);
+    }
+
+    /**
+     * @notice Updates batch privacy configuration
+     * @param batchId ID of the batch to update
+     * @param config New privacy configuration
+     */
+    function updateBatchPrivacyConfig(
+        uint256 batchId,
+        PrivacyConfig calldata config
+    ) external onlyRole(ADMIN_ROLE) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchIPFS();
+        }
+        
+        batchPrivacyConfig[batchId] = config;
+        
+        emit BatchPrivacyConfigured(
+            batchId,
+            config.level,
+            config.pricingPrivate,
+            config.qualityPrivate,
+            config.supplyChainPrivate
+        );
+    }
+
+    /**
+     * @notice Gets batch privacy configuration
+     * @param batchId ID of the batch to query
+     * @return Privacy configuration for the batch
+     */
+    function getBatchPrivacyConfig(uint256 batchId) external view returns (PrivacyConfig memory) {
+        return batchPrivacyConfig[batchId];
+    }
+
+    /**
+     * @notice Gets privacy-protected batch information
+     * @param batchId ID of the batch to query
+     * @return Basic batch info with privacy flags
+     */
+    function getBatchInfoWithPrivacy(uint256 batchId) external view returns (
+        uint256 productionDate,
+        uint256 expiryDate,
+        bool isVerified,
+        uint256 quantity,
+        uint256 pricePerUnit,
+        string memory packagingInfo,
+        string memory metadataHash,
+        bool isMetadataVerified,
+        uint256 lastVerifiedTimestamp,
+        PrivacyConfig memory privacyConfig
+    ) {
+        BatchInfo storage info = s_batchInfo[batchId];
+        return (
+            info.productionDate,
+            info.expiryDate,
+            info.isVerified,
+            info.quantity,
+            info.pricePerUnit,
+            info.packagingInfo,
+            info.metadataHash,
+            info.isMetadataVerified,
+            info.lastVerifiedTimestamp,
+            batchPrivacyConfig[batchId]
+        );
+    }
 
     /**
      * @notice Updates batch verification status
@@ -320,33 +576,6 @@ contract WAGACoffeeToken is
 
         // Emit event for tracking
         emit BatchStatusUpdated(batchId, false);
-    }
-
-    /**
-     * @notice Updates the IPFS URI and metadata hash for an existing batch
-     * @dev This function supports the blockchain-first workflow where batch is created first,
-     *      then IPFS metadata is uploaded and the contract is updated with the real IPFS hash
-     * @param batchId ID of the batch to update
-     * @param ipfsUri New IPFS URI for batch metadata
-     * @param metadataHash Hash of the IPFS metadata
-     */
-    function updateBatchIPFS(
-        uint256 batchId,
-        string memory ipfsUri,
-        string memory metadataHash
-    ) external onlyRole(ADMIN_ROLE) onlyInitialized {
-        if (!isBatchCreated(batchId)) {
-            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchIPFS();
-        }
-        if (bytes(ipfsUri).length == 0 || bytes(metadataHash).length == 0) {
-            revert WAGACoffeeToken__InvalidIPFSUri_createBatch();
-        }
-
-        // Update both IPFS URI and metadata hash
-        _setURI(batchId, ipfsUri);
-        s_batchInfo[batchId].metadataHash = metadataHash;
-        
-        emit BatchIPFSUpdated(batchId, ipfsUri);
     }
 
     /**
