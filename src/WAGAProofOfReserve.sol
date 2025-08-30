@@ -24,13 +24,11 @@ contract WAGAProofOfReserve is
     error WAGAProofOfReserve__InvalidSourceCode_requestReserveVerification();
     error WAGAProofOfReserve__BatchInactive_requestReserveVerification();
     error WAGAProofOfReserve__InvalidAddress_requestReserveVerification();
-    //error WAGAProofOfReserve__InvalidQuantity_requestReserveVerification();
+    error WAGAProofOfReserve__InvalidQuantity_requestReserveVerification();
     error WAGAProofOfReserve__RequestFailed_requestReserveVerification();
     error WAGAProofOfReserve__QuantityNotVerified_fulfillRequest();
     error WAGAProofOfReserve__BatchMetadataNotVerified_fulfillRequest();
     error WAGAProofOfReserve__CallerDoesNotHaveRequiredRole_callHasRoleFromCoffeeToken();
-
-    // error WAGAProofOfReserve__InvalidAddress_requestReserveVerification();
 
     /* -------------------------------------------------------------------------- */
     /*                              Type Declarations                             */
@@ -119,23 +117,23 @@ contract WAGAProofOfReserve is
     /**
      * @dev Requests verification of coffee reserves using Chainlink Functions
      * @param batchId Batch identifier
-     * @param recipient Address to receive minted tokens
+     * @param requestId Batch request ID to fulfill
      * @param source JavaScript source code for Chainlink Functions
-     * @return requestId The ID of the Chainlink Functions request
+     * @return verificationRequestId The ID of the Chainlink Functions request
      * Requirements:
      * - Batch must exist in the WAGACoffeeToken contract
+     * - Batch request must exist and not be fulfilled
      * - Batch metadata must be verified
      */
     function requestReserveVerification(
         uint256 batchId,
-        // uint256 quantity,
-        address recipient,
+        uint256 requestId,
         string calldata source // Get quantity, price, packaging, metadata hash (API call to offchain database)
     )
         external
         callerHasRoleFromCoffeeToken(coffeeToken.VERIFIER_ROLE())
        // onlyRole(coffeeToken.VERIFIER_ROLE())
-        returns (bytes32 requestId)
+        returns (bytes32 verificationRequestId)
     {
         // Check if the batch exists
         if (!coffeeToken.isBatchCreated(batchId)) {
@@ -149,39 +147,56 @@ contract WAGAProofOfReserve is
         if (bytes(source).length == 0) {
             revert WAGAProofOfReserve__InvalidSourceCode_requestReserveVerification();
         }
-        // Check the recipient address is valid
-        if (recipient == address(0)) {
-            revert WAGAProofOfReserve__InvalidAddress_requestReserveVerification();
+        
+        // Get batch request information
+        (
+            uint256 requestBatchId,
+            address requester,
+            uint256 requestedQuantity,
+            string memory requestDetails,
+            uint256 requestTimestamp,
+            bool isFulfilled,
+            uint256 fulfilledQuantity,
+            uint256 fulfilledTimestamp
+        ) = coffeeToken.getBatchRequest(batchId, requestId);
+        
+        // Check if request exists and is not fulfilled
+        if (requestBatchId != batchId) {
+            revert WAGAProofOfReserve__BatchDoesNotExist_requestReserveVerification();
         }
-        // // Check that the quantity is greater than zero
-        // if (quantity == 0) {
-        //     revert WAGAProofOfReserve__InvalidQuantity_requestReserveVerification();
-        // }
+        if (isFulfilled) {
+            revert WAGAProofOfReserve__RequestAlreadyCompleted_fulfillRequest();
+        }
+        if (requestedQuantity == 0) {
+            revert WAGAProofOfReserve__InvalidQuantity_requestReserveVerification();
+        }
 
         // Get Expected Values for Verification from the WAGACoffeeToken contract
         (
             ,
             ,
             ,
-            uint256 quantity,
-            uint256 pricePerUnit,
-            string memory packagingInfo,
-            string memory metadataHash,
-            ,
+            uint256 batchQuantity,
+            uint256 mintedQuantity,
+            uint256 pricePerUnit
 
         ) = coffeeToken.s_batchInfo(batchId);
+
+        // Get extended data from separate mappings
+        string memory packagingInfo = coffeeToken.getBatchPackagingInfo(batchId);
+        string memory metadataHash = coffeeToken.getBatchMetadataHash(batchId);
 
         // Prepare arguments for Chainlink Functions
         string[] memory args = new string[](5);
         args[0] = Strings.toString(batchId);
-        args[1] = Strings.toString(quantity);
+        args[1] = Strings.toString(requestedQuantity); // Use requested quantity instead of batch quantity
         args[2] = Strings.toString(pricePerUnit);
         args[3] = packagingInfo;
         args[4] = metadataHash;
 
         // Convert source code to bytes
         bytes memory sourceBytes = bytes(source);
-        requestId = _sendRequestWithArgs(
+        verificationRequestId = _sendRequestWithArgs(
             sourceBytes,
             args, // @audit We do not have this in the base contract, need to be sure the DON supports and/or processes it
             subscriptionId,
@@ -190,13 +205,13 @@ contract WAGAProofOfReserve is
         );
 
         // Check that the request was successful
-        if (requestId == bytes32(0)) {
+        if (verificationRequestId == bytes32(0)) {
             revert WAGAProofOfReserve__RequestFailed_requestReserveVerification();
         }
         // Store the verification request
-        verificationRequests[requestId] = VerificationRequest({
+        verificationRequests[verificationRequestId] = VerificationRequest({
             batchId: batchId,
-            requestQuantity: quantity,
+            requestQuantity: requestedQuantity, // Use requested quantity
             verifiedQuantity: 0,
             requestPrice: pricePerUnit,
             verifiedPrice: 0,
@@ -204,15 +219,15 @@ contract WAGAProofOfReserve is
             verifiedPackaging: "",
             expectedMetadataHash: metadataHash,
             verifiedMetadataHash: "",
-            recipient: recipient,
+            recipient: requester, // Use the requester from batch request
             completed: false,
             verified: false,
             lastVerifiedTimestamp: block.timestamp,
             shouldMint: true // Set to true by default, can be changed later
         });
-        latestRequestId = requestId;
-        emit ReserveVerificationRequested(requestId, batchId, quantity);
-        return requestId;
+        latestRequestId = verificationRequestId;
+        emit ReserveVerificationRequested(verificationRequestId, batchId, requestedQuantity);
+        return verificationRequestId;
     }
     /**
      * @dev Requests verification of coffee inventory using Chainlink Functions WITHOUT token minting
@@ -248,12 +263,14 @@ contract WAGAProofOfReserve is
             ,
             ,
             uint256 quantity, // Now uses quantity field
-            uint256 pricePerUnit,
-            string memory packagingInfo,
-            string memory metadataHash,
-            ,
+            uint256 mintedQuantity,
+            uint256 pricePerUnit
 
         ) = coffeeToken.s_batchInfo(batchId);
+
+        // Get extended data from separate mappings
+        string memory packagingInfo = coffeeToken.getBatchPackagingInfo(batchId);
+        string memory metadataHash = coffeeToken.getBatchMetadataHash(batchId);
 
         // Prepare arguments for Chainlink Functions
         string[] memory args = new string[](5);
@@ -358,7 +375,7 @@ contract WAGAProofOfReserve is
             verifiedPackaging,
             verifiedMetadataHash
         );
-        (, , , , , , , bool isMetadataVerified, ) = coffeeToken.s_batchInfo(
+        bool isMetadataVerified = coffeeToken.isBatchMetadataVerified(
             request.batchId
         );
 

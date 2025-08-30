@@ -39,13 +39,13 @@ contract WAGAZKManager is AccessControl, IPrivacyLayer {
     
     event ZKVerifierUpdated(address indexed oldVerifier, address indexed newVerifier);
     
-    constructor(address _circomVerifier, address _complianceVerifier) {
+    constructor(address _coffeeToken, address _circomVerifier, address _privacyLayer) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ZK_ADMIN_ROLE, msg.sender);
         _grantRole(VERIFIER_ROLE, msg.sender);
         
         circomVerifier = IZKVerifier(_circomVerifier);
-        complianceVerifier = IComplianceVerifier(_complianceVerifier);
+        // Note: complianceVerifier will be set separately after deployment
     }
     
     // Verify all privacy proofs for a batch
@@ -98,6 +98,9 @@ contract WAGAZKManager is AccessControl, IPrivacyLayer {
             pricingPrivate: pricingVerified,
             qualityPrivate: qualityVerified,
             supplyChainPrivate: supplyChainVerified,
+            pricingSelective: false, // Set based on business logic
+            qualitySelective: false,
+            supplyChainSelective: false,
             pricingProofHash: pricingProofHash,
             qualityProofHash: qualityProofHash,
             supplyChainProofHash: supplyChainProofHash,

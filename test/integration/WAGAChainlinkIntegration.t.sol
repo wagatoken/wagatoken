@@ -5,21 +5,23 @@ import {Test, console} from "forge-std/Test.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {DeployWagaToken} from "../../script/DeployWagaToken.s.sol";
 import {WAGACoffeeToken} from "../../src/WAGACoffeeToken.sol";
-import {WAGAInventoryManager} from "../../src/WAGAInventoryManager2.sol";
+import {WAGAInventoryManager2} from "../../src/WAGAInventoryManager2.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
+import {IPrivacyLayer} from "../../src/ZKCircuits/Interfaces/IPrivacyLayer.sol";
 import {MockFunctionsRouter} from "../mocks/MockFunctionsRouter.sol";
 import {MockFunctionsHelper} from "../mocks/MockFunctionsHelper.sol";
 
 /**
- * @title WAGAIntegrationTest
- * @dev Integration test for WAGA contracts with MockFunctionsRouter
+ * @title WAGAChainlinkIntegration
+ * @dev Integration test for WAGA contracts with Chainlink Functions and core system functionality
+ * This test focuses on Chainlink integration, batch verification workflows, and processor functionality
  */
-contract WAGAIntegrationTest is Test {
+contract WAGAChainlinkIntegration is Test {
     // Contract instances
     HelperConfig public helperConfig;
     WAGACoffeeToken public coffeeToken;
-    WAGAInventoryManager public inventoryManager;
+    WAGAInventoryManager2 public inventoryManager;
     WAGACoffeeRedemption public redemptionContract;
     WAGAProofOfReserve public proofOfReserve;
     MockFunctionsRouter public mockRouter;
@@ -28,6 +30,8 @@ contract WAGAIntegrationTest is Test {
     // Test addresses - use roles that actually exist
     address public constant ADMIN_USER = address(0x1);
     address public constant VERIFIER_USER = address(0x2);
+    address public constant PROCESSOR_USER = address(0x3);
+    address public constant DISTRIBUTOR_USER = address(0x4);
 
     function setUp() public {
         // Deploy all contracts via the standard deployment script
@@ -37,6 +41,10 @@ contract WAGAIntegrationTest is Test {
             inventoryManager,
             redemptionContract,
             proofOfReserve,
+            , // zkManager - ignore for this test
+            , // circomVerifier - ignore for this test
+            , // selectiveTransparency - ignore for this test
+            , // competitiveProtection - ignore for this test
             helperConfig
         ) = deployer.run();
 
@@ -62,11 +70,21 @@ contract WAGAIntegrationTest is Test {
         coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), VERIFIER_USER);
         console.log("Granted VERIFIER_ROLE to VERIFIER_USER");
         
+        // Grant PROCESSOR_ROLE to PROCESSOR_USER
+        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), PROCESSOR_USER);
+        console.log("Granted PROCESSOR_ROLE to PROCESSOR_USER");
+        
+        // Grant DISTRIBUTOR_ROLE to DISTRIBUTOR_USER
+        coffeeToken.grantRole(keccak256("DISTRIBUTOR_ROLE"), DISTRIBUTOR_USER);
+        console.log("Granted DISTRIBUTOR_ROLE to DISTRIBUTOR_USER");
+        
         vm.stopPrank();
 
         // Verify roles were granted correctly
         assertTrue(coffeeToken.hasRole(coffeeToken.ADMIN_ROLE(), ADMIN_USER), "ADMIN_USER should have ADMIN_ROLE");
         assertTrue(coffeeToken.hasRole(coffeeToken.VERIFIER_ROLE(), VERIFIER_USER), "VERIFIER_USER should have VERIFIER_ROLE");
+        assertTrue(coffeeToken.hasRole(keccak256("PROCESSOR_ROLE"), PROCESSOR_USER), "PROCESSOR_USER should have PROCESSOR_ROLE");
+        assertTrue(coffeeToken.hasRole(keccak256("DISTRIBUTOR_ROLE"), DISTRIBUTOR_USER), "DISTRIBUTOR_USER should have DISTRIBUTOR_ROLE");
 
         console.log("Integration test setup completed");
         console.log("CoffeeToken:", address(coffeeToken));
@@ -91,7 +109,8 @@ contract WAGAIntegrationTest is Test {
             block.timestamp + 365 days, // expiryDate
             1000, // quantity
             50 * 1e18, // pricePerUnit
-            "250g" // packagingInfo - must be "250g" or "500g"
+            "250g", // packagingInfo - must be "250g" or "500g"
+            IPrivacyLayer.PrivacyLevel.Public // privacyLevel
         );
         
         // Update batch with IPFS URI and metadata hash (blockchain-first workflow)
@@ -151,7 +170,8 @@ contract WAGAIntegrationTest is Test {
             block.timestamp + 365 days, // expiryDate
             500, // quantity
             50 * 1e18, // pricePerUnit
-            "500g" // packagingInfo - using different valid size for this test
+            "500g", // packagingInfo - using different valid size for this test
+            IPrivacyLayer.PrivacyLevel.Public // privacyLevel
         );
         
         // Update batch with IPFS URI and metadata hash (blockchain-first workflow)
@@ -216,5 +236,123 @@ contract WAGAIntegrationTest is Test {
         assertTrue(mockRouter.isPendingRequest(requestId), "Request should be pending");
         
         console.log("MockRouter basic functionality test passed!");
+    }
+
+    function testProcessorBatchCreationAndRequests() public {
+        console.log("Testing processor batch creation and request functionality...");
+
+        // Step 1: Create a batch as processor
+        vm.startPrank(PROCESSOR_USER);
+        
+        uint256 batchId = coffeeToken.createBatch(
+            block.timestamp + 1 days, // productionDate
+            block.timestamp + 365 days, // expiryDate
+            500, // quantity
+            75 * 1e18, // pricePerUnit (higher price for specialty coffee)
+            "250g", // packagingInfo
+            IPrivacyLayer.PrivacyLevel.Selective // Privacy level for competitive protection
+        );
+        
+        // Update batch with IPFS metadata
+        coffeeToken.updateBatchIPFS(batchId, "QmProcessorBatch123", "metadataHash123");
+        
+        vm.stopPrank();
+        
+        console.log("Processor created batch ID:", batchId);
+        assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be created after processor creation");
+        assertFalse(coffeeToken.exists(batchId), "Tokens should not exist before verification");
+
+        // Step 2: Test batch request functionality (anyone can request)
+        vm.startPrank(DISTRIBUTOR_USER);
+        
+        coffeeToken.requestBatch(batchId, "Need 200 bags for regional distribution in Seattle area");
+        
+        vm.stopPrank();
+
+        // Step 3: Verify request was recorded
+        uint256 requestCount = coffeeToken.getBatchRequestCount(batchId);
+        assertEq(requestCount, 1, "Should have exactly one batch request");
+        
+        (address requester, string memory details, uint256 timestamp, bool fulfilled) = 
+            coffeeToken.getBatchRequest(batchId, 0);
+            
+        assertEq(requester, DISTRIBUTOR_USER, "Requester should be DISTRIBUTOR_USER");
+        assertEq(details, "Need 200 bags for regional distribution in Seattle area", "Request details should match");
+        assertFalse(fulfilled, "Request should not be fulfilled initially");
+        assertTrue(timestamp > 0, "Timestamp should be set");
+        
+        console.log("Batch request recorded successfully");
+        console.log("Requester:", requester);
+        console.log("Request details:", details);
+
+        // Step 4: Test that admin can still verify the processor-created batch
+        vm.startPrank(VERIFIER_USER);
+        
+        string memory jsSource = "return { verified: true, quantity: 500, price: 75000000000000000000 };";
+        
+        bytes32 requestId = proofOfReserve.requestReserveVerification(
+            batchId,
+            DISTRIBUTOR_USER, // Mint tokens to the distributor who requested
+            jsSource
+        );
+        
+        vm.stopPrank();
+
+        // Step 5: Simulate successful verification
+        console.log("Simulating successful verification for processor batch...");
+        
+        mockHelper.simulateSuccessfulVerification(
+            requestId,
+            address(proofOfReserve),
+            500, // verified quantity
+            75 * 1e18 // verified price
+        );
+
+        // Step 6: Verify the results
+        (, , bool isVerified, , , , , , ) = coffeeToken.s_batchInfo(batchId);
+        assertTrue(isVerified, "Processor batch should be verified after successful verification");
+        
+        uint256 balance = coffeeToken.balanceOf(DISTRIBUTOR_USER, batchId);
+        assertEq(balance, 500, "Distributor should have received 500 tokens");
+        
+        console.log("Processor batch creation and verification test completed successfully!");
+        console.log("Final distributor balance:", balance);
+    }
+
+    function testProcessorAccessControl() public {
+        console.log("Testing processor access control...");
+
+        // Test that processors can create batches
+        vm.startPrank(PROCESSOR_USER);
+        
+        uint256 batchId = coffeeToken.createBatch(
+            block.timestamp + 1 days,
+            block.timestamp + 365 days,
+            300,
+            60 * 1e18,
+            "500g",
+            IPrivacyLayer.PrivacyLevel.Public
+        );
+        
+        assertTrue(batchId > 0, "Processor should be able to create batches");
+        
+        vm.stopPrank();
+
+        // Test that non-processors cannot create batches without proper role
+        vm.startPrank(DISTRIBUTOR_USER);
+        
+        vm.expectRevert(); // Should revert due to lack of PROCESSOR_ROLE or ADMIN_ROLE
+        coffeeToken.createBatch(
+            block.timestamp + 1 days,
+            block.timestamp + 365 days,
+            100,
+            50 * 1e18,
+            "250g",
+            IPrivacyLayer.PrivacyLevel.Public
+        );
+        
+        vm.stopPrank();
+        
+        console.log("Processor access control test passed!");
     }
 }

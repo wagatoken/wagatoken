@@ -47,7 +47,7 @@ interface BatchDisplay {
 
 export default function AdminPage() {
   const { isConnected, address } = useWallet();
-  const [activeTab, setActiveTab] = useState<"create" | "manage" | "verify">(
+  const [activeTab, setActiveTab] = useState<"create" | "manage" | "verify" | "inventory">(
     "create"
   );
   const [loading, setLoading] = useState(false);
@@ -341,6 +341,11 @@ export default function AdminPage() {
                 tab="verify" 
                 label="Verify & Mint" 
                 icon={<MdVerified size={20} />} 
+              />
+              <TabButton 
+                tab="inventory" 
+                label="Inventory Management" 
+                icon={<MdStorage size={20} />} 
               />
             </div>
 
@@ -794,6 +799,29 @@ export default function AdminPage() {
                     </div>
                   )}
                 </button>
+              </div>
+            )}
+
+            {/* Inventory Management Tab */}
+            {activeTab === 'inventory' && (
+              <div className="web3-card animate-card-entrance">
+                <h2 className="flex items-center gap-3 text-2xl font-bold text-gray-900 mb-6">
+                  <MdStorage size={24} />
+                  Inventory Management
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Monitor and control periodic inventory verifications, configure automation parameters, 
+                  and view verification history.
+                </p>
+                <div className="text-center">
+                  <a 
+                    href="/admin/inventory" 
+                    className="web3-gradient-button inline-flex items-center gap-2 px-6 py-3 text-lg"
+                  >
+                    <MdStorage size={20} />
+                    Open Inventory Dashboard
+                  </a>
+                </div>
               </div>
             )}
 

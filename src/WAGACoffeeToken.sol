@@ -2,466 +2,611 @@
 pragma solidity ^0.8.18;
 
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC1155Supply} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import {ERC1155URIStorage} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155URIStorage.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import {WAGAConfigManager} from "./WAGAConfigManager.sol";
-import {WAGAViewFunctions} from "./WAGAViewFunctions.sol";
-import {WAGACoffeeRedemption} from "./WAGACoffeeRedemption.sol";
-import {WAGAZKManager} from "./ZKIntegration/WAGAZKManager.sol";
+import {IZKVerifier} from "./ZKIntegration/Interfaces/IZKVerifier.sol";
+import {IPrivacyLayer} from "./ZKIntegration/Interfaces/IPrivacyLayer.sol";
+import {IComplianceVerifier} from "./ZKIntegration/Interfaces/IComplianceVerifier.sol";
 
 /**
  * @title WAGACoffeeToken
- * @author WAGA Coffee Team
- * @notice ERC1155 token contract for WAGA Coffee batch-based token system with ZK privacy
- * @dev Implements role-based access control, supply tracking, ZK proof verification, and privacy management
- *
- * Each token ID (batchId) represents a unique coffee batch with production details,
- * verification status, metadata, and privacy-protected competitive intelligence.
+ * @dev Enhanced ERC1155 token contract with maximum privacy features
+ * @dev Supports ZK proofs, encrypted data storage, and selective transparency
  */
 contract WAGACoffeeToken is
     ERC1155,
     ERC1155Supply,
     ERC1155URIStorage,
-    WAGAConfigManager,
-    WAGAViewFunctions
+    AccessControl,
+    ReentrancyGuard,
+    ERC1155Holder,
+    WAGAConfigManager
 {
-    using Strings for uint256;
-
     /* -------------------------------------------------------------------------- */
-    /*                                CUSTOM ERRORS                               */
+    /*                                  Errors                                   */
     /* -------------------------------------------------------------------------- */
-
-    error WAGACoffeeToken__InvalidInventoryManagerAddress_setInventoryManager();
-    error WAGACoffeeToken__InvalidredemptionContractAddress_setRedemptionContract();
-    error WAGACoffeeToken__InvalidIPFSUri_createBatch();
-    error WAGACoffeeToken__InvalidPackagingSize_createBatch();
-    error WAGACoffeeToken__InvalidProductionDate_createBatch();
-    error WAGACoffeeToken__ZeroMetaDataValues_createBatch();
-    error WAGACoffeeToken__InvalidBatchDates_createBatch();
+    error WAGACoffeeToken__BatchDoesNotExist_createBatch();
+    error WAGACoffeeToken__BatchAlreadyExists_createBatch();
+    error WAGACoffeeToken__InvalidQuantity_createBatch();
+    error WAGACoffeeToken__InvalidPrice_createBatch();
+    error WAGACoffeeToken__AccessControlUnauthorizedAccount_createBatch();
     error WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
-    error WAGACoffeeToken__BatchDoesNotExist_updateBatchIPFS();
     error WAGACoffeeToken__BatchDoesNotExist_updateInventory();
-    error WAGACoffeeToken__BatchDoesNotExist_setPricePerUint();
-    error WAGACoffeeToken__BatchIsInactive_setPricePerUint(
-        uint256 productionDate,
-        uint256 expiryDate
-    );
+    error WAGACoffeeToken__InvalidQuantity_updateInventory();
     error WAGACoffeeToken__BatchDoesNotExist_verifyBatchMetadata();
-    error WAGACoffeeToken__MetadataMisMatch_verifyBatchMetaData();
-    error WAGACoffeeToken__UnauthorizedCaller_updateBatchStatus(address caller);
-    error WAGACoffeeToken__UnauthorizedCaller_verifyBatchMetadata(
-        address caller
-    );
-    error WAGACoffeeToken__BatchIsInactive_markBatchExpired(
-        uint256 productionDate,
-        uint256 expiryDate
-    );
-    error WAGACoffeeToken__BatchDoesNotExist_mintBatch();
-    error WAGACoffeeToken__BatchNotVerified_mintBatch();
-    error WAGACoffeeToken__BatchDoesNotExist_getBatchQuantity();
-    error WAGACoffeeToken__BatchDoesNotExist_updateBatchLastVerifiedTimestamp();
-    error WAGACoffeeToken__BatchDoesNotExist_resetBatchVerificationFlags();
-    error WAGACoffeeToken__BatchHasActiveRedemptions_resetBatchVerificationFlags();
-    error WAGACoffeeToken__ContractNotInitialized();
-    error WAGACoffeeToken__ContractAlreadyInitialized_initialize();
-    error WAGACoffeeToken__ZKProofVerificationFailed();
-    error WAGACoffeeToken__InvalidZKManagerAddress();
+    error WAGACoffeeToken__MetadataMisMatch_verifyBatchMetadata();
+    error WAGACoffeeToken__BatchDoesNotExist_updateBatchIPFS();
+    error WAGACoffeeToken__BatchDoesNotExist_updateBatchIPFSWithZKProofs();
+    error WAGACoffeeToken__ZKProofVerificationFailed_updateBatchIPFSWithZKProofs();
+    error WAGACoffeeToken__InvalidZKProof_updateBatchIPFSWithZKProofs();
+    error WAGACoffeeToken__BatchDoesNotExist_requestBatch();
+    error WAGACoffeeToken__AccessControlUnauthorizedAccount_requestBatch();
+    error WAGACoffeeToken__BatchDoesNotExist_getBatchInfoWithPrivacy();
+    error WAGACoffeeToken__InvalidCaller_getBatchInfoWithPrivacy();
+    error WAGACoffeeToken__EncryptionKeyNotFound_getEncryptedBatchData();
+    error WAGACoffeeToken__ZKProofNotFound_getZKProof();
+    error WAGACoffeeToken__InvalidPrivacyLevel_createBatch();
+    error WAGACoffeeToken__InsufficientBatchQuantity_mintBatch();
+    error WAGACoffeeToken__BatchQuantityExceeded_mintBatch();
+    error WAGACoffeeToken__InventoryMismatch_updateInventory();
 
     /* -------------------------------------------------------------------------- */
-    /*                               STATE VARIABLES                              
+    /*                              Type Declarations                             */
     /* -------------------------------------------------------------------------- */
 
-    // Reference to redemption contract for safety checks
-    address private s_redemptionContract;
-    
-    // ZK Manager for privacy and proof verification
-    WAGAZKManager public zkManager;
-    
-    // Privacy configuration for each batch
-    mapping(uint256 => PrivacyConfig) public batchPrivacyConfig;
-
-    // Initialization flag
-    bool public isInitialized;
-
-    /* -------------------------------------------------------------------------- */
-    /*                              TYPE DECLARATIONS                             */
-    /* -------------------------------------------------------------------------- */
-
-    // Privacy configuration structure
-    struct PrivacyConfig {
-        bool pricingPrivate;
-        bool qualityPrivate;
-        bool supplyChainPrivate;
-        bytes32 pricingProofHash;
-        bytes32 qualityProofHash;
-        bytes32 supplyChainProofHash;
-        PrivacyLevel level;
+    // Optimized batch information with separate mappings for efficiency
+    struct BatchInfo {
+        uint256 productionDate;
+        uint256 expiryDate;
+        uint256 quantity;              // Total batch quantity (coffee bags)
+        uint256 mintedQuantity;        // Total tokens minted for this batch
+        uint256 pricePerUnit;
+        uint256 lastVerifiedTimestamp;
     }
 
-    // Privacy levels enum
-    enum PrivacyLevel {
-        Public,     // Show all data
-        Selective,  // Show ZK proof results only
-        Private     // Show minimal verified data
+    // Bit-packed flags for boolean values (gas efficient)
+    // Bit 0: isVerified
+    // Bit 1: isMetadataVerified  
+    // Bit 2: isActive
+    // Bit 3-7: Reserved for future use
+
+    // Batch request structure for distributors
+    struct BatchRequest {
+        uint256 batchId;
+        address requester;
+        uint256 requestedQuantity;  // Add requested quantity
+        string requestDetails;
+        uint256 requestTimestamp;
+        bool isFulfilled;
+        uint256 fulfilledQuantity;
+        uint256 fulfilledTimestamp;
+    }
+
+    // ZK Proof structure for verification
+    struct ZKProof {
+        bytes32 proofHash;
+        bytes proofData;
+        uint256 proofTimestamp;
+        address proofGenerator;
+        bool isValid;
+        string proofType; // "price", "quality", "supply_chain", "compliance"
+    }
+
+    // Encrypted data structure
+    struct EncryptedData {
+        bytes32 dataHash;
+        bytes encryptedData;
+        bytes32 encryptionKeyHash;
+        uint256 encryptionTimestamp;
+        address dataOwner;
+        bool isAccessible;
     }
 
     /* -------------------------------------------------------------------------- */
-    /*                                   EVENTS                                   */
+    /*                               State Variables                              */
     /* -------------------------------------------------------------------------- */
 
-    event BatchCreated(uint256 indexed batchId, string ipfsUri);
-    event BatchIPFSUpdated(uint256 indexed batchId, string newIpfsUri);
-    event BatchStatusUpdated(uint256 indexed batchId, bool isVerified);
-    event InventoryUpdated(uint256 indexed batchId, uint256 newQuantity);
-    event BatchExpired(
+    // Batch management
+    mapping(uint256 => BatchInfo) public s_batchInfo;
+    mapping(uint256 => bool) public s_batchExists;
+    mapping(uint256 => bool) public s_batchActive;
+    uint256 public s_batchCounter;
+
+    // Separate mappings for extended batch data (gas efficient)
+    mapping(uint256 => string) public batchPackagingInfo;
+    mapping(uint256 => string) public batchMetadataHash;
+    mapping(uint256 => bytes32) public batchZKProofHash;
+    mapping(uint256 => bytes32) public batchEncryptedDataHash;
+    mapping(uint256 => uint8) public batchFlags; // Bit-packed booleans
+
+    // Batch requests from distributors
+    mapping(uint256 => BatchRequest) public batchRequests;
+    mapping(uint256 => uint256) public batchRequestCount;
+    mapping(uint256 => mapping(uint256 => BatchRequest)) public batchRequestsByIndex;
+
+    // ZK Proof management
+    mapping(uint256 => ZKProof) public batchZKProofs;
+    mapping(bytes32 => bool) public zkProofExists;
+
+    // Encrypted data management
+    mapping(uint256 => EncryptedData) public batchEncryptedData;
+    mapping(bytes32 => bool) public encryptedDataExists;
+
+    // Privacy configuration per batch
+    mapping(uint256 => IPrivacyLayer.PrivacyConfig) public batchPrivacyConfig;
+
+    // ZK Verification contracts
+    IZKVerifier public zkVerifier;
+    IPrivacyLayer public privacyLayer;
+    IComplianceVerifier public complianceVerifier;
+
+    /* -------------------------------------------------------------------------- */
+    /*                                   Events                                   */
+    /* -------------------------------------------------------------------------- */
+
+    event BatchCreated(
         uint256 indexed batchId,
-        uint256 productionDate,
-        uint256 expiryDate
+        address indexed creator,
+        uint256 quantity,
+        uint256 pricePerUnit,
+        IPrivacyLayer.PrivacyConfig privacyConfig
     );
-    event BatchPriceUpdated(
+
+    event BatchVerified(
         uint256 indexed batchId,
-        uint256 oldPrice,
-        uint256 newPrice
+        address indexed verifier,
+        uint256 verifiedQuantity
     );
-    event BatchMetadataVerified(uint256 indexed batchId);
-    event BatchPrivacyConfigured(
+
+    event BatchRequested(
         uint256 indexed batchId,
-        PrivacyLevel level,
-        bool pricingPrivate,
-        bool qualityPrivate,
-        bool supplyChainPrivate
+        address indexed requester,
+        uint256 requestedQuantity,
+        string requestDetails,
+        uint256 requestId
     );
-    event ZKProofsVerified(
+
+    event BatchFulfilled(
         uint256 indexed batchId,
-        bool pricingVerified,
-        bool qualityVerified,
-        bool supplyChainVerified
+        address indexed requester,
+        uint256 fulfilledQuantity
+    );
+
+    event ZKProofAdded(
+        uint256 indexed batchId,
+        bytes32 indexed proofHash,
+        string proofType,
+        address indexed generator
+    );
+
+    event ZKProofVerified(
+        uint256 indexed batchId,
+        bytes32 indexed proofHash,
+        bool isValid
+    );
+
+    event EncryptedDataStored(
+        uint256 indexed batchId,
+        bytes32 indexed dataHash,
+        address indexed owner
+    );
+
+    event PrivacyConfigUpdated(
+        uint256 indexed batchId,
+        IPrivacyLayer.PrivacyConfig privacyConfig
     );
 
     event TokensMinted(
-        address indexed to,
         uint256 indexed batchId,
-        uint256 amount
+        address indexed recipient,
+        uint256 quantity,
+        uint256 totalMintedForBatch
+    );
+
+    event InventoryVerified(
+        uint256 indexed batchId,
+        uint256 onChainTokens,
+        uint256 offChainInventory,
+        bool isSynchronized
     );
 
     /* -------------------------------------------------------------------------- */
-    /*                                  MODIFIERS                                 */
+    /*                                 Constructor                                */
     /* -------------------------------------------------------------------------- */
 
-    modifier onlyInitialized() {
-        if (!isInitialized) {
-            revert WAGACoffeeToken__ContractNotInitialized();
-        }
-        _;
-    }
+    constructor(
+        string memory baseURI,
+        address zkVerifierAddress,
+        address privacyLayerAddress,
+        address complianceVerifierAddress
+    ) ERC1155(baseURI) {
+        zkVerifier = IZKVerifier(zkVerifierAddress);
+        privacyLayer = IPrivacyLayer(privacyLayerAddress);
+        complianceVerifier = IComplianceVerifier(complianceVerifierAddress);
 
-    modifier onlyInventoryManagerOrProofOfReserve() {
-        if (
-            !hasRole(INVENTORY_MANAGER_ROLE, msg.sender) &&
-            !hasRole(PROOF_OF_RESERVE_ROLE, msg.sender)
-        ) {
-            revert WAGACoffeeToken__UnauthorizedCaller_updateBatchStatus(
-                msg.sender
-            );
-        }
-        _;
-    }
-
-    modifier onlyZKManager() {
-        if (msg.sender != address(zkManager)) {
-            revert WAGACoffeeToken__UnauthorizedCaller_updateBatchStatus(msg.sender);
-        }
-        _;
-    }
-
-    /* -------------------------------------------------------------------------- */
-    /*                                 CONSTRUCTOR                                */
-    /* -------------------------------------------------------------------------- */
-
-    /**
-     * @notice Initializes the contract with zero addresses for two-phase deployment
-     */
-    constructor() ERC1155("") {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); // Grant DEFAULT_ADMIN_ROLE first
+        // Grant roles to deployer
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ADMIN_ROLE, msg.sender);
-    }
-
-    /**
-     * @notice Second phase initialization with all contract addresses
-     * @param _inventoryManager Address for inventory management
-     * @param _redemptionContract Address for token redemption
-     * @param _proofOfReserveManager Address for proof of reserve operations
-     * @param _zkManager Address for ZK proof management
-     */
-    function initialize(
-        address _inventoryManager,
-        address _redemptionContract,
-        address _proofOfReserveManager,
-        address _zkManager
-    ) external onlyRole(ADMIN_ROLE) {
-        if (isInitialized) {
-            revert WAGACoffeeToken__ContractAlreadyInitialized_initialize();
-        }
-
-        if (_zkManager == address(0)) {
-            revert WAGACoffeeToken__InvalidZKManagerAddress();
-        }
-
-        setInventoryManager(_inventoryManager);
-        setRedemptionManager(_redemptionContract);
-        setProofOfReserveManager(_proofOfReserveManager);
-        setZKManager(_zkManager);
-        
-        _grantRole(MINTER_ROLE, _proofOfReserveManager);
-        _grantRole(REDEMPTION_ROLE, _redemptionContract);
         _grantRole(VERIFIER_ROLE, msg.sender);
-        _grantRole(FULFILLER_ROLE, msg.sender);
-
-        // Initialize the redemption contract reference
-        s_redemptionContract = _redemptionContract;
-
-        isInitialized = true;
+        _grantRole(INVENTORY_MANAGER_ROLE, msg.sender);
+        _grantRole(ZK_ADMIN_ROLE, msg.sender);
+        _grantRole(PRIVACY_ADMIN_ROLE, msg.sender);
+        _grantRole(DATA_MANAGER_ROLE, msg.sender);
+        _grantRole(COMPETITIVE_ADMIN_ROLE, msg.sender);
+        _grantRole(MARKET_ANALYST_ROLE, msg.sender);
+        _grantRole(PROCESSOR_ROLE, msg.sender);
+        _grantRole(DISTRIBUTOR_ROLE, msg.sender);
+        
+        // Note: ZK contract roles will be granted in initializeSystem()
+        // after all contracts are deployed
     }
 
     /* -------------------------------------------------------------------------- */
-    /*                              EXTERNAL FUNCTIONS                            */
+    /*                              Batch Management                              */
     /* -------------------------------------------------------------------------- */
 
     /**
-     * @notice Creates a new coffee batch with ZK privacy protection
-     * @param productionDate Batch production timestamp
-     * @param expiryDate Batch expiry timestamp
-     * @param quantity Number of coffee bags in batch
-     * @param pricePerUnit Price per unit in wei
-     * @param packagingInfo Must be "250g" or "500g"
-     * @param privacyLevel Initial privacy level for the batch
-     * @return batchId The newly created batch ID
+     * @dev Create a new coffee batch with maximum privacy features
+     * @param productionDate Production date timestamp
+     * @param expiryDate Expiry date timestamp
+     * @param quantity Initial quantity
+     * @param pricePerUnit Price per unit (can be hidden via ZK proofs)
+     * @param packagingInfo Packaging information
+     * @param metadataHash IPFS metadata hash
+     * @param zkProofHash Hash of ZK proof for verification
+     * @param encryptedDataHash Hash of encrypted sensitive data
+     * @param privacyConfig Privacy configuration for selective transparency
      */
     function createBatch(
         uint256 productionDate,
         uint256 expiryDate,
         uint256 quantity,
         uint256 pricePerUnit,
-        string memory packagingInfo,
-        PrivacyLevel privacyLevel
-    ) external onlyRole(ADMIN_ROLE) onlyInitialized returns (uint256) {
-        uint256 batchId = _nextBatchId;
-        _nextBatchId++; // Increment after assignment
-
-        if (expiryDate == 0 || pricePerUnit == 0 || productionDate == 0 || quantity == 0) {
-            revert WAGACoffeeToken__ZeroMetaDataValues_createBatch();
-        }
-        // Allow past production dates for already produced coffee, but ensure expiry is after production
-        if (expiryDate <= productionDate) {
-            revert WAGACoffeeToken__InvalidBatchDates_createBatch();
-        }
-        if (bytes(packagingInfo).length == 0) {
-            revert WAGACoffeeToken__InvalidIPFSUri_createBatch();
-        }
-        if (
-            keccak256(bytes(packagingInfo)) != keccak256("250g") &&
-            keccak256(bytes(packagingInfo)) != keccak256("500g")
-        ) {
-            revert WAGACoffeeToken__InvalidPackagingSize_createBatch();
+        string calldata packagingInfo,
+        string calldata metadataHash,
+        bytes32 zkProofHash,
+        bytes32 encryptedDataHash,
+        IPrivacyLayer.PrivacyConfig calldata privacyConfig
+    ) external {
+        // Only admins and processors can create batches
+        if (!hasRole(ADMIN_ROLE, msg.sender) && !hasRole(PROCESSOR_ROLE, msg.sender)) {
+            revert WAGACoffeeToken__AccessControlUnauthorizedAccount_createBatch();
         }
 
+        // Validate inputs
+        if (quantity == 0) {
+            revert WAGACoffeeToken__InvalidQuantity_createBatch();
+        }
+        if (pricePerUnit == 0) {
+            revert WAGACoffeeToken__InvalidPrice_createBatch();
+        }
+        if (productionDate >= expiryDate) {
+            revert WAGACoffeeToken__BatchDoesNotExist_createBatch();
+        }
+
+        // Generate batch ID
+        uint256 batchId = ++s_batchCounter;
+
+        // Check if batch already exists
+        if (s_batchExists[batchId]) {
+            revert WAGACoffeeToken__BatchAlreadyExists_createBatch();
+        }
+
+        // Validate privacy configuration
+        if (!_validatePrivacyConfig(privacyConfig)) {
+            revert WAGACoffeeToken__InvalidPrivacyLevel_createBatch();
+        }
+
+        // Store core batch information
         s_batchInfo[batchId] = BatchInfo({
             productionDate: productionDate,
             expiryDate: expiryDate,
-            isVerified: false,
-            quantity: quantity, // Number of coffee bags in batch
+            quantity: quantity,
+            mintedQuantity: 0,  // Initialize minted quantity to 0
             pricePerUnit: pricePerUnit,
-            packagingInfo: packagingInfo,
-            metadataHash: "", // Empty initially - will be set via updateBatchIPFS
-            isMetadataVerified: false,
-            lastVerifiedTimestamp: 0 // Initialize to zero
+            lastVerifiedTimestamp: 0
         });
 
-        // Initialize privacy configuration
-        batchPrivacyConfig[batchId] = PrivacyConfig({
-            pricingPrivate: privacyLevel == PrivacyLevel.Private || privacyLevel == PrivacyLevel.Selective,
-            qualityPrivate: privacyLevel == PrivacyLevel.Private || privacyLevel == PrivacyLevel.Selective,
-            supplyChainPrivate: privacyLevel == PrivacyLevel.Private || privacyLevel == PrivacyLevel.Selective,
-            pricingProofHash: bytes32(0),
-            qualityProofHash: bytes32(0),
-            supplyChainProofHash: bytes32(0),
-            level: privacyLevel
-        });
+        // Store extended batch data in separate mappings
+        batchPackagingInfo[batchId] = packagingInfo;
+        batchMetadataHash[batchId] = metadataHash;
+        batchZKProofHash[batchId] = zkProofHash;
+        batchEncryptedDataHash[batchId] = encryptedDataHash;
 
-        // Note: No URI set initially for blockchain-first workflow
-        // URI will be set later via updateBatchIPFS()
-        emit BatchCreated(batchId, ""); // Empty IPFS URI initially
-        emit BatchPrivacyConfigured(
+        // Set initial flags (isActive = true, others = false)
+        _setBatchFlag(batchId, 0, false); // isVerified
+        _setBatchFlag(batchId, 1, false); // isMetadataVerified
+        _setBatchFlag(batchId, 2, true);  // isActive
+
+        // Store ZK proof if provided
+        if (zkProofHash != bytes32(0)) {
+            batchZKProofs[batchId] = ZKProof({
+                proofHash: zkProofHash,
+                proofData: "",
+                proofTimestamp: block.timestamp,
+                proofGenerator: msg.sender,
+                isValid: false,
+                proofType: ""
+            });
+            zkProofExists[zkProofHash] = true;
+        }
+
+        // Store encrypted data if provided
+        if (encryptedDataHash != bytes32(0)) {
+            batchEncryptedData[batchId] = EncryptedData({
+                dataHash: encryptedDataHash,
+                encryptedData: "",
+                encryptionKeyHash: bytes32(0),
+                encryptionTimestamp: block.timestamp,
+                dataOwner: msg.sender,
+                isAccessible: false
+            });
+            encryptedDataExists[encryptedDataHash] = true;
+        }
+
+        // Store privacy configuration
+        batchPrivacyConfig[batchId] = privacyConfig;
+
+        // Mark batch as existing and active
+        s_batchExists[batchId] = true;
+        s_batchActive[batchId] = true;
+
+        emit BatchCreated(
             batchId,
-            privacyLevel,
-            batchPrivacyConfig[batchId].pricingPrivate,
-            batchPrivacyConfig[batchId].qualityPrivate,
-            batchPrivacyConfig[batchId].supplyChainPrivate
-        );
-
-        _addToActiveBatches(batchId);
-        allBatchIds.push(batchId);
-
-        return batchId;
-    }
-
-    /**
-     * @notice Creates a new coffee batch without ZK privacy (backward compatibility)
-     * @param productionDate Batch production timestamp
-     * @param expiryDate Batch expiry timestamp
-     * @param quantity Number of coffee bags in batch
-     * @param pricePerUnit Price per unit in wei
-     * @param packagingInfo Must be "250g" or "500g"
-     * @return batchId The newly created batch ID
-     */
-    function createBatch(
-        uint256 productionDate,
-        uint256 expiryDate,
-        uint256 quantity,
-        uint256 pricePerUnit,
-        string memory packagingInfo
-    ) external onlyRole(ADMIN_ROLE) onlyInitialized returns (uint256) {
-        return createBatch(
-            productionDate,
-            expiryDate,
+            msg.sender,
             quantity,
             pricePerUnit,
-            packagingInfo,
-            PrivacyLevel.Public
+            privacyConfig
         );
     }
 
     /**
-     * @notice Updates batch IPFS metadata with ZK proof verification
-     * @param batchId ID of the batch to update
-     * @param ipfsUri New IPFS URI for batch metadata
-     * @param metadataHash Hash of the IPFS metadata
-     * @param pricingProof ZK proof for price privacy (optional)
-     * @param qualityProof ZK proof for quality privacy (optional)
-     * @param supplyChainProof ZK proof for supply chain privacy (optional)
+     * @dev Request a batch with specific quantity (only distributors can request)
+     * @param batchId Batch identifier
+     * @param requestedQuantity Quantity requested from the batch
+     * @param requestDetails Request details
+     */
+    function requestBatch(
+        uint256 batchId,
+        uint256 requestedQuantity,
+        string calldata requestDetails
+    ) external {
+        // Only distributors can request batches
+        if (!hasRole(DISTRIBUTOR_ROLE, msg.sender)) {
+            revert WAGACoffeeToken__AccessControlUnauthorizedAccount_requestBatch();
+        }
+
+        // Check if batch exists
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_requestBatch();
+        }
+
+        // Check if batch is active
+        if (!isBatchActive(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_requestBatch();
+        }
+
+        // Validate requested quantity
+        if (requestedQuantity == 0) {
+            revert WAGACoffeeToken__InvalidQuantity_createBatch();
+        }
+
+        // Check if requested quantity is available
+        BatchInfo storage batchInfo = s_batchInfo[batchId];
+        uint256 availableQuantity = batchInfo.quantity - batchInfo.mintedQuantity;
+        
+        // Calculate already requested but not yet fulfilled quantity
+        uint256 alreadyRequested = 0;
+        for (uint256 i = 0; i < batchRequestCount[batchId]; i++) {
+            BatchRequest storage existingRequest = batchRequestsByIndex[batchId][i];
+            if (!existingRequest.isFulfilled) {
+                alreadyRequested += existingRequest.requestedQuantity;
+            }
+        }
+        
+        uint256 remainingQuantity = availableQuantity - alreadyRequested;
+        if (requestedQuantity > remainingQuantity) {
+            revert WAGACoffeeToken__InvalidQuantity_createBatch();
+        }
+
+        // Create batch request
+        uint256 requestId = batchRequestCount[batchId]++;
+        batchRequestsByIndex[batchId][requestId] = BatchRequest({
+            batchId: batchId,
+            requester: msg.sender,
+            requestedQuantity: requestedQuantity,
+            requestDetails: requestDetails,
+            requestTimestamp: block.timestamp,
+            isFulfilled: false,
+            fulfilledQuantity: 0,
+            fulfilledTimestamp: 0
+        });
+
+        batchRequests[requestId] = batchRequestsByIndex[batchId][requestId];
+
+        emit BatchRequested(batchId, msg.sender, requestedQuantity, requestDetails, requestId);
+    }
+
+    /**
+     * @dev Update batch IPFS metadata with ZK proofs for enhanced privacy
+     * @param batchId Batch identifier
+     * @param metadataHash New IPFS metadata hash
+     * @param zkProofData ZK proof data for verification
+     * @param proofType Type of ZK proof
      */
     function updateBatchIPFSWithZKProofs(
         uint256 batchId,
-        string memory ipfsUri,
+        string calldata metadataHash,
+        bytes calldata zkProofData,
+        string calldata proofType
+    ) external {
+        // Only admins and processors can update with ZK proofs
+        if (!hasRole(ADMIN_ROLE, msg.sender) && !hasRole(PROCESSOR_ROLE, msg.sender)) {
+            revert WAGACoffeeToken__AccessControlUnauthorizedAccount_createBatch();
+        }
+
+        // Check if batch exists
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchIPFSWithZKProofs();
+        }
+
+        // Verify ZK proof
+        if (!zkVerifier.verifyProof(zkProofData, proofType)) {
+            revert WAGACoffeeToken__ZKProofVerificationFailed_updateBatchIPFSWithZKProofs();
+        }
+
+        // Update batch metadata
+        batchMetadataHash[batchId] = metadataHash;
+        _setBatchFlag(batchId, 1, true); // isMetadataVerified
+
+        // Update ZK proof
+        bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, proofType, block.timestamp));
+        batchZKProofs[batchId] = ZKProof({
+            proofHash: proofHash,
+            proofData: zkProofData,
+            proofTimestamp: block.timestamp,
+            proofGenerator: msg.sender,
+            isValid: true,
+            proofType: proofType
+        });
+        zkProofExists[proofHash] = true;
+
+        emit ZKProofAdded(batchId, proofHash, proofType, msg.sender);
+        emit ZKProofVerified(batchId, proofHash, true);
+    }
+
+    /**
+     * @dev Store encrypted data for maximum privacy
+     * @param batchId Batch identifier
+     * @param encryptedData Encrypted sensitive data
+     * @param encryptionKeyHash Hash of encryption key
+     */
+    function storeEncryptedBatchData(
+        uint256 batchId,
+        bytes calldata encryptedData,
+        bytes32 encryptionKeyHash
+    ) external {
+        // Only admins and processors can store encrypted data
+        if (!hasRole(ADMIN_ROLE, msg.sender) && !hasRole(PROCESSOR_ROLE, msg.sender)) {
+            revert WAGACoffeeToken__AccessControlUnauthorizedAccount_createBatch();
+        }
+
+        // Check if batch exists
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchIPFSWithZKProofs();
+        }
+
+        // Store encrypted data
+        bytes32 dataHash = keccak256(encryptedData);
+        batchEncryptedData[batchId] = EncryptedData({
+            dataHash: dataHash,
+            encryptedData: encryptedData,
+            encryptionKeyHash: encryptionKeyHash,
+            encryptionTimestamp: block.timestamp,
+            dataOwner: msg.sender,
+            isAccessible: false
+        });
+        encryptedDataExists[dataHash] = true;
+
+        // Update batch encrypted data hash
+        batchEncryptedDataHash[batchId] = dataHash;
+
+        emit EncryptedDataStored(batchId, dataHash, msg.sender);
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              View Functions                                */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Get batch information with role-based privacy filtering
+     * @param batchId Batch identifier
+     * @param caller Address of the caller for role-based access control
+     */
+    function getBatchInfoWithPrivacy(
+        uint256 batchId,
+        address caller
+    ) external view returns (
+        uint256 productionDate,
+        uint256 expiryDate,
+        bool isVerified,
+        uint256 quantity,
+        uint256 mintedQuantity,
+        uint256 pricePerUnit,
+        string memory packagingInfo,
         string memory metadataHash,
-        bytes calldata pricingProof,
-        bytes calldata qualityProof,
-        bytes calldata supplyChainProof
-    ) external onlyRole(ADMIN_ROLE) onlyInitialized {
+        bool isMetadataVerified,
+        uint256 lastVerifiedTimestamp,
+        IPrivacyLayer.PrivacyConfig memory privacyConfig
+    ) {
         if (!isBatchCreated(batchId)) {
-            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchIPFS();
-        }
-        if (bytes(ipfsUri).length == 0 || bytes(metadataHash).length == 0) {
-            revert WAGACoffeeToken__InvalidIPFSUri_createBatch();
+            revert WAGACoffeeToken__BatchDoesNotExist_getBatchInfoWithPrivacy();
         }
 
-        // Update IPFS data first
-        _setURI(batchId, ipfsUri);
-        s_batchInfo[batchId].metadataHash = metadataHash;
+        BatchInfo storage info = s_batchInfo[batchId];
+        bool isVerifiedFlag = _getBatchFlag(batchId, 0);
+        bool isMetadataVerifiedFlag = _getBatchFlag(batchId, 1);
         
-        emit BatchIPFSUpdated(batchId, ipfsUri);
-
-        // Verify ZK proofs if provided
-        if (pricingProof.length > 0 || qualityProof.length > 0 || supplyChainProof.length > 0) {
-            bool verified = zkManager.verifyBatchPrivacyProofs(
-                batchId,
-                pricingProof,
-                qualityProof,
-                supplyChainProof
+        // Determine what data to return based on caller's role
+        if (hasRole(ADMIN_ROLE, caller) || hasRole(PROCESSOR_ROLE, caller)) {
+            // Admins and Processors: Full access to all data
+            return (
+                info.productionDate,
+                info.expiryDate,
+                isVerifiedFlag,
+                info.quantity,
+                info.mintedQuantity,
+                info.pricePerUnit,
+                batchPackagingInfo[batchId],
+                batchMetadataHash[batchId],
+                isMetadataVerifiedFlag,
+                info.lastVerifiedTimestamp,
+                batchPrivacyConfig[batchId]
             );
-            
-            if (!verified) {
-                revert WAGACoffeeToken__ZKProofVerificationFailed();
-            }
-
-            // Update privacy configuration from ZK manager
-            PrivacyConfig memory config = zkManager.getPrivacyConfig(batchId);
-            batchPrivacyConfig[batchId] = config;
-
-            emit ZKProofsVerified(
-                batchId,
-                config.pricingPrivate,
-                config.qualityPrivate,
-                config.supplyChainPrivate
+        } else if (hasRole(DISTRIBUTOR_ROLE, caller)) {
+            // Distributors: Price visible, quality/supply chain hidden but proven
+            return (
+                info.productionDate,
+                info.expiryDate,
+                isVerifiedFlag,
+                info.quantity,
+                info.mintedQuantity,
+                info.pricePerUnit, // Price is visible to distributors
+                batchPackagingInfo[batchId],
+                batchMetadataHash[batchId],
+                isMetadataVerifiedFlag,
+                info.lastVerifiedTimestamp,
+                batchPrivacyConfig[batchId]
+            );
+        } else {
+            // Public: Basic info only, no price data
+            return (
+                info.productionDate,
+                info.expiryDate,
+                isVerifiedFlag,
+                info.quantity,
+                info.mintedQuantity,
+                0, // Price hidden from public
+                batchPackagingInfo[batchId],
+                batchMetadataHash[batchId],
+                isMetadataVerifiedFlag,
+                info.lastVerifiedTimestamp,
+                batchPrivacyConfig[batchId]
             );
         }
     }
 
     /**
-     * @notice Updates the IPFS URI and metadata hash for an existing batch (backward compatibility)
-     * @dev This function supports the blockchain-first workflow where batch is created first,
-     *      then IPFS metadata is uploaded and the contract is updated with the real IPFS hash
-     * @param batchId ID of the batch to update
-     * @param ipfsUri New IPFS URI for batch metadata
-     * @param metadataHash Hash of the IPFS metadata
+     * @dev Get batch information with privacy (legacy function for backward compatibility)
+     * @param batchId Batch identifier
      */
-    function updateBatchIPFS(
-        uint256 batchId,
-        string memory ipfsUri,
-        string memory metadataHash
-    ) external onlyRole(ADMIN_ROLE) onlyInitialized {
-        updateBatchIPFSWithZKProofs(
-            batchId,
-            ipfsUri,
-            metadataHash,
-            "", // No pricing proof
-            "", // No quality proof
-            ""  // No supply chain proof
-        );
-    }
-
-    /**
-     * @notice Sets the ZK manager address
-     * @param _zkManager New ZK manager address
-     */
-    function setZKManager(address _zkManager) public onlyRole(ADMIN_ROLE) {
-        if (_zkManager == address(0)) {
-            revert WAGACoffeeToken__InvalidZKManagerAddress();
-        }
-        zkManager = WAGAZKManager(_zkManager);
-    }
-
-    /**
-     * @notice Updates batch privacy configuration
-     * @param batchId ID of the batch to update
-     * @param config New privacy configuration
-     */
-    function updateBatchPrivacyConfig(
-        uint256 batchId,
-        PrivacyConfig calldata config
-    ) external onlyRole(ADMIN_ROLE) {
-        if (!isBatchCreated(batchId)) {
-            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchIPFS();
-        }
-        
-        batchPrivacyConfig[batchId] = config;
-        
-        emit BatchPrivacyConfigured(
-            batchId,
-            config.level,
-            config.pricingPrivate,
-            config.qualityPrivate,
-            config.supplyChainPrivate
-        );
-    }
-
-    /**
-     * @notice Gets batch privacy configuration
-     * @param batchId ID of the batch to query
-     * @return Privacy configuration for the batch
-     */
-    function getBatchPrivacyConfig(uint256 batchId) external view returns (PrivacyConfig memory) {
-        return batchPrivacyConfig[batchId];
-    }
-
-    /**
-     * @notice Gets privacy-protected batch information
-     * @param batchId ID of the batch to query
-     * @return Basic batch info with privacy flags
-     */
-    function getBatchInfoWithPrivacy(uint256 batchId) external view returns (
+    function getBatchInfoWithPrivacy(
+        uint256 batchId
+    ) external view returns (
         uint256 productionDate,
         uint256 expiryDate,
         bool isVerified,
@@ -471,321 +616,597 @@ contract WAGACoffeeToken is
         string memory metadataHash,
         bool isMetadataVerified,
         uint256 lastVerifiedTimestamp,
-        PrivacyConfig memory privacyConfig
+        IPrivacyLayer.PrivacyConfig memory privacyConfig
     ) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_getBatchInfoWithPrivacy();
+        }
+
         BatchInfo storage info = s_batchInfo[batchId];
         return (
             info.productionDate,
             info.expiryDate,
-            info.isVerified,
+            _getBatchFlag(batchId, 0), // isVerified
             info.quantity,
             info.pricePerUnit,
-            info.packagingInfo,
-            info.metadataHash,
-            info.isMetadataVerified,
+            batchPackagingInfo[batchId],
+            batchMetadataHash[batchId],
+            _getBatchFlag(batchId, 1), // isMetadataVerified
             info.lastVerifiedTimestamp,
             batchPrivacyConfig[batchId]
         );
     }
 
     /**
-     * @notice Updates batch verification status
-     * @param batchId ID of the batch to update
-     * @param isVerified New verification status
+     * @dev Get ZK proof for a batch
+     * @param batchId Batch identifier
      */
-    function updateBatchStatus(
+    function getZKProof(
+        uint256 batchId
+    ) external view returns (
+        bytes32 proofHash,
+        bytes memory proofData,
+        uint256 proofTimestamp,
+        address proofGenerator,
+        bool isValid,
+        string memory proofType
+    ) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__ZKProofNotFound_getZKProof();
+        }
+
+        ZKProof storage proof = batchZKProofs[batchId];
+        return (
+            proof.proofHash,
+            proof.proofData,
+            proof.proofTimestamp,
+            proof.proofGenerator,
+            proof.isValid,
+            proof.proofType
+        );
+    }
+
+    /**
+     * @dev Get encrypted data for a batch (only accessible to authorized users)
+     * @param batchId Batch identifier
+     * @param encryptionKey Encryption key for decryption
+     */
+    function getEncryptedBatchData(
         uint256 batchId,
-        bool isVerified
-    ) external onlyInventoryManagerOrProofOfReserve {
+        bytes32 encryptionKey
+    ) external view returns (
+        bytes32 dataHash,
+        bytes memory encryptedData,
+        bytes32 encryptionKeyHash,
+        uint256 encryptionTimestamp,
+        address dataOwner
+    ) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__EncryptionKeyNotFound_getEncryptedBatchData();
+        }
+
+        EncryptedData storage data = batchEncryptedData[batchId];
+        
+        // Verify encryption key
+        if (data.encryptionKeyHash != keccak256(abi.encodePacked(encryptionKey))) {
+            revert WAGACoffeeToken__EncryptionKeyNotFound_getEncryptedBatchData();
+        }
+
+        return (
+            data.dataHash,
+            data.encryptedData,
+            data.encryptionKeyHash,
+            data.encryptionTimestamp,
+            data.dataOwner
+        );
+    }
+
+    /**
+     * @dev Get batch request count
+     * @param batchId Batch identifier
+     */
+    function getBatchRequestCount(uint256 batchId) external view returns (uint256) {
+        return batchRequestCount[batchId];
+    }
+
+    /**
+     * @dev Get batch request by index
+     * @param batchId Batch identifier
+     * @param requestIndex Request index
+     */
+    function getBatchRequest(
+        uint256 batchId,
+        uint256 requestIndex
+    ) external view returns (
+        uint256 requestBatchId,
+        address requester,
+        uint256 requestedQuantity,
+        string memory requestDetails,
+        uint256 requestTimestamp,
+        bool isFulfilled,
+        uint256 fulfilledQuantity,
+        uint256 fulfilledTimestamp
+    ) {
+        BatchRequest storage request = batchRequestsByIndex[batchId][requestIndex];
+        return (
+            request.batchId,
+            request.requester,
+            request.requestedQuantity,
+            request.requestDetails,
+            request.requestTimestamp,
+            request.isFulfilled,
+            request.fulfilledQuantity,
+            request.fulfilledTimestamp
+        );
+    }
+
+    /**
+     * @dev Get all batch requests for a batch
+     * @param batchId Batch identifier
+     */
+    function getAllBatchRequests(
+        uint256 batchId
+    ) external view returns (BatchRequest[] memory) {
+        uint256 count = batchRequestCount[batchId];
+        BatchRequest[] memory requests = new BatchRequest[](count);
+        
+        for (uint256 i = 0; i < count; i++) {
+            requests[i] = batchRequestsByIndex[batchId][i];
+        }
+        
+        return requests;
+    }
+
+    /**
+     * @dev Check if batch exists
+     * @param batchId Batch identifier
+     */
+    function isBatchCreated(uint256 batchId) public view returns (bool) {
+        return s_batchExists[batchId];
+    }
+
+    /**
+     * @dev Check if batch is active
+     * @param batchId Batch identifier
+     */
+    function isBatchActive(uint256 batchId) public view returns (bool) {
+        return s_batchActive[batchId];
+    }
+
+    /**
+     * @dev Get all active batch IDs
+     * @return activeBatchIds Array of active batch IDs
+     */
+    function getActiveBatchIds() external view returns (uint256[] memory activeBatchIds) {
+        uint256 activeCount = 0;
+        
+        // First pass: count active batches
+        for (uint256 i = 1; i <= s_batchCounter; i++) {
+            if (s_batchActive[i]) {
+                activeCount++;
+            }
+        }
+        
+        // Second pass: collect active batch IDs
+        activeBatchIds = new uint256[](activeCount);
+        uint256 currentIndex = 0;
+        
+        for (uint256 i = 1; i <= s_batchCounter; i++) {
+            if (s_batchActive[i]) {
+                activeBatchIds[currentIndex] = i;
+                currentIndex++;
+            }
+        }
+        
+        return activeBatchIds;
+    }
+
+    /**
+     * @dev Get batch expiry date
+     * @param batchId Batch identifier
+     */
+    function getBatchExpiryDate(uint256 batchId) external view returns (uint256) {
         if (!isBatchCreated(batchId)) {
             revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
         }
-        s_batchInfo[batchId].isVerified = isVerified;
-        emit BatchStatusUpdated(batchId, isVerified);
+        return s_batchInfo[batchId].expiryDate;
     }
 
     /**
-     * @notice Updates batch inventory quantity
-     * @param batchId ID of the batch to update
-     * @param newQuantity New quantity value
+     * @dev Get batch last verified timestamp
+     * @param batchId Batch identifier
      */
-    function updateInventory(
-        uint256 batchId,
-        uint256 newQuantity
-    ) external onlyInventoryManagerOrProofOfReserve {
+    function getBatchLastVerifiedTimestamp(uint256 batchId) external view returns (uint256) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+        }
+        return s_batchInfo[batchId].lastVerifiedTimestamp;
+    }
+
+    /**
+     * @dev Get batch quantity
+     * @param batchId Batch identifier
+     */
+    function getBatchQuantity(uint256 batchId) external view returns (uint256) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+        }
+        return s_batchInfo[batchId].quantity;
+    }
+
+    /**
+     * @dev Get batch creation date
+     * @param batchId Batch identifier
+     */
+    function getBatchCreationDate(uint256 batchId) external view returns (uint256) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+        }
+        return s_batchInfo[batchId].productionDate;
+    }
+
+    /**
+     * @dev Get batch verification status
+     * @param batchId Batch identifier
+     */
+    function isBatchVerified(uint256 batchId) external view returns (bool) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+        }
+        return _getBatchFlag(batchId, 0);
+    }
+
+    /**
+     * @dev Get batch metadata verification status
+     * @param batchId Batch identifier
+     */
+    function isBatchMetadataVerified(uint256 batchId) external view returns (bool) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+        }
+        return _getBatchFlag(batchId, 1);
+    }
+
+    /**
+     * @dev Get batch packaging info
+     * @param batchId Batch identifier
+     */
+    function getBatchPackagingInfo(uint256 batchId) external view returns (string memory) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+        }
+        return batchPackagingInfo[batchId];
+    }
+
+    /**
+     * @dev Get batch metadata hash
+     * @param batchId Batch identifier
+     */
+    function getBatchMetadataHash(uint256 batchId) external view returns (string memory) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+        }
+        return batchMetadataHash[batchId];
+    }
+
+    /**
+     * @dev Get batch ZK proof hash
+     * @param batchId Batch identifier
+     */
+    function getBatchZKProofHash(uint256 batchId) external view returns (bytes32) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+        }
+        return batchZKProofHash[batchId];
+    }
+
+    /**
+     * @dev Get batch encrypted data hash
+     * @param batchId Batch identifier
+     */
+    function getBatchEncryptedDataHash(uint256 batchId) external view returns (bytes32) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+        }
+        return batchEncryptedDataHash[batchId];
+    }
+
+    /**
+     * @dev Mark batch as expired (only inventory manager)
+     * @param batchId Batch identifier
+     */
+    function markBatchExpired(uint256 batchId) external onlyRole(INVENTORY_MANAGER_ROLE) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+        }
+        _setBatchFlag(batchId, 2, false); // isActive = false
+        s_batchActive[batchId] = false;
+    }
+
+    /**
+     * @dev Reset batch verification flags (only inventory manager)
+     * @param batchId Batch identifier
+     */
+    function resetBatchVerificationFlags(uint256 batchId) external onlyRole(INVENTORY_MANAGER_ROLE) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+        }
+        _setBatchFlag(batchId, 0, false); // isVerified = false
+        _setBatchFlag(batchId, 1, false); // isMetadataVerified = false
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              Admin Functions                               */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Update batch status (only admins)
+     * @param batchId Batch identifier
+     * @param isActive Active status
+     */
+    function updateBatchStatus(uint256 batchId, bool isActive) external onlyRole(ADMIN_ROLE) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+        }
+        s_batchActive[batchId] = isActive;
+        _setBatchFlag(batchId, 2, isActive); // isActive
+    }
+
+    /**
+     * @dev Update batch inventory (only admins)
+     * @param batchId Batch identifier
+     * @param newQuantity New quantity
+     */
+    function updateInventory(uint256 batchId, uint256 newQuantity) external onlyRole(ADMIN_ROLE) {
         if (!isBatchCreated(batchId)) {
             revert WAGACoffeeToken__BatchDoesNotExist_updateInventory();
         }
+        if (newQuantity == 0) {
+            revert WAGACoffeeToken__InvalidQuantity_updateInventory();
+        }
+        s_batchInfo[batchId].quantity = newQuantity;
+    }
 
-        uint256 currentQuantity = s_batchInfo[batchId].quantity;
-
-        if (newQuantity == 0 && currentQuantity > 0) {
-            _removeFromActiveBatches(batchId);
-        } else if (newQuantity > 0 && currentQuantity == 0) {
-            _addToActiveBatches(batchId);
+    /**
+     * @dev Verify batch metadata (only admins)
+     * @param batchId Batch identifier
+     * @param verifiedPrice Verified price
+     * @param verifiedPackaging Verified packaging
+     * @param verifiedMetadataHash Verified metadata hash
+     */
+    function verifyBatchMetadata(
+        uint256 batchId,
+        uint256 verifiedPrice,
+        string calldata verifiedPackaging,
+        string calldata verifiedMetadataHash
+    ) external onlyRole(ADMIN_ROLE) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_verifyBatchMetadata();
         }
 
-        s_batchInfo[batchId].quantity = newQuantity;
-        emit InventoryUpdated(batchId, newQuantity);
-    }
-    /**
-     * @notice Updates the last verified timestamp for a batch
-     * @param batchId ID of the batch to update
-     * @param timestamp New last verified timestamp
-     */
+        BatchInfo storage info = s_batchInfo[batchId];
+        
+        if (info.pricePerUnit != verifiedPrice ||
+            keccak256(bytes(batchPackagingInfo[batchId])) != keccak256(bytes(verifiedPackaging)) ||
+            keccak256(bytes(batchMetadataHash[batchId])) != keccak256(bytes(verifiedMetadataHash))) {
+            revert WAGACoffeeToken__MetadataMisMatch_verifyBatchMetadata();
+        }
 
+        _setBatchFlag(batchId, 1, true); // isMetadataVerified
+        info.lastVerifiedTimestamp = block.timestamp;
+    }
+
+    /**
+     * @dev Update batch last verified timestamp (only admins)
+     * @param batchId Batch identifier
+     * @param timestamp Timestamp
+     */
     function updateBatchLastVerifiedTimestamp(
         uint256 batchId,
         uint256 timestamp
-    ) external onlyRole(PROOF_OF_RESERVE_ROLE) {
+    ) external onlyRole(ADMIN_ROLE) {
         if (!isBatchCreated(batchId)) {
-            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchLastVerifiedTimestamp();
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
         }
         s_batchInfo[batchId].lastVerifiedTimestamp = timestamp;
     }
 
     /**
-     * @notice Safely resets batch verification flags before inventory verification
-     * @param batchId ID of the batch to reset flags for
-     * @dev Only resets flags if batch has no active redemption requests
-     */
-    function resetBatchVerificationFlags(
-        uint256 batchId
-    ) external onlyInventoryManagerOrProofOfReserve onlyInitialized {
-        if (!isBatchCreated(batchId)) {
-            revert WAGACoffeeToken__BatchDoesNotExist_resetBatchVerificationFlags();
-        }
-
-        // Check if batch has active redemptions before resetting flags
-        if (s_redemptionContract != address(0)) {
-            try
-                WAGACoffeeRedemption(s_redemptionContract)
-                    .hasPendingRedemptions(batchId)
-            returns (bool hasPending) {
-                if (hasPending) {
-                    revert WAGACoffeeToken__BatchHasActiveRedemptions_resetBatchVerificationFlags();
-                }
-            } catch {
-                // If call fails, proceed with caution - don't reset flags
-                revert WAGACoffeeToken__BatchHasActiveRedemptions_resetBatchVerificationFlags();
-            }
-        }
-
-        s_batchInfo[batchId].isVerified = false;
-        s_batchInfo[batchId].isMetadataVerified = false;
-
-        // Emit event for tracking
-        emit BatchStatusUpdated(batchId, false);
-    }
-
-    /**
-     * @notice Updates the redemption contract address for safety checks
-     * @param _redemptionContract New redemption contract address
-     */
-    function updateRedemptionContract(
-        address _redemptionContract
-    ) external onlyRole(ADMIN_ROLE) {
-        s_redemptionContract = _redemptionContract;
-    }
-
-    /**
-     * @notice Sets new price per unit for a batch
-     * @param batchId ID of the batch to update
-     * @param newPrice New price per unit in wei
-     */
-    function setPricePerUnit(
-        uint256 batchId,
-        uint256 newPrice
-    ) external onlyRole(ADMIN_ROLE) {
-        if (!isBatchCreated(batchId)) {
-            revert WAGACoffeeToken__BatchDoesNotExist_setPricePerUint();
-        }
-        if (!s_isActiveBatch[batchId]) {
-            uint256 productionDate = s_batchInfo[batchId].productionDate;
-            uint256 expiryDate = s_batchInfo[batchId].expiryDate;
-            revert WAGACoffeeToken__BatchIsInactive_setPricePerUint(
-                productionDate,
-                expiryDate
-            );
-        }
-
-        uint256 oldPrice = s_batchInfo[batchId].pricePerUnit;
-        s_batchInfo[batchId].pricePerUnit = newPrice;
-        emit BatchPriceUpdated(batchId, oldPrice, newPrice);
-    }
-
-    /**
-     * @notice Verifies batch metadata against expected values
-     * @param batchId ID of the batch to verify
-     * @param verifiedPrice Expected price per unit
-     * @param verifiedPackaging Expected packaging info
-     * @param verifiedMetadataHash Expected metadata hash
-     */
-    function verifyBatchMetadata(
-        uint256 batchId,
-        uint256 verifiedPrice,
-        string memory verifiedPackaging,
-        string memory verifiedMetadataHash
-    ) external onlyInventoryManagerOrProofOfReserve onlyInitialized {
-        BatchInfo storage info = s_batchInfo[batchId];
-        if (!isBatchCreated(batchId)) {
-            revert WAGACoffeeToken__BatchDoesNotExist_verifyBatchMetadata();
-        }
-        // Fixed: Use OR logic - fail if ANY field mismatches
-        if (
-            info.pricePerUnit != verifiedPrice ||
-            keccak256(bytes(info.packagingInfo)) !=
-            keccak256(bytes(verifiedPackaging)) ||
-            keccak256(bytes(info.metadataHash)) !=
-            keccak256(bytes(verifiedMetadataHash))
-        ) {
-            revert WAGACoffeeToken__MetadataMisMatch_verifyBatchMetaData();
-        }
-        info.isMetadataVerified = true;
-        emit BatchMetadataVerified(batchId);
-    }
-
-    /**
-     * @notice Marks a batch as expired
-     * @param batchId ID of the batch to expire
-     */
-    function markBatchExpired(
-        uint256 batchId
-    ) external onlyRole(INVENTORY_MANAGER_ROLE) {
-        // @Yohannes not checking if batch is created
-        if (!s_isActiveBatch[batchId]) {
-            uint256 productionDate_1 = s_batchInfo[batchId].productionDate;
-            uint256 expiryDate_1 = s_batchInfo[batchId].expiryDate;
-            revert WAGACoffeeToken__BatchIsInactive_markBatchExpired(
-                productionDate_1,
-                expiryDate_1
-            );
-        }
-
-        _removeFromActiveBatches(batchId);
-        uint256 productionDate = s_batchInfo[batchId].productionDate;
-        uint256 expiryDate = s_batchInfo[batchId].expiryDate;
-        emit BatchExpired(batchId, productionDate, expiryDate);
-    }
-
-    /**
-     * @notice Mints tokens for a verified batch
-     * @param to Address to receive minted tokens
-     * @param batchId ID of the batch to mint from
-     * @param amount Number of tokens to mint
+     * @dev Mint batch tokens with inventory validation (only admins)
+     * @param to Recipient address
+     * @param batchId Batch identifier
+     * @param amount Amount to mint
      */
     function mintBatch(
         address to,
         uint256 batchId,
         uint256 amount
-    ) external onlyRole(MINTER_ROLE) {
+    ) external onlyRole(ADMIN_ROLE) {
         if (!isBatchCreated(batchId)) {
-            revert WAGACoffeeToken__BatchDoesNotExist_mintBatch();
+            revert WAGACoffeeToken__BatchDoesNotExist_createBatch();
         }
-        if (!s_batchInfo[batchId].isVerified) {
-            revert WAGACoffeeToken__BatchNotVerified_mintBatch();
+        
+        BatchInfo storage batchInfo = s_batchInfo[batchId];
+        
+        // Validate minting doesn't exceed batch quantity
+        if (batchInfo.mintedQuantity + amount > batchInfo.quantity) {
+            revert WAGACoffeeToken__BatchQuantityExceeded_mintBatch();
         }
-
-        if (
-            s_batchInfo[batchId].quantity == 0 &&
-            !s_isActiveBatch[batchId]
-        ) {
-            _addToActiveBatches(batchId);
+        
+        // Validate amount is greater than 0
+        if (amount == 0) {
+            revert WAGACoffeeToken__InsufficientBatchQuantity_mintBatch();
         }
-
-        s_batchInfo[batchId].quantity += amount;
+        
+        // Update minted quantity
+        batchInfo.mintedQuantity += amount;
+        
+        // Mint tokens
         _mint(to, batchId, amount, "");
-        emit TokensMinted(to, batchId, amount);
+        
+        // Emit event
+        emit TokensMinted(batchId, to, amount, batchInfo.mintedQuantity);
     }
 
     /**
-     * @notice Burns tokens during redemption process
-     * @param account Address to burn tokens from
-     * @param batchId ID of the batch to burn from
-     * @param amount Number of tokens to burn
+     * @dev Update batch IPFS metadata (only admins)
+     * @param batchId Batch identifier
+     * @param metadataHash New metadata hash
+     * @param newMetadataHash New metadata hash
+     */
+    function updateBatchIPFS(
+        uint256 batchId,
+        string calldata metadataHash,
+        string calldata newMetadataHash
+    ) external {
+        // Only admins and processors can update IPFS metadata
+        if (!hasRole(ADMIN_ROLE, msg.sender) && !hasRole(PROCESSOR_ROLE, msg.sender)) {
+            revert WAGACoffeeToken__AccessControlUnauthorizedAccount_createBatch();
+        }
+
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchIPFS();
+        }
+        batchMetadataHash[batchId] = newMetadataHash;
+    }
+
+    /**
+     * @dev Verify inventory synchronization between on-chain tokens and off-chain inventory
+     * @param batchId Batch identifier
+     * @param offChainInventory Off-chain inventory quantity
+     * @return isSynchronized Whether inventory is synchronized
+     */
+    function verifyInventorySynchronization(
+        uint256 batchId,
+        uint256 offChainInventory
+    ) external onlyRole(ADMIN_ROLE) returns (bool isSynchronized) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+        }
+        
+        BatchInfo storage batchInfo = s_batchInfo[batchId];
+        uint256 onChainTokens = batchInfo.mintedQuantity;
+        
+        // Check if on-chain tokens match off-chain inventory
+        isSynchronized = (onChainTokens == offChainInventory);
+        
+        // Emit verification event
+        emit InventoryVerified(batchId, onChainTokens, offChainInventory, isSynchronized);
+        
+        return isSynchronized;
+    }
+
+    /**
+     * @dev Get batch inventory information
+     * @param batchId Batch identifier
+     * @return totalQuantity Total batch quantity
+     * @return mintedQuantity Total tokens minted
+     * @return availableQuantity Available quantity for minting
+     */
+    function getBatchInventoryInfo(
+        uint256 batchId
+    ) external view returns (
+        uint256 totalQuantity,
+        uint256 mintedQuantity,
+        uint256 availableQuantity
+    ) {
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_updateBatchStatus();
+        }
+        
+        BatchInfo storage batchInfo = s_batchInfo[batchId];
+        totalQuantity = batchInfo.quantity;
+        mintedQuantity = batchInfo.mintedQuantity;
+        availableQuantity = batchInfo.quantity - batchInfo.mintedQuantity;
+        
+        return (totalQuantity, mintedQuantity, availableQuantity);
+    }
+
+    /**
+     * @dev Burn tokens for redemption (only redemption contract)
+     * @param from Address to burn tokens from
+     * @param batchId Batch identifier
+     * @param amount Amount to burn
      */
     function burnForRedemption(
-        address account,
+        address from,
         uint256 batchId,
         uint256 amount
     ) external onlyRole(REDEMPTION_ROLE) {
-        _burn(account, batchId, amount);
-        s_batchInfo[batchId].quantity -= amount;
+        if (!isBatchCreated(batchId)) {
+            revert WAGACoffeeToken__BatchDoesNotExist_createBatch();
+        }
+        
+        BatchInfo storage batchInfo = s_batchInfo[batchId];
+        
+        // Validate burning doesn't exceed minted quantity
+        if (amount > batchInfo.mintedQuantity) {
+            revert WAGACoffeeToken__BatchQuantityExceeded_mintBatch();
+        }
+        
+        // Validate amount is greater than 0
+        if (amount == 0) {
+            revert WAGACoffeeToken__InsufficientBatchQuantity_mintBatch();
+        }
+        
+        // Update minted quantity (decrease)
+        batchInfo.mintedQuantity -= amount;
+        
+        // Burn tokens
+        _burn(from, batchId, amount);
+        
+        // Emit event
+        emit TokensMinted(batchId, from, amount, batchInfo.mintedQuantity);
     }
 
     /* -------------------------------------------------------------------------- */
-    /*                                   PUBLIC FUNCTIONS                         */
+    /*                              Helper Functions                               */
     /* -------------------------------------------------------------------------- */
 
     /**
-     * @notice Returns the URI for a token ID
-     * @param tokenId Token ID to query
-     * @return URI containing token metadata
+     * @dev Validate privacy configuration
+     * @param privacyConfig Privacy configuration to validate
      */
-    function uri(
-        uint256 tokenId
-    ) public view override(ERC1155, ERC1155URIStorage) returns (string memory) {
-        return ERC1155URIStorage.uri(tokenId);
+    function _validatePrivacyConfig(
+        IPrivacyLayer.PrivacyConfig memory privacyConfig
+    ) internal pure returns (bool) {
+        // Validate privacy levels (0 = Public, 1 = Selective, 2 = Private)
+        if (privacyConfig.pricingSelective > 2 || 
+            privacyConfig.qualitySelective > 2 || 
+            privacyConfig.supplyChainSelective > 2) {
+            return false;
+        }
+        return true;
     }
-
-    // /**
-    //  * @notice Checks interface support
-    //  * @param interfaceId Interface identifier
-    //  * @return True if interface is supported
-    //  */
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view override(ERC1155, AccessControl) returns (bool) {
-        return super.supportsInterface(interfaceId);
-    }
-
-    /* -------------------------------------------------------------------------- */
-    /*                             INTERNAL FUNCTIONS                             */
-    /* -------------------------------------------------------------------------- */
 
     /**
-     * @dev Adds a batch to the active tracking system
-     * @param batchId ID of batch to add
+     * @dev Get batch flag value
+     * @param batchId Batch identifier
+     * @param flagBit Bit position (0: isVerified, 1: isMetadataVerified, 2: isActive)
      */
-    function _addToActiveBatches(uint256 batchId) internal {
-        if (!s_isActiveBatch[batchId]) {
-            s_isActiveBatch[batchId] = true;
-            s_activeBatchIndex[batchId] = s_activeBatchIds.length;
-            s_activeBatchIds.push(batchId);
+    function _getBatchFlag(uint256 batchId, uint8 flagBit) internal view returns (bool) {
+        return (batchFlags[batchId] & (1 << flagBit)) != 0;
+    }
+
+    /**
+     * @dev Set batch flag value
+     * @param batchId Batch identifier
+     * @param flagBit Bit position (0: isVerified, 1: isMetadataVerified, 2: isActive)
+     * @param value Flag value
+     */
+    function _setBatchFlag(uint256 batchId, uint8 flagBit, bool value) internal {
+        uint8 currentFlags = batchFlags[batchId];
+        if (value) {
+            batchFlags[batchId] = uint8(currentFlags | (1 << flagBit));
+        } else {
+            batchFlags[batchId] = uint8(currentFlags & ~(1 << flagBit));
         }
     }
 
-    /**
-     * @dev Removes a batch from the active tracking system using swap-and-pop
-     * @param batchId ID of batch to remove
-     */
-    function _removeFromActiveBatches(uint256 batchId) internal {
-        if (s_isActiveBatch[batchId]) {
-            // Use the s_activeBatchIndex mapping to get the index of the batch to remove from the s_activeBatchIds Array. The s_activeBatchIndex mapping is used to track the index of each batch in the s_activeBatchIds array.
-            uint256 index = s_activeBatchIndex[batchId];
-            // Get the index of the last element (batch) in the s_activeBatchIds array.
-            uint256 lastIndex = s_activeBatchIds.length - 1;
-            // Check if the index to remove is not the last index.
-            if (index != lastIndex) {
-                // Get the last batch ID from the s_activeBatchIds array and swap it with the batch to remove.
-                uint256 lastBatchId = s_activeBatchIds[lastIndex];
-                s_activeBatchIds[index] = lastBatchId; // This is how you replace the value of an array at a specific index.
-                // Update the index mapping for the last batch ID to point to the index of the removed batch. We need the index mapping to point to the correct index in the s_activeBatchIds array after the swap.
-                s_activeBatchIndex[lastBatchId] = index;
-            }
+    /* -------------------------------------------------------------------------- */
+    /*                              Override Functions                             */
+    /* -------------------------------------------------------------------------- */
 
-            // uint256[] private numbers = [1, 2, 3, 4, 5]
-            // numbers[1] = 5; // This replaces the value at index 1 with 5
-
-            s_activeBatchIds.pop();
-            delete s_isActiveBatch[batchId];
-            delete s_activeBatchIndex[batchId];
-        }
-    }
-
-    /**
-     * @dev Updates token balances - required override for ERC1155Supply
-     */
     function _update(
         address from,
         address to,
@@ -793,5 +1214,13 @@ contract WAGACoffeeToken is
         uint256[] memory values
     ) internal override(ERC1155, ERC1155Supply) {
         super._update(from, to, ids, values);
+    }
+
+    function uri(uint256 tokenId) public view override(ERC1155, ERC1155URIStorage) returns (string memory) {
+        return super.uri(tokenId);
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view override(ERC1155, AccessControl, ERC1155Holder) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 }

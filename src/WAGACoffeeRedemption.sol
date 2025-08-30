@@ -142,14 +142,16 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         (
             ,
             uint256 expiryDate,
-            bool isVerified,
             ,
             ,
-            string memory packagingInfo,
             ,
-            bool isMetadataVerified,
 
         ) = coffeeToken.s_batchInfo(batchId);
+
+        // Get boolean flags and string data from separate mappings
+        bool isVerified = coffeeToken.isBatchVerified(batchId);
+        bool isMetadataVerified = coffeeToken.isBatchMetadataVerified(batchId);
+        string memory packagingInfo = coffeeToken.getBatchPackagingInfo(batchId);
 
         // Ensure the batch has not expired
         if (block.timestamp > expiryDate) {

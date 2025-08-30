@@ -1,184 +1,438 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import {Script} from "forge-std/Script.sol";
+import {Script, console} from "forge-std/Script.sol";
 import {WAGACoffeeToken} from "../src/WAGACoffeeToken.sol";
-import {WAGAInventoryManager} from "../src/WAGAInventoryManager2.sol";
-import {WAGACoffeeRedemption} from "../src/WAGACoffeeRedemption.sol";
 import {WAGAProofOfReserve} from "../src/WAGAProofOfReserve.sol";
+import {WAGAInventoryManager2} from "../src/WAGAInventoryManager2.sol";
+import {WAGACoffeeRedemption} from "../src/WAGACoffeeRedemption.sol";
+import {WAGAConfigManager} from "../src/WAGAConfigManager.sol";
+import {WAGAViewFunctions} from "../src/WAGAViewFunctions.sol";
 import {WAGAZKManager} from "../src/ZKIntegration/WAGAZKManager.sol";
-import {CircomVerifier} from "../src/ZKVerifiers/CircomVerifier.sol";
+import {CircomVerifier} from "../src/ZKIntegration/CircomVerifier.sol";
+import {ComplianceVerifier} from "../src/ZKIntegration/ComplianceVerifier.sol";
 import {SelectiveTransparency} from "../src/PrivacyLayers/SelectiveTransparency.sol";
-import {CompetitiveProtection} from "../src/PrivacyLayers/CompetitiveProtection.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
+/**
+ * @title DeployWagaToken
+ * @dev Deployment script for the complete WAGA Coffee system with maximum privacy
+ */
 contract DeployWagaToken is Script {
+    /* -------------------------------------------------------------------------- */
+    /*                              State Variables                              */
+    /* -------------------------------------------------------------------------- */
+
+    // Contract addresses
+    address public coffeeTokenAddress;
+    address public proofOfReserveAddress;
+    address public inventoryManagerAddress;
+    address public redemptionAddress;
+    address public zkManagerAddress;
+    address public privacyLayerAddress;
+    address public zkVerifierAddress;
+    address public complianceVerifierAddress;
+
+    // Helper configuration
     HelperConfig public helperConfig;
 
-    function run()
-        external
-        returns (
-            WAGACoffeeToken,
-            WAGAInventoryManager,
-            WAGACoffeeRedemption,
-            WAGAProofOfReserve,
-            WAGAZKManager,
-            CircomVerifier,
-            SelectiveTransparency,
-            CompetitiveProtection,
-            HelperConfig
-        )
-    {
+    /* -------------------------------------------------------------------------- */
+    /*                                   Events                                   */
+    /* -------------------------------------------------------------------------- */
+
+    event ContractDeployed(string contractName, address contractAddress);
+    event RoleGranted(string role, address user);
+    event SystemInitialized();
+
+    /* -------------------------------------------------------------------------- */
+    /*                              Main Functions                                */
+    /* -------------------------------------------------------------------------- */
+
+    function run() external returns (
+        WAGACoffeeToken,
+        WAGAProofOfReserve,
+        WAGACoffeeRedemption,
+        WAGAInventoryManager2,
+        WAGAZKManager,
+        CircomVerifier,
+        SelectiveTransparency,
+        ComplianceVerifier,
+        HelperConfig
+    ) {
+        // Initialize HelperConfig
         helperConfig = new HelperConfig();
-        HelperConfig.NetworkConfig memory config = helperConfig
-            .getActiveNetworkConfig();
+        
+        // Get network configuration and deployer key from HelperConfig
+        HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
+        uint256 deployerKey = networkConfig.deployerKey;
+        
+        vm.startBroadcast(deployerKey);
 
-        vm.startBroadcast(config.deployerKey);
+        // Step 1: Deploy Privacy Layer
+        deployPrivacyLayer();
 
-        console.log("🚀 Deploying WAGA Coffee System with ZK Privacy...");
-        console.log("Deployer:", vm.addr(config.deployerKey));
+        // Step 2: Deploy ZK Verification contracts first (with address(0) for coffeeToken)
+        deployZKVerificationSystem();
 
-        // 1. Deploy ZK System Components
-        console.log("\n📋 Deploying ZK System Components...");
-        
-        CircomVerifier circomVerifier = new CircomVerifier();
-        console.log("Circom Verifier deployed at:", address(circomVerifier));
-        
-        SelectiveTransparency selectiveTransparency = new SelectiveTransparency();
-        console.log("Selective Transparency deployed at:", address(selectiveTransparency));
-        
-        CompetitiveProtection competitiveProtection = new CompetitiveProtection();
-        console.log("Competitive Protection deployed at:", address(competitiveProtection));
-        
-        WAGAZKManager zkManager = new WAGAZKManager(
-            address(circomVerifier),
-            address(circomVerifier) // Using circomVerifier as compliance verifier for now
-        );
-        console.log("ZK Manager deployed at:", address(zkManager));
+        // Step 3: Deploy Compliance Verifier (with address(0) for coffeeToken)
+        deployComplianceVerifier();
 
-        // 2. Deploy Core WAGA Contracts
-        console.log("\n☕ Deploying Core WAGA Contracts...");
-        
-        WAGACoffeeToken coffeeToken = new WAGACoffeeToken();
-        console.log("WAGACoffeeToken deployed at:", address(coffeeToken));
+        // Step 4: Deploy main WAGA Coffee Token with ZK verifier addresses
+        deployWAGACoffeeToken();
 
-        WAGAProofOfReserve proofOfReserve = new WAGAProofOfReserve(
-            address(coffeeToken),
-            config.router,
-            config.subscriptionId,
-            config.donId
-        );
-        console.log("WAGAProofOfReserve deployed at:", address(proofOfReserve));
+        // Step 5: Set coffeeToken reference in ZK contracts
+        setCoffeeTokenReferences();
 
-        WAGAInventoryManager inventoryManager = new WAGAInventoryManager(
-            address(coffeeToken),
-            address(proofOfReserve)
-        );
-        console.log("WAGAInventoryManager deployed at:", address(inventoryManager));
+        // Step 6: Deploy Proof of Reserve with privacy support
+        deployProofOfReserve(networkConfig.router, networkConfig.subscriptionId, networkConfig.donId);
 
-        WAGACoffeeRedemption redemptionContract = new WAGACoffeeRedemption(
-            address(coffeeToken)
-        );
-        console.log("WAGACoffeeRedemption deployed at:", address(redemptionContract));
+        // Step 7: Deploy Inventory Manager
+        deployInventoryManager();
 
-        // 3. Set up ZK System Roles and Permissions
-        console.log("\n🔐 Setting up ZK System Roles...");
-        
-        selectiveTransparency.grantDataManagerRole(address(zkManager));
-        competitiveProtection.grantMarketAnalystRole(address(zkManager));
-        circomVerifier.grantVerifierRole(address(zkManager));
-        
-        console.log("✅ ZK System roles configured");
+        // Step 8: Deploy Redemption contract
+        deployRedemptionContract();
 
-        // 4. Initialize Core Contracts
-        console.log("\n🔧 Initializing Core Contracts...");
-        
-        coffeeToken.initialize(
-            address(inventoryManager),
-            address(redemptionContract),
-            address(proofOfReserve),
-            address(zkManager) // Add ZK manager to initialization
-        );
-        
-        console.log("✅ Core contracts initialized with ZK integration");
+        // Step 9: Deploy View Functions
+        deployViewFunctions();
 
-        // 5. Verify Deployment
-        console.log("\n🔍 Verifying Deployment...");
-        
-        bool zkManagerWorks = zkManager.hasRole(keccak256("ZK_ADMIN_ROLE"), vm.addr(config.deployerKey));
-        bool selectiveTransparencyWorks = selectiveTransparency.hasRole(keccak256("PRIVACY_ADMIN_ROLE"), vm.addr(config.deployerKey));
-        bool competitiveProtectionWorks = competitiveProtection.hasRole(keccak256("COMPETITIVE_ADMIN_ROLE"), vm.addr(config.deployerKey));
-        bool coffeeTokenWorks = coffeeToken.hasRole(keccak256("ADMIN_ROLE"), vm.addr(config.deployerKey));
-        
-        console.log("ZK Manager:", zkManagerWorks ? "✅" : "❌");
-        console.log("Selective Transparency:", selectiveTransparencyWorks ? "✅" : "❌");
-        console.log("Competitive Protection:", competitiveProtectionWorks ? "✅" : "❌");
-        console.log("WAGACoffeeToken:", coffeeTokenWorks ? "✅" : "❌");
+        // Step 10: Deploy ZK Manager
+        deployZKManager();
+
+        // Step 11: Initialize the system
+        initializeSystem();
+
+        console.log("Privacy-Enhanced WAGA System deployed successfully!");
+        printDeploymentSummary();
 
         vm.stopBroadcast();
 
-        // 6. Output Deployment Summary
-        console.log("\n🎉 WAGA Coffee System with ZK Privacy Deployment Complete!");
-        console.log("================================================================");
-        console.log("Core Contracts:");
-        console.log("  WAGACoffeeToken:", address(coffeeToken));
-        console.log("  WAGAInventoryManager:", address(inventoryManager));
-        console.log("  WAGACoffeeRedemption:", address(redemptionContract));
-        console.log("  WAGAProofOfReserve:", address(proofOfReserve));
-        console.log("\nZK System:");
-        console.log("  ZK Manager:", address(zkManager));
-        console.log("  Circom Verifier:", address(circomVerifier));
-        console.log("  Selective Transparency:", address(selectiveTransparency));
-        console.log("  Competitive Protection:", address(competitiveProtection));
-        console.log("\n📝 Next Steps:");
-        console.log("1. Test ZK proof verification workflows");
-        console.log("2. Create batches with privacy levels");
-        console.log("3. Integrate ZK proofs in batch creation");
-        console.log("4. Test privacy-protected data display");
-
-        // Save deployment addresses
-        string memory deploymentData = string(abi.encodePacked(
-            "WAGA Coffee System with ZK Privacy - ", 
-            vm.toString(block.timestamp),
-            "\n\n",
-            "Core Contracts:",
-            "\n  WAGACoffeeToken: ", vm.toString(address(coffeeToken)),
-            "\n  WAGAInventoryManager: ", vm.toString(address(inventoryManager)),
-            "\n  WAGACoffeeRedemption: ", vm.toString(address(redemptionContract)),
-            "\n  WAGAProofOfReserve: ", vm.toString(address(proofOfReserve)),
-            "\n\n",
-            "ZK System:",
-            "\n  ZK Manager: ", vm.toString(address(zkManager)),
-            "\n  Circom Verifier: ", vm.toString(address(circomVerifier)),
-            "\n  Selective Transparency: ", vm.toString(address(selectiveTransparency)),
-            "\n  Competitive Protection: ", vm.toString(address(competitiveProtection)),
-            "\n\n",
-            "Deployer: ", vm.toString(vm.addr(config.deployerKey)),
-            "\n",
-            "Network: ", vm.toString(block.chainid)
-        ));
-        
-        vm.writeFile("deployment-waga-zk-system.txt", deploymentData);
-        console.log("\n💾 Deployment addresses saved to: deployment-waga-zk-system.txt");
-
+        // Return deployed contracts
         return (
-            coffeeToken,
-            inventoryManager,
-            redemptionContract,
-            proofOfReserve,
-            zkManager,
-            circomVerifier,
-            selectiveTransparency,
-            competitiveProtection,
+            WAGACoffeeToken(coffeeTokenAddress),
+            WAGAProofOfReserve(proofOfReserveAddress),
+            WAGACoffeeRedemption(redemptionAddress),
+            WAGAInventoryManager2(inventoryManagerAddress),
+            WAGAZKManager(zkManagerAddress),
+            CircomVerifier(zkVerifierAddress),
+            SelectiveTransparency(privacyLayerAddress),
+            ComplianceVerifier(complianceVerifierAddress),
             helperConfig
         );
     }
-}
 
-// All WAGA Contracts Successfully Deployed & Verified on Base Sepolia:
-// Contract Addresses:
-// WAGACoffeeToken: 0xbAA584BDA90bF54fee155329e59C0E7e02A40FD2
-// WAGAInventoryManager: 0xb9e41ab9c876B8281F8a286f4db1cFAFD6eFF25C
-// WAGACoffeeRedemption: 0x82f57003c108d99337cc3E40D9DB86d2B3Fe6df2
-// WAGAProofOfReserve: 0xf04e3F560DcFF5927aBDD0aa7755Dbaec56247ac
-// HelperConfig: 0xC7f2Cf4845C6db0e1a1e91ED41Bcd0FcC1b0E141
+    /**
+     * @dev Deploy ZK verification system
+     */
+    function deployZKVerificationSystem() internal {
+        console.log("Deploying ZK Verification System...");
+
+        // Deploy Circom Verifier for ZK proof verification
+        CircomVerifier circomVerifier = new CircomVerifier(address(0)); // Placeholder for coffeeTokenAddress
+        zkVerifierAddress = address(circomVerifier);
+
+        emit ContractDeployed("CircomVerifier", zkVerifierAddress);
+        console.log("CircomVerifier deployed at:", zkVerifierAddress);
+    }
+
+    /**
+     * @dev Deploy privacy layer
+     */
+    function deployPrivacyLayer() internal {
+        console.log("Deploying Privacy Layer...");
+
+        // Deploy Selective Transparency privacy layer
+        SelectiveTransparency privacyLayer = new SelectiveTransparency();
+        privacyLayerAddress = address(privacyLayer);
+
+        emit ContractDeployed("SelectiveTransparency", privacyLayerAddress);
+        console.log("SelectiveTransparency deployed at:", privacyLayerAddress);
+    }
+
+    /**
+     * @dev Deploy compliance verifier
+     */
+    function deployComplianceVerifier() internal {
+        console.log("Deploying Compliance Verifier...");
+
+        // Deploy Compliance Verifier for regulatory and quality compliance
+        ComplianceVerifier complianceVerifier = new ComplianceVerifier(address(0)); // Placeholder for coffeeTokenAddress
+        complianceVerifierAddress = address(complianceVerifier);
+
+        emit ContractDeployed("ComplianceVerifier", complianceVerifierAddress);
+        console.log("ComplianceVerifier deployed at:", complianceVerifierAddress);
+    }
+
+    /**
+     * @dev Deploy main WAGA Coffee Token with privacy features
+     */
+    function deployWAGACoffeeToken() internal {
+        console.log("Deploying WAGA Coffee Token with Privacy Features...");
+
+        // Deploy WAGA Coffee Token with privacy-enhanced constructor
+        WAGACoffeeToken coffeeToken = new WAGACoffeeToken(
+            "https://ipfs.io/ipfs/", // Base URI for metadata
+            zkVerifierAddress,
+            privacyLayerAddress,
+            complianceVerifierAddress
+        );
+        coffeeTokenAddress = address(coffeeToken);
+
+        emit ContractDeployed("WAGACoffeeToken", coffeeTokenAddress);
+        console.log("WAGACoffeeToken deployed at:", coffeeTokenAddress);
+    }
+
+    /**
+     * @dev Set coffeeToken reference in ZK contracts
+     */
+    function setCoffeeTokenReferences() internal {
+        console.log("Setting Coffee Token references in ZK contracts...");
+
+        WAGACoffeeToken coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
+        CircomVerifier zkVerifier = CircomVerifier(zkVerifierAddress);
+        SelectiveTransparency privacyLayer = SelectiveTransparency(privacyLayerAddress);
+        ComplianceVerifier complianceVerifier = ComplianceVerifier(complianceVerifierAddress);
+
+        // Set coffeeToken address in ZK Verifier
+        zkVerifier.setCoffeeTokenAddress(coffeeTokenAddress);
+        console.log("Coffee Token address set in CircomVerifier:", coffeeTokenAddress);
+
+        // Set coffeeToken address in Privacy Layer
+        privacyLayer.setCoffeeTokenAddress(coffeeTokenAddress);
+        console.log("Coffee Token address set in SelectiveTransparency:", coffeeTokenAddress);
+
+        // Set coffeeToken address in Compliance Verifier
+        complianceVerifier.setCoffeeTokenAddress(coffeeTokenAddress);
+        console.log("Coffee Token address set in ComplianceVerifier:", coffeeTokenAddress);
+    }
+
+    /**
+     * @dev Deploy Proof of Reserve with privacy support
+     */
+    function deployProofOfReserve(
+        address _router,
+        uint64 _subscriptionId,
+        bytes32 _donId
+    ) internal {
+        console.log("Deploying Proof of Reserve with Privacy Support...");
+
+        // Deploy Proof of Reserve
+        WAGAProofOfReserve proofOfReserve = new WAGAProofOfReserve(
+            coffeeTokenAddress,
+            _router,
+            _subscriptionId,
+            _donId
+        );
+        proofOfReserveAddress = address(proofOfReserve);
+
+        emit ContractDeployed("WAGAProofOfReserve", proofOfReserveAddress);
+        console.log("WAGAProofOfReserve deployed at:", proofOfReserveAddress);
+    }
+
+    /**
+     * @dev Deploy Inventory Manager
+     */
+    function deployInventoryManager() internal {
+        console.log("Deploying Inventory Manager...");
+
+        // Deploy Inventory Manager
+        WAGAInventoryManager2 inventoryManager = new WAGAInventoryManager2(
+            coffeeTokenAddress,
+            proofOfReserveAddress
+        );
+        inventoryManagerAddress = address(inventoryManager);
+
+        emit ContractDeployed("WAGAInventoryManager2", inventoryManagerAddress);
+        console.log("WAGAInventoryManager2 deployed at:", inventoryManagerAddress);
+    }
+
+    /**
+     * @dev Deploy Redemption contract
+     */
+    function deployRedemptionContract() internal {
+        console.log("Deploying Redemption Contract...");
+
+        // Deploy Redemption contract
+        WAGACoffeeRedemption redemption = new WAGACoffeeRedemption(
+            coffeeTokenAddress
+        );
+        redemptionAddress = address(redemption);
+
+        emit ContractDeployed("WAGACoffeeRedemption", redemptionAddress);
+        console.log("WAGACoffeeRedemption deployed at:", redemptionAddress);
+    }
+
+    /**
+     * @dev Deploy View Functions
+     */
+    function deployViewFunctions() internal {
+        console.log("Deploying View Functions...");
+
+        // Deploy View Functions
+        WAGAViewFunctions viewFunctions = new WAGAViewFunctions(
+            coffeeTokenAddress,
+            proofOfReserveAddress,
+            inventoryManagerAddress,
+            redemptionAddress
+        );
+
+        emit ContractDeployed("WAGAViewFunctions", address(viewFunctions));
+        console.log("WAGAViewFunctions deployed at:", address(viewFunctions));
+    }
+
+    /**
+     * @dev Deploy ZK Manager
+     */
+    function deployZKManager() internal {
+        console.log("Deploying ZK Manager...");
+
+        // Deploy ZK Manager
+        WAGAZKManager zkManager = new WAGAZKManager(
+            coffeeTokenAddress,
+            zkVerifierAddress,
+            privacyLayerAddress
+        );
+        zkManagerAddress = address(zkManager);
+
+        emit ContractDeployed("WAGAZKManager", zkManagerAddress);
+        console.log("WAGAZKManager deployed at:", zkManagerAddress);
+    }
+
+    /**
+     * @dev Initialize the complete system
+     */
+    function initializeSystem() internal {
+        console.log("Initializing Privacy-Enhanced System...");
+
+        WAGACoffeeToken coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
+        WAGAZKManager zkManager = WAGAZKManager(zkManagerAddress);
+
+        // Grant roles to ZK Manager
+        coffeeToken.grantRole(coffeeToken.ZK_ADMIN_ROLE(), zkManagerAddress);
+        coffeeToken.grantRole(coffeeToken.PRIVACY_ADMIN_ROLE(), zkManagerAddress);
+        coffeeToken.grantRole(coffeeToken.DATA_MANAGER_ROLE(), zkManagerAddress);
+
+        // Grant roles to Privacy Layer
+        coffeeToken.grantRole(coffeeToken.PRIVACY_ADMIN_ROLE(), privacyLayerAddress);
+        coffeeToken.grantRole(coffeeToken.DATA_MANAGER_ROLE(), privacyLayerAddress);
+
+        // Grant roles to Compliance Verifier
+        coffeeToken.grantRole(coffeeToken.COMPETITIVE_ADMIN_ROLE(), complianceVerifierAddress);
+        coffeeToken.grantRole(coffeeToken.MARKET_ANALYST_ROLE(), complianceVerifierAddress);
+
+        // Grant roles to Proof of Reserve
+        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), proofOfReserveAddress);
+        coffeeToken.grantRole(coffeeToken.INVENTORY_MANAGER_ROLE(), proofOfReserveAddress);
+
+        // Grant roles to Inventory Manager
+        coffeeToken.grantRole(coffeeToken.INVENTORY_MANAGER_ROLE(), inventoryManagerAddress);
+
+        // Grant roles to Redemption contract
+        coffeeToken.grantRole(coffeeToken.REDEMPTION_ROLE(), redemptionAddress);
+
+        // Grant MINTER_ROLE to Proof of Reserve
+        coffeeToken.grantRole(coffeeToken.MINTER_ROLE(), proofOfReserveAddress);
+
+        // Grant REDEMPTION_ROLE to Redemption contract
+        coffeeToken.grantRole(coffeeToken.REDEMPTION_ROLE(), redemptionAddress);
+
+        console.log("System initialization completed!");
+        emit SystemInitialized();
+    }
+
+    /**
+     * @dev Set up Processor and Distributor roles
+     */
+    function setupUserRoles() internal {
+        console.log("Setting up Processor and Distributor Roles...");
+
+        WAGACoffeeToken coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
+
+        // Note: These roles should be granted manually to specific addresses
+        // This is just for demonstration - in production, grant these to actual users
+        
+        console.log("Processor and Distributor roles are ready for manual assignment");
+        console.log("Use the following functions to grant roles:");
+        console.log("- coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), userAddress)");
+        console.log("- coffeeToken.grantRole(coffeeToken.DISTRIBUTOR_ROLE(), userAddress)");
+    }
+
+    /**
+     * @dev Print deployment summary
+     */
+    function printDeploymentSummary() internal view {
+        console.log("\n" + "=".repeat(60));
+        console.log(" PRIVACY-ENHANCED WAGA SYSTEM DEPLOYMENT SUMMARY");
+        console.log("=".repeat(60));
+        
+        console.log("\n Contract Addresses:");
+        console.log("WAGACoffeeToken:", coffeeTokenAddress);
+        console.log("WAGAProofOfReserve:", proofOfReserveAddress);
+        console.log("WAGAInventoryManager2:", inventoryManagerAddress);
+        console.log("WAGACoffeeRedemption:", redemptionAddress);
+        console.log("WAGAZKManager:", zkManagerAddress);
+        console.log("SelectiveTransparency:", privacyLayerAddress);
+        console.log("CircomVerifier:", zkVerifierAddress);
+        console.log("ComplianceVerifier:", complianceVerifierAddress);
+        
+        console.log("\nPrivacy Features:");
+        console.log("- ZK Proof Verification System");
+        console.log("- Encrypted Data Storage");
+        console.log("- Selective Transparency");
+        console.log("- Role-Based Access Control");
+        console.log("- Compliance Verification");
+        console.log("- Privacy-Enhanced Chainlink Functions");
+        
+        console.log("\nUser Roles:");
+        console.log("- ADMIN_ROLE: Full system access");
+        console.log("- PROCESSOR_ROLE: Can create batches with privacy");
+        console.log("- DISTRIBUTOR_ROLE: Can request batches, see prices");
+        console.log("- VERIFIER_ROLE: Can verify batches");
+        console.log("- INVENTORY_MANAGER_ROLE: Can manage inventory");
+        console.log("- ZK_ADMIN_ROLE: Can manage ZK proofs");
+        console.log("- PRIVACY_ADMIN_ROLE: Can manage privacy settings");
+        console.log("- DATA_MANAGER_ROLE: Can manage encrypted data");
+        console.log("- COMPETITIVE_ADMIN_ROLE: Can manage competitive data");
+        console.log("- MARKET_ANALYST_ROLE: Can access market data");
+        
+        console.log("\n Chainlink Configuration:");
+        console.log("Router:", helperConfig.getActiveNetworkConfig().router);
+        console.log("Subscription ID:", helperConfig.getActiveNetworkConfig().subscriptionId);
+        console.log("DON ID:", vm.toString(helperConfig.getActiveNetworkConfig().donId));
+        
+        console.log("\n Next Steps:");
+        console.log("1. Grant PROCESSOR_ROLE to coffee processors");
+        console.log("2. Grant DISTRIBUTOR_ROLE to coffee distributors");
+        console.log("3. Test privacy features with sample batches");
+        console.log("4. Configure Chainlink Functions for privacy verification");
+        console.log("5. Set up encrypted data storage");
+        console.log("6. Test ZK proof generation and verification");
+        console.log("7. Test role-based data access control");
+        
+        console.log("\n" + "=".repeat(60));
+    }
+
+    /**
+     * @dev Get contract addresses for testing
+     */
+    function getContractAddresses() external view returns (
+        address coffeeToken,
+        address proofOfReserve,
+        address inventoryManager,
+        address redemption,
+        address zkManager,
+        address privacyLayer,
+        address zkVerifier,
+        address complianceVerifier
+    ) {
+        return (
+            coffeeTokenAddress,
+            proofOfReserveAddress,
+            inventoryManagerAddress,
+            redemptionAddress,
+            zkManagerAddress,
+            privacyLayerAddress,
+            zkVerifierAddress,
+            complianceVerifierAddress
+        );
+    }
+}

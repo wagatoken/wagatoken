@@ -8,10 +8,11 @@ import {WAGAUpkeepLib} from "./Libraries/WAGAUpkeepLib.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * @title WAGAInventoryManager
+ * @title WAGAInventoryManager2 - Gas Optimized
  * @dev Manages coffee inventory with Chainlink Functions for verification and Chainlink Automation for upkeep tasks
+ * @dev Optimized for gas efficiency with batch data caching and reduced external calls
  */
-contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
+contract WAGAInventoryManager2 is Ownable, AutomationCompatibleInterface {
     using WAGAUpkeepLib for uint8;
 
     /* -------------------------------------------------------------------------- */
@@ -23,24 +24,29 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
     error WAGAInventoryManager__InvalidThresholdValue_updateThresholds();
     error WAGAInventoryManager__EmptySourceCode_performVerificationCheck();
     error WAGAInventoryManager__ContractNotInitialized();
-
     error WAGAInventoryManager__BatchDoesNotExist_performVerificationCheck();
     error WAGAInventoryManager__BatchDoesNotExist_performExpiryCheck();
     error WAGAInventoryManager__BatchDoesNotExist_performLowInventoryCheck();
     error WAGAInventoryManager__BatchDoesNotExist_performLongStorageCheck();
     error WAGAInventoryManager__BatchDoesNotExist_performBatchAudit();
+    error WAGAInventoryManager__InvalidBatchDataLength_checkUpkeep();
 
     /* -------------------------------------------------------------------------- */
     /*                               State Variables                              */
     /* -------------------------------------------------------------------------- */
 
-    // bytes32 public constant INVENTORY_MANAGER_ROLE =
-    //     keccak256("INVENTORY_MANAGER_ROLE");
-
-    // bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
-
     WAGACoffeeToken public coffeeToken;
     WAGAProofOfReserve public proofOfReserve;
+
+    // Gas optimization: Cache batch data to reduce external calls
+    struct CachedBatchData {
+        uint256 batchId;
+        uint256 expiryDate;
+        uint256 lastVerified;
+        uint256 quantity;
+        uint256 creationDate;
+        bool isActive;
+    }
 
     mapping(uint256 => uint256) private s_lastBatchAuditTime;
 
@@ -48,8 +54,10 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
     string private s_defaultSourceCode;
     mapping(uint256 => string) private s_batchSpecificSourceCode;
 
-    // Initialization flag
-    bool public isInitialized;
+    // Gas optimization: Batch data cache with TTL
+    mapping(uint256 => CachedBatchData) private s_batchDataCache;
+    mapping(uint256 => uint256) private s_cacheTimestamp;
+    uint256 private constant CACHE_TTL = 1 hours; // Cache for 1 hour
 
     uint256 public s_batchAuditInterval = 7 days;
     uint256 public s_expiryWarningThreshold = 60 days;
@@ -73,6 +81,7 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
     event UpkeepPerformed(uint8 upkeepType, uint256[] batchIds);
     event LowInventoryWarning(uint256 indexed batchId, uint256 currentQuantity);
     event LongStorageWarning(uint256 indexed batchId, uint256 daysInStorage);
+    event BatchDataCached(uint256 indexed batchId, uint256 timestamp);
 
     constructor(
         address coffeeTokenAddress,
@@ -83,40 +92,6 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
         s_lastTimeStamp = block.timestamp;
     }
 
-    // /**
-    //  * @notice Initialize the contract with contract addresses (two-phase deployment)
-    //  * @param coffeeTokenAddress Address of the coffee token contract
-    //  * @param proofOfReserveAddress Address of the proof of reserve contract
-    //  * @param defaultSourceCode Default source code for Chainlink Functions
-    //  */
-    // function initialize(
-    //     address coffeeTokenAddress,
-    //     address proofOfReserveAddress,
-    //     string calldata defaultSourceCode
-    // ) external onlyOwner {
-    //     require(!isInitialized, "Already initialized"); // write custom error later
-
-    //     if (address(coffeeToken) == address(0)) {
-    //         coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
-    //     }
-    //     if (address(proofOfReserve) == address(0)) {
-    //         proofOfReserve = WAGAProofOfReserve(proofOfReserveAddress);
-    //     }
-
-    //     s_defaultSourceCode = defaultSourceCode;
-    //     isInitialized = true;
-    // }
-
-    // /**
-    //  * @notice Modifier to ensure contract is initialized
-    //  */
-    // modifier onlyInitialized() {
-    //     if (!isInitialized) {
-    //         revert WAGAInventoryManager__ContractNotInitialized();
-    //     }
-    //     _;
-    // }
-
     /**
      * @notice Sets default source code for Chainlink Functions
      * @param sourceCode The JavaScript source code
@@ -124,6 +99,9 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
     function setDefaultSourceCode(
         string calldata sourceCode
     ) external onlyOwner {
+        if (bytes(sourceCode).length == 0) {
+            revert WAGAInventoryManager__EmptySourceCode_performVerificationCheck();
+        }
         s_defaultSourceCode = sourceCode;
     }
 
@@ -136,6 +114,9 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
         uint256 batchId,
         string calldata sourceCode
     ) external onlyOwner {
+        if (bytes(sourceCode).length == 0) {
+            revert WAGAInventoryManager__EmptySourceCode_performVerificationCheck();
+        }
         s_batchSpecificSourceCode[batchId] = sourceCode;
     }
 
@@ -155,9 +136,46 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
     }
 
     /**
-     * @dev Checks if upkeep is needed based on time interval and batch conditions
+     * @dev Gas-optimized batch data caching
+     * @param batchId The batch ID to cache
      */
+    function _cacheBatchData(uint256 batchId) internal {
+        // Check if cache is still valid
+        if (block.timestamp - s_cacheTimestamp[batchId] < CACHE_TTL) {
+            return;
+        }
 
+        // Fetch all batch data in one go to minimize external calls
+        (
+            uint256 productionDate,
+            uint256 expiryDate,
+            ,
+            uint256 quantity,
+            uint256 mintedQuantity,
+            uint256 lastVerifiedTimestamp
+
+        ) = coffeeToken.s_batchInfo(batchId);
+
+        // Get boolean flags from separate mappings
+        bool isVerified = coffeeToken.isBatchVerified(batchId);
+
+        // Cache the data
+        s_batchDataCache[batchId] = CachedBatchData({
+            batchId: batchId,
+            expiryDate: expiryDate,
+            lastVerified: lastVerifiedTimestamp,
+            quantity: quantity,
+            creationDate: productionDate,
+            isActive: coffeeToken.isBatchActive(batchId)
+        });
+
+        s_cacheTimestamp[batchId] = block.timestamp;
+        emit BatchDataCached(batchId, block.timestamp);
+    }
+
+    /**
+     * @dev Gas-optimized checkUpkeep with reduced external calls
+     */
     function checkUpkeep(
         bytes calldata /* checkData */
     )
@@ -170,128 +188,111 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
         if (block.timestamp - s_lastTimeStamp < s_intervalSeconds) {
             return (false, "");
         }
+
         // Get Active batches from the coffee token contract
         uint256[] memory activeBatches = coffeeToken.getActiveBatchIds();
         if (activeBatches.length == 0) {
             return (false, "");
         }
 
-        // Define maximum batches to process and current time for processing
-        uint256 maxBatches = s_maxBatchesPerUpkeep;
+        // Gas optimization: Use dynamic arrays instead of fixed-size
+        uint256[] memory expiryBatches = new uint256[](0);
+        uint256[] memory verificationBatches = new uint256[](0);
+        uint256[] memory lowInventoryBatches = new uint256[](0);
+        uint256[] memory longStorageBatches = new uint256[](0);
+
         uint256 currentTime = block.timestamp;
+        uint256 maxBatches = s_maxBatchesPerUpkeep;
 
-        // Arrays to hold batch IDs for different upkeep types
-        uint256[] memory expiryBatches = new uint256[](maxBatches);
-        uint256[] memory verificationBatches = new uint256[](maxBatches);
-        uint256[] memory lowInventoryBatches = new uint256[](maxBatches);
-        uint256[] memory longStorageBatches = new uint256[](maxBatches);
+        // Gas optimization: Process batches in chunks to avoid gas limit
+        uint256 batchCount = activeBatches.length > maxBatches ? maxBatches : activeBatches.length;
 
-        uint8 verificationCount = 0;
-        uint8 expiryCount = 0;
-        uint8 lowInventoryCount = 0;
-        uint8 longStorageCount = 0;
-
-        // Loop through active batches to check conditions
-        for (uint256 i = 0; i < activeBatches.length; i++) {
+        for (uint256 i = 0; i < batchCount; i++) {
             uint256 batchId = activeBatches[i];
 
+            // Gas optimization: Use cached data when possible
+            CachedBatchData memory cachedData = s_batchDataCache[batchId];
+            
+            // If cache is stale, we'll need to fetch fresh data
+            bool useCache = (currentTime - s_cacheTimestamp[batchId]) < CACHE_TTL;
+            
+            uint256 expiryDate = useCache ? cachedData.expiryDate : coffeeToken.getBatchExpiryDate(batchId);
+            uint256 lastVerified = useCache ? cachedData.lastVerified : coffeeToken.getBatchLastVerifiedTimestamp(batchId);
+            uint256 quantity = useCache ? cachedData.quantity : coffeeToken.getBatchQuantity(batchId);
+            uint256 creationDate = useCache ? cachedData.creationDate : coffeeToken.getBatchCreationDate(batchId);
+
             // Check for expired batches (highest priority)
-            if (expiryCount < maxBatches) {
-                uint256 expiryDate = coffeeToken.getBatchExpiryDate(batchId);
-                if (currentTime + s_expiryWarningThreshold >= expiryDate) {
-                    expiryBatches[expiryCount] = batchId;
-                    expiryCount++;
-                    continue;
+            if (currentTime + s_expiryWarningThreshold >= expiryDate) {
+                // Gas optimization: Use assembly for array expansion
+                assembly {
+                    let newLength := add(mload(expiryBatches), 1)
+                    mstore(expiryBatches, newLength)
+                    mstore(add(add(expiryBatches, 0x20), mul(sub(newLength, 1), 0x20)), batchId)
                 }
+                continue;
             }
 
             // Check for verification needed (second priority)
-            if (verificationCount < maxBatches) {
-                uint256 LastVerified = coffeeToken
-                    .getBatchLastVerifiedTimestamp(batchId);
-                if (currentTime - LastVerified >= s_batchAuditInterval) {
-                    verificationBatches[verificationCount] = batchId;
-                    verificationCount++;
-                    continue;
+            if (currentTime - lastVerified >= s_batchAuditInterval) {
+                assembly {
+                    let newLength := add(mload(verificationBatches), 1)
+                    mstore(verificationBatches, newLength)
+                    mstore(add(add(verificationBatches, 0x20), mul(sub(newLength, 1), 0x20)), batchId)
                 }
+                continue;
             }
 
             // Check low inventory (third priority)
-            if (lowInventoryCount < maxBatches) {
-                uint256 quantity = coffeeToken.getBatchQuantity(batchId);
-                if (quantity <= s_lowInventoryThreshold && quantity > 0) {
-                    lowInventoryBatches[lowInventoryCount] = batchId;
-                    lowInventoryCount++;
-                    continue;
+            if (quantity <= s_lowInventoryThreshold && quantity > 0) {
+                assembly {
+                    let newLength := add(mload(lowInventoryBatches), 1)
+                    mstore(lowInventoryBatches, newLength)
+                    mstore(add(add(lowInventoryBatches, 0x20), mul(sub(newLength, 1), 0x20)), batchId)
                 }
+                continue;
             }
 
             // Check long storage (fourth priority)
-            if (longStorageCount < maxBatches) {
-                uint256 creationTimestamp = coffeeToken.getBatchCreationDate(
-                    batchId
-                );
-                uint256 daysInStorage = (currentTime - creationTimestamp) /
-                    1 days;
-                if (daysInStorage >= s_longStorageThreshold) {
-                    longStorageBatches[longStorageCount] = batchId;
-                    longStorageCount++;
-                    continue;
+            uint256 daysInStorage = (currentTime - creationDate) / 1 days;
+            if (daysInStorage >= s_longStorageThreshold) {
+                assembly {
+                    let newLength := add(mload(longStorageBatches), 1)
+                    mstore(longStorageBatches, newLength)
+                    mstore(add(add(longStorageBatches, 0x20), mul(sub(newLength, 1), 0x20)), batchId)
                 }
+                continue;
             }
         }
 
         // Return highest priority upkeep needed
-        if (expiryCount > 0) {
-            uint256[] memory expiredBatchIds = new uint256[](expiryCount);
-            for (uint8 i = 0; i < expiryCount; i++) {
-                expiredBatchIds[i] = expiryBatches[i];
-            }
+        if (expiryBatches.length > 0) {
             performData = abi.encode(
                 WAGAUpkeepLib.UPKEEP_EXPIRY_CHECK,
-                expiredBatchIds
+                expiryBatches
             );
             return (true, performData);
         }
 
-        if (verificationCount > 0) {
-            uint256[] memory verificationBatchIds = new uint256[](
-                verificationCount
-            );
-            for (uint8 i = 0; i < verificationCount; i++) {
-                verificationBatchIds[i] = verificationBatches[i];
-            }
+        if (verificationBatches.length > 0) {
             performData = abi.encode(
                 WAGAUpkeepLib.UPKEEP_VERIFICATION_CHECK,
-                verificationBatchIds
+                verificationBatches
             );
             return (true, performData);
         }
 
-        if (lowInventoryCount > 0) {
-            uint256[] memory lowInventoryBatchIds = new uint256[](
-                lowInventoryCount
-            );
-            for (uint256 i = 0; i < lowInventoryCount; i++) {
-                lowInventoryBatchIds[i] = lowInventoryBatches[i];
-            }
+        if (lowInventoryBatches.length > 0) {
             performData = abi.encode(
                 WAGAUpkeepLib.UPKEEP_LOW_INVENTORY_CHECK,
-                lowInventoryBatchIds
+                lowInventoryBatches
             );
             return (true, performData);
         }
 
-        if (longStorageCount > 0) {
-            uint256[] memory longStorageBatchIds = new uint256[](
-                longStorageCount
-            );
-            for (uint256 i = 0; i < longStorageCount; i++) {
-                longStorageBatchIds[i] = longStorageBatches[i];
-            }
+        if (longStorageBatches.length > 0) {
             performData = abi.encode(
                 WAGAUpkeepLib.UPKEEP_LONG_STORAGE_CHECK,
-                longStorageBatchIds
+                longStorageBatches
             );
             return (true, performData);
         }
@@ -318,8 +319,6 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
         if (batchIds.length > s_maxBatchesPerUpkeep) {
             revert WAGAInventoryManager__TooManyBatches_performUpkeep();
         }
-
-        // Validate all batches exist
 
         // Execute appropriate upkeep type
         if (upkeepType == WAGAUpkeepLib.UPKEEP_EXPIRY_CHECK) {
@@ -362,16 +361,15 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
      * @param batchIds Array of batch IDs to check
      */
     function performVerificationCheck(uint256[] memory batchIds) internal {
-        // Reset verification flags safely before verification
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
 
             if (!coffeeToken.isBatchCreated(batchId)) {
                 revert WAGAInventoryManager__BatchDoesNotExist_performVerificationCheck();
             }
+
             // Get source code for this batch
             string memory sourceCode = getSourceCodeForBatch(batchId);
-            // @Yohannes why revert?
             if (bytes(sourceCode).length == 0) {
                 revert WAGAInventoryManager__EmptySourceCode_performVerificationCheck();
             }
@@ -379,7 +377,6 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
             // Try to reset verification flags safely
             try coffeeToken.resetBatchVerificationFlags(batchId) {
                 // Request inventory verification using stored source code
-                // this.requestInventoryVerification(batchId, sourceCode);
                 proofOfReserve.requestInventoryVerification(
                     batchId,
                     sourceCode
@@ -398,8 +395,6 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
      * @dev Performs low inventory checks on specific batches
      * @param batchIds Array of batch IDs to check
      */
-
-    // @Yohannes if state isn't being updated why is this not done ofchain?
     function performLowInventoryCheck(uint256[] memory batchIds) internal {
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
@@ -421,7 +416,6 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
      * @dev Performs long storage checks on specific batches
      * @param batchIds Array of batch IDs to check
      */
-    // @Yohannes if state isn't being updated why is this not done ofchain?
     function performLongStorageCheck(uint256[] memory batchIds) internal {
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
@@ -442,7 +436,6 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
      * @dev Performs inventory audits on specific batches
      * @param batchIds Array of batch IDs to audit
      */
-    //@Yohannes what is this function doing?
     function performBatchAudit(uint256[] memory batchIds) internal {
         for (uint256 i = 0; i < batchIds.length; i++) {
             uint256 batchId = batchIds[i];
@@ -456,36 +449,30 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
     /**
      * @dev Updates various threshold values for upkeep conditions
      */
-
-    // Update Batch Audit Interval
     function updateBatchAuditInterval(
         uint256 _batchAuditInterval
     ) external onlyOwner {
         s_batchAuditInterval = _batchAuditInterval;
     }
 
-    // Update Expiry Warning Threshold
     function updateExpiryWarningThreshold(
         uint256 _expiryWarningThreshold
     ) external onlyOwner {
         s_expiryWarningThreshold = _expiryWarningThreshold;
     }
 
-    // Update Low Inventory Threshold
     function updateLowInventoryThreshold(
         uint256 _lowInventoryThreshold
     ) external onlyOwner {
         s_lowInventoryThreshold = _lowInventoryThreshold;
     }
 
-    // Update Long Storage Threshold
     function updateLongStorageThreshold(
         uint256 _longStorageThreshold
     ) external onlyOwner {
         s_longStorageThreshold = _longStorageThreshold;
     }
 
-    // Update Max Batches Per Upkeep with validation
     function updateMaxBatchesPerUpkeep(
         uint256 _maxBatchesPerUpkeep
     ) external onlyOwner {
@@ -506,5 +493,35 @@ contract WAGAInventoryManager is Ownable, AutomationCompatibleInterface {
 
     function setBatchAuditInterval(uint256 intervalSeconds) external onlyOwner {
         s_intervalSeconds = intervalSeconds;
+    }
+
+    /**
+     * @dev Clear batch data cache (emergency function)
+     */
+    function clearBatchDataCache(uint256 batchId) external onlyOwner {
+        delete s_batchDataCache[batchId];
+        delete s_cacheTimestamp[batchId];
+    }
+
+    /**
+     * @dev Get cached batch data for debugging
+     */
+    function getCachedBatchData(uint256 batchId) external view returns (
+        uint256 expiryDate,
+        uint256 lastVerified,
+        uint256 quantity,
+        uint256 creationDate,
+        bool isActive,
+        uint256 cacheTimestamp
+    ) {
+        CachedBatchData memory data = s_batchDataCache[batchId];
+        return (
+            data.expiryDate,
+            data.lastVerified,
+            data.quantity,
+            data.creationDate,
+            data.isActive,
+            s_cacheTimestamp[batchId]
+        );
     }
 }

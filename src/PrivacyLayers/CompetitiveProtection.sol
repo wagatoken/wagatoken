@@ -202,7 +202,7 @@ contract CompetitiveProtection is AccessControl, IPrivacyLayer {
         return (
             position.segment,
             position.isCompetitive,
-            position.score,
+            position.competitiveScore,
             position.positioningStatement,
             privacy.level,
             this.getProtectedPositioning(batchId)

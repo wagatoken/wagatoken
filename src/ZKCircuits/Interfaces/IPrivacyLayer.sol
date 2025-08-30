@@ -12,6 +12,9 @@ interface IPrivacyLayer {
         bool pricingPrivate;
         bool qualityPrivate;
         bool supplyChainPrivate;
+        bool pricingSelective;
+        bool qualitySelective;
+        bool supplyChainSelective;
         bytes32 pricingProofHash;
         bytes32 qualityProofHash;
         bytes32 supplyChainProofHash;

@@ -9,7 +9,7 @@ contract WAGAConfigManager is AccessControl, Ownable {
     /*                                   Errors                                   */
     /* -------------------------------------------------------------------------- */
     error WAGAConfigManager__InvalidInventoryManagerAddress_setInventoryManager();
-    error WAGAConfigManager__InvalidredemptionContractAddress_setRedemptionContract();
+    error WAGAConfigManager__InvalidRedemptionContractAddress_setRedemptionContract();
     error WAGAConfigManager__InvalidProofOfReserveManagerAddress_setProofOfReserveManager();
 
     /* -------------------------------------------------------------------------- */
@@ -28,6 +28,18 @@ contract WAGAConfigManager is AccessControl, Ownable {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
     bytes32 public constant FULFILLER_ROLE = keccak256("FULFILLER_ROLE");
+    bytes32 public constant PROCESSOR_ROLE = keccak256("PROCESSOR_ROLE");
+    bytes32 public constant DISTRIBUTOR_ROLE = keccak256("DISTRIBUTOR_ROLE");
+    
+    // ZK and Privacy related roles
+    bytes32 public constant ZK_ADMIN_ROLE = keccak256("ZK_ADMIN_ROLE");
+    bytes32 public constant PRIVACY_ADMIN_ROLE = keccak256("PRIVACY_ADMIN_ROLE");
+    bytes32 public constant DATA_MANAGER_ROLE = keccak256("DATA_MANAGER_ROLE");
+    bytes32 public constant COMPETITIVE_ADMIN_ROLE = keccak256("COMPETITIVE_ADMIN_ROLE");
+    bytes32 public constant MARKET_ANALYST_ROLE = keccak256("MARKET_ANALYST_ROLE");
+    bytes32 public constant COMPLIANCE_VERIFIER_ROLE = keccak256("COMPLIANCE_VERIFIER_ROLE");
+    bytes32 public constant QUALITY_ASSESSOR_ROLE = keccak256("QUALITY_ASSESSOR_ROLE");
+    bytes32 public constant CERTIFICATION_VERIFIER_ROLE = keccak256("CERTIFICATION_VERIFIER_ROLE");
 
     address private s_inventoryManager;
     address private s_redemptionManager;
@@ -86,7 +98,7 @@ contract WAGAConfigManager is AccessControl, Ownable {
         address _redemptionContract
     ) public onlyRole(ADMIN_ROLE) {
         if (_redemptionContract == address(0)) {
-            revert WAGAConfigManager__InvalidredemptionContractAddress_setRedemptionContract();
+            revert WAGAConfigManager__InvalidRedemptionContractAddress_setRedemptionContract();
         }
         if (s_redemptionManager != address(0)) {
             _revokeRole(REDEMPTION_ROLE, s_redemptionManager);
@@ -104,7 +116,7 @@ contract WAGAConfigManager is AccessControl, Ownable {
         address _proofOfReserveManager
     ) public onlyRole(ADMIN_ROLE) {
         if (_proofOfReserveManager == address(0)) {
-            revert WAGAConfigManager__InvalidredemptionContractAddress_setRedemptionContract();
+            revert WAGAConfigManager__InvalidRedemptionContractAddress_setRedemptionContract();
         }
         if (s_proofOfReserveManager != address(0)) {
             _revokeRole(PROOF_OF_RESERVE_ROLE, s_proofOfReserveManager);

@@ -367,7 +367,7 @@ Use our specialized templates:
 ### **🤝 Get Involved**
 - **Discord**: Join our developer community
 - **GitHub Discussions**: Technical discussions and feature requests
-- **Twitter**: Follow [@WAGACoffee](https://twitter.com/wagacoffee) for updates
+- **Twitter**: Follow [@WAGAToken](https://x.com/Wagatoken?t=DJ-g5RE824iE4dpeTUHc7w&s=09) for updates
 - **Documentation**: Contribute to platform documentation
 
 ### **💬 Support Channels**
@@ -395,23 +395,6 @@ This project is licensed under the **MIT License** - see the `LICENSE` file for 
 - **International Trade**: Coffee import/export regulation compliance
 - **Smart Contract Auditing**: Professional security audits before mainnet deployment
 
----
-
-## 🎉 **Acknowledgments**
-
-### **🙏 Special Thanks**
-- **OpenZeppelin** - Security-first smart contract libraries
-- **Chainlink** - Reliable oracle infrastructure
-- **Base** - Efficient L2 scaling solution
-- **Pinata** - Robust IPFS infrastructure
-- **Coffee Industry Partners** - Domain expertise and testing
-
-### **🏆 Recognition**
-WAGA Coffee Platform represents the intersection of blockchain technology and real-world impact, creating sustainable value for the entire coffee ecosystem while maintaining the highest standards of security and user experience.
-
----
-
-**🌟 Ready to revolutionize coffee trading? Start with our Quick Start Guide above!**
 
 *Every bean tracked, every cup trusted.* ☕
 
