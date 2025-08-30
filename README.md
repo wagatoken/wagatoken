@@ -367,7 +367,7 @@ Use our specialized templates:
 ### **🤝 Get Involved**
 - **Discord**: Join our developer community
 - **GitHub Discussions**: Technical discussions and feature requests
-- **Twitter**: Follow [@WAGACoffee](https://x.com/Wagatoken?t=DJ-g5RE824iE4dpeTUHc7w&s=09) for updates
+- **Twitter**: Follow [@WAGAToken](https://x.com/Wagatoken?t=DJ-g5RE824iE4dpeTUHc7w&s=09) for updates
 - **Documentation**: Contribute to platform documentation
 
 ### **💬 Support Channels**
