@@ -77,6 +77,14 @@ contract WAGAProofOfReserve is
         uint256 indexed batchId,
         bool verified
     );
+    
+    event TokensMinted(
+        bytes32 indexed requestId,
+        address indexed recipient,
+        uint256 indexed batchId,
+        uint256 requestedQuantity,
+        uint256 verifiedQuantity
+    );
 
     /**
      * @dev Constructor to initialize the contract
@@ -363,6 +371,11 @@ contract WAGAProofOfReserve is
             string memory verifiedPackaging,
             string memory verifiedMetadataHash
         ) = _parseResponse(response);
+        
+        // verifiedQuantity represents the total quantity verified in the offchain system
+        // This should be at least equal to the requested quantity for the verification to pass
+        // We'll mint exactly the requested quantity, not the entire verified amount
+        
         // Update the request with the verified values
         request.verifiedQuantity = verifiedQuantity;
         request.verifiedPrice = verifiedPrice;
@@ -403,10 +416,21 @@ contract WAGAProofOfReserve is
 
         // Only mint tokens if shouldMint is true
         if (request.shouldMint) {
+            // Mint exactly the requested quantity (not the verified quantity)
+            // This ensures we only mint what the distributor requested, not the entire verified amount
             coffeeToken.mintBatch(
                 request.recipient,
                 request.batchId,
-                request.verifiedQuantity
+                request.requestQuantity
+            );
+            
+            // Emit event for minted tokens with both quantities for clarity
+            emit TokensMinted(
+                requestId,
+                request.recipient,
+                request.batchId,
+                request.requestQuantity,
+                verifiedQuantity
             );
         }
     }
