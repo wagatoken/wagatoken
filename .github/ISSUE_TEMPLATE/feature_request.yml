@@ -1,0 +1,79 @@
+name: 🚀 Feature Request
+description: Suggest a new feature for the WAGA Coffee Platform
+title: "[FEATURE] "
+labels: ["enhancement", "triage-needed"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest a feature for WAGA Coffee Platform!
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature Description
+      description: Clear and concise description of what the feature is
+      placeholder: Describe the feature you'd like to see...
+    validations:
+      required: true
+
+  - type: textarea
+    id: user-story
+    attributes:
+      label: User Story
+      description: Describe this as a user story
+      placeholder: As a [user type], I want [goal] so that [benefit]
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: component
+    attributes:
+      label: Component Affected
+      description: Which parts of the system will this affect?
+      options:
+        - label: Smart Contracts (Solidity)
+        - label: Frontend (React/Next.js)
+        - label: ZK Circuits (Circom)
+        - label: API/Backend
+        - label: Infrastructure/DevOps
+        - label: Documentation
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority Level
+      description: How important is this feature?
+      options:
+        - Critical - Blocking MVP launch
+        - High - Important for user experience
+        - Medium - Valuable enhancement
+        - Low - Nice to have
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Define what "done" looks like for this feature
+      placeholder: |
+        - [ ] Functional requirement 1
+        - [ ] Functional requirement 2
+        - [ ] Non-functional requirement (performance, security, etc.)
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies & Blockers
+      description: Any dependencies or potential blockers
+      placeholder: Depends on issue #X, requires completion of Y feature...
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other context, screenshots, or relevant information
+      placeholder: Add any mockups, examples, or additional details...

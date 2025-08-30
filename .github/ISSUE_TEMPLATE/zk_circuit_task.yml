@@ -1,0 +1,152 @@
+name: ⚡ ZK Circuit Task
+description: Task for zero-knowledge circuit development or modification
+title: "[ZK] "
+labels: ["zk-proofs", "development", "circom"]
+body:
+  - type: checkboxes
+    id: circuit-affected
+    attributes:
+      label: Circuit(s) Affected
+      description: Which ZK circuits need work?
+      options:
+        - label: PricePrivacyCircuit.circom
+        - label: QualityTierCircuit.circom
+        - label: SupplyChainPrivacyCircuit.circom
+        - label: New Circuit
+
+  - type: input
+    id: circuit-name
+    attributes:
+      label: Circuit Name (if new)
+      description: Name for the new circuit
+      placeholder: "NewPrivacyCircuit"
+
+  - type: textarea
+    id: circuit-purpose
+    attributes:
+      label: Circuit Purpose
+      description: What does this circuit prove and what stays private?
+      placeholder: |
+        What this circuit proves: [clear statement]
+        What remains private: [hidden information]
+        What becomes public: [revealed information]
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Task Description
+      description: What needs to be implemented or changed
+      placeholder: Clear description of the ZK circuit work required
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: requirements
+    attributes:
+      label: Implementation Requirements
+      description: What needs to be done?
+      options:
+        - label: Circuit logic design and validation
+        - label: Input/output signals definition
+        - label: Public/private signal classification
+        - label: Constraint system implementation
+        - label: Circuit compilation and testing
+        - label: Test vector creation
+        - label: On-chain verifier integration
+        - label: Frontend proof generation
+
+  - type: textarea
+    id: circuit-inputs
+    attributes:
+      label: Circuit Inputs & Outputs
+      description: Define the circuit interface
+      placeholder: |
+        Private inputs (hidden):
+        - privateValue1: [description]
+        - privateValue2: [description]
+        
+        Public inputs (revealed):
+        - publicParameter1: [description]
+        
+        Outputs (proof results):
+        - proofResult: [description]
+      render: circom
+
+  - type: input
+    id: constraint-target
+    attributes:
+      label: Target Constraint Count
+      description: Estimated number of constraints
+      placeholder: "1000"
+
+  - type: checkboxes
+    id: security-properties
+    attributes:
+      label: Security Properties
+      description: What does this circuit guarantee?
+      options:
+        - label: Soundness - False statements cannot be proven
+        - label: Completeness - True statements can always be proven
+        - label: Zero-knowledge - No information leaked beyond the statement
+        - label: Specific security property (describe below)
+
+  - type: textarea
+    id: performance-requirements
+    attributes:
+      label: Performance Requirements
+      description: Target metrics for this circuit
+      placeholder: |
+        - Proof generation time: [target seconds]
+        - Proof size: [target bytes]
+        - Verification gas: [target gas units]
+        - Circuit complexity: [optimization notes]
+
+  - type: input
+    id: estimation
+    attributes:
+      label: Story Point Estimation
+      description: Complexity estimate (1-21 points)
+      placeholder: "13"
+
+  - type: textarea
+    id: integration-requirements
+    attributes:
+      label: Integration Requirements
+      description: How will this integrate with the system?
+      placeholder: |
+        Smart contract integration:
+        - Verifier contract: [contract name]
+        - Verification function: [function signature]
+        
+        Frontend integration:
+        - Proof generation library: [snarkjs/other]
+        - User experience: [proof generation UX]
+
+  - type: textarea
+    id: testing-strategy
+    attributes:
+      label: Testing Strategy
+      description: How will this circuit be tested?
+      placeholder: |
+        - Circuit compilation tests
+        - Proof generation with test data
+        - On-chain verification tests
+        - Performance benchmarking
+        - Security analysis
+
+  - type: textarea
+    id: mathematical-foundation
+    attributes:
+      label: Mathematical Foundation
+      description: Mathematical basis for the circuit
+      placeholder: |
+        Core algorithms:
+        - Algorithm 1: [description]
+        
+        Mathematical properties:
+        - Property 1: [mathematical property]
+        
+        References:
+        - Paper/specification: [link]

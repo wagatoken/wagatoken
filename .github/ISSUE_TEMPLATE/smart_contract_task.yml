@@ -1,0 +1,98 @@
+name: ⚡ Smart Contract Task
+description: Task for smart contract development or modification
+title: "[CONTRACT] "
+labels: ["smart-contracts", "development"]
+body:
+  - type: dropdown
+    id: contract
+    attributes:
+      label: Contract Affected
+      description: Which contract needs work?
+      options:
+        - WAGACoffeeToken.sol
+        - WAGAProofOfReserve.sol
+        - WAGAInventoryManager.sol
+        - WAGAConfigManager.sol
+        - WAGAZKManager.sol
+        - CircomVerifier.sol
+        - New Contract
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Task Description
+      description: What needs to be implemented or changed
+      placeholder: Clear description of the smart contract work required
+    validations:
+      required: true
+
+  - type: input
+    id: function-name
+    attributes:
+      label: Function(s) Involved
+      description: Name of the function(s) to be created or modified
+      placeholder: "createBatch, updateBatchIPFS, etc."
+
+  - type: checkboxes
+    id: requirements
+    attributes:
+      label: Requirements Checklist
+      description: What needs to be implemented?
+      options:
+        - label: Function implementation
+        - label: Access control (role-based restrictions)
+        - label: Event emission
+        - label: Error handling and custom errors
+        - label: Gas optimization
+        - label: Unit tests
+        - label: Integration tests
+        - label: Security review
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Define what "done" looks like for this task
+      placeholder: |
+        - [ ] Function signature defined
+        - [ ] Parameter validation implemented
+        - [ ] Events emitted for state changes
+        - [ ] All tests passing
+    validations:
+      required: true
+
+  - type: textarea
+    id: security-considerations
+    attributes:
+      label: Security Considerations
+      description: Any security implications and mitigations
+      placeholder: |
+        - Potential risks and mitigation strategies
+        - Access control requirements
+        - External dependencies or oracles
+
+  - type: input
+    id: estimation
+    attributes:
+      label: Story Point Estimation
+      description: Complexity estimate (1-21 points)
+      placeholder: "5"
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies & Integration
+      description: Related components and dependencies
+      placeholder: |
+        - Smart contract dependencies
+        - Frontend integration requirements
+        - Database schema changes needed
+
+  - type: textarea
+    id: implementation-notes
+    attributes:
+      label: Implementation Notes
+      description: Technical implementation details or approach
+      render: solidity

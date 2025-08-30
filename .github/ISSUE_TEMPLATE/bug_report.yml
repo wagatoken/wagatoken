@@ -1,0 +1,107 @@
+name: 🐛 Bug Report
+description: Report a bug or issue with the WAGA Coffee Platform
+title: "[BUG] "
+labels: ["bug", "triage-needed"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the form below.
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Bug Description
+      description: Clear and concise description of the bug
+      placeholder: What is the issue you're experiencing?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this bug?
+      options:
+        - Critical - System is broken/unusable
+        - High - Major feature is broken
+        - Medium - Minor feature issue/workaround exists
+        - Low - Cosmetic issue/very minor impact
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: component
+    attributes:
+      label: Component Affected
+      description: Which part of the system is affected?
+      options:
+        - label: Smart Contracts (Solidity)
+        - label: Frontend UI (React/Next.js)
+        - label: ZK Circuits (Circom)
+        - label: API/Backend (Node.js)
+        - label: Database (PostgreSQL)
+        - label: IPFS/Pinata Integration
+        - label: Chainlink Integration
+        - label: Wallet Connection
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the behavior
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Enter data '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: What actually happened instead
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Network/Browser/Wallet information
+      placeholder: "Base Sepolia, Chrome 120, MetaMask"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console Logs/Error Messages
+      description: Paste any relevant console logs or error messages
+      render: shell
+
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: How often can this be reproduced?
+      options:
+        - Always (100% of the time)
+        - Often (>75% of the time)
+        - Sometimes (25-75% of the time)
+        - Rarely (<25% of the time)
+        - Unable to reproduce
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround
+      description: Any temporary solution that can be used until the bug is fixed
+      placeholder: Describe any workaround if available...

@@ -1,0 +1,124 @@
+name: 🎨 Frontend Task
+description: Task for frontend development or UI/UX improvements
+title: "[FRONTEND] "
+labels: ["frontend", "development"]
+body:
+  - type: checkboxes
+    id: page-component
+    attributes:
+      label: Page/Component Affected
+      description: Which frontend areas need work?
+      options:
+        - label: Homepage (/)
+        - label: Admin Portal (/admin)
+        - label: Distributor Portal (/distributor)
+        - label: Processor Portal (/processor) - NEW
+        - label: Browse Coffee (/browse)
+        - label: Shared Component
+        - label: New Page/Component
+
+  - type: checkboxes
+    id: change-type
+    attributes:
+      label: Type of Change
+      description: What kind of frontend work is this?
+      options:
+        - label: New feature/page
+        - label: Bug fix
+        - label: UI improvement
+        - label: Performance optimization
+        - label: Accessibility enhancement
+        - label: Mobile responsiveness
+        - label: Web3/Smart contract integration
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Task Description
+      description: What needs to be implemented or changed
+      placeholder: Clear description of the frontend work required
+    validations:
+      required: true
+
+  - type: textarea
+    id: user-flow
+    attributes:
+      label: User Interaction Flow
+      description: Step-by-step user journey
+      placeholder: |
+        1. User navigates to [page]
+        2. User sees [initial state]
+        3. User clicks/interacts with [element]
+        4. System responds with [feedback]
+        5. User completes [goal]
+
+  - type: checkboxes
+    id: web3-integration
+    attributes:
+      label: Web3 Integration Requirements
+      description: Smart contract integration needed?
+      options:
+        - label: Wallet connection handling
+        - label: Smart contract function calls
+        - label: Transaction handling and status
+        - label: Event listening and updates
+        - label: Error handling for blockchain issues
+        - label: ZK proof generation
+
+  - type: input
+    id: contracts-involved
+    attributes:
+      label: Smart Contracts to Integrate
+      description: Which contracts will this interact with?
+      placeholder: "WAGACoffeeToken, WAGAZKManager, etc."
+
+  - type: checkboxes
+    id: design-requirements
+    attributes:
+      label: Design & UX Requirements
+      description: Visual and user experience needs
+      options:
+        - label: Follow existing design system
+        - label: Mobile responsive design
+        - label: Accessibility (WCAG 2.1 AA)
+        - label: Loading states and progress indicators
+        - label: Error handling and user feedback
+        - label: Success confirmations
+
+  - type: input
+    id: estimation
+    attributes:
+      label: Story Point Estimation
+      description: Complexity estimate (1-21 points)
+      placeholder: "8"
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Define what "done" looks like for this task
+      placeholder: |
+        - [ ] Component/page implemented
+        - [ ] Responsive design verified
+        - [ ] Smart contract integration working
+        - [ ] User testing completed
+    validations:
+      required: true
+
+  - type: textarea
+    id: testing-requirements
+    attributes:
+      label: Testing Requirements
+      description: How should this be tested?
+      placeholder: |
+        - Unit tests for components
+        - Integration tests for Web3 functionality
+        - Cross-browser compatibility
+        - Mobile device testing
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies & Blockers
+      description: What needs to be completed first?
+      placeholder: Depends on smart contract implementation, design mockups, etc.

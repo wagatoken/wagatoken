@@ -1,0 +1,139 @@
+name: Project Board Automation
+
+on:
+  issues:
+    types: [opened, labeled, assigned, closed]
+  pull_request:
+    types: [opened, ready_for_review, closed, merged]
+
+jobs:
+  add_to_project:
+    runs-on: ubuntu-latest
+    name: Add issue/PR to project boards
+    steps:
+      - name: Add to Development Kanban Board
+        uses: actions/add-to-project@v0.4.0
+        with:
+          # Replace with your actual project URL once created
+          project-url: https://github.com/orgs/wagatoken/projects/1
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        if: |
+          contains(github.event.issue.labels.*.name, 'smart-contracts') || 
+          contains(github.event.issue.labels.*.name, 'frontend') || 
+          contains(github.event.issue.labels.*.name, 'zk-proofs') ||
+          contains(github.event.issue.labels.*.name, 'api-backend') ||
+          contains(github.event.issue.labels.*.name, 'infrastructure')
+
+      - name: Add to Feature Roadmap
+        uses: actions/add-to-project@v0.4.0
+        with:
+          # Replace with your actual roadmap project URL once created
+          project-url: https://github.com/orgs/wagatoken/projects/2
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        if: contains(github.event.issue.labels.*.name, 'enhancement')
+
+      - name: Add to Bug Tracking
+        uses: actions/add-to-project@v0.4.0
+        with:
+          # Replace with your actual bug tracking project URL once created
+          project-url: https://github.com/orgs/wagatoken/projects/3
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        if: contains(github.event.issue.labels.*.name, 'bug')
+
+  label_assignment:
+    runs-on: ubuntu-latest
+    name: Auto-assign labels based on title
+    if: github.event.action == 'opened'
+    steps:
+      - name: Add component labels
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const title = issue.title.toLowerCase();
+            const labels = [];
+
+            // Auto-assign component labels based on title
+            if (title.includes('[contract]') || title.includes('smart contract')) {
+              labels.push('smart-contracts');
+            }
+            if (title.includes('[frontend]') || title.includes('ui') || title.includes('portal')) {
+              labels.push('frontend');
+            }
+            if (title.includes('[zk]') || title.includes('zero-knowledge') || title.includes('circom')) {
+              labels.push('zk-proofs');
+            }
+            if (title.includes('[api]') || title.includes('backend') || title.includes('database')) {
+              labels.push('api-backend');
+            }
+            if (title.includes('[infra]') || title.includes('deploy') || title.includes('devops')) {
+              labels.push('infrastructure');
+            }
+            if (title.includes('chainlink') || title.includes('oracle')) {
+              labels.push('chainlink');
+            }
+
+            // Auto-assign priority labels based on keywords
+            if (title.includes('critical') || title.includes('urgent') || title.includes('blocking')) {
+              labels.push('priority-critical');
+            } else if (title.includes('important') || title.includes('high')) {
+              labels.push('priority-high');
+            }
+
+            // Add labels if any were determined
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: labels
+              });
+            }
+
+  milestone_assignment:
+    runs-on: ubuntu-latest
+    name: Auto-assign to milestones
+    if: github.event.action == 'opened'
+    steps:
+      - name: Assign to Phase milestones
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const title = issue.title.toLowerCase();
+            const body = issue.body ? issue.body.toLowerCase() : '';
+
+            // Get milestones
+            const milestones = await github.rest.issues.listMilestones({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+
+            let targetMilestone = null;
+
+            // Phase 1 keywords
+            if (title.includes('processor') || title.includes('batch request') || 
+                body.includes('phase 1') || body.includes('processor integration')) {
+              targetMilestone = milestones.data.find(m => m.title.includes('Phase 1'));
+            }
+            // Phase 2 keywords  
+            else if (title.includes('bulk coffee') || title.includes('green coffee') ||
+                     body.includes('phase 2') || body.includes('zk enhancement')) {
+              targetMilestone = milestones.data.find(m => m.title.includes('Phase 2'));
+            }
+            // Phase 3 keywords
+            else if (title.includes('trade finance') || title.includes('vault') ||
+                     body.includes('phase 3') || body.includes('advanced features')) {
+              targetMilestone = milestones.data.find(m => m.title.includes('Phase 3'));
+            }
+
+            // Assign milestone if found
+            if (targetMilestone) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                milestone: targetMilestone.number
+              });
+            }
