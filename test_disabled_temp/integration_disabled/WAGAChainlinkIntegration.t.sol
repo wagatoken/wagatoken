@@ -38,13 +38,13 @@ contract WAGAChainlinkIntegration is Test {
         DeployWagaToken deployer = new DeployWagaToken();
         (
             coffeeToken,
-            inventoryManager,
-            redemptionContract,
             proofOfReserve,
+            redemptionContract,
+            inventoryManager,
             , // zkManager - ignore for this test
             , // circomVerifier - ignore for this test
             , // selectiveTransparency - ignore for this test
-            , // competitiveProtection - ignore for this test
+            , // complianceVerifier - ignore for this test
             helperConfig
         ) = deployer.run();
 
@@ -71,11 +71,11 @@ contract WAGAChainlinkIntegration is Test {
         console.log("Granted VERIFIER_ROLE to VERIFIER_USER");
         
         // Grant PROCESSOR_ROLE to PROCESSOR_USER
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), PROCESSOR_USER);
+        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), PROCESSOR_USER);
         console.log("Granted PROCESSOR_ROLE to PROCESSOR_USER");
         
         // Grant DISTRIBUTOR_ROLE to DISTRIBUTOR_USER
-        coffeeToken.grantRole(keccak256("DISTRIBUTOR_ROLE"), DISTRIBUTOR_USER);
+        coffeeToken.grantRole(coffeeToken.DISTRIBUTOR_ROLE(), DISTRIBUTOR_USER);
         console.log("Granted DISTRIBUTOR_ROLE to DISTRIBUTOR_USER");
         
         vm.stopPrank();
@@ -83,8 +83,8 @@ contract WAGAChainlinkIntegration is Test {
         // Verify roles were granted correctly
         assertTrue(coffeeToken.hasRole(coffeeToken.ADMIN_ROLE(), ADMIN_USER), "ADMIN_USER should have ADMIN_ROLE");
         assertTrue(coffeeToken.hasRole(coffeeToken.VERIFIER_ROLE(), VERIFIER_USER), "VERIFIER_USER should have VERIFIER_ROLE");
-        assertTrue(coffeeToken.hasRole(keccak256("PROCESSOR_ROLE"), PROCESSOR_USER), "PROCESSOR_USER should have PROCESSOR_ROLE");
-        assertTrue(coffeeToken.hasRole(keccak256("DISTRIBUTOR_ROLE"), DISTRIBUTOR_USER), "DISTRIBUTOR_USER should have DISTRIBUTOR_ROLE");
+        assertTrue(coffeeToken.hasRole(coffeeToken.PROCESSOR_ROLE(), PROCESSOR_USER), "PROCESSOR_USER should have PROCESSOR_ROLE");
+        assertTrue(coffeeToken.hasRole(coffeeToken.DISTRIBUTOR_ROLE(), DISTRIBUTOR_USER), "DISTRIBUTOR_USER should have DISTRIBUTOR_ROLE");
 
         console.log("Integration test setup completed");
         console.log("CoffeeToken:", address(coffeeToken));

@@ -8,10 +8,9 @@ import {WAGAInventoryManager2} from "../src/WAGAInventoryManager2.sol";
 import {WAGACoffeeRedemption} from "../src/WAGACoffeeRedemption.sol";
 import {WAGAConfigManager} from "../src/WAGAConfigManager.sol";
 import {WAGAViewFunctions} from "../src/WAGAViewFunctions.sol";
-import {WAGAZKManager} from "../src/ZKIntegration/WAGAZKManager.sol";
-import {CircomVerifier} from "../src/ZKIntegration/CircomVerifier.sol";
-import {ComplianceVerifier} from "../src/ZKIntegration/ComplianceVerifier.sol";
-import {SelectiveTransparency} from "../src/PrivacyLayers/SelectiveTransparency.sol";
+import {WAGAAccessControl} from "../src/WAGAAccessControl.sol";
+import {CircomVerifier} from "../src/CircomVerifier.sol";
+import {PrivacyLayer} from "../src/PrivacyLayer.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
 /**
@@ -28,10 +27,9 @@ contract DeployWagaToken is Script {
     address public proofOfReserveAddress;
     address public inventoryManagerAddress;
     address public redemptionAddress;
-    address public zkManagerAddress;
-    address public privacyLayerAddress;
+    address public accessControlAddress;
     address public zkVerifierAddress;
-    address public complianceVerifierAddress;
+    address public privacyLayerAddress;
 
     // Helper configuration
     HelperConfig public helperConfig;
@@ -50,13 +48,8 @@ contract DeployWagaToken is Script {
 
     function run() external returns (
         WAGACoffeeToken,
-        WAGAProofOfReserve,
-        WAGACoffeeRedemption,
-        WAGAInventoryManager2,
-        WAGAZKManager,
         CircomVerifier,
-        SelectiveTransparency,
-        ComplianceVerifier,
+        PrivacyLayer,
         HelperConfig
     ) {
         // Initialize HelperConfig
@@ -68,40 +61,19 @@ contract DeployWagaToken is Script {
         
         vm.startBroadcast(deployerKey);
 
-        // Step 1: Deploy Privacy Layer
+        // Step 1: Deploy Access Control
+        deployAccessControl();
+
+        // Step 2: Deploy ZK Verifier 
+        deployZKVerifier();
+
+        // Step 3: Deploy Privacy Layer
         deployPrivacyLayer();
 
-        // Step 2: Deploy ZK Verification contracts first (with address(0) for coffeeToken)
-        deployZKVerificationSystem();
-
-        // Step 3: Deploy Compliance Verifier (with address(0) for coffeeToken)
-        deployComplianceVerifier();
-
-        // Step 4: Deploy main WAGA Coffee Token with ZK verifier addresses
+        // Step 4: Deploy main WAGA Coffee Token with simplified ZK system
         deployWAGACoffeeToken();
 
-        // Step 5: Set coffeeToken reference in ZK contracts
-        setCoffeeTokenReferences();
-
-        // Step 6: Deploy Proof of Reserve with privacy support
-        deployProofOfReserve(networkConfig.router, networkConfig.subscriptionId, networkConfig.donId);
-
-        // Step 7: Deploy Inventory Manager
-        deployInventoryManager();
-
-        // Step 8: Deploy Redemption contract
-        deployRedemptionContract();
-
-        // Step 9: Deploy View Functions
-        deployViewFunctions();
-
-        // Step 10: Deploy ZK Manager
-        deployZKManager();
-
-        // Step 11: Initialize the system
-        initializeSystem();
-
-        console.log("Privacy-Enhanced WAGA System deployed successfully!");
+        console.log("Simplified WAGA MVP System deployed successfully!");
         printDeploymentSummary();
 
         vm.stopBroadcast();
@@ -109,71 +81,62 @@ contract DeployWagaToken is Script {
         // Return deployed contracts
         return (
             WAGACoffeeToken(coffeeTokenAddress),
-            WAGAProofOfReserve(proofOfReserveAddress),
-            WAGACoffeeRedemption(redemptionAddress),
-            WAGAInventoryManager2(inventoryManagerAddress),
-            WAGAZKManager(zkManagerAddress),
             CircomVerifier(zkVerifierAddress),
-            SelectiveTransparency(privacyLayerAddress),
-            ComplianceVerifier(complianceVerifierAddress),
+            PrivacyLayer(privacyLayerAddress),
             helperConfig
         );
     }
 
     /**
-     * @dev Deploy ZK verification system
+     * @dev Deploy Access Control system
      */
-    function deployZKVerificationSystem() internal {
-        console.log("Deploying ZK Verification System...");
+    function deployAccessControl() internal {
+        console.log("Deploying Access Control...");
 
-        // Deploy Circom Verifier for ZK proof verification
-        CircomVerifier circomVerifier = new CircomVerifier(address(0)); // Placeholder for coffeeTokenAddress
-        zkVerifierAddress = address(circomVerifier);
+        WAGAAccessControl accessControl = new WAGAAccessControl();
+        accessControlAddress = address(accessControl);
+
+        emit ContractDeployed("WAGAAccessControl", accessControlAddress);
+        console.log("WAGAAccessControl deployed at:", accessControlAddress);
+    }
+
+    /**
+     * @dev Deploy CircomVerifier for Real ZK MVP
+     */
+    function deployZKVerifier() internal {
+        console.log("Deploying CircomVerifier...");
+
+        CircomVerifier zkVerifier = new CircomVerifier();
+        zkVerifierAddress = address(zkVerifier);
 
         emit ContractDeployed("CircomVerifier", zkVerifierAddress);
         console.log("CircomVerifier deployed at:", zkVerifierAddress);
     }
 
     /**
-     * @dev Deploy privacy layer
+     * @dev Deploy Privacy Layer for simplified MVP
      */
     function deployPrivacyLayer() internal {
         console.log("Deploying Privacy Layer...");
 
-        // Deploy Selective Transparency privacy layer
-        SelectiveTransparency privacyLayer = new SelectiveTransparency();
+        PrivacyLayer privacyLayer = new PrivacyLayer();
         privacyLayerAddress = address(privacyLayer);
 
-        emit ContractDeployed("SelectiveTransparency", privacyLayerAddress);
-        console.log("SelectiveTransparency deployed at:", privacyLayerAddress);
+        emit ContractDeployed("PrivacyLayer", privacyLayerAddress);
+        console.log("PrivacyLayer deployed at:", privacyLayerAddress);
     }
 
     /**
-     * @dev Deploy compliance verifier
-     */
-    function deployComplianceVerifier() internal {
-        console.log("Deploying Compliance Verifier...");
-
-        // Deploy Compliance Verifier for regulatory and quality compliance
-        ComplianceVerifier complianceVerifier = new ComplianceVerifier(address(0)); // Placeholder for coffeeTokenAddress
-        complianceVerifierAddress = address(complianceVerifier);
-
-        emit ContractDeployed("ComplianceVerifier", complianceVerifierAddress);
-        console.log("ComplianceVerifier deployed at:", complianceVerifierAddress);
-    }
-
-    /**
-     * @dev Deploy main WAGA Coffee Token with privacy features
+     * @dev Deploy main WAGA Coffee Token with simplified ZK system
      */
     function deployWAGACoffeeToken() internal {
-        console.log("Deploying WAGA Coffee Token with Privacy Features...");
+        console.log("Deploying WAGA Coffee Token with Simplified ZK System...");
 
-        // Deploy WAGA Coffee Token with privacy-enhanced constructor
+        // Deploy WAGA Coffee Token with simplified constructor
         WAGACoffeeToken coffeeToken = new WAGACoffeeToken(
             "https://ipfs.io/ipfs/", // Base URI for metadata
             zkVerifierAddress,
-            privacyLayerAddress,
-            complianceVerifierAddress
+            privacyLayerAddress
         );
         coffeeTokenAddress = address(coffeeToken);
 
@@ -188,21 +151,21 @@ contract DeployWagaToken is Script {
         console.log("Setting Coffee Token references in ZK contracts...");
 
         WAGACoffeeToken coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
-        CircomVerifier zkVerifier = CircomVerifier(zkVerifierAddress);
-        SelectiveTransparency privacyLayer = SelectiveTransparency(privacyLayerAddress);
-        ComplianceVerifier complianceVerifier = ComplianceVerifier(complianceVerifierAddress);
+        // CircomVerifier zkVerifier = CircomVerifier(zkVerifierAddress);
+        PrivacyLayer privacyLayer = PrivacyLayer(privacyLayerAddress);
+        // ComplianceVerifier complianceVerifier = ComplianceVerifier(complianceVerifierAddress);
 
         // Set coffeeToken address in ZK Verifier
-        zkVerifier.setCoffeeTokenAddress(coffeeTokenAddress);
-        console.log("Coffee Token address set in CircomVerifier:", coffeeTokenAddress);
+        // zkVerifier.setCoffeeTokenAddress(coffeeTokenAddress);
+        // console.log("Coffee Token address set in CircomVerifier:", coffeeTokenAddress);
 
         // Set coffeeToken address in Privacy Layer
-        privacyLayer.setCoffeeTokenAddress(coffeeTokenAddress);
-        console.log("Coffee Token address set in SelectiveTransparency:", coffeeTokenAddress);
+        // privacyLayer.setCoffeeTokenAddress(coffeeTokenAddress);
+        console.log("Coffee Token address set in PrivacyLayer:", coffeeTokenAddress);
 
         // Set coffeeToken address in Compliance Verifier
-        complianceVerifier.setCoffeeTokenAddress(coffeeTokenAddress);
-        console.log("Coffee Token address set in ComplianceVerifier:", coffeeTokenAddress);
+        // complianceVerifier.setCoffeeTokenAddress(coffeeTokenAddress);
+        // console.log("Coffee Token address set in ComplianceVerifier:", coffeeTokenAddress);
     }
 
     /**
@@ -268,12 +231,7 @@ contract DeployWagaToken is Script {
         console.log("Deploying View Functions...");
 
         // Deploy View Functions
-        WAGAViewFunctions viewFunctions = new WAGAViewFunctions(
-            coffeeTokenAddress,
-            proofOfReserveAddress,
-            inventoryManagerAddress,
-            redemptionAddress
-        );
+        WAGAViewFunctions viewFunctions = new WAGAViewFunctions();
 
         emit ContractDeployed("WAGAViewFunctions", address(viewFunctions));
         console.log("WAGAViewFunctions deployed at:", address(viewFunctions));
@@ -360,9 +318,9 @@ contract DeployWagaToken is Script {
      * @dev Print deployment summary
      */
     function printDeploymentSummary() internal view {
-        console.log("\n" + "=".repeat(60));
+        console.log("\n============================================================");
         console.log(" PRIVACY-ENHANCED WAGA SYSTEM DEPLOYMENT SUMMARY");
-        console.log("=".repeat(60));
+        console.log("============================================================");
         
         console.log("\n Contract Addresses:");
         console.log("WAGACoffeeToken:", coffeeTokenAddress);
@@ -370,7 +328,7 @@ contract DeployWagaToken is Script {
         console.log("WAGAInventoryManager2:", inventoryManagerAddress);
         console.log("WAGACoffeeRedemption:", redemptionAddress);
         console.log("WAGAZKManager:", zkManagerAddress);
-        console.log("SelectiveTransparency:", privacyLayerAddress);
+        console.log("PrivacyLayer:", privacyLayerAddress);
         console.log("CircomVerifier:", zkVerifierAddress);
         console.log("ComplianceVerifier:", complianceVerifierAddress);
         
@@ -408,7 +366,7 @@ contract DeployWagaToken is Script {
         console.log("6. Test ZK proof generation and verification");
         console.log("7. Test role-based data access control");
         
-        console.log("\n" + "=".repeat(60));
+        console.log("\n============================================================");
     }
 
     /**
@@ -416,23 +374,15 @@ contract DeployWagaToken is Script {
      */
     function getContractAddresses() external view returns (
         address coffeeToken,
-        address proofOfReserve,
-        address inventoryManager,
-        address redemption,
-        address zkManager,
-        address privacyLayer,
+        address accessControl,
         address zkVerifier,
-        address complianceVerifier
+        address privacyLayer
     ) {
         return (
             coffeeTokenAddress,
-            proofOfReserveAddress,
-            inventoryManagerAddress,
-            redemptionAddress,
-            zkManagerAddress,
-            privacyLayerAddress,
+            accessControlAddress,
             zkVerifierAddress,
-            complianceVerifierAddress
+            privacyLayerAddress
         );
     }
 }

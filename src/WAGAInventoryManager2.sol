@@ -4,7 +4,7 @@ pragma solidity ^0.8.18;
 import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/interfaces/AutomationCompatibleInterface.sol";
 import {WAGACoffeeToken} from "./WAGACoffeeToken.sol";
 import {WAGAProofOfReserve} from "./WAGAProofOfReserve.sol";
-import {WAGAUpkeepLib} from "./Libraries/WAGAUpkeepLib.sol";
+import {WAGAUpkeepLib} from "./libraries/WAGAUpkeepLib.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**

@@ -8,9 +8,8 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import {WAGAConfigManager} from "./WAGAConfigManager.sol";
-import {IZKVerifier} from "./ZKIntegration/Interfaces/IZKVerifier.sol";
-import {IPrivacyLayer} from "./ZKIntegration/Interfaces/IPrivacyLayer.sol";
-import {IComplianceVerifier} from "./ZKIntegration/Interfaces/IComplianceVerifier.sol";
+import {IZKVerifier} from "./Interfaces/IZKVerifier.sol";
+import {IPrivacyLayer} from "./Interfaces/IPrivacyLayer.sol";
 
 /**
  * @title WAGACoffeeToken
@@ -93,7 +92,8 @@ contract WAGACoffeeToken is
         uint256 proofTimestamp;
         address proofGenerator;
         bool isValid;
-        string proofType; // "price", "quality", "supply_chain", "compliance"
+        IZKVerifier.ProofType proofType; // PRICE_COMPETITIVENESS, QUALITY_STANDARDS, SUPPLY_CHAIN_PROVENANCE
+        string publicClaim; // Public claim after verification
     }
 
     // Encrypted data structure
@@ -139,10 +139,9 @@ contract WAGACoffeeToken is
     // Privacy configuration per batch
     mapping(uint256 => IPrivacyLayer.PrivacyConfig) public batchPrivacyConfig;
 
-    // ZK Verification contracts
+    // ZK Verification contracts (Simplified MVP)
     IZKVerifier public zkVerifier;
     IPrivacyLayer public privacyLayer;
-    IComplianceVerifier public complianceVerifier;
 
     /* -------------------------------------------------------------------------- */
     /*                                   Events                                   */
@@ -179,7 +178,8 @@ contract WAGACoffeeToken is
     event ZKProofAdded(
         uint256 indexed batchId,
         bytes32 indexed proofHash,
-        string proofType,
+        IZKVerifier.ProofType proofType,
+        string publicClaim,
         address indexed generator
     );
 
@@ -221,13 +221,18 @@ contract WAGACoffeeToken is
     constructor(
         string memory baseURI,
         address zkVerifierAddress,
-        address privacyLayerAddress,
-        address complianceVerifierAddress
+        address privacyLayerAddress
     ) ERC1155(baseURI) {
         zkVerifier = IZKVerifier(zkVerifierAddress);
         privacyLayer = IPrivacyLayer(privacyLayerAddress);
-        complianceVerifier = IComplianceVerifier(complianceVerifierAddress);
 
+        _initializeRoles();
+    }
+
+    /**
+     * @dev Initialize roles for both constructors
+     */
+    function _initializeRoles() internal {
         // Grant roles to deployer
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ADMIN_ROLE, msg.sender);
@@ -271,7 +276,69 @@ contract WAGACoffeeToken is
         bytes32 zkProofHash,
         bytes32 encryptedDataHash,
         IPrivacyLayer.PrivacyConfig calldata privacyConfig
-    ) external {
+    ) external returns (uint256) {
+        return _createBatchInternal(
+            productionDate,
+            expiryDate,
+            quantity,
+            pricePerUnit,
+            packagingInfo,
+            metadataHash,
+            zkProofHash,
+            encryptedDataHash,
+            privacyConfig
+        );
+    }
+
+    /**
+     * @dev Simplified createBatch function for testing (backwards compatibility)
+     */
+    function createBatch(
+        uint256 productionDate,
+        uint256 expiryDate,
+        uint256 quantity,
+        uint256 pricePerUnit,
+        string calldata packagingInfo,
+        IPrivacyLayer.PrivacyLevel privacyLevel
+    ) external returns (uint256) {
+        // Create default privacy config
+        IPrivacyLayer.PrivacyConfig memory defaultConfig = IPrivacyLayer.PrivacyConfig({
+            pricingPrivate: privacyLevel != IPrivacyLayer.PrivacyLevel.PUBLIC,
+            qualityPrivate: privacyLevel != IPrivacyLayer.PrivacyLevel.PUBLIC,
+            supplyChainPrivate: privacyLevel != IPrivacyLayer.PrivacyLevel.PUBLIC,
+            level: privacyLevel,
+            pricingClaim: "Standard Pricing",
+            qualityClaim: "Quality Verified",
+            supplyChainClaim: "Supply Chain Verified"
+        });
+
+        return _createBatchInternal(
+            productionDate,
+            expiryDate,
+            quantity,
+            pricePerUnit,
+            packagingInfo,
+            "defaultMetadata",
+            bytes32(0),
+            bytes32(0),
+            defaultConfig
+        );
+    }
+
+    /**
+     * @dev Internal function to create batch
+     */
+    function _createBatchInternal(
+        uint256 productionDate,
+        uint256 expiryDate,
+        uint256 quantity,
+        uint256 pricePerUnit,
+        string memory packagingInfo,
+        string memory metadataHash,
+        bytes32 zkProofHash,
+        bytes32 encryptedDataHash,
+        IPrivacyLayer.PrivacyConfig memory privacyConfig
+    ) internal returns (uint256) {
         // Only admins and processors can create batches
         if (!hasRole(ADMIN_ROLE, msg.sender) && !hasRole(PROCESSOR_ROLE, msg.sender)) {
             revert WAGACoffeeToken__AccessControlUnauthorizedAccount_createBatch();
@@ -330,7 +397,8 @@ contract WAGACoffeeToken is
                 proofTimestamp: block.timestamp,
                 proofGenerator: msg.sender,
                 isValid: false,
-                proofType: ""
+                proofType: IZKVerifier.ProofType.PRICE_COMPETITIVENESS, // Default type
+                publicClaim: "Pending Verification"
             });
             zkProofExists[zkProofHash] = true;
         }
@@ -362,6 +430,8 @@ contract WAGACoffeeToken is
             pricePerUnit,
             privacyConfig
         );
+        
+        return batchId;
     }
 
     /**
@@ -375,6 +445,30 @@ contract WAGACoffeeToken is
         uint256 requestedQuantity,
         string calldata requestDetails
     ) external {
+        _requestBatchInternal(batchId, requestedQuantity, requestDetails);
+    }
+
+    /**
+     * @dev Simplified requestBatch function (backwards compatibility)
+     * @param batchId Batch identifier
+     * @param requestDetails Request details
+     */
+    function requestBatch(
+        uint256 batchId,
+        string calldata requestDetails
+    ) external {
+        // Default to requesting 100 units
+        _requestBatchInternal(batchId, 100, requestDetails);
+    }
+
+    /**
+     * @dev Internal function to handle batch requests
+     */
+    function _requestBatchInternal(
+        uint256 batchId,
+        uint256 requestedQuantity,
+        string memory requestDetails
+    ) internal {
         // Only distributors can request batches
         if (!hasRole(DISTRIBUTOR_ROLE, msg.sender)) {
             revert WAGACoffeeToken__AccessControlUnauthorizedAccount_requestBatch();
@@ -436,13 +530,15 @@ contract WAGACoffeeToken is
      * @param batchId Batch identifier
      * @param metadataHash New IPFS metadata hash
      * @param zkProofData ZK proof data for verification
-     * @param proofType Type of ZK proof
+     * @param proofType Type of ZK proof (PRICE_COMPETITIVENESS, QUALITY_STANDARDS, SUPPLY_CHAIN_PROVENANCE)
+     * @param publicClaim Public claim text after proof verification
      */
     function updateBatchIPFSWithZKProofs(
         uint256 batchId,
         string calldata metadataHash,
         bytes calldata zkProofData,
-        string calldata proofType
+        IZKVerifier.ProofType proofType,
+        string calldata publicClaim
     ) external {
         // Only admins and processors can update with ZK proofs
         if (!hasRole(ADMIN_ROLE, msg.sender) && !hasRole(PROCESSOR_ROLE, msg.sender)) {
@@ -454,8 +550,17 @@ contract WAGACoffeeToken is
             revert WAGACoffeeToken__BatchDoesNotExist_updateBatchIPFSWithZKProofs();
         }
 
-        // Verify ZK proof
-        if (!zkVerifier.verifyProof(zkProofData, proofType)) {
+        // Verify ZK proof based on type
+        bool verified = false;
+        if (proofType == IZKVerifier.ProofType.PRICE_COMPETITIVENESS) {
+            verified = zkVerifier.verifyPriceCompetitiveness(batchId, zkProofData, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.QUALITY_STANDARDS) {
+            verified = zkVerifier.verifyQualityStandards(batchId, zkProofData, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE) {
+            verified = zkVerifier.verifySupplyChainProvenance(batchId, zkProofData, publicClaim);
+        }
+
+        if (!verified) {
             revert WAGACoffeeToken__ZKProofVerificationFailed_updateBatchIPFSWithZKProofs();
         }
 
@@ -464,18 +569,19 @@ contract WAGACoffeeToken is
         _setBatchFlag(batchId, 1, true); // isMetadataVerified
 
         // Update ZK proof
-        bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, proofType, block.timestamp));
+        bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, uint256(proofType), block.timestamp));
         batchZKProofs[batchId] = ZKProof({
             proofHash: proofHash,
             proofData: zkProofData,
             proofTimestamp: block.timestamp,
             proofGenerator: msg.sender,
             isValid: true,
-            proofType: proofType
+            proofType: proofType,
+            publicClaim: publicClaim
         });
         zkProofExists[proofHash] = true;
 
-        emit ZKProofAdded(batchId, proofHash, proofType, msg.sender);
+        emit ZKProofAdded(batchId, proofHash, proofType, publicClaim, msg.sender);
         emit ZKProofVerified(batchId, proofHash, true);
     }
 
@@ -656,13 +762,24 @@ contract WAGACoffeeToken is
         }
 
         ZKProof storage proof = batchZKProofs[batchId];
+        string memory proofTypeString;
+        if (proof.proofType == IZKVerifier.ProofType.PRICE_COMPETITIVENESS) {
+            proofTypeString = "PRICE_COMPETITIVENESS";
+        } else if (proof.proofType == IZKVerifier.ProofType.QUALITY_STANDARDS) {
+            proofTypeString = "QUALITY_STANDARDS";
+        } else if (proof.proofType == IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE) {
+            proofTypeString = "SUPPLY_CHAIN_PROVENANCE";
+        } else {
+            proofTypeString = "UNKNOWN";
+        }
+        
         return (
             proof.proofHash,
             proof.proofData,
             proof.proofTimestamp,
             proof.proofGenerator,
             proof.isValid,
-            proof.proofType
+            proofTypeString
         );
     }
 
@@ -1170,12 +1287,22 @@ contract WAGACoffeeToken is
     function _validatePrivacyConfig(
         IPrivacyLayer.PrivacyConfig memory privacyConfig
     ) internal pure returns (bool) {
-        // Validate privacy levels (0 = Public, 1 = Selective, 2 = Private)
-        if (privacyConfig.pricingSelective > 2 || 
-            privacyConfig.qualitySelective > 2 || 
-            privacyConfig.supplyChainSelective > 2) {
+        // Validate privacy level
+        if (uint8(privacyConfig.level) > 2) {
             return false;
         }
+        
+        // Validate that claims are not empty if privacy is enabled
+        if (privacyConfig.pricingPrivate && bytes(privacyConfig.pricingClaim).length == 0) {
+            return false;
+        }
+        if (privacyConfig.qualityPrivate && bytes(privacyConfig.qualityClaim).length == 0) {
+            return false;
+        }
+        if (privacyConfig.supplyChainPrivate && bytes(privacyConfig.supplyChainClaim).length == 0) {
+            return false;
+        }
+        
         return true;
     }
 

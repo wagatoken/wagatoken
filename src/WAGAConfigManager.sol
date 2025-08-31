@@ -61,6 +61,10 @@ contract WAGAConfigManager is AccessControl, Ownable {
         address indexed newProofOfReserveManager,
         address indexed updatedBy
     );
+    event CoffeeTokenUpdated(
+        address indexed newCoffeeToken,
+        address indexed updatedBy
+    );
 
     constructor() Ownable(msg.sender) {
         i_owner = msg.sender;

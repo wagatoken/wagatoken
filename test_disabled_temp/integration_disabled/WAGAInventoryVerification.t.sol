@@ -5,11 +5,11 @@ import {Test, console} from "forge-std/Test.sol";
 import {WAGACoffeeToken} from "../../src/WAGACoffeeToken.sol";
 import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
 import {WAGAInventoryManager2} from "../../src/WAGAInventoryManager2.sol";
-import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
+import {IPrivacyLayer} from "../../src/ZKCircuits/Interfaces/IPrivacyLayer.sol";
 import {MockFunctionsRouter} from "../mocks/MockFunctionsRouter.sol";
 import {MockFunctionsHelper} from "../mocks/MockFunctionsHelper.sol";
+import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
-import {IPrivacyLayer} from "../../src/ZKIntegration/Interfaces/IPrivacyLayer.sol";
 
 /**
  * @title WAGAInventoryVerification
@@ -296,17 +296,17 @@ contract WAGAInventoryVerification is Test {
         
         // 3. Get cached data
         (
-            uint256 expiryDate,
+            uint256 cachedExpiryDate,
             uint256 lastVerified,
-            uint256 quantity,
+            uint256 cachedQuantity,
             uint256 creationDate,
             bool isActive,
             uint256 cacheTimestamp
         ) = inventoryManager.getCachedBatchData(batchId);
         
         // 4. Verify cached data
-        assertEq(expiryDate, this.expiryDate(), "Cached expiry date should match");
-        assertEq(quantity, this.quantity(), "Cached quantity should match");
+        assertEq(cachedExpiryDate, this.expiryDate(), "Cached expiry date should match");
+        assertEq(cachedQuantity, this.quantity(), "Cached quantity should match");
         assertTrue(isActive, "Cached active status should be true");
         assertGt(cacheTimestamp, 0, "Cache timestamp should be set");
         

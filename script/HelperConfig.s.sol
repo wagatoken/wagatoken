@@ -2,7 +2,7 @@
 pragma solidity ^0.8.18;
 
 import {Script} from "forge-std/Script.sol";
-import {MockFunctionsRouter} from "../test/mocks/MockFunctionsRouter.sol";
+// import {MockFunctionsRouter} from "../test/mocks/MockFunctionsRouter.sol";
 
 contract HelperConfig is Script {
     struct NetworkConfig {
@@ -96,18 +96,14 @@ contract HelperConfig is Script {
             return activeNetworkConfig;
         }
 
-        vm.startBroadcast();
-        
-        // Deploy MockFunctionsRouter for local testing
-        MockFunctionsRouter mockRouter = new MockFunctionsRouter();
-        
-        vm.stopBroadcast();
+        // For MVP testing, use mock address
+        address mockRouter = address(0x1234567890123456789012345678901234567890);
 
         return
             NetworkConfig({
                 subscriptionId: 1, // Use default test subscription ID
                 donId: 0x66756e2d6c6f63616c2d74657374000000000000000000000000000000000000, // "fun-local-test"
-                router: address(mockRouter),
+                router: mockRouter,
                 deployerKey: DEFAULT_ANVIL_KEY
             });
     }

@@ -1,0 +1,200 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.18;
+
+import {Script, console} from "forge-std/Script.sol";
+import {WAGACoffeeToken} from "../src/WAGACoffeeToken.sol";
+import {WAGAAccessControl} from "../src/WAGAAccessControl.sol";
+import {CircomVerifier} from "../src/CircomVerifier.sol";
+import {PrivacyLayer} from "../src/PrivacyLayer.sol";
+import {HelperConfig} from "./HelperConfig.s.sol";
+
+/**
+ * @title DeployWagaMVP
+ * @dev Simplified deployment script for WAGA MVP with focused ZK system
+ */
+contract DeployWagaMVP is Script {
+    /* -------------------------------------------------------------------------- */
+    /*                              State Variables                              */
+    /* -------------------------------------------------------------------------- */
+
+    // Contract addresses
+    address public coffeeTokenAddress;
+    address public accessControlAddress;
+    address public zkVerifierAddress;
+    address public privacyLayerAddress;
+
+    // Helper configuration
+    HelperConfig public helperConfig;
+
+    /* -------------------------------------------------------------------------- */
+    /*                                   Events                                   */
+    /* -------------------------------------------------------------------------- */
+
+    event ContractDeployed(string contractName, address contractAddress);
+    event RoleGranted(string role, address user);
+    event SystemInitialized();
+
+    /* -------------------------------------------------------------------------- */
+    /*                              Main Functions                                */
+    /* -------------------------------------------------------------------------- */
+
+    function run() external returns (
+        WAGACoffeeToken,
+        CircomVerifier,
+        PrivacyLayer,
+        HelperConfig
+    ) {
+        // Initialize HelperConfig
+        helperConfig = new HelperConfig();
+        
+        // Get network configuration and deployer key from HelperConfig
+        HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
+        uint256 deployerKey = networkConfig.deployerKey;
+        
+        vm.startBroadcast(deployerKey);
+
+        // Step 1: Deploy Access Control
+        deployAccessControl();
+
+        // Step 2: Deploy ZK Verifier 
+        deployZKVerifier();
+
+        // Step 3: Deploy Privacy Layer
+        deployPrivacyLayer();
+
+        // Step 4: Deploy main WAGA Coffee Token with simplified ZK system
+        deployWAGACoffeeToken();
+
+        // Step 5: Setup basic roles
+        setupBasicRoles();
+
+        console.log("Simplified WAGA MVP System deployed successfully!");
+        printDeploymentSummary();
+
+        vm.stopBroadcast();
+
+        // Return deployed contracts
+        return (
+            WAGACoffeeToken(coffeeTokenAddress),
+            CircomVerifier(zkVerifierAddress),
+            PrivacyLayer(privacyLayerAddress),
+            helperConfig
+        );
+    }
+
+    /**
+     * @dev Deploy Access Control system
+     */
+    function deployAccessControl() internal {
+        console.log("Deploying Access Control...");
+
+        WAGAAccessControl accessControl = new WAGAAccessControl();
+        accessControlAddress = address(accessControl);
+
+        emit ContractDeployed("WAGAAccessControl", accessControlAddress);
+        console.log("WAGAAccessControl deployed at:", accessControlAddress);
+    }
+
+    /**
+     * @dev Deploy CircomVerifier for Real ZK MVP
+     */
+    function deployZKVerifier() internal {
+        console.log("Deploying CircomVerifier...");
+
+        CircomVerifier zkVerifier = new CircomVerifier();
+        zkVerifierAddress = address(zkVerifier);
+
+        emit ContractDeployed("CircomVerifier", zkVerifierAddress);
+        console.log("CircomVerifier deployed at:", zkVerifierAddress);
+    }
+
+    /**
+     * @dev Deploy Privacy Layer for simplified MVP
+     */
+    function deployPrivacyLayer() internal {
+        console.log("Deploying Privacy Layer...");
+
+        PrivacyLayer privacyLayer = new PrivacyLayer();
+        privacyLayerAddress = address(privacyLayer);
+
+        emit ContractDeployed("PrivacyLayer", privacyLayerAddress);
+        console.log("PrivacyLayer deployed at:", privacyLayerAddress);
+    }
+
+    /**
+     * @dev Deploy main WAGA Coffee Token with simplified ZK system
+     */
+    function deployWAGACoffeeToken() internal {
+        console.log("Deploying WAGA Coffee Token with Simplified ZK System...");
+
+        // Deploy WAGA Coffee Token with simplified constructor
+        WAGACoffeeToken coffeeToken = new WAGACoffeeToken(
+            "https://ipfs.io/ipfs/", // Base URI for metadata
+            zkVerifierAddress,
+            privacyLayerAddress
+        );
+        coffeeTokenAddress = address(coffeeToken);
+
+        emit ContractDeployed("WAGACoffeeToken", coffeeTokenAddress);
+        console.log("WAGACoffeeToken deployed at:", coffeeTokenAddress);
+    }
+
+    /**
+     * @dev Setup basic roles for MVP
+     */
+    function setupBasicRoles() internal {
+        console.log("Setting up basic roles...");
+
+        WAGACoffeeToken coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
+        CircomVerifier zkVerifier = CircomVerifier(zkVerifierAddress);
+        PrivacyLayer privacyLayer = PrivacyLayer(privacyLayerAddress);
+
+        // Grant verifier role to CircomVerifier contract
+        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), zkVerifierAddress);
+        
+        // Grant processor role to deployer for testing
+        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), msg.sender);
+        
+        emit RoleGranted("VERIFIER_ROLE", zkVerifierAddress);
+        emit RoleGranted("PROCESSOR_ROLE", msg.sender);
+        
+        console.log("Basic roles configured successfully");
+    }
+
+    /**
+     * @dev Print deployment summary
+     */
+    function printDeploymentSummary() internal view {
+        console.log("\n============================================================");
+        console.log("              WAGA MVP DEPLOYMENT SUMMARY");
+        console.log("============================================================");
+        console.log("WAGACoffeeToken:", coffeeTokenAddress);
+        console.log("WAGAAccessControl:", accessControlAddress);
+        console.log("CircomVerifier:", zkVerifierAddress);
+        console.log("PrivacyLayer:", privacyLayerAddress);
+        console.log("============================================================");
+        console.log("MVP Features:");
+        console.log("1. 3 Core ZK Proofs: Price, Quality, Supply Chain");
+        console.log("2. 4 Essential Roles: Admin, Processor, ZK Verifier, Distributor");
+        console.log("3. Lightweight Privacy Protection");
+        console.log("4. Simplified Batch Management");
+        console.log("============================================================");
+    }
+
+    /**
+     * @dev Get contract addresses for testing
+     */
+    function getContractAddresses() external view returns (
+        address coffeeToken,
+        address accessControl,
+        address zkVerifier,
+        address privacyLayer
+    ) {
+        return (
+            coffeeTokenAddress,
+            accessControlAddress,
+            zkVerifierAddress,
+            privacyLayerAddress
+        );
+    }
+}

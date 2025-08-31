@@ -143,6 +143,31 @@ contract WAGAProofOfReserve is
        // onlyRole(coffeeToken.VERIFIER_ROLE())
         returns (bytes32 verificationRequestId)
     {
+        return _requestReserveVerificationInternal(batchId, requestId, source);
+    }
+
+    /**
+     * @dev Simplified version for testing
+     */
+    function requestReserveVerification(
+        uint256 batchId
+    )
+        external
+        callerHasRoleFromCoffeeToken(coffeeToken.VERIFIER_ROLE())
+        returns (bytes32 verificationRequestId)
+    {
+        string memory defaultSource = "return { verified: true, quantity: 100, price: 50000000000000000000 };";
+        return _requestReserveVerificationInternal(batchId, 0, defaultSource);
+    }
+
+    /**
+     * @dev Internal function to handle verification requests
+     */
+    function _requestReserveVerificationInternal(
+        uint256 batchId,
+        uint256 requestId,
+        string memory source
+    ) internal returns (bytes32 verificationRequestId) {
         // Check if the batch exists
         if (!coffeeToken.isBatchCreated(batchId)) {
             revert WAGAProofOfReserve__BatchDoesNotExist_requestReserveVerification();
