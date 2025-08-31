@@ -29,9 +29,12 @@ WAGA transforms coffee trading by creating a **complete digital ecosystem** wher
 
 ### **🎭 **Zero-Knowledge Privacy System**
 - **Price Privacy**: Prove competitiveness without revealing exact pricing
-- **Quality Privacy**: Verify standards without exposing proprietary scores  
+- **Quality Privacy**: Verify standards without exposing proprietary scores
 - **Supply Chain Privacy**: Confirm compliance without revealing sourcing details
 - **Selective Transparency**: Show verification results to distributors, hide from competitors
+- **Real Cryptographic Verification**: Production-ready Groth16 elliptic curve pairing
+- **Trusted Setup**: Complete Powers of Tau ceremony with entropy contribution
+- **On-chain Verification**: CircomVerifier with full cryptographic proof validation
 
 ### **💰 DeFi Integration**
 - **USDC Payments**: Native payment processing for redemptions and fees
@@ -74,6 +77,10 @@ WAGA transforms coffee trading by creating a **complete digital ecosystem** wher
 #### **⚡ Smart Contract System**
 - **WAGACoffeeToken**: Core ERC-1155 with ZK privacy integration
 - **WAGAProofOfReserve**: Chainlink-powered inventory verification
+- **CircomVerifier**: Real cryptographic ZK proof verification hub
+- **PricePrivacyCircuitVerifier**: Groth16 elliptic curve pairing for price proofs
+- **QualityTierCircuitVerifier**: Cryptographic verification for quality standards
+- **SupplyChainPrivacyCircuitVerifier**: Proof verification for supply chain compliance
 - **WAGAZKManager**: Zero-knowledge proof verification and management
 - **WAGATreasury**: USDC payment processing and fee collection
 - **WAGAVault**: Trade finance and collateralized lending
@@ -98,6 +105,9 @@ WAGA transforms coffee trading by creating a **complete digital ecosystem** wher
 - **Smart Contracts**: Deployed and verified on Base Sepolia
 - **Frontend Portals**: Admin, Distributor, Browse interfaces operational
 - **ZK Circuits**: Compiled and tested for price, quality, supply chain privacy
+- **Cryptographic Verifiers**: Production-ready Groth16 elliptic curve pairing
+- **Trusted Setup**: Complete Powers of Tau ceremony with entropy contribution
+- **ZK Integration**: CircomVerifier with real cryptographic verification
 - **IPFS Integration**: Metadata storage and retrieval working
 - **Chainlink Integration**: Functions and Automation deployed
 
@@ -206,12 +216,25 @@ cd circuits
 # Install Circom dependencies
 npm install
 
+# Complete trusted setup ceremony
+node continue-ceremony.js
+
 # Compile circuits
-npm run build
+node build-circuits.js
+
+# Generate cryptographic verifiers
+node generate-verifiers-only.js
 
 # Test circuits
-npm run test
+node test-circuits.js
 ```
+
+#### **ZK Circuit Specifications**
+- **PricePrivacyCircuit**: 3 public signals, 33 non-linear constraints
+- **QualityTierCircuit**: 3 public signals, 35 non-linear constraints
+- **SupplyChainPrivacyCircuit**: 5 public signals, 7 total constraints
+- **Trusted Setup**: Complete Powers of Tau ceremony executed
+- **Verifiers**: Production-ready Groth16 elliptic curve pairing contracts
 
 ### **5. Frontend Development**
 ```bash
@@ -403,12 +426,14 @@ This project is licensed under the **MIT License** - see the `LICENSE` file for 
 ## 📊 **Platform Statistics**
 
 - **🏗️ Smart Contracts**: 5+ deployed and verified
-- **☕ Coffee Batches**: 10+ tracked and tokenized  
-- **🔐 ZK Circuits**: 3 privacy-preserving proof systems
+- **☕ Coffee Batches**: 10+ tracked and tokenized
+- **🔐 ZK Circuits**: 3 privacy-preserving proof systems with real cryptography
+- **🔐 Cryptographic Verifiers**: 3 Groth16 elliptic curve pairing contracts
+- **🎭 Privacy Levels**: Selective transparency with competitive protection
 - **👥 User Portals**: 4 specialized interfaces
 - **📋 Development Tasks**: 30+ structured project items
 - **🛠️ Components**: 20+ reusable frontend components
 - **✅ Test Coverage**: 90%+ for critical contract functions
-- **🚀 Deployment**: Automated CI/CD pipeline
+- **🚀 Deployment**: Automated CI/CD pipeline with ZK integration
 
 *Building the future of coffee, one block at a time.* 🚀

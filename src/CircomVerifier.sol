@@ -2,9 +2,9 @@
 pragma solidity ^0.8.18;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {PricePrivacyCircuitVerifier} from "./verifiers/PricePrivacyCircuitVerifier.sol";
-import {QualityTierCircuitVerifier} from "./verifiers/QualityTierCircuitVerifier.sol";
-import {SupplyChainPrivacyCircuitVerifier} from "./verifiers/SupplyChainPrivacyCircuitVerifier.sol";
+import {Groth16Verifier as PricePrivacyCircuitVerifier} from "./verifiers/PricePrivacyCircuitVerifier.sol";
+import {Groth16Verifier as QualityTierCircuitVerifier} from "./verifiers/QualityTierCircuitVerifier.sol";
+import {Groth16Verifier as SupplyChainPrivacyCircuitVerifier} from "./verifiers/SupplyChainPrivacyCircuitVerifier.sol";
 
 /**
  * @title CircomVerifier
@@ -97,7 +97,7 @@ contract CircomVerifier is AccessControl {
     /**
      * @dev Verify price competitiveness using real ZK circuit
      * @param batchId Batch identifier
-     * @param zkProofData ZK proof from PricePrivacyCircuit
+     * @param zkProofData ZK proof from PricePrivacyCircuit (encoded Groth16 proof)
      * @param publicSignals Public inputs: [marketSegment, priceRange, isCompetitive]
      * @param publicClaim Public claim text (e.g., "Competitively Priced")
      */
@@ -107,10 +107,19 @@ contract CircomVerifier is AccessControl {
         uint256[] calldata publicSignals,
         string calldata publicClaim
     ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
-        require(publicSignals.length == 3, "Invalid public signals for price circuit");
-        
+        require(publicSignals.length <= 5, "Too many public signals for price circuit");
+
+        // Decode Groth16 proof from bytes
+        (uint[2] memory _pA, uint[2][2] memory _pB, uint[2] memory _pC) = _decodeGroth16Proof(zkProofData);
+
+        // Convert public signals to fixed-size array for verifier
+        uint[5] memory _pubSignals;
+        for (uint i = 0; i < publicSignals.length; i++) {
+            _pubSignals[i] = publicSignals[i];
+        }
+
         // Verify ZK proof using circuit verifier
-        verified = priceVerifier.verifyProof(zkProofData, publicSignals);
+        verified = priceVerifier.verifyProof(_pA, _pB, _pC, _pubSignals);
         
         if (verified) {
             bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, block.timestamp));
@@ -137,8 +146,8 @@ contract CircomVerifier is AccessControl {
 
     /**
      * @dev Verify quality standards using real ZK circuit
-     * @param batchId Batch identifier  
-     * @param zkProofData ZK proof from QualityTierCircuit
+     * @param batchId Batch identifier
+     * @param zkProofData ZK proof from QualityTierCircuit (encoded Groth16 proof)
      * @param publicSignals Public inputs: [qualityTier, minScore, meetsTierRequirements]
      * @param publicClaim Public claim text (e.g., "Premium Quality - SCA 85+")
      */
@@ -148,9 +157,18 @@ contract CircomVerifier is AccessControl {
         uint256[] calldata publicSignals,
         string calldata publicClaim
     ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
-        require(publicSignals.length == 3, "Invalid public signals for quality circuit");
-        
-        verified = qualityVerifier.verifyProof(zkProofData, publicSignals);
+        require(publicSignals.length <= 5, "Too many public signals for quality circuit");
+
+        // Decode Groth16 proof from bytes
+        (uint[2] memory _pA, uint[2][2] memory _pB, uint[2] memory _pC) = _decodeGroth16Proof(zkProofData);
+
+        // Convert public signals to fixed-size array for verifier
+        uint[5] memory _pubSignals;
+        for (uint i = 0; i < publicSignals.length; i++) {
+            _pubSignals[i] = publicSignals[i];
+        }
+
+        verified = qualityVerifier.verifyProof(_pA, _pB, _pC, _pubSignals);
         
         if (verified) {
             bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, block.timestamp));
@@ -178,7 +196,7 @@ contract CircomVerifier is AccessControl {
     /**
      * @dev Verify supply chain provenance using real ZK circuit
      * @param batchId Batch identifier
-     * @param zkProofData ZK proof from SupplyChainPrivacyCircuit
+     * @param zkProofData ZK proof from SupplyChainPrivacyCircuit (encoded Groth16 proof)
      * @param publicSignals Public inputs: [originRegion, originCountry, altitudeRange, processType, complianceType]
      * @param publicClaim Public claim text (e.g., "Single-Origin Ethiopian - Traceable")
      */
@@ -188,9 +206,18 @@ contract CircomVerifier is AccessControl {
         uint256[] calldata publicSignals,
         string calldata publicClaim
     ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
-        require(publicSignals.length == 5, "Invalid public signals for supply chain circuit");
-        
-        verified = supplyChainVerifier.verifyProof(zkProofData, publicSignals);
+        require(publicSignals.length <= 7, "Too many public signals for supply chain circuit");
+
+        // Decode Groth16 proof from bytes
+        (uint[2] memory _pA, uint[2][2] memory _pB, uint[2] memory _pC) = _decodeGroth16Proof(zkProofData);
+
+        // Convert public signals to fixed-size array for verifier
+        uint[7] memory _pubSignals;
+        for (uint i = 0; i < publicSignals.length; i++) {
+            _pubSignals[i] = publicSignals[i];
+        }
+
+        verified = supplyChainVerifier.verifyProof(_pA, _pB, _pC, _pubSignals);
         
         if (verified) {
             bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, block.timestamp));
@@ -213,6 +240,47 @@ contract CircomVerifier is AccessControl {
         }
         
         return verified;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                            Internal Functions                              */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Decode Groth16 proof from bytes to elliptic curve points
+     * @param proofBytes Encoded proof bytes (256 bytes: A[2], B[4], C[2])
+     * @return _pA Point A (G1)
+     * @return _pB Point B (G2)
+     * @return _pC Point C (G1)
+     */
+    function _decodeGroth16Proof(
+        bytes memory proofBytes
+    ) internal pure returns (
+        uint[2] memory _pA,
+        uint[2][2] memory _pB,
+        uint[2] memory _pC
+    ) {
+        require(proofBytes.length == 256, "Invalid proof length");
+
+        // Decode point A (G1: x, y) - first 64 bytes
+        assembly {
+            mstore(_pA, mload(add(proofBytes, 32)))     // A.x
+            mstore(add(_pA, 32), mload(add(proofBytes, 64))) // A.y
+        }
+
+        // Decode point B (G2: x1, x2, y1, y2) - next 128 bytes
+        assembly {
+            mstore(_pB, mload(add(proofBytes, 96)))       // B.x1
+            mstore(add(_pB, 32), mload(add(proofBytes, 128)))  // B.x2
+            mstore(add(_pB, 64), mload(add(proofBytes, 160)))  // B.y1
+            mstore(add(_pB, 96), mload(add(proofBytes, 192)))  // B.y2
+        }
+
+        // Decode point C (G1: x, y) - last 64 bytes
+        assembly {
+            mstore(_pC, mload(add(proofBytes, 224)))     // C.x
+            mstore(add(_pC, 32), mload(add(proofBytes, 256))) // C.y
+        }
     }
 
     /* -------------------------------------------------------------------------- */
