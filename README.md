@@ -1,4 +1,4 @@
-# ☕ WAGA Coffee Platform - A blockchain Based Privacy Enhanced Coffee Value Chain 
+# ☕ WAGA Coffee Platform - A Blockchain Based Privacy Enhanced Coffee Value Chain 
 
 *Onchain Coffee - OffChain Impact* 
 
