@@ -170,7 +170,7 @@ contract PrivacyLayer is WAGAAccessControl, IPrivacyLayer {
      * @dev Check if user can access full data for a batch
      */
     function canAccessFullData(
-        uint256 batchId,
+    uint256 /*batchId*/,
         address viewer
     ) external view returns (bool) {
         // Only batch creators (admin/processor) can access full data

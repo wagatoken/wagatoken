@@ -5,6 +5,9 @@ import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {ERC1155Supply} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./WAGAConfigManager.sol";
 import "./WAGAViewFunctions.sol";
+import "./WAGABatchManager.sol";
+import "./WAGAZKManager.sol";
+import "./Interfaces/IPrivacyLayer.sol";
 
 /**
  * @title WAGACoffeeTokenCore
@@ -19,10 +22,14 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     error WAGACoffeeTokenCore__BatchAlreadyExists_createBatch();
     error WAGACoffeeTokenCore__InvalidQuantity_createBatch();
     error WAGACoffeeTokenCore__InvalidPrice_createBatch();
-    error WAGACoffeeTokenCore__BatchDoesNotExist_updateBatchStatus();
     error WAGACoffeeTokenCore__BatchDoesNotExist_updateBatchURI();
     error WAGACoffeeTokenCore__BatchDoesNotExist_transferBatch();
     error WAGACoffeeTokenCore__InsufficientBalance_transferBatch();
+    error WAGACoffeeTokenCore__BatchDoesNotExist_mintBatch();
+    error WAGACoffeeTokenCore__BatchQuantityExceeded_mintBatch();
+    error WAGACoffeeTokenCore__BatchDoesNotExist_burnForRedemption();
+    error WAGACoffeeTokenCore__BatchQuantityExceeded_burnForRedemption();
+    error WAGACoffeeTokenCore__InsufficientBatchQuantity_burnForRedemption();
 
     /* -------------------------------------------------------------------------- */
     /*                                   Events                                   */
@@ -36,11 +43,6 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
         string metadataURI
     );
 
-    event BatchStatusUpdated(
-        uint256 indexed batchId,
-        bool isActive
-    );
-
     event BatchTransferred(
         uint256 indexed batchId,
         address indexed from,
@@ -52,14 +54,13 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     /*                               State Variables                              */
     /* -------------------------------------------------------------------------- */
 
-    // Manager contract addresses (for modular architecture)
-    address public batchManager;
-    address public zkManager;
+    // Modular manager contracts
+    WAGABatchManager public batchManager;
+    WAGAZKManager public zkManager;
 
-    // Additional state variables not in WAGAViewFunctions
+    // Basic ERC1155 token state only
     mapping(uint256 => string) public s_batchMetadata; // Token metadata URIs
-    mapping(uint256 => bool) public batchCreated; // Track created batches
-    mapping(uint256 => bool) public batchActive; // Track active batches
+    mapping(uint256 => bool) public batchCreated; // Track created batches (for ERC1155)
     uint256 public batchCounter; // Total batches created
 
     /* -------------------------------------------------------------------------- */
@@ -68,10 +69,23 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
 
     constructor(
         string memory baseURI
-    ) ERC1155(baseURI) WAGAConfigManager() WAGAViewFunctions() {
+    ) ERC1155(baseURI) {
+        // Initialize config manager and view functions (they have no constructor params)
+        
         // Grant roles to deployer
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ADMIN_ROLE, msg.sender);
+    }
+
+    /**
+     * @dev Set manager contracts (admin only)
+     */
+    function setManagers(
+        address _batchManager,
+        address _zkManager
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        batchManager = WAGABatchManager(_batchManager);
+        zkManager = WAGAZKManager(_zkManager);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -79,17 +93,49 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     /* -------------------------------------------------------------------------- */
 
     /**
-     * @dev Create a new coffee batch
+     * @dev Create a new coffee batch - delegates to BatchManager
      */
     function createBatch(
-        uint256 batchId,
+        uint256 productionDate,
+        uint256 expiryDate,
+        uint256 quantity,
+        uint256 pricePerUnit,
+        string calldata origin,
+        string calldata packagingInfo,
+        string calldata metadataURI
+    ) external onlyRole(PROCESSOR_ROLE) returns (uint256) {
+        // Generate new batch ID
+        uint256 batchId = ++batchCounter;
+        
+        // Mark batch as created in ERC1155 system
+        batchCreated[batchId] = true;
+        s_batchMetadata[batchId] = metadataURI;
+
+        // Delegate detailed batch creation to BatchManager
+        batchManager.createBatchInfo(
+            batchId,
+            productionDate,
+            expiryDate,
+            quantity,
+            pricePerUnit,
+            origin,
+            packagingInfo,
+            IPrivacyLayer.PrivacyLevel(1) // Use correct enum value for MODERATE
+        );
+
+        emit BatchCreated(batchId, msg.sender, quantity, pricePerUnit, metadataURI);
+        return batchId;
+    }
+
+    /**
+     * @dev Simplified batch creation for testing
+     */
+    function createBatchSimple(
         uint256 quantity,
         uint256 pricePerUnit,
         string calldata metadataURI
-    ) external onlyRole(PROCESSOR_ROLE) {
-        if (batchCreated[batchId]) {
-            revert WAGACoffeeTokenCore__BatchAlreadyExists_createBatch();
-        }
+    ) external onlyRole(PROCESSOR_ROLE) returns (uint256) {
+        // Validate inputs
         if (quantity == 0) {
             revert WAGACoffeeTokenCore__InvalidQuantity_createBatch();
         }
@@ -97,58 +143,79 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
             revert WAGACoffeeTokenCore__InvalidPrice_createBatch();
         }
 
-        // Mark batch as created and active
+        // Create batch ID
+        uint256 batchId = ++batchCounter;
+        
+        // Check if batch already exists
+        if (batchCreated[batchId]) {
+            revert WAGACoffeeTokenCore__BatchAlreadyExists_createBatch();
+        }
+
+        // Mark batch as created
         batchCreated[batchId] = true;
-        batchActive[batchId] = true;
-        batchCounter++;
 
-        // Store basic batch info in WAGAViewFunctions state
-        s_batchInfo[batchId] = BatchInfo({
-            productionDate: block.timestamp,
-            expiryDate: block.timestamp + 365 days, // Default 1 year
-            isVerified: false,
-            quantity: quantity,
-            pricePerUnit: pricePerUnit,
-            packagingInfo: "Standard",
-            metadataHash: metadataURI,
-            isMetadataVerified: false,
-            lastVerifiedTimestamp: block.timestamp
-        });
-
-        // Store metadata URI
-        s_batchMetadata[batchId] = metadataURI;
+        // Delegate detailed batch creation to BatchManager if available
+        if (address(batchManager) != address(0)) {
+            batchManager.createBatchInfo(
+                batchId,
+                block.timestamp, // productionDate
+                block.timestamp + 365 days, // expiryDate
+                quantity,
+                pricePerUnit,
+                "Origin TBD", // origin
+                "Standard", // packagingInfo
+                IPrivacyLayer.PrivacyLevel(1) // Use integer cast for privacy level
+            );
+        }
 
         emit BatchCreated(batchId, msg.sender, quantity, pricePerUnit, metadataURI);
+        return batchId;
     }
 
     /**
-     * @dev Update batch status (active/inactive)
+     * @dev Mint tokens for verified batch (called by ProofOfReserve)
      */
-    function updateBatchStatus(
+    function mintBatch(
+        address to,
         uint256 batchId,
-        bool isActive
-    ) external onlyRole(PROCESSOR_ROLE) {
+        uint256 amount
+    ) external onlyRole(MINTER_ROLE) {
         if (!batchCreated[batchId]) {
-            revert WAGACoffeeTokenCore__BatchDoesNotExist_updateBatchStatus();
+            revert WAGACoffeeTokenCore__BatchDoesNotExist_mintBatch();
+        }
+        
+        // Get batch info from shared state
+        BatchInfo memory batch = s_batchInfo[batchId];
+        if (batch.mintedQuantity + amount > batch.quantity) {
+            revert WAGACoffeeTokenCore__BatchQuantityExceeded_mintBatch();
         }
 
-        batchActive[batchId] = isActive;
-        emit BatchStatusUpdated(batchId, isActive);
+        // Update minted quantity in shared state
+        s_batchInfo[batchId].mintedQuantity += amount;
+
+        // Mint ERC1155 tokens
+        _mint(to, batchId, amount, "");
     }
 
     /**
-     * @dev Update batch metadata URI
+     * @dev Burn tokens for redemption (called by RedemptionManager)
      */
-    function updateBatchURI(
+    function burnForRedemption(
+        address from,
         uint256 batchId,
-        string calldata newURI
-    ) external onlyRole(PROCESSOR_ROLE) {
+        uint256 amount
+    ) external onlyRole(REDEMPTION_ROLE) {
         if (!batchCreated[batchId]) {
-            revert WAGACoffeeTokenCore__BatchDoesNotExist_updateBatchURI();
+            revert WAGACoffeeTokenCore__BatchDoesNotExist_burnForRedemption();
+        }
+        
+        uint256 balance = balanceOf(from, batchId);
+        if (balance < amount) {
+            revert WAGACoffeeTokenCore__InsufficientBatchQuantity_burnForRedemption();
         }
 
-        s_batchMetadata[batchId] = newURI;
-        s_batchInfo[batchId].metadataHash = newURI;
+        // Burn ERC1155 tokens
+        _burn(from, batchId, amount);
     }
 
     /**
@@ -176,6 +243,13 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     /* -------------------------------------------------------------------------- */
 
     /**
+     * @dev Check if batch exists (required by BatchManager)
+     */
+    function isBatchCreated(uint256 batchId) public view override returns (bool) {
+        return batchCreated[batchId];
+    }
+
+    /**
      * @dev Get total number of batches created
      */
     function getTotalBatches() external view returns (uint256) {
@@ -189,15 +263,15 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
         address _batchManager,
         address _zkManager
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        batchManager = _batchManager;
-        zkManager = _zkManager;
+    batchManager = WAGABatchManager(_batchManager);
+    zkManager = WAGAZKManager(_zkManager);
     }
 
     /**
      * @dev Check if caller is a manager contract
      */
     function isManagerContract(address caller) external view returns (bool) {
-        return caller == batchManager || caller == zkManager;
+    return caller == address(batchManager) || caller == address(zkManager);
     }
 
     /* -------------------------------------------------------------------------- */

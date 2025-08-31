@@ -2,23 +2,65 @@
 pragma solidity ^0.8.18;
 
 import {Script, console} from "forge-std/Script.sol";
-import {WAGACoffeeToken} from "../src/WAGACoffeeToken.sol";
+import {HelperConfig} from "./HelperConfig.s.sol";
+import {WAGACoffeeTokenCore} from "../src/WAGACoffeeTokenCore.sol";
+import {WAGABatchManager} from "../src/WAGABatchManager.sol";
+import {WAGAZKManager} from "../src/WAGAZKManager.sol";
+import {WAGAProofOfReserve} from "../src/WAGAProofOfReserve.sol";
+import {WAGAInventoryManagerMVP} from "../src/WAGAInventoryManagerMVP.sol";
+import {WAGACoffeeRedemption} from "../src/WAGACoffeeRedemption.sol";
 import {WAGAAccessControl} from "../src/WAGAAccessControl.sol";
 import {CircomVerifier} from "../src/CircomVerifier.sol";
 import {PrivacyLayer} from "../src/PrivacyLayer.sol";
-import {HelperConfig} from "./HelperConfig.s.sol";
 
 /**
  * @title DeployRealZKMVP
  * @dev Deployment script for Real ZK MVP with 3 core proofs
  */
 contract DeployRealZKMVP is Script {
+
+
+
+    /**
+     * @dev Deploy ProofOfReserve contract
+     */
+    function deployProofOfReserve(HelperConfig.NetworkConfig memory) internal {
+    console.log("Deploying ProofOfReserve...");
+    proofOfReserveAddress = address(new WAGAProofOfReserve());
+    emit ContractDeployed("WAGAProofOfReserve", proofOfReserveAddress);
+    console.log("WAGAProofOfReserve deployed at:", proofOfReserveAddress);
+    }
+
+    /**
+     * @dev Deploy InventoryManagerMVP contract
+     */
+    function deployInventoryManagerMVP() internal {
+    console.log("Deploying InventoryManagerMVP...");
+    inventoryManagerAddress = address(new WAGAInventoryManagerMVP());
+    emit ContractDeployed("WAGAInventoryManagerMVP", inventoryManagerAddress);
+    console.log("WAGAInventoryManagerMVP deployed at:", inventoryManagerAddress);
+    }
+
+    /**
+     * @dev Deploy RedemptionManager contract
+     */
+    function deployRedemptionManager() internal {
+    console.log("Deploying RedemptionManager...");
+    redemptionAddress = address(new WAGACoffeeRedemption());
+    emit ContractDeployed("WAGACoffeeRedemption", redemptionAddress);
+    console.log("WAGACoffeeRedemption deployed at:", redemptionAddress);
+    }
     /* -------------------------------------------------------------------------- */
     /*                              State Variables                              */
     /* -------------------------------------------------------------------------- */
 
-    // Contract addresses
+    // Contract addresses  
     address public coffeeTokenAddress;
+    address public batchManagerAddress;
+    address public zkManagerAddress;
+    address public proofOfReserveAddress;
+    address public inventoryManagerAddress;
+    address public redemptionAddress;
     address public accessControlAddress;
     address public zkVerifierAddress;
     address public privacyLayerAddress;
@@ -39,7 +81,12 @@ contract DeployRealZKMVP is Script {
     /* -------------------------------------------------------------------------- */
 
     function run() external returns (
-        WAGACoffeeToken,
+        WAGACoffeeTokenCore,
+        WAGABatchManager,
+        WAGAZKManager,
+        WAGAProofOfReserve,
+        WAGAInventoryManagerMVP,
+        WAGACoffeeRedemption,
         CircomVerifier,
         PrivacyLayer,
         HelperConfig
@@ -53,19 +100,35 @@ contract DeployRealZKMVP is Script {
         
         vm.startBroadcast(deployerKey);
 
-        // Step 1: Deploy Access Control
+                // Step 1: Deploy Access Control
         deployAccessControl();
 
-        // Step 2: Deploy CircomVerifier with Real ZK proofs
+        // Step 2: Deploy CircomVerifier  
         deployCircomVerifier();
 
         // Step 3: Deploy Privacy Layer
         deployPrivacyLayer();
 
-        // Step 4: Deploy main WAGA Coffee Token
-        deployWAGACoffeeToken();
+        // Step 4: Deploy Coffee Token Core (ERC1155 only)
+        deployWAGACoffeeTokenCore();
 
-        // Step 5: Setup basic roles
+        // Step 5: Deploy Modular Managers
+        deployBatchManager();
+        deployZKManager();
+
+        // Step 6: Connect managers to token
+        connectManagersToToken();
+
+        // Step 7: Deploy ProofOfReserve
+        deployProofOfReserve(networkConfig);
+
+        // Step 8: Deploy MVP Inventory Manager
+        deployInventoryManagerMVP();
+
+        // Step 9: Deploy Redemption Manager
+        deployRedemptionManager();
+
+        // Step 10: Setup basic roles
         setupBasicRoles();
 
         console.log("Real ZK MVP System deployed successfully!");
@@ -74,8 +137,14 @@ contract DeployRealZKMVP is Script {
         vm.stopBroadcast();
 
         // Return deployed contracts
+        // Return deployed contracts
         return (
-            WAGACoffeeToken(coffeeTokenAddress),
+            WAGACoffeeTokenCore(coffeeTokenAddress),
+            WAGABatchManager(batchManagerAddress),
+            WAGAZKManager(zkManagerAddress),
+            WAGAProofOfReserve(proofOfReserveAddress),
+            WAGAInventoryManagerMVP(inventoryManagerAddress),
+            WAGACoffeeRedemption(redemptionAddress),
             CircomVerifier(zkVerifierAddress),
             PrivacyLayer(privacyLayerAddress),
             helperConfig
@@ -86,56 +155,72 @@ contract DeployRealZKMVP is Script {
      * @dev Deploy Access Control system
      */
     function deployAccessControl() internal {
-        console.log("Deploying Access Control...");
-
-        WAGAAccessControl accessControl = new WAGAAccessControl();
-        accessControlAddress = address(accessControl);
-
-        emit ContractDeployed("WAGAAccessControl", accessControlAddress);
-        console.log("WAGAAccessControl deployed at:", accessControlAddress);
+    console.log("Deploying Access Control...");
+    accessControlAddress = address(new WAGAAccessControl());
+    emit ContractDeployed("WAGAAccessControl", accessControlAddress);
+    console.log("WAGAAccessControl deployed at:", accessControlAddress);
     }
 
     /**
      * @dev Deploy CircomVerifier for Real ZK MVP
      */
     function deployCircomVerifier() internal {
-        console.log("Deploying Real ZK CircomVerifier...");
-
-        CircomVerifier zkVerifier = new CircomVerifier();
-        zkVerifierAddress = address(zkVerifier);
-
-        emit ContractDeployed("CircomVerifier", zkVerifierAddress);
-        console.log("CircomVerifier deployed at:", zkVerifierAddress);
+    console.log("Deploying Real ZK CircomVerifier...");
+    zkVerifierAddress = address(new CircomVerifier());
+    emit ContractDeployed("CircomVerifier", zkVerifierAddress);
+    console.log("CircomVerifier deployed at:", zkVerifierAddress);
     }
 
     /**
      * @dev Deploy Privacy Layer
      */
     function deployPrivacyLayer() internal {
-        console.log("Deploying Privacy Layer...");
-
-        PrivacyLayer privacyLayer = new PrivacyLayer();
-        privacyLayerAddress = address(privacyLayer);
-
-        emit ContractDeployed("PrivacyLayer", privacyLayerAddress);
-        console.log("PrivacyLayer deployed at:", privacyLayerAddress);
+    console.log("Deploying Privacy Layer...");
+    privacyLayerAddress = address(new PrivacyLayer());
+    emit ContractDeployed("PrivacyLayer", privacyLayerAddress);
+    console.log("PrivacyLayer deployed at:", privacyLayerAddress);
     }
 
     /**
-     * @dev Deploy main WAGA Coffee Token
+     * @dev Deploy main WAGA Coffee Token Core (ERC1155 only)
      */
-    function deployWAGACoffeeToken() internal {
-        console.log("Deploying WAGA Coffee Token with Real ZK...");
+    function deployWAGACoffeeTokenCore() internal {
+    console.log("Deploying WAGA Coffee Token Core...");
+    coffeeTokenAddress = address(new WAGACoffeeTokenCore("https://ipfs.io/ipfs/"));
+    emit ContractDeployed("WAGACoffeeTokenCore", coffeeTokenAddress);
+    console.log("WAGACoffeeTokenCore deployed at:", coffeeTokenAddress);
+    }
 
-        WAGACoffeeToken coffeeToken = new WAGACoffeeToken(
-            "https://ipfs.io/ipfs/", // Base URI for metadata
-            zkVerifierAddress,
-            privacyLayerAddress
-        );
-        coffeeTokenAddress = address(coffeeToken);
+    /**
+     * @dev Deploy Batch Manager
+     */
+    function deployBatchManager() internal {
+    console.log("Deploying Batch Manager...");
+    batchManagerAddress = address(new WAGABatchManager(coffeeTokenAddress, privacyLayerAddress));
+    emit ContractDeployed("WAGABatchManager", batchManagerAddress);
+    console.log("WAGABatchManager deployed at:", batchManagerAddress);
+    }
 
-        emit ContractDeployed("WAGACoffeeToken", coffeeTokenAddress);
-        console.log("WAGACoffeeToken deployed at:", coffeeTokenAddress);
+    /**
+     * @dev Deploy ZK Manager
+     */
+    function deployZKManager() internal {
+    console.log("Deploying ZK Manager...");
+    zkManagerAddress = address(new WAGAZKManager(coffeeTokenAddress, zkVerifierAddress));
+    emit ContractDeployed("WAGAZKManager", zkManagerAddress);
+    console.log("WAGAZKManager deployed at:", zkManagerAddress);
+    }
+
+    /**
+     * @dev Connect managers to token
+     */
+    function connectManagersToToken() internal {
+        console.log("Connecting managers to token...");
+
+        WAGACoffeeTokenCore coffeeToken = WAGACoffeeTokenCore(coffeeTokenAddress);
+        coffeeToken.setManagers(batchManagerAddress, zkManagerAddress);
+
+        console.log("Managers connected successfully");
     }
 
     /**
@@ -144,7 +229,7 @@ contract DeployRealZKMVP is Script {
     function setupBasicRoles() internal {
         console.log("Setting up basic roles for Real ZK MVP...");
 
-        WAGACoffeeToken coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
+        WAGACoffeeTokenCore coffeeToken = WAGACoffeeTokenCore(coffeeTokenAddress);
 
         // Grant verifier role to CircomVerifier contract
         coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), zkVerifierAddress);
@@ -170,7 +255,7 @@ contract DeployRealZKMVP is Script {
         console.log("\n============================================================");
         console.log("              REAL ZK MVP DEPLOYMENT SUMMARY");
         console.log("============================================================");
-        console.log("WAGACoffeeToken:", coffeeTokenAddress);
+        console.log("WAGACoffeeTokenCore:", coffeeTokenAddress);
         console.log("WAGAAccessControl:", accessControlAddress);
         console.log("CircomVerifier:", zkVerifierAddress);
         console.log("PrivacyLayer:", privacyLayerAddress);

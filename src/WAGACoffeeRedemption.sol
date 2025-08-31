@@ -4,7 +4,7 @@ pragma solidity ^0.8.18;
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol"; // why
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import {WAGACoffeeToken} from "./WAGACoffeeToken.sol";
+import {WAGACoffeeTokenCore} from "./WAGACoffeeTokenCore.sol";
 
 contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     /* -------------------------------------------------------------------------- */
@@ -58,7 +58,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
 
     // bytes32 public constant FULFILLER_ROLE = keccak256("FULFILLER_ROLE");
     // bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    WAGACoffeeToken public coffeeToken;
+    WAGACoffeeTokenCore public coffeeToken;
     // Mapping from redemption ID to redemption request
     mapping(uint256 => RedemptionRequest) public redemptions;
     uint256 public nextRedemptionId; // 1000
@@ -107,7 +107,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     /* -------------------------------------------------------------------------- */
 
     constructor(address _coffeeToken) /*address coffeeTokenAddress*/ {
-        coffeeToken = WAGACoffeeToken(_coffeeToken);
+        coffeeToken = WAGACoffeeTokenCore(_coffeeToken);
         nextRedemptionId = 1000; // Do we need to initialize this?
     }
 
@@ -142,16 +142,17 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         (
             ,
             uint256 expiryDate,
+            bool isVerified,
             ,
             ,
+            string memory packagingInfo,
             ,
+            bool isMetadataVerified,
+            // 9th value placeholder
+            
+        ) = coffeeToken.getbatchInfo(batchId);
 
-        ) = coffeeToken.s_batchInfo(batchId);
-
-        // Get boolean flags and string data from separate mappings
-        bool isVerified = coffeeToken.isBatchVerified(batchId);
-        bool isMetadataVerified = coffeeToken.isBatchMetadataVerified(batchId);
-        string memory packagingInfo = coffeeToken.getBatchPackagingInfo(batchId);
+        // Get boolean flags and string data from separate mappings - already retrieved above
 
         // Ensure the batch has not expired
         if (block.timestamp > expiryDate) {

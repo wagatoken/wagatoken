@@ -2,7 +2,7 @@
 pragma solidity ^0.8.18;
 
 import {WAGAChainlinkFunctionsBase} from "./WAGAChainlinkFunctionsBase.sol";
-import {WAGACoffeeToken} from "./WAGACoffeeToken.sol";
+import {WAGACoffeeTokenCore} from "./WAGACoffeeTokenCore.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 //import {WAGAConfigManager} from "./WAGAConfigManager.sol";
 
@@ -26,7 +26,8 @@ contract WAGAProofOfReserve is
     error WAGAProofOfReserve__InvalidAddress_requestReserveVerification();
     error WAGAProofOfReserve__InvalidQuantity_requestReserveVerification();
     error WAGAProofOfReserve__RequestFailed_requestReserveVerification();
-    error WAGAProofOfReserve__QuantityNotVerified_fulfillRequest();
+    error WAGAProofOfReserve__OffchainBatchQuantityInsufficient_fulfillRequest();
+    error WAGAProofOfReserve__OffchainRequestQuantityInsufficient_fulfillRequest();
     error WAGAProofOfReserve__BatchMetadataNotVerified_fulfillRequest();
     error WAGAProofOfReserve__CallerDoesNotHaveRequiredRole_callHasRoleFromCoffeeToken();
 
@@ -36,7 +37,8 @@ contract WAGAProofOfReserve is
     // Reserve verification request structure
     struct VerificationRequest {
         uint256 batchId;
-        uint256 requestQuantity; // Expected quantity from batch (not minted tokens)
+        uint256 batchQuantity; // On-chain declared batch total quantity
+        uint256 requestQuantity; // Amount requested by user from batch
         uint256 verifiedQuantity; // Quantity verified by Chainlink Functions
         uint256 requestPrice; // Price per unit from batch
         uint256 verifiedPrice; // Price verified by Chainlink Functions
@@ -57,7 +59,7 @@ contract WAGAProofOfReserve is
 
     // bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
     // bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    WAGACoffeeToken public coffeeToken;
+    WAGACoffeeTokenCore public coffeeToken;
 
     // Mapping from request ID to verification request
     mapping(bytes32 requestId => VerificationRequest verificationRequest)
@@ -88,7 +90,7 @@ contract WAGAProofOfReserve is
 
     /**
      * @dev Constructor to initialize the contract
-     * @param coffeeTokenAddress Address of the WAGACoffeeToken contract
+     * @param coffeeTokenAddress Address of the WAGACoffeeTokenCore contract
      * @param router Address of the Chainlink Functions router
      * @param _subscriptionId Chainlink subscription ID
      * @param _donId Decentralized Oracle Network (DON) ID
@@ -101,7 +103,7 @@ contract WAGAProofOfReserve is
     )
         WAGAChainlinkFunctionsBase(router, _subscriptionId, _donId)
     /*Ownable(msg.sender)*/ {
-        coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
+        coffeeToken = WAGACoffeeTokenCore(coffeeTokenAddress);
         // _grantRole(VERIFIER_ROLE, msg.sender);
         // _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); // what is the difference between this and ADMIN_ROLE?
         // _grantRole(ADMIN_ROLE, msg.sender); // Remember to transfer this role to the appropriate verifier
@@ -129,7 +131,7 @@ contract WAGAProofOfReserve is
      * @param source JavaScript source code for Chainlink Functions
      * @return verificationRequestId The ID of the Chainlink Functions request
      * Requirements:
-     * - Batch must exist in the WAGACoffeeToken contract
+     * - Batch must exist in the WAGACoffeeTokenCore contract
      * - Batch request must exist and not be fulfilled
      * - Batch metadata must be verified
      */
@@ -144,20 +146,6 @@ contract WAGAProofOfReserve is
         returns (bytes32 verificationRequestId)
     {
         return _requestReserveVerificationInternal(batchId, requestId, source);
-    }
-
-    /**
-     * @dev Simplified version for testing
-     */
-    function requestReserveVerification(
-        uint256 batchId
-    )
-        external
-        callerHasRoleFromCoffeeToken(coffeeToken.VERIFIER_ROLE())
-        returns (bytes32 verificationRequestId)
-    {
-        string memory defaultSource = "return { verified: true, quantity: 100, price: 50000000000000000000 };";
-        return _requestReserveVerificationInternal(batchId, 0, defaultSource);
     }
 
     /**
@@ -184,13 +172,13 @@ contract WAGAProofOfReserve is
         // Get batch request information
         (
             uint256 requestBatchId,
-            address requester,
-            uint256 requestedQuantity,
-            string memory requestDetails,
-            uint256 requestTimestamp,
+            address requester, // Used later for recipient
+            uint256 requestedQuantity, // Amount user requested from batch
+            , // string memory requestDetails - unused
+            , // uint256 requestTimestamp - unused
             bool isFulfilled,
-            uint256 fulfilledQuantity,
-            uint256 fulfilledTimestamp
+            , // uint256 fulfilledQuantity - unused
+            // uint256 fulfilledTimestamp
         ) = coffeeToken.getBatchRequest(batchId, requestId);
         
         // Check if request exists and is not fulfilled
@@ -204,28 +192,30 @@ contract WAGAProofOfReserve is
             revert WAGAProofOfReserve__InvalidQuantity_requestReserveVerification();
         }
 
-        // Get Expected Values for Verification from the WAGACoffeeToken contract
+        // Get Expected Values for Verification from the WAGACoffeeTokenCore contract
+        uint256 batchQuantity = coffeeToken.getBatchQuantity(batchId);
+        
+        // Get batch info for additional details needed
         (
-            ,
-            ,
-            ,
-            uint256 batchQuantity,
-            uint256 mintedQuantity,
-            uint256 pricePerUnit
-
-        ) = coffeeToken.s_batchInfo(batchId);
-
-        // Get extended data from separate mappings
-        string memory packagingInfo = coffeeToken.getBatchPackagingInfo(batchId);
-        string memory metadataHash = coffeeToken.getBatchMetadataHash(batchId);
+            , // uint256 productionDate - unused
+            , // uint256 expiryDate - unused
+            , // bool isVerified - unused
+            , // uint256 quantity - already have batchQuantity
+            uint256 pricePerUnit,
+            string memory packagingInfo,
+            string memory metadataHash,
+            , // bool isMetadataVerified - unused
+            // uint256 lastVerifiedTimestamp - unused
+        ) = coffeeToken.getbatchInfo(batchId);
 
         // Prepare arguments for Chainlink Functions
-        string[] memory args = new string[](5);
+        string[] memory args = new string[](6);
         args[0] = Strings.toString(batchId);
-        args[1] = Strings.toString(requestedQuantity); // Use requested quantity instead of batch quantity
-        args[2] = Strings.toString(pricePerUnit);
-        args[3] = packagingInfo;
-        args[4] = metadataHash;
+        args[1] = Strings.toString(batchQuantity); // On-chain declared batch total
+        args[2] = Strings.toString(requestedQuantity); // User requested amount
+        args[3] = Strings.toString(pricePerUnit);
+        args[4] = packagingInfo;
+        args[5] = metadataHash;
 
         // Convert source code to bytes
         bytes memory sourceBytes = bytes(source);
@@ -244,7 +234,8 @@ contract WAGAProofOfReserve is
         // Store the verification request
         verificationRequests[verificationRequestId] = VerificationRequest({
             batchId: batchId,
-            requestQuantity: requestedQuantity, // Use requested quantity
+            batchQuantity: batchQuantity, // Store on-chain declared batch total
+            requestQuantity: requestedQuantity, // Amount requested by user
             verifiedQuantity: 0,
             requestPrice: pricePerUnit,
             verifiedPrice: 0,
@@ -290,28 +281,30 @@ contract WAGAProofOfReserve is
             revert WAGAProofOfReserve__InvalidSourceCode_requestReserveVerification();
         }
 
-        // Get Expected Values for Verification from the WAGACoffeeToken contract
+        // Get Expected Values for Verification from the WAGACoffeeTokenCore contract
+        uint256 quantity = coffeeToken.getBatchQuantity(batchId);
+        
+        // Get batch info for additional details needed
         (
-            ,
-            ,
-            ,
-            uint256 quantity, // Now uses quantity field
-            uint256 mintedQuantity,
-            uint256 pricePerUnit
-
-        ) = coffeeToken.s_batchInfo(batchId);
-
-        // Get extended data from separate mappings
-        string memory packagingInfo = coffeeToken.getBatchPackagingInfo(batchId);
-        string memory metadataHash = coffeeToken.getBatchMetadataHash(batchId);
+            , // uint256 productionDate - unused  
+            , // uint256 expiryDate - unused
+            , // bool isVerified - unused
+            , // uint256 quantity - already have quantity
+            uint256 pricePerUnit,
+            string memory packagingInfo,
+            string memory metadataHash,
+            , // bool isMetadataVerified - unused
+            // uint256 lastVerifiedTimestamp - unused
+        ) = coffeeToken.getbatchInfo(batchId);
 
         // Prepare arguments for Chainlink Functions
-        string[] memory args = new string[](5);
+        string[] memory args = new string[](6);
         args[0] = Strings.toString(batchId);
-        args[1] = Strings.toString(quantity);
-        args[2] = Strings.toString(pricePerUnit);
-        args[3] = packagingInfo;
-        args[4] = metadataHash;
+        args[1] = Strings.toString(quantity); // Batch total quantity to verify
+        args[2] = Strings.toString(quantity); // For inventory verification, request equals batch
+        args[3] = Strings.toString(pricePerUnit);
+        args[4] = packagingInfo;
+        args[5] = metadataHash;
 
         // Convert source code to bytes
         bytes memory sourceBytes = bytes(source);
@@ -331,7 +324,8 @@ contract WAGAProofOfReserve is
         // Store the verification request WITHOUT minting enabled
         verificationRequests[requestId] = VerificationRequest({
             batchId: batchId,
-            requestQuantity: quantity,
+            batchQuantity: quantity, // For inventory verification, batch quantity
+            requestQuantity: quantity, // For inventory verification, same as batch
             verifiedQuantity: 0,
             requestPrice: pricePerUnit,
             verifiedPrice: 0,
@@ -394,7 +388,7 @@ contract WAGAProofOfReserve is
             uint256 verifiedQuantity,
             uint256 verifiedPrice,
             string memory verifiedPackaging,
-            string memory verifiedMetadataHash
+            string memory metadataHashFromResponse
         ) = _parseResponse(response);
         
         // verifiedQuantity represents the total quantity verified in the offchain system
@@ -405,13 +399,13 @@ contract WAGAProofOfReserve is
         request.verifiedQuantity = verifiedQuantity;
         request.verifiedPrice = verifiedPrice;
         request.verifiedPackaging = verifiedPackaging;
-        request.verifiedMetadataHash = verifiedMetadataHash;
+        request.verifiedMetadataHash = metadataHashFromResponse;
         // Verify the batch metadata
         coffeeToken.verifyBatchMetadata(
             request.batchId,
             verifiedPrice,
             verifiedPackaging,
-            verifiedMetadataHash
+            metadataHashFromResponse
         );
         bool isMetadataVerified = coffeeToken.isBatchMetadataVerified(
             request.batchId
@@ -420,8 +414,16 @@ contract WAGAProofOfReserve is
         if (!isMetadataVerified) {
             revert WAGAProofOfReserve__BatchMetadataNotVerified_fulfillRequest();
         }
+        
+        // Dual verification:
+        // 1. Off-chain inventory must back the entire on-chain declared batch
+        if (verifiedQuantity < request.batchQuantity) {
+            revert WAGAProofOfReserve__OffchainBatchQuantityInsufficient_fulfillRequest();
+        }
+        
+        // 2. Off-chain inventory must be able to fulfill this specific request
         if (verifiedQuantity < request.requestQuantity) {
-            revert WAGAProofOfReserve__QuantityNotVerified_fulfillRequest();
+            revert WAGAProofOfReserve__OffchainRequestQuantityInsufficient_fulfillRequest();
         }
         request.completed = true;
         request.verified = true;

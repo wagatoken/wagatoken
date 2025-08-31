@@ -2,7 +2,7 @@
 pragma solidity ^0.8.18;
 
 import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/interfaces/AutomationCompatibleInterface.sol";
-import {WAGACoffeeToken} from "./WAGACoffeeToken.sol";
+import {WAGACoffeeTokenCore} from "./WAGACoffeeTokenCore.sol";
 import {WAGAProofOfReserve} from "./WAGAProofOfReserve.sol";
 import {WAGAUpkeepLib} from "./libraries/WAGAUpkeepLib.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -35,7 +35,7 @@ contract WAGAInventoryManager2 is Ownable, AutomationCompatibleInterface {
     /*                               State Variables                              */
     /* -------------------------------------------------------------------------- */
 
-    WAGACoffeeToken public coffeeToken;
+    WAGACoffeeTokenCore public coffeeToken;
     WAGAProofOfReserve public proofOfReserve;
 
     // Gas optimization: Cache batch data to reduce external calls
@@ -87,7 +87,7 @@ contract WAGAInventoryManager2 is Ownable, AutomationCompatibleInterface {
         address coffeeTokenAddress,
         address proofOfReserveAddress
     ) Ownable(msg.sender) {
-        coffeeToken = WAGACoffeeToken(coffeeTokenAddress);
+        coffeeToken = WAGACoffeeTokenCore(coffeeTokenAddress);
         proofOfReserve = WAGAProofOfReserve(proofOfReserveAddress);
         s_lastTimeStamp = block.timestamp;
     }
@@ -149,15 +149,16 @@ contract WAGAInventoryManager2 is Ownable, AutomationCompatibleInterface {
         (
             uint256 productionDate,
             uint256 expiryDate,
-            ,
+            bool isVerified,
             uint256 quantity,
-            uint256 mintedQuantity,
+            uint256 pricePerUnit,
+            ,
+            ,
+            ,
             uint256 lastVerifiedTimestamp
+        ) = coffeeToken.getbatchInfo(batchId);
 
-        ) = coffeeToken.s_batchInfo(batchId);
-
-        // Get boolean flags from separate mappings
-        bool isVerified = coffeeToken.isBatchVerified(batchId);
+        // Get boolean flags from separate mappings - already retrieved above
 
         // Cache the data
         s_batchDataCache[batchId] = CachedBatchData({
