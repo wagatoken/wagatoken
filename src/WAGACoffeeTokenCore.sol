@@ -5,7 +5,7 @@ import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {ERC1155Supply} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./WAGAConfigManager.sol";
 import "./WAGAViewFunctions.sol";
-import "./WAGABatchManager.sol";
+import "./Interfaces/IWAGABatchManager.sol";
 import "./WAGAZKManager.sol";
 import "./Interfaces/IPrivacyLayer.sol";
 
@@ -14,6 +14,38 @@ import "./Interfaces/IPrivacyLayer.sol";
  * @dev Core functionality for WAGA Coffee Token system - modular version
  */
 contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFunctions {
+
+    /**
+     * @dev Update batch inventory (only admins or trusted contracts)
+     */
+    function updateInventory(uint256 batchId, uint256 newQuantity) external onlyRole(ADMIN_ROLE) {
+        if (!batchCreated[batchId]) {
+            revert WAGACoffeeTokenCore__BatchDoesNotExist_mintBatch();
+        }
+        if (newQuantity == 0) {
+            revert WAGACoffeeTokenCore__InvalidQuantity_createBatch();
+        }
+        s_batchInfo[batchId].quantity = newQuantity;
+    }
+
+    /**
+     * @dev Forwarding function for batch metadata verification (for compatibility)
+     */
+    function verifyBatchMetadata(
+        uint256 batchId,
+        uint256 verifiedPrice,
+        string calldata verifiedPackaging,
+        string calldata verifiedMetadataHash
+    ) external onlyRole(ADMIN_ROLE) {
+        batchManager.verifyBatchMetadata(batchId, verifiedPrice, verifiedPackaging, verifiedMetadataHash);
+    }
+
+    /**
+     * @dev Forwarding function to check if batch metadata is verified
+     */
+    function isBatchMetadataVerified(uint256 batchId) external view returns (bool) {
+        return batchManager.isBatchMetadataVerified(batchId);
+    }
     
     /* -------------------------------------------------------------------------- */
     /*                                   Errors                                   */
@@ -55,7 +87,7 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     /* -------------------------------------------------------------------------- */
 
     // Modular manager contracts
-    WAGABatchManager public batchManager;
+    IWAGABatchManager public batchManager;
     WAGAZKManager public zkManager;
 
     // Basic ERC1155 token state only
@@ -84,7 +116,7 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
         address _batchManager,
         address _zkManager
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        batchManager = WAGABatchManager(_batchManager);
+        batchManager = IWAGABatchManager(_batchManager);
         zkManager = WAGAZKManager(_zkManager);
     }
 
@@ -263,8 +295,8 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
         address _batchManager,
         address _zkManager
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-    batchManager = WAGABatchManager(_batchManager);
-    zkManager = WAGAZKManager(_zkManager);
+        batchManager = IWAGABatchManager(_batchManager);
+        zkManager = WAGAZKManager(_zkManager);
     }
 
     /**

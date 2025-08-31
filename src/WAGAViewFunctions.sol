@@ -219,7 +219,7 @@ contract WAGAViewFunctions {
      * @param batchId ID of the batch to check
      * @return True if batch exists
      */
-    function isBatchCreated(uint256 batchId) public view returns (bool) {
+    function isBatchCreated(uint256 batchId) public view virtual returns (bool) {
         return s_batchInfo[batchId].productionDate != 0;
     }
 

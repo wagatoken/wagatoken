@@ -10,10 +10,112 @@ import "./WAGAViewFunctions.sol";
  * @dev Manages detailed batch information and metadata for WAGA Coffee system
  */
 contract WAGABatchManager is WAGAViewFunctions {
+    /**
+     * @dev Mark a batch as expired (only admin)
+     */
+    function markBatchExpired(
+        uint256 batchId
+    ) external callerHasRoleFromCoffeeToken(DEFAULT_ADMIN_ROLE) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGABatchManager__BatchDoesNotExist_createBatchInfo();
+        }
+        _setBatchFlag(batchId, 3, true); // Use bit 3 for expired
+        // Optionally, emit an event here if you want to track expiries
+    }
+
+    /**
+     * @dev Reset verification flags for a batch (only admin)
+     */
+    function resetBatchVerificationFlags(
+        uint256 batchId
+    ) external callerHasRoleFromCoffeeToken(DEFAULT_ADMIN_ROLE) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGABatchManager__BatchDoesNotExist_createBatchInfo();
+        }
+        s_batchInfo[batchId].isVerified = false;
+        s_batchInfo[batchId].isMetadataVerified = false;
+        s_batchInfo[batchId].lastVerifiedTimestamp = 0;
+        _setBatchFlag(batchId, 0, false); // isVerified
+        _setBatchFlag(batchId, 1, false); // isMetadataVerified
+    }
+
+    /**
+     * @dev Update batch active status (only admin)
+     */
+    function updateBatchStatus(
+        uint256 batchId,
+        bool isActive
+    ) external callerHasRoleFromCoffeeToken(DEFAULT_ADMIN_ROLE) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGABatchManager__BatchDoesNotExist_createBatchInfo();
+        }
+        s_isActiveBatch[batchId] = isActive;
+    }
+
+    /**
+     * @dev Update batch inventory (only admin)
+     */
+    function updateInventory(
+        uint256 batchId,
+        uint256 newQuantity
+    ) external callerHasRoleFromCoffeeToken(DEFAULT_ADMIN_ROLE) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGABatchManager__BatchDoesNotExist_createBatchInfo();
+        }
+        if (newQuantity == 0) {
+            revert("WAGABatchManager__InvalidQuantity_updateInventory");
+        }
+        s_batchInfo[batchId].quantity = newQuantity;
+    }
+    /**
+     * @dev Verify batch metadata (only admin)
+     * @param batchId Batch identifier
+     * @param verifiedPrice Verified price
+     * @param verifiedPackaging Verified packaging
+     * @param verifiedMetadataHash Verified metadata hash
+     */
+    function verifyBatchMetadata(
+        uint256 batchId,
+        uint256 verifiedPrice,
+        string calldata verifiedPackaging,
+        string calldata verifiedMetadataHash
+    ) external callerHasRoleFromCoffeeToken(DEFAULT_ADMIN_ROLE) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGABatchManager__BatchDoesNotExist_createBatchInfo();
+        }
+
+        BatchInfo storage info = s_batchInfo[batchId];
+        if (
+            info.pricePerUnit != verifiedPrice ||
+            keccak256(bytes(info.packagingInfo)) !=
+            keccak256(bytes(verifiedPackaging)) ||
+            keccak256(bytes(info.metadataHash)) !=
+            keccak256(bytes(verifiedMetadataHash))
+        ) {
+            revert("WAGABatchManager__MetadataMismatch_verifyBatchMetadata");
+        }
+
+        // Set isMetadataVerified flag and update timestamp
+        info.isMetadataVerified = true;
+        info.lastVerifiedTimestamp = block.timestamp;
+        _setBatchFlag(batchId, 1, true); // isMetadataVerified
+    }
+
+    /**
+     * @dev Returns whether batch metadata is verified
+     */
+    function isBatchMetadataVerified(
+        uint256 batchId
+    ) external view returns (bool) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGABatchManager__BatchDoesNotExist_getBatchInfo();
+        }
+        return s_batchInfo[batchId].isMetadataVerified;
+    }
     /* -------------------------------------------------------------------------- */
     /*                                   Constants                                */
     /* -------------------------------------------------------------------------- */
-    
+
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
     bytes32 public constant PROCESSOR_ROLE = keccak256("PROCESSOR_ROLE");
     bytes32 public constant DISTRIBUTOR_ROLE = keccak256("DISTRIBUTOR_ROLE");
@@ -22,12 +124,12 @@ contract WAGABatchManager is WAGAViewFunctions {
     /* -------------------------------------------------------------------------- */
     /*                                   Errors                                   */
     /* -------------------------------------------------------------------------- */
-    
+
     error WAGABatchManager__CallerDoesNotHaveRequiredRole_callerHasRoleFromCoffeeToken();
     error WAGABatchManager__BatchDoesNotExist_createBatchInfo();
     error WAGABatchManager__BatchDoesNotExist_updateBatchMetadata();
     error WAGABatchManager__BatchDoesNotExist_getBatchInfo();
-    
+
     /* -------------------------------------------------------------------------- */
     /*                              State Variables                              */
     /* -------------------------------------------------------------------------- */
@@ -52,10 +154,7 @@ contract WAGABatchManager is WAGAViewFunctions {
         string packagingInfo
     );
 
-    event BatchMetadataUpdated(
-        uint256 indexed batchId,
-        string metadataHash
-    );
+    event BatchMetadataUpdated(uint256 indexed batchId, string metadataHash);
 
     /* -------------------------------------------------------------------------- */
     /*                                Modifiers                                   */
@@ -64,9 +163,13 @@ contract WAGABatchManager is WAGAViewFunctions {
     modifier callerHasRoleFromCoffeeToken(bytes32 roleType) {
         // Use a try-catch or low-level call since interface might not have hasRole
         (bool success, bytes memory result) = address(coffeeToken).staticcall(
-            abi.encodeWithSignature("hasRole(bytes32,address)", roleType, msg.sender)
+            abi.encodeWithSignature(
+                "hasRole(bytes32,address)",
+                roleType,
+                msg.sender
+            )
         );
-        
+
         if (!success || result.length == 0 || !abi.decode(result, (bool))) {
             revert WAGABatchManager__CallerDoesNotHaveRequiredRole_callerHasRoleFromCoffeeToken();
         }
@@ -80,15 +183,21 @@ contract WAGABatchManager is WAGAViewFunctions {
     /**
      * @dev Check if caller has a specific role from coffee token
      */
-    function _hasRoleFromCoffeeToken(bytes32 roleType) internal view returns (bool) {
+    function _hasRoleFromCoffeeToken(
+        bytes32 roleType
+    ) internal view returns (bool) {
         (bool success, bytes memory result) = address(coffeeToken).staticcall(
-            abi.encodeWithSignature("hasRole(bytes32,address)", roleType, msg.sender)
+            abi.encodeWithSignature(
+                "hasRole(bytes32,address)",
+                roleType,
+                msg.sender
+            )
         );
-        
+
         if (!success || result.length == 0) {
             return false;
         }
-        
+
         return abi.decode(result, (bool));
     }
 
@@ -97,10 +206,7 @@ contract WAGABatchManager is WAGAViewFunctions {
     /*                                Constructor                                 */
     /* -------------------------------------------------------------------------- */
 
-    constructor(
-        address _coffeeToken,
-        address _privacyLayer
-    ) {
+    constructor(address _coffeeToken, address _privacyLayer) {
         coffeeToken = IWAGACoffeeToken(_coffeeToken);
         privacyLayer = IPrivacyLayer(_privacyLayer);
     }
@@ -140,22 +246,26 @@ contract WAGABatchManager is WAGAViewFunctions {
         s_batchInfo[batchId].packagingInfo = packagingInfo;
 
         // Configure privacy for this batch
-        IPrivacyLayer.PrivacyConfig memory privacyConfig = IPrivacyLayer.PrivacyConfig({
-            pricingPrivate: privacyLevel != IPrivacyLayer.PrivacyLevel.PUBLIC,
-            qualityPrivate: privacyLevel != IPrivacyLayer.PrivacyLevel.PUBLIC,
-            supplyChainPrivate: privacyLevel != IPrivacyLayer.PrivacyLevel.PUBLIC,
-            level: privacyLevel,
-            pricingClaim: "Standard Pricing",
-            qualityClaim: "Quality Verified",
-            supplyChainClaim: "Supply Chain Verified"
-        });
+        IPrivacyLayer.PrivacyConfig memory privacyConfig = IPrivacyLayer
+            .PrivacyConfig({
+                pricingPrivate: privacyLevel !=
+                    IPrivacyLayer.PrivacyLevel.PUBLIC,
+                qualityPrivate: privacyLevel !=
+                    IPrivacyLayer.PrivacyLevel.PUBLIC,
+                supplyChainPrivate: privacyLevel !=
+                    IPrivacyLayer.PrivacyLevel.PUBLIC,
+                level: privacyLevel,
+                pricingClaim: "Standard Pricing",
+                qualityClaim: "Quality Verified",
+                supplyChainClaim: "Supply Chain Verified"
+            });
 
         privacyLayer.configurePrivacy(batchId, privacyConfig);
 
         // Set initial flags
         _setBatchFlag(batchId, 0, false); // isVerified
         _setBatchFlag(batchId, 1, false); // isMetadataVerified
-        _setBatchFlag(batchId, 2, true);  // isActive
+        _setBatchFlag(batchId, 2, true); // isActive
 
         emit BatchInfoUpdated(batchId, origin, packagingInfo);
     }
@@ -178,44 +288,160 @@ contract WAGABatchManager is WAGAViewFunctions {
     }
 
     /**
-     * @dev Get batch information with privacy considerations
+     * @dev Get batch information with privacy considerations - optimized for stack depth
      */
-    function getBatchInfo(uint256 batchId) external view returns (
-        uint256 productionDate,
-        uint256 expiryDate,
-        uint256 quantity,
-        uint256 pricePerUnit,
-        string memory origin,
-        string memory packagingInfo,
-        address creator,
-        uint256 timestamp
-    ) {
+    function getBatchInfo(
+        uint256 batchId
+    )
+        external
+        view
+        returns (
+            uint256 productionDate,
+            uint256 expiryDate,
+            uint256 quantity,
+            uint256 pricePerUnit,
+            string memory origin,
+            string memory packagingInfo,
+            address creator,
+            uint256 timestamp
+        )
+    {
         if (!coffeeToken.isBatchCreated(batchId)) {
             revert WAGABatchManager__BatchDoesNotExist_getBatchInfo();
         }
 
-        BatchInfo memory info = s_batchInfo[batchId];
-        IPrivacyLayer.PrivacyConfig memory config = privacyLayer.getPrivacyConfig(batchId);
+        // Separate privacy processing to reduce stack depth
+        return _getFilteredBatchInfo(batchId);
+    }
 
-        // Apply privacy filtering based on caller's role
-        bool canViewPricing = !config.pricingPrivate || 
-            _hasRoleFromCoffeeToken(DISTRIBUTOR_ROLE) ||
-            _hasRoleFromCoffeeToken(DEFAULT_ADMIN_ROLE);
-
-        bool canViewDetails = !config.supplyChainPrivate || 
-            _hasRoleFromCoffeeToken(VERIFIER_ROLE) ||
-            _hasRoleFromCoffeeToken(DEFAULT_ADMIN_ROLE);
+    /**
+     * @dev Internal function to handle privacy filtering
+     */
+    function _getFilteredBatchInfo(
+        uint256 batchId
+    )
+        internal
+        view
+        returns (
+            uint256 productionDate,
+            uint256 expiryDate,
+            uint256 quantity,
+            uint256 pricePerUnit,
+            string memory origin,
+            string memory packagingInfo,
+            address creator,
+            uint256 timestamp
+        )
+    {
+        BatchInfo storage info = s_batchInfo[batchId];
+        
+        // Get privacy permissions in separate call
+        (bool canViewPricing, bool canViewDetails) = _getPrivacyPermissions(batchId);
 
         return (
             canViewDetails ? info.productionDate : 0,
             canViewDetails ? info.expiryDate : 0,
             info.quantity,
             canViewPricing ? info.pricePerUnit : 0,
-            canViewDetails ? batchOrigin[batchId] : config.supplyChainClaim,
+            canViewDetails ? batchOrigin[batchId] : "Origin Protected",
             canViewDetails ? info.packagingInfo : "Standard Packaging",
             batchCreator[batchId],
             batchCreationTimestamp[batchId]
         );
+    }
+
+    /**
+     * @dev Get privacy permissions for caller - separated for stack depth optimization
+     */
+    function _getPrivacyPermissions(
+        uint256 batchId
+    ) internal view returns (bool canViewPricing, bool canViewDetails) {
+        IPrivacyLayer.PrivacyConfig memory config = privacyLayer.getPrivacyConfig(batchId);
+        
+        canViewPricing = !config.pricingPrivate || 
+            _hasRoleFromCoffeeToken(DISTRIBUTOR_ROLE) ||
+            _hasRoleFromCoffeeToken(DEFAULT_ADMIN_ROLE);
+
+        canViewDetails = !config.supplyChainPrivate ||
+            _hasRoleFromCoffeeToken(VERIFIER_ROLE) ||
+            _hasRoleFromCoffeeToken(DEFAULT_ADMIN_ROLE);
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                            ZK Privacy Functions                           */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Get privacy configuration for a batch (ZK processing)
+     */
+    function getBatchPrivacyConfig(
+        uint256 batchId
+    ) external view returns (IPrivacyLayer.PrivacyConfig memory) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGABatchManager__BatchDoesNotExist_getBatchInfo();
+        }
+        return privacyLayer.getPrivacyConfig(batchId);
+    }
+
+    /**
+     * @dev Update ZK claims after proof verification (preserves existing ZK logic)
+     */
+    function updateZKClaims(
+        uint256 batchId,
+        string calldata pricingClaim,
+        string calldata qualityClaim,
+        string calldata supplyChainClaim
+    ) external callerHasRoleFromCoffeeToken(VERIFIER_ROLE) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGABatchManager__BatchDoesNotExist_getBatchInfo();
+        }
+        privacyLayer.updatePublicClaims(batchId, pricingClaim, qualityClaim, supplyChainClaim);
+    }
+
+    /**
+     * @dev Check if caller can view pricing data (ZK role verification)
+     */
+    function canViewPricingData(
+        uint256 batchId,
+        address caller
+    ) external view returns (bool) {
+        IPrivacyLayer.PrivacyConfig memory config = privacyLayer.getPrivacyConfig(batchId);
+        return !config.pricingPrivate || _hasSpecificRoleForAddress(caller, DISTRIBUTOR_ROLE) || 
+               _hasSpecificRoleForAddress(caller, DEFAULT_ADMIN_ROLE);
+    }
+
+    /**
+     * @dev Check if caller can view supply chain details (ZK role verification)
+     */
+    function canViewSupplyChainData(
+        uint256 batchId,
+        address caller
+    ) external view returns (bool) {
+        IPrivacyLayer.PrivacyConfig memory config = privacyLayer.getPrivacyConfig(batchId);
+        return !config.supplyChainPrivate || _hasSpecificRoleForAddress(caller, VERIFIER_ROLE) || 
+               _hasSpecificRoleForAddress(caller, DEFAULT_ADMIN_ROLE);
+    }
+
+    /**
+     * @dev Internal helper for role checking with specific address
+     */
+    function _hasSpecificRoleForAddress(
+        address account,
+        bytes32 roleType
+    ) internal view returns (bool) {
+        (bool success, bytes memory result) = address(coffeeToken).staticcall(
+            abi.encodeWithSignature(
+                "hasRole(bytes32,address)",
+                roleType,
+                account
+            )
+        );
+
+        if (!success || result.length == 0) {
+            return false;
+        }
+
+        return abi.decode(result, (bool));
     }
 
     /* -------------------------------------------------------------------------- */
@@ -225,7 +451,11 @@ contract WAGABatchManager is WAGAViewFunctions {
     /**
      * @dev Set a specific flag for a batch
      */
-    function _setBatchFlag(uint256 batchId, uint8 flagBit, bool value) internal {
+    function _setBatchFlag(
+        uint256 batchId,
+        uint8 flagBit,
+        bool value
+    ) internal {
         uint8 currentFlags = batchFlags[batchId];
         if (value) {
             batchFlags[batchId] = uint8(currentFlags | (1 << flagBit));
@@ -237,7 +467,10 @@ contract WAGABatchManager is WAGAViewFunctions {
     /**
      * @dev Get a specific flag for a batch
      */
-    function getBatchFlag(uint256 batchId, uint8 flagBit) external view returns (bool) {
+    function getBatchFlag(
+        uint256 batchId,
+        uint8 flagBit
+    ) external view returns (bool) {
         return (batchFlags[batchId] & (1 << flagBit)) != 0;
     }
 }

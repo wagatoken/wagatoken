@@ -4,7 +4,7 @@ pragma solidity ^0.8.18;
 import {WAGAChainlinkFunctionsBase} from "./WAGAChainlinkFunctionsBase.sol";
 import {WAGACoffeeTokenCore} from "./WAGACoffeeTokenCore.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-//import {WAGAConfigManager} from "./WAGAConfigManager.sol";
+import {IWAGABatchManager} from "./Interfaces/IWAGABatchManager.sol";
 
 /**
  * @title WAGAProofOfReserve
@@ -12,7 +12,6 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
  */
 contract WAGAProofOfReserve is
     WAGAChainlinkFunctionsBase
-   // WAGAConfigManager /*, Ownable */
 {
     /* -------------------------------------------------------------------------- */
     /*                                  // Errors                                 */
@@ -60,6 +59,7 @@ contract WAGAProofOfReserve is
     // bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
     // bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     WAGACoffeeTokenCore public coffeeToken;
+    IWAGABatchManager public batchManager;
 
     // Mapping from request ID to verification request
     mapping(bytes32 requestId => VerificationRequest verificationRequest)
@@ -97,16 +97,15 @@ contract WAGAProofOfReserve is
      */
     constructor(
         address coffeeTokenAddress,
+        address batchManagerAddress,
         address router,
         uint64 _subscriptionId,
         bytes32 _donId
     )
         WAGAChainlinkFunctionsBase(router, _subscriptionId, _donId)
-    /*Ownable(msg.sender)*/ {
+    {
         coffeeToken = WAGACoffeeTokenCore(coffeeTokenAddress);
-        // _grantRole(VERIFIER_ROLE, msg.sender);
-        // _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); // what is the difference between this and ADMIN_ROLE?
-        // _grantRole(ADMIN_ROLE, msg.sender); // Remember to transfer this role to the appropriate verifier
+    batchManager = IWAGABatchManager(batchManagerAddress);
     }
 
     modifier callerHasRoleFromCoffeeToken(bytes32 roleType) {
@@ -400,14 +399,14 @@ contract WAGAProofOfReserve is
         request.verifiedPrice = verifiedPrice;
         request.verifiedPackaging = verifiedPackaging;
         request.verifiedMetadataHash = metadataHashFromResponse;
-        // Verify the batch metadata
-        coffeeToken.verifyBatchMetadata(
+        // Verify the batch metadata using batchManager
+        batchManager.verifyBatchMetadata(
             request.batchId,
             verifiedPrice,
             verifiedPackaging,
             metadataHashFromResponse
         );
-        bool isMetadataVerified = coffeeToken.isBatchMetadataVerified(
+        bool isMetadataVerified = batchManager.isBatchMetadataVerified(
             request.batchId
         );
 
@@ -429,12 +428,8 @@ contract WAGAProofOfReserve is
         request.verified = true;
         request.lastVerifiedTimestamp = block.timestamp;
         // Update coffeeToken state regardless of the check.
-        coffeeToken.updateBatchLastVerifiedTimestamp(
-            request.batchId,
-            block.timestamp
-        );
-        coffeeToken.updateInventory(request.batchId, verifiedQuantity);
-        coffeeToken.updateBatchStatus(request.batchId, true);
+    batchManager.updateInventory(request.batchId, verifiedQuantity);
+    batchManager.updateBatchStatus(request.batchId, true);
         emit ReserveVerificationCompleted(
             requestId,
             request.batchId,

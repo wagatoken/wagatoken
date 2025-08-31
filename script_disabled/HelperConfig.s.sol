@@ -89,7 +89,7 @@ contract HelperConfig is Script {
             });
     }
 
-    function getOrCreateAnvilConfig() public view returns (NetworkConfig memory) {
+    function getOrCreateAnvilConfig() public returns (NetworkConfig memory) {
         // Check if we already deployed mocks
         if (activeNetworkConfig.router != address(0)) {
             return activeNetworkConfig;

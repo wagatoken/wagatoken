@@ -2,6 +2,7 @@
 pragma solidity ^0.8.18;
 
 import {WAGACoffeeTokenCore} from "./WAGACoffeeTokenCore.sol";
+import {IWAGABatchManager} from "./Interfaces/IWAGABatchManager.sol";
 import {WAGAProofOfReserve} from "./WAGAProofOfReserve.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -40,6 +41,7 @@ contract WAGAInventoryManagerMVP is Ownable {
     
     // Core contract references
     WAGACoffeeTokenCore public immutable coffeeToken;
+    IWAGABatchManager public immutable batchManager;
     WAGAProofOfReserve public immutable proofOfReserve;
     
     // Configuration thresholds
@@ -60,16 +62,20 @@ contract WAGAInventoryManagerMVP is Ownable {
     
     constructor(
         address _coffeeToken,
+        address _batchManager,
         address _proofOfReserve
     ) Ownable(msg.sender) {
         if (_coffeeToken == address(0)) {
             revert WAGAInventoryManagerMVP__InvalidCoffeeTokenAddress();
         }
+        if (_batchManager == address(0)) {
+            revert("InvalidBatchManagerAddress");
+        }
         if (_proofOfReserve == address(0)) {
             revert WAGAInventoryManagerMVP__InvalidProofOfReserveAddress();
         }
-        
         coffeeToken = WAGACoffeeTokenCore(_coffeeToken);
+        batchManager = IWAGABatchManager(_batchManager);
         proofOfReserve = WAGAProofOfReserve(_proofOfReserve);
     }
 
@@ -100,7 +106,7 @@ contract WAGAInventoryManagerMVP is Ownable {
             // Check if batch is expired
             if (currentTime > expiryDate && !isExpiredBatch[batchId]) {
                 // Mark as expired
-                coffeeToken.markBatchExpired(batchId);
+                batchManager.markBatchExpired(batchId);
                 isExpiredBatch[batchId] = true;
                 
                 emit BatchExpired(batchId, expiryDate);
@@ -129,7 +135,7 @@ contract WAGAInventoryManagerMVP is Ownable {
             // Check if verification is needed
             if (currentTime >= lastVerificationTime[batchId] + verificationInterval) {
                 // Reset verification flags
-                coffeeToken.resetBatchVerificationFlags(batchId);
+                batchManager.resetBatchVerificationFlags(batchId);
                 
                 // Request verification from ProofOfReserve
                 bytes32 requestId = proofOfReserve.requestInventoryVerification(batchId, defaultSourceCode);

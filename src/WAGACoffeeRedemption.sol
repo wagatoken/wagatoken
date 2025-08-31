@@ -56,8 +56,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     /*                               STATE VARIABLES                              */
     /* -------------------------------------------------------------------------- */
 
-    // bytes32 public constant FULFILLER_ROLE = keccak256("FULFILLER_ROLE");
-    // bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    // ...existing code...
     WAGACoffeeTokenCore public coffeeToken;
     // Mapping from redemption ID to redemption request
     mapping(uint256 => RedemptionRequest) public redemptions;
