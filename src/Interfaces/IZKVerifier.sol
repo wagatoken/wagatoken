@@ -53,38 +53,44 @@ interface IZKVerifier {
      * @dev Verify price competitiveness without revealing actual price
      * @param batchId Batch identifier
      * @param zkProofData ZK proof that price is competitive
+     * @param publicSignals Public inputs for the ZK circuit
      * @param publicClaim Public claim text (e.g., "Competitively Priced", "Premium Value")
      * @return verified Whether proof is valid
      */
     function verifyPriceCompetitiveness(
         uint256 batchId,
         bytes calldata zkProofData,
+        uint256[] calldata publicSignals,
         string calldata publicClaim
     ) external returns (bool verified);
 
     /**
      * @dev Verify quality standards without revealing exact scores
-     * @param batchId Batch identifier  
+     * @param batchId Batch identifier
      * @param zkProofData ZK proof that quality meets standards
+     * @param publicSignals Public inputs for the ZK circuit
      * @param publicClaim Public claim text (e.g., "Premium Quality", "SCA 85+")
      * @return verified Whether proof is valid
      */
     function verifyQualityStandards(
         uint256 batchId,
         bytes calldata zkProofData,
+        uint256[] calldata publicSignals,
         string calldata publicClaim
     ) external returns (bool verified);
 
     /**
      * @dev Verify supply chain provenance without revealing sensitive details
      * @param batchId Batch identifier
-     * @param zkProofData ZK proof of origin and traceability  
+     * @param zkProofData ZK proof of origin and traceability
+     * @param publicSignals Public inputs for the ZK circuit
      * @param publicClaim Public claim text (e.g., "Single-Origin Ethiopian", "Farm-Traceable")
      * @return verified Whether proof is valid
      */
     function verifySupplyChainProvenance(
         uint256 batchId,
         bytes calldata zkProofData,
+        uint256[] calldata publicSignals,
         string calldata publicClaim
     ) external returns (bool verified);
 

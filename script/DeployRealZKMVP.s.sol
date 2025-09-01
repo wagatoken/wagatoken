@@ -37,11 +37,11 @@ contract DeployRealZKMVP is Script {
         // 1. Deploy CircomVerifier
         CircomVerifier zkVerifier = new CircomVerifier();
 
-        // 2. Deploy PrivacyLayer
-        PrivacyLayer privacyLayer = new PrivacyLayer();
-
-        // 3. Deploy WAGACoffeeTokenCore
+        // 2. Deploy WAGACoffeeTokenCore first
         WAGACoffeeTokenCore coffeeToken = new WAGACoffeeTokenCore("https://ipfs.io/ipfs/");
+
+        // 3. Deploy PrivacyLayer with coffee token reference
+        PrivacyLayer privacyLayer = new PrivacyLayer(address(coffeeToken));
 
         // 4. Deploy WAGABatchManager
         WAGABatchManager batchManager = new WAGABatchManager(
@@ -79,6 +79,7 @@ contract DeployRealZKMVP is Script {
 
         // 10. Grant roles
         coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(zkVerifier));
+        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(zkManager)); // ZK Manager needs to call verifier
         coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), msg.sender);
         coffeeToken.grantRole(coffeeToken.DISTRIBUTOR_ROLE(), msg.sender);
         coffeeToken.grantRole(coffeeToken.MINTER_ROLE(), address(proofOfReserve));

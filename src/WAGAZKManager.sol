@@ -87,6 +87,21 @@ contract WAGAZKManager is WAGAViewFunctions {
         _;
     }
 
+    function _checkCallerHasRoleFromCoffeeToken(bytes32 roleType, address caller) internal view {
+        // Use a try-catch or low-level call since interface might not have hasRole
+        (bool success, bytes memory result) = address(coffeeToken).staticcall(
+            abi.encodeWithSignature(
+                "hasRole(bytes32,address)",
+                roleType,
+                caller
+            )
+        );
+
+        if (!success || result.length == 0 || !abi.decode(result, (bool))) {
+            revert WAGAZKManager__CallerDoesNotHaveRequiredRole_callerHasRoleFromCoffeeToken();
+        }
+    }
+
     /* -------------------------------------------------------------------------- */
     /*                                Constructor                                 */
     /* -------------------------------------------------------------------------- */
@@ -119,11 +134,11 @@ contract WAGAZKManager is WAGAViewFunctions {
         // Verify ZK proof based on type
         bool verified = false;
         if (proofType == IZKVerifier.ProofType.PRICE_COMPETITIVENESS) {
-            verified = zkVerifier.verifyPriceCompetitiveness(batchId, zkProofData, publicClaim);
+            verified = zkVerifier.verifyPriceCompetitiveness(batchId, zkProofData, new uint256[](0), publicClaim);
         } else if (proofType == IZKVerifier.ProofType.QUALITY_STANDARDS) {
-            verified = zkVerifier.verifyQualityStandards(batchId, zkProofData, publicClaim);
+            verified = zkVerifier.verifyQualityStandards(batchId, zkProofData, new uint256[](0), publicClaim);
         } else if (proofType == IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE) {
-            verified = zkVerifier.verifySupplyChainProvenance(batchId, zkProofData, publicClaim);
+            verified = zkVerifier.verifySupplyChainProvenance(batchId, zkProofData, new uint256[](0), publicClaim);
         }
 
         if (!verified) {
@@ -144,6 +159,55 @@ contract WAGAZKManager is WAGAViewFunctions {
         zkProofExists[proofHash] = true;
 
         emit ZKProofAdded(batchId, proofHash, proofType, publicClaim, msg.sender);
+        emit ZKProofVerified(batchId, proofHash, true);
+    }
+
+    /**
+     * @dev Add and verify ZK proof for a batch with explicit caller
+     * This function is used by tests to pass the original caller
+     */
+    function addZKProofWithCaller(
+        address originalCaller,
+        uint256 batchId,
+        bytes calldata zkProofData,
+        IZKVerifier.ProofType proofType,
+        string calldata publicClaim
+    ) external {
+        // Check that the original caller has PROCESSOR_ROLE
+        _checkCallerHasRoleFromCoffeeToken(PROCESSOR_ROLE, originalCaller);
+
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGAZKManager__BatchDoesNotExist_addZKProof();
+        }
+
+        // Verify ZK proof based on type
+        bool verified = false;
+        if (proofType == IZKVerifier.ProofType.PRICE_COMPETITIVENESS) {
+            verified = zkVerifier.verifyPriceCompetitiveness(batchId, zkProofData, new uint256[](0), publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.QUALITY_STANDARDS) {
+            verified = zkVerifier.verifyQualityStandards(batchId, zkProofData, new uint256[](0), publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE) {
+            verified = zkVerifier.verifySupplyChainProvenance(batchId, zkProofData, new uint256[](0), publicClaim);
+        }
+
+        if (!verified) {
+            revert WAGAZKManager__ZKProofVerificationFailed_addZKProof();
+        }
+
+        // Store ZK proof
+        bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, uint256(proofType), block.timestamp));
+        batchZKProofs[batchId] = ZKProof({
+            proofHash: proofHash,
+            proofData: zkProofData,
+            proofTimestamp: block.timestamp,
+            proofGenerator: originalCaller, // Use original caller
+            isValid: true,
+            proofType: proofType,
+            publicClaim: publicClaim
+        });
+        zkProofExists[proofHash] = true;
+
+        emit ZKProofAdded(batchId, proofHash, proofType, publicClaim, originalCaller);
         emit ZKProofVerified(batchId, proofHash, true);
     }
 

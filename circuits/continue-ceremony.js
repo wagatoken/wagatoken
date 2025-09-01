@@ -48,3 +48,4 @@ if (fs.existsSync('pot12_0000.ptau')) {
   console.log('❌ No pot12_0000.ptau found. Run full ceremony first.\n');
   process.exit(1);
 }
+

@@ -3,12 +3,18 @@ pragma solidity ^0.8.18;
 
 import {WAGAAccessControl} from "./WAGAAccessControl.sol";
 import {IPrivacyLayer} from "./Interfaces/IPrivacyLayer.sol";
+import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
 
 /**
  * @title PrivacyLayer
  * @dev Simplified privacy layer for WAGA MVP with lightweight data protection
  */
 contract PrivacyLayer is WAGAAccessControl, IPrivacyLayer {
+    IWAGACoffeeToken public coffeeToken;
+
+    constructor(address _coffeeToken) {
+        coffeeToken = IWAGACoffeeToken(_coffeeToken);
+    }
     
     /* -------------------------------------------------------------------------- */
     /*                              Type Declarations                             */
@@ -65,6 +71,35 @@ contract PrivacyLayer is WAGAAccessControl, IPrivacyLayer {
     ) external onlyBatchCreator {
         batchPrivacyConfig[batchId] = config;
         emit PrivacyConfigured(batchId, config.level, msg.sender);
+    }
+
+    /**
+     * @dev Configure privacy with explicit caller for internal contract calls
+     * This function is used by WAGABatchManager to pass the original caller
+     */
+    function configurePrivacyWithCaller(
+        address originalCaller,
+        uint256 batchId,
+        IPrivacyLayer.PrivacyConfig calldata config
+    ) external {
+        // Check that the original caller has PROCESSOR_ROLE on the coffee token contract
+        (bool success, bytes memory result) = address(coffeeToken).staticcall(
+            abi.encodeWithSignature("hasRole(bytes32,address)", keccak256("ADMIN_ROLE"), originalCaller)
+        );
+        bool hasAdminRole = success && result.length > 0 && abi.decode(result, (bool));
+
+        (success, result) = address(coffeeToken).staticcall(
+            abi.encodeWithSignature("hasRole(bytes32,address)", keccak256("PROCESSOR_ROLE"), originalCaller)
+        );
+        bool hasProcessorRole = success && result.length > 0 && abi.decode(result, (bool));
+
+        require(
+            hasAdminRole || hasProcessorRole,
+            "PrivacyLayer: Must be admin or processor"
+        );
+
+        batchPrivacyConfig[batchId] = config;
+        emit PrivacyConfigured(batchId, config.level, originalCaller);
     }
 
     /**

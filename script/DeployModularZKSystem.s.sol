@@ -115,11 +115,7 @@ contract DeployModularZKSystem is Script {
         emit ContractDeployed("CircomVerifier", zkVerifierAddress);
         console.log(" CircomVerifier deployed at:", zkVerifierAddress);
 
-        // Deploy Privacy Layer
-        console.log("Deploying PrivacyLayer...");
-        privacyLayerAddress = address(new PrivacyLayer());
-        emit ContractDeployed("PrivacyLayer", privacyLayerAddress);
-        console.log(" PrivacyLayer deployed at:", privacyLayerAddress);
+        // Note: PrivacyLayer is now deployed in deployCoreContracts after coffee token
 
         emit SystemConfigured("Infrastructure");
     }
@@ -136,6 +132,12 @@ contract DeployModularZKSystem is Script {
         coffeeTokenAddress = address(new WAGACoffeeTokenCore("https://violet-rainy-toad-577.mypinata.cloud/ipfs/"));
         emit ContractDeployed("WAGACoffeeTokenCore", coffeeTokenAddress);
         console.log(" WAGACoffeeTokenCore deployed at:", coffeeTokenAddress);
+
+        // Deploy Privacy Layer (after coffee token so it can reference it)
+        console.log("Deploying PrivacyLayer...");
+        privacyLayerAddress = address(new PrivacyLayer(coffeeTokenAddress));
+        emit ContractDeployed("PrivacyLayer", privacyLayerAddress);
+        console.log(" PrivacyLayer deployed at:", privacyLayerAddress);
 
         // Deploy Batch Manager (with ZK privacy)
         console.log("Deploying WAGABatchManager...");

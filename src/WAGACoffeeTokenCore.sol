@@ -188,7 +188,8 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
 
         // Delegate detailed batch creation to BatchManager if available
         if (address(batchManager) != address(0)) {
-            batchManager.createBatchInfo(
+            batchManager.createBatchInfoWithCaller(
+                msg.sender, // Pass the original caller
                 batchId,
                 block.timestamp, // productionDate
                 block.timestamp + 365 days, // expiryDate
@@ -199,6 +200,9 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
                 IPrivacyLayer.PrivacyLevel(1) // Use integer cast for privacy level
             );
         }
+
+        // Set the batch as active in our view functions
+        s_isActiveBatch[batchId] = true;
 
         emit BatchCreated(batchId, msg.sender, quantity, pricePerUnit, metadataURI);
         return batchId;

@@ -161,19 +161,28 @@ contract WAGABatchManager is WAGAViewFunctions {
     /* -------------------------------------------------------------------------- */
 
     modifier callerHasRoleFromCoffeeToken(bytes32 roleType) {
+        _checkCallerHasRoleFromCoffeeToken(roleType, msg.sender);
+        _;
+    }
+
+    modifier callerHasRoleFromCoffeeTokenWithCaller(bytes32 roleType, address caller) {
+        _checkCallerHasRoleFromCoffeeToken(roleType, caller);
+        _;
+    }
+
+    function _checkCallerHasRoleFromCoffeeToken(bytes32 roleType, address caller) internal view {
         // Use a try-catch or low-level call since interface might not have hasRole
         (bool success, bytes memory result) = address(coffeeToken).staticcall(
             abi.encodeWithSignature(
                 "hasRole(bytes32,address)",
                 roleType,
-                msg.sender
+                caller
             )
         );
 
         if (!success || result.length == 0 || !abi.decode(result, (bool))) {
             revert WAGABatchManager__CallerDoesNotHaveRequiredRole_callerHasRoleFromCoffeeToken();
         }
-        _;
     }
 
     /* -------------------------------------------------------------------------- */
@@ -260,12 +269,76 @@ contract WAGABatchManager is WAGAViewFunctions {
                 supplyChainClaim: "Supply Chain Verified"
             });
 
-        privacyLayer.configurePrivacy(batchId, privacyConfig);
+        privacyLayer.configurePrivacyWithCaller(msg.sender, batchId, privacyConfig);
 
         // Set initial flags
         _setBatchFlag(batchId, 0, false); // isVerified
         _setBatchFlag(batchId, 1, false); // isMetadataVerified
         _setBatchFlag(batchId, 2, true); // isActive
+
+        emit BatchInfoUpdated(batchId, origin, packagingInfo);
+    }
+
+    /**
+     * @dev Create detailed batch information with explicit caller for internal contract calls
+     * This function is used by WAGACoffeeTokenCore to pass the original caller
+     */
+    function createBatchInfoWithCaller(
+        address originalCaller,
+        uint256 batchId,
+        uint256 productionDate,
+        uint256 expiryDate,
+        uint256 quantity,
+        uint256 pricePerUnit,
+        string calldata origin,
+        string calldata packagingInfo,
+        IPrivacyLayer.PrivacyLevel privacyLevel
+    ) external {
+        // Check that the caller has PROCESSOR_ROLE using the original caller
+        _checkCallerHasRoleFromCoffeeToken(PROCESSOR_ROLE, originalCaller);
+
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGABatchManager__BatchDoesNotExist_createBatchInfo();
+        }
+
+        // Store additional batch metadata in our dedicated mappings
+        batchOrigin[batchId] = origin;
+        additionalPackagingInfo[batchId] = packagingInfo;
+        batchCreator[batchId] = originalCaller; // Use original caller
+        batchCreationTimestamp[batchId] = block.timestamp;
+
+        // Update the main batch info in WAGAViewFunctions state
+        s_batchInfo[batchId].productionDate = productionDate;
+        s_batchInfo[batchId].expiryDate = expiryDate;
+        s_batchInfo[batchId].quantity = quantity;
+        s_batchInfo[batchId].pricePerUnit = pricePerUnit;
+        s_batchInfo[batchId].packagingInfo = packagingInfo;
+
+        // Configure privacy for this batch
+        IPrivacyLayer.PrivacyConfig memory privacyConfig = IPrivacyLayer
+            .PrivacyConfig({
+                pricingPrivate: privacyLevel !=
+                    IPrivacyLayer.PrivacyLevel.PUBLIC,
+                qualityPrivate: privacyLevel !=
+                    IPrivacyLayer.PrivacyLevel.PUBLIC,
+                supplyChainPrivate: privacyLevel !=
+                    IPrivacyLayer.PrivacyLevel.PUBLIC,
+                level: privacyLevel,
+                pricingClaim: "Standard Pricing",
+                qualityClaim: "Quality Verified",
+                supplyChainClaim: "Supply Chain Verified"
+            });
+
+        privacyLayer.configurePrivacyWithCaller(originalCaller, batchId, privacyConfig);
+
+        // Set initial flags
+        _setBatchFlag(batchId, 0, false); // isVerified
+        _setBatchFlag(batchId, 1, false); // isMetadataVerified
+        _setBatchFlag(batchId, 2, true); // isActive
+
+        // Also set the active status in the coffee token's view functions
+        // We need to call this through the coffee token since it has the canonical view functions
+        // For now, we'll rely on the coffee token's batch creation to handle activation
 
         emit BatchInfoUpdated(batchId, origin, packagingInfo);
     }

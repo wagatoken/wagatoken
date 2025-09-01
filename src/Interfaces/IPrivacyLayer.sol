@@ -32,6 +32,16 @@ interface IPrivacyLayer {
     ) external;
 
     /**
+     * @dev Configure privacy for a batch with explicit caller
+     * Used by WAGABatchManager to pass the original caller
+     */
+    function configurePrivacyWithCaller(
+        address originalCaller,
+        uint256 batchId,
+        PrivacyConfig calldata config
+    ) external;
+
+    /**
      * @dev Get privacy configuration for a batch
      */
     function getPrivacyConfig(
