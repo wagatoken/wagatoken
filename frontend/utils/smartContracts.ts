@@ -15,6 +15,14 @@ const PROOF_OF_RESERVE_ADDRESS = process.env.NEXT_PUBLIC_WAGA_PROOF_OF_RESERVE_A
 const INVENTORY_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_WAGA_INVENTORY_MANAGER_ADDRESS!;
 const REDEMPTION_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_WAGA_REDEMPTION_CONTRACT_ADDRESS!;
 
+// ZK Contract addresses
+const ZK_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_WAGA_ZK_MANAGER_ADDRESS!;
+const PRIVACY_LAYER_ADDRESS = process.env.NEXT_PUBLIC_PRIVACY_LAYER_ADDRESS!;
+const CIRCOM_VERIFIER_ADDRESS = process.env.NEXT_PUBLIC_CIRCOM_VERIFIER_ADDRESS!;
+const PRICE_PRIVACY_VERIFIER_ADDRESS = process.env.NEXT_PUBLIC_PRICE_PRIVACY_VERIFIER_ADDRESS!;
+const QUALITY_TIER_VERIFIER_ADDRESS = process.env.NEXT_PUBLIC_QUALITY_TIER_VERIFIER_ADDRESS!;
+const SUPPLY_CHAIN_VERIFIER_ADDRESS = process.env.NEXT_PUBLIC_SUPPLY_CHAIN_VERIFIER_ADDRESS!;
+
 // Chainlink Functions configuration
 const CHAINLINK_DON_ID = process.env.NEXT_PUBLIC_CHAINLINK_DON_ID!;
 const CHAINLINK_SUBSCRIPTION_ID = process.env.NEXT_PUBLIC_CHAINLINK_SUBSCRIPTION_ID!;
@@ -74,6 +82,29 @@ const PROOF_OF_RESERVE_ABI = [
   "function requestInventoryVerification(uint256 batchId, string calldata source) external returns (bytes32)",
   "function verificationRequests(bytes32 requestId) external view returns (uint256 batchId, uint256 requestQuantity, uint256 verifiedQuantity, uint256 requestPrice, uint256 verifiedPrice, string memory expectedPackaging, string memory verifiedPackaging, string memory expectedMetadataHash, string memory verifiedMetadataHash, address recipient, bool completed, bool verified, uint256 lastVerifiedTimestamp, bool shouldMint)",
   "event ReserveVerificationRequested(bytes32 indexed requestId, uint256 indexed batchId, uint256 quantity)"
+];
+
+// ZK Manager ABI
+const ZK_MANAGER_ABI = [
+  "function verifyPriceProof(uint256 batchId, uint256[8] memory proof, uint256[3] memory inputs) external view returns (bool)",
+  "function verifyQualityProof(uint256 batchId, uint256[8] memory proof, uint256[3] memory inputs) external view returns (bool)",
+  "function verifySupplyChainProof(uint256 batchId, uint256[8] memory proof, uint256[3] memory inputs) external view returns (bool)",
+  "function setPrivacyLevel(uint256 batchId, uint8 level) external",
+  "function getPrivacyLevel(uint256 batchId) external view returns (uint8)",
+  "function batchPrivacyLevels(uint256) external view returns (uint8)"
+];
+
+// Privacy Layer ABI
+const PRIVACY_LAYER_ABI = [
+  "function setBatchPrivacy(uint256 batchId, uint8 pricingLevel, uint8 qualityLevel, uint8 supplyChainLevel) external",
+  "function getPublicClaims(uint256 batchId, address viewer) external view returns (string memory pricingDisplay, string memory qualityDisplay, string memory supplyChainDisplay)",
+  "function batchPrivacyConfig(uint256) external view returns (uint8 pricingLevel, uint8 qualityLevel, uint8 supplyChainLevel, address creator)",
+  "function createPrivacyConfig(uint256 batchId, address creator) external"
+];
+
+// Circom Verifier ABI
+const CIRCOM_VERIFIER_ABI = [
+  "function verifyProof(uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[3] memory input) external view returns (bool)"
 ];
 
 const REDEMPTION_CONTRACT_ABI = [
@@ -882,5 +913,160 @@ export async function getRedemptionRequest(redemptionId: string): Promise<Redemp
     console.error('Error fetching redemption request:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     throw new Error(`Failed to fetch redemption request: ${errorMessage}`);
+  }
+}
+
+/**
+ * ============================================================================
+ * ZK (ZERO KNOWLEDGE) FUNCTIONS
+ * ============================================================================
+ */
+
+/**
+ * Set privacy level for a batch
+ */
+export async function setBatchPrivacyLevel(batchId: string, privacyLevel: number): Promise<{ transactionHash: string }> {
+  try {
+    const signer = await getSigner();
+    const zkManagerContract = getContract(ZK_MANAGER_ADDRESS, ZK_MANAGER_ABI, signer);
+
+    const tx = await zkManagerContract.setPrivacyLevel(batchId, privacyLevel);
+    const receipt = await tx.wait();
+
+    return {
+      transactionHash: receipt.transactionHash
+    };
+
+  } catch (error) {
+    console.error('Error setting batch privacy level:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    throw new Error(`Failed to set batch privacy level: ${errorMessage}`);
+  }
+}
+
+/**
+ * Get privacy level for a batch
+ */
+export async function getBatchPrivacyLevel(batchId: string): Promise<number> {
+  try {
+    const signer = await getSigner();
+    const zkManagerContract = getContract(ZK_MANAGER_ADDRESS, ZK_MANAGER_ABI, signer);
+
+    const privacyLevel = await zkManagerContract.getPrivacyLevel(batchId);
+    return privacyLevel.toNumber();
+
+  } catch (error) {
+    console.error('Error getting batch privacy level:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    throw new Error(`Failed to get batch privacy level: ${errorMessage}`);
+  }
+}
+
+/**
+ * Set batch privacy configuration
+ */
+export async function setBatchPrivacy(
+  batchId: string,
+  pricingLevel: number,
+  qualityLevel: number,
+  supplyChainLevel: number
+): Promise<{ transactionHash: string }> {
+  try {
+    const signer = await getSigner();
+    const privacyLayerContract = getContract(PRIVACY_LAYER_ADDRESS, PRIVACY_LAYER_ABI, signer);
+
+    const tx = await privacyLayerContract.setBatchPrivacy(batchId, pricingLevel, qualityLevel, supplyChainLevel);
+    const receipt = await tx.wait();
+
+    return {
+      transactionHash: receipt.transactionHash
+    };
+
+  } catch (error) {
+    console.error('Error setting batch privacy:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    throw new Error(`Failed to set batch privacy: ${errorMessage}`);
+  }
+}
+
+/**
+ * Get public claims for a batch
+ */
+export async function getBatchPublicClaims(batchId: string, viewerAddress?: string): Promise<{
+  pricingDisplay: string;
+  qualityDisplay: string;
+  supplyChainDisplay: string;
+}> {
+  try {
+    const signer = await getSigner();
+    const privacyLayerContract = getContract(PRIVACY_LAYER_ADDRESS, PRIVACY_LAYER_ABI, signer);
+
+    const viewer = viewerAddress || await signer.getAddress();
+    const claims = await privacyLayerContract.getPublicClaims(batchId, viewer);
+
+    return {
+      pricingDisplay: claims.pricingDisplay,
+      qualityDisplay: claims.qualityDisplay,
+      supplyChainDisplay: claims.supplyChainDisplay
+    };
+
+  } catch (error) {
+    console.error('Error getting batch public claims:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    throw new Error(`Failed to get batch public claims: ${errorMessage}`);
+  }
+}
+
+/**
+ * Verify ZK proof using Circom verifier
+ */
+export async function verifyZKProof(
+  proof: {
+    a: [string, string];
+    b: [[string, string], [string, string]];
+    c: [string, string];
+  },
+  inputs: [string, string, string]
+): Promise<boolean> {
+  try {
+    const signer = await getSigner();
+    const circomVerifierContract = getContract(CIRCOM_VERIFIER_ADDRESS, CIRCOM_VERIFIER_ABI, signer);
+
+    const result = await circomVerifierContract.verifyProof(proof.a, proof.b, proof.c, inputs);
+    return result;
+
+  } catch (error) {
+    console.error('Error verifying ZK proof:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    throw new Error(`Failed to verify ZK proof: ${errorMessage}`);
+  }
+}
+
+/**
+ * Get batch privacy configuration
+ */
+export async function getBatchPrivacyConfig(batchId: string): Promise<{
+  pricingLevel: number;
+  qualityLevel: number;
+  supplyChainLevel: number;
+  creator: string;
+}> {
+  try {
+    const signer = await getSigner();
+    const privacyLayerContract = getContract(PRIVACY_LAYER_ADDRESS, PRIVACY_LAYER_ABI, signer);
+
+    const config = await privacyLayerContract.batchPrivacyConfig(batchId);
+
+    return {
+      pricingLevel: config.pricingLevel.toNumber(),
+      qualityLevel: config.qualityLevel.toNumber(),
+      supplyChainLevel: config.supplyChainLevel.toNumber(),
+      creator: config.creator
+    };
+
+  } catch (error) {
+    console.error('Error getting batch privacy config:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    throw new Error(`Failed to get batch privacy config: ${errorMessage}`);
   }
 }
