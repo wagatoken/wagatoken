@@ -2,17 +2,19 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from 'next/navigation';
-import { 
+import {
   getActiveBatchIds,
   getBatchInfoWithMetadata,
   requestBatchVerification,
   getUserBatchBalance,
   requestCoffeeRedemption,
-  getUserRoles
+  getUserRoles,
+  getBatchProductType,
+  getBatchUnitWeight
 } from "@/utils/smartContracts";
 import { SiIpfs } from 'react-icons/si';
 import { FaLink } from 'react-icons/fa';
-import { MdCheck, MdClose, MdCoffee, MdVerified, MdStorefront, MdStorage, MdOutlineAssignment, MdLocalShipping, MdToken } from 'react-icons/md';
+import { MdCheck, MdClose, MdCoffee, MdVerified, MdStorefront, MdStorage, MdOutlineAssignment, MdLocalShipping, MdToken, MdNature, MdLocalFireDepartment, MdShoppingCart, MdFilterList } from 'react-icons/md';
 import { CoffeeBatchMetadata } from "@/utils/ipfsMetadata";
 
 interface BatchDisplay {
@@ -27,7 +29,17 @@ interface BatchDisplay {
   isMetadataVerified: boolean;
   userBalance: number;
   metadata?: CoffeeBatchMetadata;
+  productType?: 'RETAIL_BAGS' | 'GREEN_BEANS' | 'ROASTED_BEANS';
+  unitWeight?: string;
 }
+
+// Product type definitions
+const PRODUCT_TYPES = {
+  ALL: { label: 'All Products', icon: MdCoffee, color: 'text-gray-600' },
+  RETAIL_BAGS: { label: 'Retail Coffee Bags', icon: MdShoppingCart, color: 'text-blue-600' },
+  GREEN_BEANS: { label: 'Green Coffee Beans', icon: MdNature, color: 'text-green-600' },
+  ROASTED_BEANS: { label: 'Roasted Coffee Beans', icon: MdLocalFireDepartment, color: 'text-orange-600' }
+};
 
 function DistributorPageContent() {
   const searchParams = useSearchParams();
@@ -39,13 +51,20 @@ function DistributorPageContent() {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [batches, setBatches] = useState<BatchDisplay[]>([]);
-  const [userRoles, setUserRoles] = useState({ 
-    isAdmin: false, 
-    isVerifier: false, 
-    isMinter: false, 
-    isRedemption: false, 
-    isFulfiller: false 
+  const [filteredBatches, setFilteredBatches] = useState<BatchDisplay[]>([]);
+  const [userRoles, setUserRoles] = useState({
+    isAdmin: false,
+    isVerifier: false,
+    isMinter: false,
+    isRedemption: false,
+    isFulfiller: false
   });
+
+  // Product type filtering
+  const [selectedProductType, setSelectedProductType] = useState<'ALL' | 'RETAIL_BAGS' | 'GREEN_BEANS' | 'ROASTED_BEANS'>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'price' | 'quantity' | 'date'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   
   // Request form state
   const [selectedBatchForRequest, setSelectedBatchForRequest] = useState<string>(selectedBatchFromBrowse || '');
@@ -82,18 +101,25 @@ function DistributorPageContent() {
     }
   };
 
-  // Load batches with user balances
+  // Load batches with user balances and product types
   const loadBatches = async () => {
     try {
       setLoading(true);
       const batchIds = await getActiveBatchIds();
-      
+
       const batchPromises = batchIds.map(async (id) => {
-        const [batchInfo, userBalance] = await Promise.all([
+        const [batchInfo, userBalance, productType, unitWeight] = await Promise.all([
           getBatchInfoWithMetadata(id),
-          userAddress ? getUserBatchBalance(id, userAddress) : Promise.resolve(0)
+          userAddress ? getUserBatchBalance(id, userAddress) : Promise.resolve(0),
+          getBatchProductType(id).catch(() => 0), // Default to RETAIL_BAGS (0) if error
+          getBatchUnitWeight(id).catch(() => '') // Default to empty string if error
         ]);
-        
+
+        // Convert product type number to string
+        let productTypeString: 'RETAIL_BAGS' | 'GREEN_BEANS' | 'ROASTED_BEANS' = 'RETAIL_BAGS';
+        if (productType === 1) productTypeString = 'GREEN_BEANS';
+        else if (productType === 2) productTypeString = 'ROASTED_BEANS';
+
         return {
           batchId: id,
           name: batchInfo.metadata?.name || `Batch ${id}`,
@@ -105,12 +131,15 @@ function DistributorPageContent() {
           isVerified: batchInfo.isVerified,
           isMetadataVerified: batchInfo.isMetadataVerified,
           userBalance,
-          metadata: batchInfo.metadata
+          metadata: batchInfo.metadata,
+          productType: productTypeString,
+          unitWeight: unitWeight || batchInfo.packagingInfo
         };
       });
-      
+
       const batchDisplays = await Promise.all(batchPromises);
       setBatches(batchDisplays);
+      setFilteredBatches(batchDisplays);
     } catch (err) {
       setError('Failed to load batches');
       console.error(err);
@@ -118,6 +147,61 @@ function DistributorPageContent() {
       setLoading(false);
     }
   };
+
+  // Filter and sort batches
+  const applyFilters = () => {
+    let filtered = batches;
+
+    // Filter by product type
+    if (selectedProductType !== 'ALL') {
+      filtered = filtered.filter(batch => batch.productType === selectedProductType);
+    }
+
+    // Filter by search query
+    if (searchQuery) {
+      filtered = filtered.filter(batch =>
+        batch.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        batch.origin.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        batch.farmer.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Sort batches
+    filtered.sort((a, b) => {
+      let aValue: any, bValue: any;
+
+      switch (sortBy) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'price':
+          aValue = parseFloat(a.pricePerUnit);
+          bValue = parseFloat(b.pricePerUnit);
+          break;
+        case 'quantity':
+          aValue = a.quantity;
+          bValue = b.quantity;
+          break;
+        default:
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+      }
+
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+
+    setFilteredBatches(filtered);
+  };
+
+  // Apply filters when dependencies change
+  useEffect(() => {
+    applyFilters();
+  }, [batches, selectedProductType, searchQuery, sortBy, sortOrder]);
 
   // Request batch verification and auto-minting
   const requestBatch = async () => {
@@ -388,6 +472,105 @@ function DistributorPageContent() {
             {/* Tab Content */}
             {activeTab === 'request' && (
               <div className="space-y-6">
+                {/* Advanced Filtering */}
+                <div className="web3-card animate-card-entrance">
+                  <div className="flex items-center gap-2 mb-4">
+                    <MdFilterList size={20} className="text-gray-600" />
+                    <h3 className="text-lg font-semibold text-gray-900">Filter & Search</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Product Type Filter */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Product Type
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(PRODUCT_TYPES).map(([key, product]) => {
+                          const Icon = product.icon;
+                          return (
+                            <button
+                              key={key}
+                              onClick={() => setSelectedProductType(key as any)}
+                              className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                selectedProductType === key
+                                  ? 'bg-emerald-100 text-emerald-800 border-2 border-emerald-300'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-transparent'
+                              }`}
+                            >
+                              <Icon size={16} />
+                              {product.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Search Input */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Search
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Search by name, origin, or farmer..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    {/* Sort Options */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Sort By
+                      </label>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as any)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      >
+                        <option value="name">Name</option>
+                        <option value="price">Price</option>
+                        <option value="quantity">Quantity</option>
+                      </select>
+                    </div>
+
+                    {/* Sort Order */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Order
+                      </label>
+                      <select
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value as any)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      >
+                        <option value="asc">Ascending</option>
+                        <option value="desc">Descending</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Filter Results Summary */}
+                  <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+                    <span>
+                      Showing {filteredBatches.length} of {batches.length} batches
+                    </span>
+                    <button
+                      onClick={() => {
+                        setSelectedProductType('ALL');
+                        setSearchQuery('');
+                        setSortBy('name');
+                        setSortOrder('asc');
+                      }}
+                      className="text-emerald-600 hover:text-emerald-800 underline"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                </div>
+
                 {/* Batch Request Form */}
                 <div className="web3-card animate-card-entrance">
                   <h2 className="flex items-center gap-3 text-2xl font-bold text-gray-900 mb-6">
@@ -456,57 +639,136 @@ function DistributorPageContent() {
                     <MdCoffee size={20} />
                     Available Coffee Batches
                   </h3>
-                  
+
                   {loading ? (
                     <div className="text-center py-8">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
                       <p>Loading batches...</p>
                     </div>
-                  ) : batches.length === 0 ? (
+                  ) : filteredBatches.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <div className="text-6xl mb-4">📦</div>
-                      <p>No batches available.</p>
+                      <p>{batches.length === 0 ? 'No batches available.' : 'No batches match your filters.'}</p>
                     </div>
                   ) : (
                     <div className="grid gap-4">
-                      {batches.map((batch) => (
-                        <div key={batch.batchId} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className="flex items-center space-x-2 mb-2">
-                                <h4 className="font-semibold text-lg">Batch #{batch.batchId}</h4>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  batch.isVerified 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                  {batch.isVerified ? 'Verified' : 'Unverified'}
-                                </span>
-                                {batch.userBalance > 0 && (
-                                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                                    You own {batch.userBalance} tokens
+                      {filteredBatches.map((batch) => {
+                        const productTypeInfo = PRODUCT_TYPES[batch.productType || 'RETAIL_BAGS'];
+                        const Icon = productTypeInfo.icon;
+
+                        return (
+                          <div
+                            key={batch.batchId}
+                            className={`border rounded-lg p-4 hover:shadow-md transition-all duration-300 ${
+                              batch.productType === 'GREEN_BEANS'
+                                ? 'border-green-200 bg-green-50/30'
+                                : batch.productType === 'ROASTED_BEANS'
+                                ? 'border-orange-200 bg-orange-50/30'
+                                : 'border-gray-200'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <h4 className="font-semibold text-lg">Batch #{batch.batchId}</h4>
+
+                                  {/* Product Type Badge */}
+                                  <span className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${productTypeInfo.color} bg-current bg-opacity-10`}>
+                                    <Icon size={12} />
+                                    {batch.productType?.replace('_', ' ') || 'Retail Bags'}
                                   </span>
+
+                                  {/* Verification Status */}
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    batch.isVerified
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                    {batch.isVerified ? 'Verified' : 'Unverified'}
+                                  </span>
+
+                                  {/* User Balance */}
+                                  {batch.userBalance > 0 && (
+                                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                                      You own {batch.userBalance} tokens
+                                    </span>
+                                  )}
+                                </div>
+
+                                <p className="text-gray-600 mb-2">{batch.name}</p>
+
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                                  <div>
+                                    <span className="font-medium">Origin:</span>
+                                    <div className="text-gray-700">{batch.origin}</div>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Farmer:</span>
+                                    <div className="text-gray-700">{batch.farmer}</div>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Quantity:</span>
+                                    <div className="text-gray-700">{batch.quantity} {batch.unitWeight || batch.packagingInfo}</div>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Price:</span>
+                                    <div className="text-gray-700">{batch.pricePerUnit} ETH</div>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Unit:</span>
+                                    <div className="text-gray-700">{batch.unitWeight || batch.packagingInfo}</div>
+                                  </div>
+                                </div>
+
+                                {/* Additional Info for Green/Roasted Beans */}
+                                {batch.productType && batch.productType !== 'RETAIL_BAGS' && batch.metadata?.properties && (
+                                  <div className="mt-3 pt-3 border-t border-gray-200">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-gray-600">
+                                      {batch.metadata.properties.moisture_content && (
+                                        <div>
+                                          <span className="font-medium">Moisture:</span> {batch.metadata.properties.moisture_content}%
+                                        </div>
+                                      )}
+                                      {batch.metadata.properties.density && (
+                                        <div>
+                                          <span className="font-medium">Density:</span> {batch.metadata.properties.density} g/cm³
+                                        </div>
+                                      )}
+                                      {batch.metadata.properties.certifications && (
+                                        <div>
+                                          <span className="font-medium">Certs:</span> {batch.metadata.properties.certifications.length}
+                                        </div>
+                                      )}
+                                      {batch.metadata.properties.altitude && (
+                                        <div>
+                                          <span className="font-medium">Altitude:</span> {batch.metadata.properties.altitude}m
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
                                 )}
                               </div>
-                              <p className="text-gray-600 mb-2">{batch.name}</p>
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                <div>
-                                  <span className="font-medium">Origin:</span> {batch.origin}
-                                </div>
-                                <div>
-                                  <span className="font-medium">Farmer:</span> {batch.farmer}
-                                </div>
-                                <div>
-                                  <span className="font-medium">Quantity:</span> {batch.quantity} bags
-                                </div>
-                                <div>
-                                  <span className="font-medium">Price:</span> {batch.pricePerUnit} ETH
-                                </div>
+
+                              {/* Request Button */}
+                              <div className="ml-4 flex-shrink-0">
+                                <button
+                                  onClick={() => setSelectedBatchForRequest(batch.batchId)}
+                                  disabled={!batch.isVerified}
+                                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                                    selectedBatchForRequest === batch.batchId
+                                      ? 'bg-emerald-600 text-white'
+                                      : batch.isVerified
+                                      ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  }`}
+                                >
+                                  {selectedBatchForRequest === batch.batchId ? 'Selected' : 'Select for Request'}
+                                </button>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
