@@ -97,11 +97,33 @@ const PrivacyEnhancedBatchViewer: React.FC<PrivacyEnhancedBatchViewerProps> = ({
     if (userRole === 'ADMIN' || userRole === 'PROCESSOR') {
       data.pricePerUnit = batchData.pricePerUnit;
       data.priceVisible = true;
+      data.priceDisplay = `${batchData.pricePerUnit} wei`;
     } else if (userRole === 'DISTRIBUTOR' && !batchData.privacyConfig.pricingPrivate) {
       data.pricePerUnit = batchData.pricePerUnit;
       data.priceVisible = true;
+      data.priceDisplay = `${batchData.pricePerUnit} wei`;
     } else {
-      data.pricePerUnit = 'Hidden';
+      // Check if selective privacy is enabled and we have ZK proof data
+      if (batchData.privacyConfig.pricingSelective === 1 && batchData.zkProofHash) {
+        // For selective privacy, show indicative price range based on market segment
+        // When Agent Kit is implemented, this will use real ZK proof data to determine market segment
+        // For now, we show premium tier range as default for selective privacy
+        data.priceDisplay = 'Premium Tier: $15-50 (Indicative Range)';
+        data.priceRange = { min: 15, max: 50 };
+        data.marketSegment = 'premium';
+      } else if (batchData.privacyConfig.pricingSelective === 2) {
+        // Mid-market selective privacy
+        data.priceDisplay = 'Mid-Market: $8-25 (Indicative Range)';
+        data.priceRange = { min: 8, max: 25 };
+        data.marketSegment = 'mid-market';
+      } else if (batchData.privacyConfig.pricingSelective === 3) {
+        // Value tier selective privacy
+        data.priceDisplay = 'Value Tier: $3-15 (Indicative Range)';
+        data.priceRange = { min: 3, max: 15 };
+        data.marketSegment = 'value';
+      } else {
+        data.priceDisplay = 'Pricing Information Hidden';
+      }
       data.priceVisible = false;
     }
 
@@ -235,17 +257,27 @@ const PrivacyEnhancedBatchViewer: React.FC<PrivacyEnhancedBatchViewerProps> = ({
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Price Per Unit</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Price Information</label>
             <div className="flex items-center">
               <p className={`text-gray-900 ${visibleData.priceVisible ? '' : 'text-gray-500 italic'}`}>
-                {visibleData.priceVisible ? `${visibleData.pricePerUnit} wei` : 'Hidden'}
+                {visibleData.priceDisplay || 'Pricing Information Hidden'}
               </p>
-              {!visibleData.priceVisible && (
+              {!visibleData.priceVisible && visibleData.priceRange && (
+                <span className="ml-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                  Indicative Range
+                </span>
+              )}
+              {!visibleData.priceVisible && !visibleData.priceRange && (
                 <span className="ml-2 text-xs text-gray-500">
-                  (ZK proof available)
+                  (Private)
                 </span>
               )}
             </div>
+            {visibleData.priceRange && (
+              <p className="text-xs text-gray-600 mt-1">
+                Range: ${visibleData.priceRange.min} - ${visibleData.priceRange.max} per unit
+              </p>
+            )}
           </div>
           
           <div>

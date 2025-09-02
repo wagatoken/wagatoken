@@ -55,10 +55,32 @@ export class PricePrivacyManager {
   
   static getPriceDisplay(proof: ZKProof): string {
     if (proof.publicData.isCompetitive) {
-      return `${proof.publicData.marketSegment.charAt(0).toUpperCase() + proof.publicData.marketSegment.slice(1)} Tier Pricing`;
+      const marketSegment = proof.publicData.marketSegment;
+      const priceRange = PricePrivacyManager.getPriceRange(marketSegment);
+      return `${marketSegment.charAt(0).toUpperCase() + marketSegment.slice(1)} Tier: $${priceRange.min}-${priceRange.max}`;
     } else {
       return "Competitive Pricing";
     }
+  }
+
+  static getPriceDisplayWithRange(proof: ZKProof): {
+    display: string;
+    range: { min: number; max: number };
+    marketSegment: string;
+    isCompetitive: boolean;
+  } {
+    const marketSegment = proof.publicData.marketSegment;
+    const priceRange = PricePrivacyManager.getPriceRange(marketSegment);
+    const isCompetitive = proof.publicData.isCompetitive;
+
+    return {
+      display: isCompetitive
+        ? `${marketSegment.charAt(0).toUpperCase() + marketSegment.slice(1)} Tier: $${priceRange.min}-${priceRange.max}`
+        : "Competitive Pricing",
+      range: priceRange,
+      marketSegment,
+      isCompetitive
+    };
   }
   
   private static calculateCompetitiveness(price: number, competitorPrices: number[]): boolean {
@@ -357,8 +379,11 @@ export class WAGAPrivacyManager {
         };
       
       case 'selective':
+        const priceDisplay = batch.zkProofs?.pricing
+          ? PricePrivacyManager.getPriceDisplay(batch.zkProofs.pricing)
+          : 'Competitive Pricing';
         return {
-          pricing: batch.zkProofs?.pricing?.publicData?.positioning || 'Competitive Pricing',
+          pricing: priceDisplay,
           quality: batch.zkProofs?.quality?.publicData?.tier + ' Quality' || 'Quality Verified',
           supplyChain: batch.zkProofs?.supplyChain?.publicData?.originRegion || 'Region Verified'
         };

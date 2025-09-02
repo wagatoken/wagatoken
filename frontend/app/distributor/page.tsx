@@ -712,7 +712,14 @@ function DistributorPageContent() {
                                   </div>
                                   <div>
                                     <span className="font-medium">Price:</span>
-                                    <div className="text-gray-700">{batch.pricePerUnit} ETH</div>
+                                    <div className="text-gray-700">
+                                      {batch.pricePerUnit !== 'Hidden'
+                                        ? `${batch.pricePerUnit} ETH`
+                                        : batch.productType === 'GREEN_BEANS' || batch.productType === 'ROASTED_BEANS'
+                                        ? 'Premium Tier: $15-50 (Indicative Range)'
+                                        : 'Premium Tier: $15-50 (Indicative Range)'
+                                      }
+                                    </div>
                                   </div>
                                   <div>
                                     <span className="font-medium">Unit:</span>
