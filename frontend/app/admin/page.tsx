@@ -63,8 +63,38 @@ export default function AdminPage() {
     verification: string;
   } | null>(null);
 
-  // Batch creation form
-  const [batchForm, setBatchForm] = useState<Partial<BatchCreationData>>({
+  // Product types
+  const PRODUCT_TYPES = {
+    RETAIL_BAGS: {
+      label: 'Retail Coffee Bags',
+      sizes: ['250g', '500g'],
+      description: 'Ready-to-consume ground coffee bags',
+      requiresRole: 'ADMIN_ROLE'
+    },
+    GREEN_BEANS: {
+      label: 'Green Coffee Beans',
+      sizes: ['60kg'],
+      description: 'Raw, unroasted coffee beans',
+      requiresRole: 'COOPERATIVE_ROLE'
+    },
+    ROASTED_BEANS: {
+      label: 'Roasted Coffee Beans',
+      sizes: ['60kg'],
+      description: 'Roasted coffee beans for further processing',
+      requiresRole: 'ROASTER_ROLE'
+    }
+  };
+
+  // Batch creation form with product type
+  const [batchForm, setBatchForm] = useState<Partial<BatchCreationData & {
+    productType: keyof typeof PRODUCT_TYPES;
+    unitWeight: string;
+    moistureContent?: number;
+    density?: number;
+    defectCount?: number;
+    cooperativeId?: string;
+    processorId?: string;
+  }>>({
     name: '',
     description: '',
     origin: '',
@@ -77,6 +107,8 @@ export default function AdminPage() {
     cupping_notes: [],
     quantity: 0,
     packagingInfo: '250g',
+    unitWeight: '250g',
+    productType: 'RETAIL_BAGS',
     pricePerUnit: '0.045',
     productionDate: new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)), // 7 days ago (past date)
     expiryDate: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 days from now
@@ -138,8 +170,12 @@ export default function AdminPage() {
         return;
       }
 
-      // Create batch using blockchain-first workflow
-      const result = await createBatchBlockchainFirst(batchForm as BatchCreationData);
+      // Create batch using blockchain-first workflow with product type support
+      const result = await createBatchBlockchainFirst({
+        ...batchForm,
+        productType: batchForm.productType,
+        unitWeight: batchForm.unitWeight || batchForm.packagingInfo
+      } as BatchCreationData & { productType?: string; unitWeight?: string });
 
       setGeneratedQRs({
         comprehensive: result.qrCodeDataUrl,
@@ -396,6 +432,47 @@ export default function AdminPage() {
                   <div className="web3-premium-card animate-card-entrance">
                     <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Coffee Batch</h2>
                 
+                {/* Product Type Selection */}
+                <div className="web3-form-section">
+                  <h3 className="flex items-center gap-2">
+                    <MdCoffee size={20} />
+                    Product Type
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {Object.entries(PRODUCT_TYPES).map(([key, product]) => (
+                      <div
+                        key={key}
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-300 ${
+                          batchForm.productType === key
+                            ? 'border-emerald-500 bg-emerald-50 shadow-md'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => {
+                          setBatchForm(prev => ({
+                            ...prev,
+                            productType: key as keyof typeof PRODUCT_TYPES,
+                            packagingInfo: product.sizes[0], // Set default size
+                            unitWeight: product.sizes[0]
+                          }));
+                        }}
+                      >
+                        <h4 className="font-semibold text-gray-900 mb-2">{product.label}</h4>
+                        <p className="text-sm text-gray-600 mb-3">{product.description}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {product.sizes.map(size => (
+                            <span key={size} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                              {size}
+                            </span>
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Requires: {product.requiresRole.replace('_ROLE', '').replace('_', ' ')}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Basic Information Section */}
                 <div className="web3-form-section">
                   <h3 className="flex items-center gap-2">
@@ -511,19 +588,112 @@ export default function AdminPage() {
 
                     <div>
                       <label className="web3-form-label">
-                        Package Size<span className="required">*</span>
+                        Unit Size<span className="required">*</span>
                       </label>
                       <select
-                        value={batchForm.packagingInfo || '250g'}
+                        value={batchForm.packagingInfo || PRODUCT_TYPES[batchForm.productType || 'RETAIL_BAGS'].sizes[0]}
                         onChange={(e) => handleInputChange('packagingInfo', e.target.value)}
                         className="web3-ethereum-input w-full"
                       >
-                        <option value="250g">250g Bags</option>
-                        <option value="500g">500g Bags</option>
+                        {PRODUCT_TYPES[batchForm.productType || 'RETAIL_BAGS'].sizes.map(size => (
+                          <option key={size} value={size}>
+                            {size} {batchForm.productType === 'RETAIL_BAGS' ? 'Bags' : 'Batches'}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
                 </div>
+
+                {/* Product-Specific Fields */}
+                {batchForm.productType && batchForm.productType !== 'RETAIL_BAGS' && (
+                  <div className="web3-form-section">
+                    <h3 className="flex items-center gap-2">
+                      <MdGrade size={20} />
+                      Product Specifications
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div>
+                        <label className="web3-form-label">
+                          Moisture Content (%)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="20"
+                          value={batchForm.moistureContent || ''}
+                          onChange={(e) => handleInputChange('moistureContent', parseFloat(e.target.value) || 0)}
+                          className="web3-ethereum-input w-full"
+                          placeholder="e.g., 12.5"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="web3-form-label">
+                          Density (g/cm³)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="2"
+                          value={batchForm.density || ''}
+                          onChange={(e) => handleInputChange('density', parseFloat(e.target.value) || 0)}
+                          className="web3-ethereum-input w-full"
+                          placeholder="e.g., 0.75"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="web3-form-label">
+                          Defect Count
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={batchForm.defectCount || ''}
+                          onChange={(e) => handleInputChange('defectCount', parseInt(e.target.value) || 0)}
+                          className="web3-ethereum-input w-full"
+                          placeholder="e.g., 5"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Cooperative/Processor Information */}
+                    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {batchForm.productType === 'GREEN_BEANS' && (
+                        <div>
+                          <label className="web3-form-label">
+                            Cooperative Ethereum Address
+                          </label>
+                          <input
+                            type="text"
+                            value={batchForm.cooperativeId || ''}
+                            onChange={(e) => handleInputChange('cooperativeId', e.target.value)}
+                            className="web3-ethereum-input w-full"
+                            placeholder="0x..."
+                          />
+                        </div>
+                      )}
+
+                      {batchForm.productType === 'ROASTED_BEANS' && (
+                        <div>
+                          <label className="web3-form-label">
+                            Processor/Roaster Ethereum Address
+                          </label>
+                          <input
+                            type="text"
+                            value={batchForm.processorId || ''}
+                            onChange={(e) => handleInputChange('processorId', e.target.value)}
+                            className="web3-ethereum-input w-full"
+                            placeholder="0x..."
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Quality & Certifications Section */}
                 <div className="web3-form-section">

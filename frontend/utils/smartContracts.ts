@@ -19,9 +19,38 @@ const REDEMPTION_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_WAGA_REDEMPTION_CONT
 const CHAINLINK_DON_ID = process.env.NEXT_PUBLIC_CHAINLINK_DON_ID!;
 const CHAINLINK_SUBSCRIPTION_ID = process.env.NEXT_PUBLIC_CHAINLINK_SUBSCRIPTION_ID!;
 
-// Updated ABIs for the actual deployed contracts
+// Product type constants (matching smart contract enum)
+export const PRODUCT_TYPES = {
+  RETAIL_BAGS: 0,    // 250g/500g ready-to-consume coffee bags
+  GREEN_BEANS: 1,    // 60kg green coffee beans
+  ROASTED_BEANS: 2   // 60kg roasted coffee beans
+} as const;
+
+export type ProductType = typeof PRODUCT_TYPES[keyof typeof PRODUCT_TYPES];
+
+// Extended batch creation data with product type support
+export interface ExtendedBatchCreationData extends BatchCreationData {
+  productType?: keyof typeof PRODUCT_TYPES;
+  unitWeight?: string;
+  moistureContent?: number;
+  density?: number;
+  defectCount?: number;
+  cooperativeId?: string;
+  processorId?: string;
+}
+
+// Updated ABIs for the actual deployed contracts with product type support
 const COFFEE_TOKEN_ABI = [
-  "function createBatch(uint256 productionDate, uint256 expiryDate, uint256 quantity, uint256 pricePerUnit, string calldata packagingInfo) external returns (uint256)",
+  // Legacy function for backward compatibility
+  "function createBatch(uint256 productionDate, uint256 expiryDate, uint256 quantity, uint256 pricePerUnit, string calldata origin, string calldata packagingInfo, string calldata metadataURI) external onlyRole(bytes32) returns (uint256)",
+
+  // New function with product type support
+  "function createBatchWithProductType(uint256 productionDate, uint256 expiryDate, uint256 quantity, uint256 pricePerUnit, string calldata origin, string calldata packagingInfo, string calldata unitWeight, uint8 productType, string calldata metadataURI) external returns (uint256)",
+
+  // Product type functions
+  "function getBatchProductType(uint256 batchId) external view returns (uint8)",
+  "function getBatchUnitWeight(uint256 batchId) external view returns (string)",
+  "function getBatchWithProductType(uint256 batchId) external view returns (uint256, uint256, uint256, uint256, string, string, address, uint256, uint8, string)",
   "function updateBatchIPFS(uint256 batchId, string calldata ipfsUri, string calldata metadataHash) external",
   "function getbatchInfo(uint256 batchId) external view returns (uint256 productionDate, uint256 expiryDate, bool isVerified, uint256 quantity, uint256 pricePerUnit, string memory packagingInfo, string memory metadataHash, bool isMetadataVerified, uint256 lastVerifiedTimestamp)",
   "function getActiveBatchIds() external view returns (uint256[])",
@@ -193,13 +222,15 @@ export async function createBatchOnBlockchain(batchData: BatchCreationData): Pro
     console.log('   Price (USD cents):', priceInCents);
     console.log('   Packaging:', batchData.packagingInfo);
 
-    // Call smart contract createBatch (blockchain-first)
+    // Call smart contract createBatch (blockchain-first) - backward compatibility
     const tx = await coffeeTokenContract.createBatch(
       productionDateTimestamp,
       expiryDateTimestamp,
       batchData.quantity,
       priceInCents,
-      batchData.packagingInfo
+      batchData.origin || 'Unknown', // Add origin for new ABI
+      batchData.packagingInfo,
+      'placeholder_metadata_uri' // Will be updated with IPFS later
     );
 
     console.log('⏳ Waiting for transaction confirmation...');
@@ -229,6 +260,99 @@ export async function createBatchOnBlockchain(batchData: BatchCreationData): Pro
     console.error('❌ Error creating batch on blockchain:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     throw new Error(`Failed to create batch on blockchain: ${errorMessage}`);
+  }
+}
+
+/**
+ * Step 1 (Product Type): Create batch on blockchain with product type support
+ */
+export async function createBatchWithProductTypeOnBlockchain(
+  batchData: ExtendedBatchCreationData
+): Promise<{
+  batchId: string;
+  transactionHash: string;
+  productType: ProductType;
+}> {
+  try {
+    const signer = await getSigner();
+    const coffeeTokenContract = getContract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, signer);
+
+    // Determine required role based on product type
+    const productType = batchData.productType ? PRODUCT_TYPES[batchData.productType] : PRODUCT_TYPES.RETAIL_BAGS;
+    let requiredRole: string;
+
+    switch (productType) {
+      case PRODUCT_TYPES.RETAIL_BAGS:
+        requiredRole = await coffeeTokenContract.ADMIN_ROLE();
+        break;
+      case PRODUCT_TYPES.GREEN_BEANS:
+        requiredRole = await coffeeTokenContract.COOPERATIVE_ROLE();
+        break;
+      case PRODUCT_TYPES.ROASTED_BEANS:
+        requiredRole = await coffeeTokenContract.ROASTER_ROLE();
+        break;
+      default:
+        throw new Error('Invalid product type');
+    }
+
+    // Check if user has required role
+    const hasRequiredRole = await coffeeTokenContract.hasRole(requiredRole, await signer.getAddress());
+    if (!hasRequiredRole) {
+      throw new Error(`User does not have required role for product type: ${batchData.productType}`);
+    }
+
+    // Prepare smart contract parameters
+    const productionDateTimestamp = Math.floor(batchData.productionDate.getTime() / 1000);
+    const expiryDateTimestamp = Math.floor(batchData.expiryDate.getTime() / 1000);
+    const priceInCents = Math.round(parseFloat(batchData.pricePerUnit) * 100);
+
+    console.log('🔗 Creating batch with product type on blockchain...');
+    console.log('   Product Type:', batchData.productType);
+    console.log('   Unit Weight:', batchData.unitWeight);
+    console.log('   Required Role:', requiredRole);
+
+    // Call smart contract createBatchWithProductType
+    const tx = await coffeeTokenContract.createBatchWithProductType(
+      productionDateTimestamp,
+      expiryDateTimestamp,
+      batchData.quantity,
+      priceInCents,
+      batchData.origin || 'Unknown',
+      batchData.packagingInfo,
+      batchData.unitWeight || batchData.packagingInfo,
+      productType,
+      'placeholder_metadata_uri' // Will be updated with IPFS later
+    );
+
+    console.log('⏳ Waiting for transaction confirmation...');
+    const receipt = await tx.wait();
+
+    // Find BatchCreated event to get the actual batchId
+    const batchCreatedEvent = receipt.events?.find(
+      (event: any) => event.event === "BatchCreated"
+    );
+
+    if (!batchCreatedEvent) {
+      throw new Error('BatchCreated event not found in transaction receipt');
+    }
+
+    const batchId = batchCreatedEvent.args.batchId.toString();
+    const transactionHash = receipt.transactionHash;
+
+    console.log('✅ Batch created successfully!');
+    console.log('   Batch ID:', batchId);
+    console.log('   Transaction Hash:', transactionHash);
+    console.log('   Product Type:', productType);
+
+    return {
+      batchId,
+      transactionHash,
+      productType
+    };
+
+  } catch (error) {
+    console.error('❌ Error creating batch with product type on blockchain:', error);
+    throw error;
   }
 }
 
@@ -276,9 +400,9 @@ export async function updateBatchWithIPFS(
 }
 
 /**
- * Complete blockchain-first workflow orchestrator
+ * Complete blockchain-first workflow orchestrator with product type support
  */
-export async function createBatchBlockchainFirst(batchData: BatchCreationData): Promise<{
+export async function createBatchBlockchainFirst(batchData: BatchCreationData | ExtendedBatchCreationData): Promise<{
   batchId: string;
   ipfsUri: string;
   metadataHash: string;
@@ -289,21 +413,59 @@ export async function createBatchBlockchainFirst(batchData: BatchCreationData): 
   try {
     console.log('🚀 Starting blockchain-first batch creation workflow...');
 
-    // Step 1: Create batch on blockchain first
-    const { batchId, transactionHash: createTxHash } = await createBatchOnBlockchain(batchData);
+    // Step 1: Create batch on blockchain first (with or without product type)
+    let batchId: string;
+    let createTxHash: string;
+    let productType: ProductType | undefined;
+
+    if ('productType' in batchData && batchData.productType) {
+      // Use new product type function
+      const result = await createBatchWithProductTypeOnBlockchain(batchData as ExtendedBatchCreationData);
+      batchId = result.batchId;
+      createTxHash = result.transactionHash;
+      productType = result.productType;
+    } else {
+      // Use legacy function for backward compatibility
+      const result = await createBatchOnBlockchain(batchData as BatchCreationData);
+      batchId = result.batchId;
+      createTxHash = result.transactionHash;
+    }
 
     // Step 2: Generate standardized metadata with batchId
     console.log('📝 Generating metadata with batch ID...');
     const metadata = generateCoffeeMetadata(batchData);
-    
-    // Update metadata with the actual batch ID
+
+    // Update metadata with the actual batch ID and product type info
     const updatedMetadata = {
       ...metadata,
       name: `${metadata.name} - Batch #${batchId}`,
       properties: {
         ...metadata.properties,
         batchId: batchId,
-        blockchainId: batchId
+        blockchainId: batchId,
+        ...(productType !== undefined && {
+          productType: Object.keys(PRODUCT_TYPES)[productType],
+          productTypeId: productType
+        }),
+        // Include extended fields if available
+        ...('unitWeight' in batchData && batchData.unitWeight && {
+          unitWeight: batchData.unitWeight
+        }),
+        ...('moistureContent' in batchData && batchData.moistureContent && {
+          moistureContent: batchData.moistureContent
+        }),
+        ...('density' in batchData && batchData.density && {
+          density: batchData.density
+        }),
+        ...('defectCount' in batchData && batchData.defectCount && {
+          defectCount: batchData.defectCount
+        }),
+        ...('cooperativeId' in batchData && batchData.cooperativeId && {
+          cooperativeId: batchData.cooperativeId
+        }),
+        ...('processorId' in batchData && batchData.processorId && {
+          processorId: batchData.processorId
+        })
       }
     };
 

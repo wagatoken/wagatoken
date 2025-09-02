@@ -3,6 +3,7 @@ pragma solidity ^0.8.18;
 
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {ERC1155Supply} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import "./WAGAConfigManager.sol";
 import "./WAGAViewFunctions.sol";
 import "./Interfaces/IWAGABatchManager.sol";
@@ -11,9 +12,19 @@ import "./Interfaces/IPrivacyLayer.sol";
 
 /**
  * @title WAGACoffeeTokenCore
- * @dev Core functionality for WAGA Coffee Token system - modular version
+ * @dev Core functionality for WAGA Coffee Token system - modular version with multi-product support
  */
 contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFunctions {
+
+    /* -------------------------------------------------------------------------- */
+    /*                                   Enums                                    */
+    /* -------------------------------------------------------------------------- */
+
+    enum ProductType {
+        RETAIL_BAGS,    // 250g/500g ready-to-consume coffee bags
+        GREEN_BEANS,    // 60kg green coffee beans
+        ROASTED_BEANS   // 60kg roasted coffee beans
+    }
 
     /**
      * @dev Update batch inventory (only admins or trusted contracts)
@@ -93,6 +104,8 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     // Basic ERC1155 token state only
     mapping(uint256 => string) public s_batchMetadata; // Token metadata URIs
     mapping(uint256 => bool) public batchCreated; // Track created batches (for ERC1155)
+    mapping(uint256 => ProductType) public batchProductType; // Product type for each batch
+    mapping(uint256 => string) public batchUnitWeight; // Unit weight specification
     uint256 public batchCounter; // Total batches created
 
     /* -------------------------------------------------------------------------- */
@@ -125,7 +138,55 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     /* -------------------------------------------------------------------------- */
 
     /**
-     * @dev Create a new coffee batch - delegates to BatchManager
+     * @dev Create a new coffee batch with product type - delegates to BatchManager
+     */
+    function createBatchWithProductType(
+        uint256 productionDate,
+        uint256 expiryDate,
+        uint256 quantity,
+        uint256 pricePerUnit,
+        string calldata origin,
+        string calldata packagingInfo,
+        string calldata unitWeight,
+        ProductType productType,
+        string calldata metadataURI
+    ) external returns (uint256) {
+        // Role validation based on product type
+        if (productType == ProductType.RETAIL_BAGS) {
+            require(hasRole(ADMIN_ROLE, msg.sender), "Admin role required for retail bags");
+        } else if (productType == ProductType.GREEN_BEANS) {
+            require(hasRole(COOPERATIVE_ROLE, msg.sender), "Cooperative role required for green beans");
+        } else if (productType == ProductType.ROASTED_BEANS) {
+            require(hasRole(ROASTER_ROLE, msg.sender), "Roaster role required for roasted beans");
+        }
+
+        // Generate new batch ID
+        uint256 batchId = ++batchCounter;
+
+        // Store product type information
+        batchCreated[batchId] = true;
+        batchProductType[batchId] = productType;
+        batchUnitWeight[batchId] = unitWeight;
+        s_batchMetadata[batchId] = metadataURI;
+
+        // Delegate detailed batch creation to BatchManager
+        batchManager.createBatchInfo(
+            batchId,
+            productionDate,
+            expiryDate,
+            quantity,
+            pricePerUnit,
+            origin,
+            packagingInfo,
+            IPrivacyLayer.PrivacyLevel(1) // Use correct enum value for MODERATE
+        );
+
+        emit BatchCreated(batchId, msg.sender, quantity, pricePerUnit, metadataURI);
+        return batchId;
+    }
+
+    /**
+     * @dev Create a new coffee batch - delegates to BatchManager (backward compatibility)
      */
     function createBatch(
         uint256 productionDate,
@@ -138,9 +199,11 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     ) external onlyRole(PROCESSOR_ROLE) returns (uint256) {
         // Generate new batch ID
         uint256 batchId = ++batchCounter;
-        
-        // Mark batch as created in ERC1155 system
+
+        // Mark batch as created in ERC1155 system (backward compatibility)
         batchCreated[batchId] = true;
+        batchProductType[batchId] = ProductType.RETAIL_BAGS; // Default for backward compatibility
+        batchUnitWeight[batchId] = packagingInfo; // Use packaging info as unit weight
         s_batchMetadata[batchId] = metadataURI;
 
         // Delegate detailed batch creation to BatchManager
@@ -336,5 +399,65 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
         returns (string memory)
     {
         return s_batchMetadata[tokenId];
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                               Helper Functions                             */
+    /* -------------------------------------------------------------------------- */
+
+
+
+    /**
+     * @dev Get batch information with product type
+     */
+    function getBatchWithProductType(uint256 batchId) external view returns (
+        uint256 productionDate,
+        uint256 expiryDate,
+        uint256 quantity,
+        uint256 pricePerUnit,
+        string memory origin,
+        string memory packagingInfo,
+        address creator,
+        uint256 timestamp,
+        ProductType productType,
+        string memory unitWeight
+    ) {
+        if (!batchCreated[batchId]) {
+            revert WAGACoffeeTokenCore__BatchDoesNotExist_mintBatch();
+        }
+
+        (
+            productionDate,
+            expiryDate,
+            quantity,
+            pricePerUnit,
+            origin,
+            packagingInfo,
+            creator,
+            timestamp
+        ) = batchManager.getBatchInfo(batchId);
+
+        productType = batchProductType[batchId];
+        unitWeight = batchUnitWeight[batchId];
+    }
+
+    /**
+     * @dev Get product type for a batch
+     */
+    function getBatchProductType(uint256 batchId) external view returns (ProductType) {
+        if (!batchCreated[batchId]) {
+            revert WAGACoffeeTokenCore__BatchDoesNotExist_mintBatch();
+        }
+        return batchProductType[batchId];
+    }
+
+    /**
+     * @dev Get unit weight for a batch
+     */
+    function getBatchUnitWeight(uint256 batchId) external view returns (string memory) {
+        if (!batchCreated[batchId]) {
+            revert WAGACoffeeTokenCore__BatchDoesNotExist_mintBatch();
+        }
+        return batchUnitWeight[batchId];
     }
 }

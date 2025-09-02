@@ -30,6 +30,10 @@ contract WAGAConfigManager is AccessControl, Ownable {
     bytes32 public constant FULFILLER_ROLE = keccak256("FULFILLER_ROLE");
     bytes32 public constant PROCESSOR_ROLE = keccak256("PROCESSOR_ROLE");
     bytes32 public constant DISTRIBUTOR_ROLE = keccak256("DISTRIBUTOR_ROLE");
+
+    // New roles for expanded product lines
+    bytes32 public constant COOPERATIVE_ROLE = keccak256("COOPERATIVE_ROLE");
+    bytes32 public constant ROASTER_ROLE = keccak256("ROASTER_ROLE");
     
     // ZK and Privacy related roles
     bytes32 public constant ZK_ADMIN_ROLE = keccak256("ZK_ADMIN_ROLE");
