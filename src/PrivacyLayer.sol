@@ -178,27 +178,69 @@ contract PrivacyLayer is WAGAAccessControl, IPrivacyLayer {
         string memory supplyChainDisplay
     ) {
         IPrivacyLayer.PrivacyConfig memory config = batchPrivacyConfig[batchId];
-        
-        // Admin and processor can see everything
+
+        // Determine viewer role and get appropriate claims
+        uint8 viewerRole = _getViewerRole(viewer);
+
+        pricingDisplay = _getPricingClaim(config, viewerRole);
+        qualityDisplay = _getQualityClaim(config, viewerRole);
+        supplyChainDisplay = _getSupplyChainClaim(config, viewerRole);
+    }
+
+    /**
+     * @dev Get viewer's role level - separated for stack optimization
+     */
+    function _getViewerRole(address viewer) internal view returns (uint8) {
         if (hasRole(ADMIN_ROLE, viewer) || hasRole(PROCESSOR_ROLE, viewer)) {
-            return (config.pricingClaim, config.qualityClaim, config.supplyChainClaim);
+            return 1; // Full access
+        } else if (hasRole(DISTRIBUTOR_ROLE, viewer)) {
+            return 2; // Limited access
         }
-        
-        // Distributor can see pricing for purchasing decisions
-        if (hasRole(DISTRIBUTOR_ROLE, viewer)) {
-            return (
-                config.pricingPrivate ? "Contact for Pricing" : config.pricingClaim,
-                config.qualityClaim,
-                config.supplyChainClaim
-            );
+        return 3; // Public access
+    }
+
+    /**
+     * @dev Get pricing claim based on role - separated for stack optimization
+     */
+    function _getPricingClaim(
+        IPrivacyLayer.PrivacyConfig memory config,
+        uint8 viewerRole
+    ) internal pure returns (string memory) {
+        if (viewerRole == 1) { // Full access
+            return config.pricingClaim;
+        } else if (viewerRole == 2) { // Distributor
+            return config.pricingPrivate ? "Contact for Pricing" : config.pricingClaim;
+        } else { // Public
+            return config.pricingPrivate ? "Competitively Priced" : config.pricingClaim;
         }
-        
-        // Public sees only verified claims
-        return (
-            config.pricingPrivate ? "Competitively Priced" : config.pricingClaim,
-            config.qualityPrivate ? "Quality Verified" : config.qualityClaim,
-            config.supplyChainPrivate ? "Traceable Origin" : config.supplyChainClaim
-        );
+    }
+
+    /**
+     * @dev Get quality claim based on role - separated for stack optimization
+     */
+    function _getQualityClaim(
+        IPrivacyLayer.PrivacyConfig memory config,
+        uint8 viewerRole
+    ) internal pure returns (string memory) {
+        if (viewerRole == 1) { // Full access
+            return config.qualityClaim;
+        } else { // Distributor or Public
+            return config.qualityPrivate ? "Quality Verified" : config.qualityClaim;
+        }
+    }
+
+    /**
+     * @dev Get supply chain claim based on role - separated for stack optimization
+     */
+    function _getSupplyChainClaim(
+        IPrivacyLayer.PrivacyConfig memory config,
+        uint8 viewerRole
+    ) internal pure returns (string memory) {
+        if (viewerRole == 1) { // Full access
+            return config.supplyChainClaim;
+        } else { // Distributor or Public
+            return config.supplyChainPrivate ? "Traceable Origin" : config.supplyChainClaim;
+        }
     }
 
     /**

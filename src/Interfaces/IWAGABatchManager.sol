@@ -32,4 +32,17 @@ interface IWAGABatchManager {
     function isBatchMetadataVerified(uint256 batchId) external view returns (bool);
     function resetBatchVerificationFlags(uint256 batchId) external;
     function markBatchExpired(uint256 batchId) external;
+
+    function getBatchInfo(
+        uint256 batchId
+    ) external view returns (
+        uint256 productionDate,
+        uint256 expiryDate,
+        uint256 quantity,
+        uint256 pricePerUnit,
+        string memory origin,
+        string memory packagingInfo,
+        address creator,
+        uint256 timestamp
+    );
 }

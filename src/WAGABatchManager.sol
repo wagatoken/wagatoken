@@ -388,7 +388,7 @@ contract WAGABatchManager is WAGAViewFunctions {
     }
 
     /**
-     * @dev Internal function to handle privacy filtering
+     * @dev Internal function to handle privacy filtering - optimized for stack depth
      */
     function _getFilteredBatchInfo(
         uint256 batchId
@@ -407,20 +407,39 @@ contract WAGABatchManager is WAGAViewFunctions {
         )
     {
         BatchInfo storage info = s_batchInfo[batchId];
-        
-        // Get privacy permissions in separate call
+
+        // Get privacy permissions
         (bool canViewPricing, bool canViewDetails) = _getPrivacyPermissions(batchId);
 
-        return (
-            canViewDetails ? info.productionDate : 0,
-            canViewDetails ? info.expiryDate : 0,
-            info.quantity,
-            canViewPricing ? info.pricePerUnit : 0,
-            canViewDetails ? batchOrigin[batchId] : "Origin Protected",
-            canViewDetails ? info.packagingInfo : "Standard Packaging",
-            batchCreator[batchId],
-            batchCreationTimestamp[batchId]
-        );
+        // Build return values step by step to reduce stack usage
+        productionDate = canViewDetails ? info.productionDate : 0;
+        expiryDate = canViewDetails ? info.expiryDate : 0;
+        quantity = info.quantity;
+        pricePerUnit = canViewPricing ? info.pricePerUnit : 0;
+        origin = _getFilteredOrigin(batchId, canViewDetails);
+        packagingInfo = _getFilteredPackagingInfo(info, canViewDetails);
+        creator = batchCreator[batchId];
+        timestamp = batchCreationTimestamp[batchId];
+    }
+
+    /**
+     * @dev Get filtered origin string - separated for stack optimization
+     */
+    function _getFilteredOrigin(
+        uint256 batchId,
+        bool canViewDetails
+    ) internal view returns (string memory) {
+        return canViewDetails ? batchOrigin[batchId] : "Origin Protected";
+    }
+
+    /**
+     * @dev Get filtered packaging info - separated for stack optimization
+     */
+    function _getFilteredPackagingInfo(
+        BatchInfo storage info,
+        bool canViewDetails
+    ) internal view returns (string memory) {
+        return canViewDetails ? info.packagingInfo : "Standard Packaging";
     }
 
     /**
