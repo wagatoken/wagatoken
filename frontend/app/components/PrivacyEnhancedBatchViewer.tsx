@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { useAccount } from 'wagmi';
+import { useWallet } from '../components/WalletProvider';
 
 interface PrivacyConfig {
   pricingSelective: number;
@@ -67,7 +67,7 @@ const PrivacyEnhancedBatchViewer: React.FC<PrivacyEnhancedBatchViewerProps> = ({
   onViewZKProof,
   onDecryptData
 }) => {
-  const { address } = useAccount();
+  const { address } = useWallet();
   const [showZKProofs, setShowZKProofs] = useState(false);
   const [showEncryptedData, setShowEncryptedData] = useState(false);
   const [encryptionKey, setEncryptionKey] = useState('');

@@ -59,11 +59,16 @@ contract WAGAChainlinkIntegration is Test {
             coffeeToken,
             batchManager,
             zkManager,
+            privacyLayer,
+            , // treasury
+            redemptionContract,
+            , // cdpIntegration
             proofOfReserve,
             inventoryManager,
-            redemptionContract,
             circomVerifier,
-            privacyLayer,
+            , // priceVerifier
+            , // qualityVerifier
+            , // supplyChainVerifier
             helperConfig
         ) = deployer.run();
 

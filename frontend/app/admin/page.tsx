@@ -451,7 +451,7 @@ export default function AdminPage() {
                           setBatchForm(prev => ({
                             ...prev,
                             productType: key as keyof typeof PRODUCT_TYPES,
-                            packagingInfo: product.sizes[0], // Set default size
+                            packagingInfo: product.sizes[0] as "250g" | "500g" | "60kg", // Set default size
                             unitWeight: product.sizes[0]
                           }));
                         }}
@@ -592,7 +592,7 @@ export default function AdminPage() {
                       </label>
                       <select
                         value={batchForm.packagingInfo || PRODUCT_TYPES[batchForm.productType || 'RETAIL_BAGS'].sizes[0]}
-                        onChange={(e) => handleInputChange('packagingInfo', e.target.value)}
+                        onChange={(e) => handleInputChange('packagingInfo', e.target.value as "250g" | "500g" | "60kg")}
                         className="web3-ethereum-input w-full"
                       >
                         {PRODUCT_TYPES[batchForm.productType || 'RETAIL_BAGS'].sizes.map(size => (

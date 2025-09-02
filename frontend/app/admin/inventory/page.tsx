@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+
+// Force dynamic rendering to avoid static generation issues with wallet hooks
+export const dynamic = 'force-dynamic';
+import { useWallet } from '../../components/WalletProvider';
 import { 
   MdInventory, 
   MdSchedule, 
@@ -44,7 +47,7 @@ interface VerificationHistory {
 }
 
 function InventoryManagementPage() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useWallet();
   const [userRole, setUserRole] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

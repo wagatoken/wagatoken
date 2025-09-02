@@ -5,7 +5,7 @@ import { ethers } from 'ethers';
 import { MdCoffee, MdLocationOn, MdGrade, MdVerified, MdRefresh, MdInfo, MdQrCode, MdInventory, MdLocalFireDepartment, MdStore } from 'react-icons/md';
 import { useWallet } from '../components/WalletProvider';
 import { createBatchBlockchainFirst } from '../../utils/smartContracts';
-import { generateBatchQRCode, generateSimpleVerificationQR } from '../../utils/ipfsMetadata';
+import { generateBatchQRCode, generateSimpleVerificationQR, CoffeeBatchMetadata } from '../../utils/ipfsMetadata';
 
 // Batch creation data type for roasters
 interface RoasterBatchData {
@@ -18,11 +18,12 @@ interface RoasterBatchData {
   certifications: string[];
   cupping_notes: string[];
   quantity: number;
-  packagingInfo: string; // 60kg
+  packagingInfo: "250g" | "500g" | "60kg";
   unitWeight: string; // 60kg
   pricePerUnit: string;
   productionDate: Date;
   expiryDate: Date;
+  image?: string;
 
   // Roasted bean specific fields
   roastProfile: string;
@@ -35,7 +36,7 @@ interface RoasterBatchData {
 }
 
 export default function RoasterPortal() {
-  const { account, signer, isConnected } = useWallet();
+  const { address, isConnected } = useWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -53,7 +54,7 @@ export default function RoasterPortal() {
     certifications: [],
     cupping_notes: [],
     quantity: 0,
-    packagingInfo: '60kg',
+    packagingInfo: '60kg' as "250g" | "500g" | "60kg",
     unitWeight: '60kg',
     pricePerUnit: '4.50',
     productionDate: new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)), // 7 days ago (roast date)
@@ -78,10 +79,10 @@ export default function RoasterPortal() {
   // Check roaster role on component mount
   useEffect(() => {
     checkRoasterRole();
-  }, [account, signer, isConnected]);
+  }, [address, isConnected]);
 
   const checkRoasterRole = async () => {
-    if (!account || !signer || !isConnected) {
+    if (!address || !isConnected) {
       setRoleChecking(false);
       return;
     }
@@ -89,18 +90,19 @@ export default function RoasterPortal() {
     try {
       setRoleChecking(true);
       // Import contract utilities
-      const { getContract } = await import('../../utils/smartContracts');
+      const { getContract, getSigner, COFFEE_TOKEN_ABI } = await import('../../utils/smartContracts');
       const coffeeTokenAddress = process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS;
 
       if (!coffeeTokenAddress) {
         throw new Error('Coffee token address not configured');
       }
 
-      const coffeeTokenContract = getContract(coffeeTokenAddress, [], signer);
+      const signer = await getSigner();
+      const coffeeTokenContract = getContract(coffeeTokenAddress, COFFEE_TOKEN_ABI, signer);
 
       // Check if user has ROASTER_ROLE
       const roasterRole = await coffeeTokenContract.ROASTER_ROLE();
-      const hasRole = await coffeeTokenContract.hasRole(roasterRole, account);
+      const hasRole = await coffeeTokenContract.hasRole(roasterRole, address);
 
       setHasRoasterRole(hasRole);
     } catch (error) {
@@ -149,7 +151,7 @@ export default function RoasterPortal() {
   };
 
   const handleCreateBatch = async () => {
-    if (!isConnected || !signer || !hasRoasterRole) {
+    if (!isConnected || !hasRoasterRole) {
       setError('Please connect your wallet and ensure you have roaster permissions');
       return;
     }
@@ -176,7 +178,25 @@ export default function RoasterPortal() {
 
       // Generate QR codes
       console.log('Generating QR codes...');
-      const qrCodeDataUrl = await generateBatchQRCode(result.batchId, batchForm, result.ipfsUri);
+      const metadata: CoffeeBatchMetadata = {
+        name: batchForm.name,
+        description: batchForm.description,
+        image: batchForm.image,
+        properties: {
+          origin: batchForm.origin,
+          farmer: batchForm.farmer,
+          altitude: batchForm.altitude,
+          process: batchForm.process,
+          roastProfile: batchForm.roastProfile || '',
+          roastDate: batchForm.roastDate || '',
+          certifications: batchForm.certifications,
+          cupping_notes: batchForm.cupping_notes,
+          batchSize: batchForm.quantity,
+          packagingInfo: batchForm.packagingInfo,
+          pricePerUnit: batchForm.pricePerUnit
+        }
+      };
+      const qrCodeDataUrl = await generateBatchQRCode(result.batchId, metadata, result.ipfsUri);
       const verificationQR = await generateSimpleVerificationQR(result.batchId);
 
       setGeneratedQRs({
@@ -195,7 +215,7 @@ export default function RoasterPortal() {
         certifications: [],
         cupping_notes: [],
         quantity: 0,
-        packagingInfo: '60kg',
+        packagingInfo: '60kg' as "250g" | "500g" | "60kg",
         unitWeight: '60kg',
         pricePerUnit: '4.50',
         productionDate: new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)),
@@ -253,7 +273,7 @@ export default function RoasterPortal() {
           </p>
           <div className="bg-gray-100 p-4 rounded-lg">
             <p className="text-sm text-gray-700">
-              <strong>Current Address:</strong> {account}
+              <strong>Current Address:</strong> {address}
             </p>
           </div>
         </div>
@@ -277,7 +297,7 @@ export default function RoasterPortal() {
           </div>
           <div className="text-right">
             <div className="text-sm text-gray-500">Connected as Roaster</div>
-            <div className="text-xs text-gray-400 font-mono">{account}</div>
+            <div className="text-xs text-gray-400 font-mono">{address}</div>
           </div>
         </div>
       </div>

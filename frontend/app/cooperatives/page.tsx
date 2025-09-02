@@ -5,7 +5,7 @@ import { ethers } from 'ethers';
 import { MdCoffee, MdLocationOn, MdGrade, MdVerified, MdRefresh, MdInfo, MdQrCode, MdInventory, MdAgriculture, MdNature } from 'react-icons/md';
 import { useWallet } from '../components/WalletProvider';
 import { createBatchBlockchainFirst } from '../../utils/smartContracts';
-import { generateBatchQRCode, generateSimpleVerificationQR } from '../../utils/ipfsMetadata';
+import { generateBatchQRCode, generateSimpleVerificationQR, CoffeeBatchMetadata } from '../../utils/ipfsMetadata';
 
 // Batch creation data type for cooperatives
 interface CooperativeBatchData {
@@ -18,11 +18,12 @@ interface CooperativeBatchData {
   certifications: string[];
   cupping_notes: string[];
   quantity: number;
-  packagingInfo: string; // 60kg
+  packagingInfo: "250g" | "500g" | "60kg";
   unitWeight: string; // 60kg
   pricePerUnit: string;
   productionDate: Date;
   expiryDate: Date;
+  image?: string;
 
   // Green bean specific fields
   moistureContent: number;
@@ -34,7 +35,7 @@ interface CooperativeBatchData {
 }
 
 export default function CooperativesPortal() {
-  const { account, signer, isConnected } = useWallet();
+  const { address, isConnected } = useWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -52,7 +53,7 @@ export default function CooperativesPortal() {
     certifications: [],
     cupping_notes: [],
     quantity: 0,
-    packagingInfo: '60kg',
+    packagingInfo: '60kg' as "250g" | "500g" | "60kg",
     unitWeight: '60kg',
     pricePerUnit: '2.50',
     productionDate: new Date(Date.now() - (14 * 24 * 60 * 60 * 1000)), // 14 days ago (harvest time)
@@ -76,10 +77,10 @@ export default function CooperativesPortal() {
   // Check cooperative role on component mount
   useEffect(() => {
     checkCooperativeRole();
-  }, [account, signer, isConnected]);
+  }, [address, isConnected]);
 
   const checkCooperativeRole = async () => {
-    if (!account || !signer || !isConnected) {
+    if (!address || !isConnected) {
       setRoleChecking(false);
       return;
     }
@@ -87,18 +88,19 @@ export default function CooperativesPortal() {
     try {
       setRoleChecking(true);
       // Import contract utilities
-      const { getContract } = await import('../../utils/smartContracts');
+      const { getContract, getSigner, COFFEE_TOKEN_ABI } = await import('../../utils/smartContracts');
       const coffeeTokenAddress = process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS;
 
       if (!coffeeTokenAddress) {
         throw new Error('Coffee token address not configured');
       }
 
-      const coffeeTokenContract = getContract(coffeeTokenAddress, [], signer);
+      const signer = await getSigner();
+      const coffeeTokenContract = getContract(coffeeTokenAddress, COFFEE_TOKEN_ABI, signer);
 
       // Check if user has COOPERATIVE_ROLE
       const cooperativeRole = await coffeeTokenContract.COOPERATIVE_ROLE();
-      const hasRole = await coffeeTokenContract.hasRole(cooperativeRole, account);
+      const hasRole = await coffeeTokenContract.hasRole(cooperativeRole, address);
 
       setHasCooperativeRole(hasRole);
     } catch (error) {
@@ -147,7 +149,7 @@ export default function CooperativesPortal() {
   };
 
   const handleCreateBatch = async () => {
-    if (!isConnected || !signer || !hasCooperativeRole) {
+    if (!isConnected || !hasCooperativeRole) {
       setError('Please connect your wallet and ensure you have cooperative permissions');
       return;
     }
@@ -174,7 +176,25 @@ export default function CooperativesPortal() {
 
       // Generate QR codes
       console.log('Generating QR codes...');
-      const qrCodeDataUrl = await generateBatchQRCode(result.batchId, batchForm, result.ipfsUri);
+      const metadata: CoffeeBatchMetadata = {
+        name: batchForm.name,
+        description: batchForm.description,
+        image: batchForm.image,
+        properties: {
+          origin: batchForm.origin,
+          farmer: batchForm.farmer,
+          altitude: batchForm.altitude,
+          process: batchForm.process,
+          roastProfile: '', // Green beans don't have roast profile
+          roastDate: '', // Green beans don't have roast date
+          certifications: batchForm.certifications,
+          cupping_notes: batchForm.cupping_notes,
+          batchSize: batchForm.quantity,
+          packagingInfo: batchForm.packagingInfo,
+          pricePerUnit: batchForm.pricePerUnit
+        }
+      };
+      const qrCodeDataUrl = await generateBatchQRCode(result.batchId, metadata, result.ipfsUri);
       const verificationQR = await generateSimpleVerificationQR(result.batchId);
 
       setGeneratedQRs({
@@ -193,7 +213,7 @@ export default function CooperativesPortal() {
         certifications: [],
         cupping_notes: [],
         quantity: 0,
-        packagingInfo: '60kg',
+        packagingInfo: '60kg' as "250g" | "500g" | "60kg",
         unitWeight: '60kg',
         pricePerUnit: '2.50',
         productionDate: new Date(Date.now() - (14 * 24 * 60 * 60 * 1000)),
@@ -250,7 +270,7 @@ export default function CooperativesPortal() {
           </p>
           <div className="bg-gray-100 p-4 rounded-lg">
             <p className="text-sm text-gray-700">
-              <strong>Current Address:</strong> {account}
+              <strong>Current Address:</strong> {address}
             </p>
           </div>
         </div>
@@ -274,7 +294,7 @@ export default function CooperativesPortal() {
           </div>
           <div className="text-right">
             <div className="text-sm text-gray-500">Connected as Cooperative</div>
-            <div className="text-xs text-gray-400 font-mono">{account}</div>
+            <div className="text-xs text-gray-400 font-mono">{address}</div>
           </div>
         </div>
       </div>

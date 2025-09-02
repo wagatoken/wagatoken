@@ -207,7 +207,8 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
         s_batchMetadata[batchId] = metadataURI;
 
         // Delegate detailed batch creation to BatchManager
-        batchManager.createBatchInfo(
+        batchManager.createBatchInfoWithCaller(
+            msg.sender, // Pass the original caller for role checking
             batchId,
             productionDate,
             expiryDate,

@@ -28,24 +28,34 @@ interface IWAGACoffeeToken {
     function isBatchCreated(uint256 batchId) external view returns (bool);
 
     /**
+     * @dev Checks if an account has a specific role
+     * @param role The role to check
+     * @param account The account to check
+     * @return bool True if the account has the role, false otherwise
+     */
+    function hasRole(bytes32 role, address account) external view returns (bool);
+
+    /**
      * @dev Creates a new batch for blockchain-first workflow
      * @param productionDate Timestamp when the batch was produced
      * @param expiryDate Timestamp when the batch expires
      * @param quantity Number of coffee bags in the batch
      * @param pricePerUnit Price per unit in wei
+     * @param origin Origin of the coffee
      * @param packagingInfo Packaging size ("250g" or "500g")
-     * @param metadataHash Placeholder hash for metadata
+     * @param metadataURI IPFS URI for batch metadata
      * @return uint256 The ID of the newly created batch
      * Requirements:
-     * - Caller must have ADMIN_ROLE
+     * - Caller must have PROCESSOR_ROLE
      */
     function createBatch(
         uint256 productionDate,
         uint256 expiryDate,
         uint256 quantity,
         uint256 pricePerUnit,
+        string memory origin,
         string memory packagingInfo,
-        string memory metadataHash
+        string memory metadataURI
     ) external returns (uint256);
 
     /**

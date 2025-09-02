@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { useAccount } from 'wagmi';
+import { useWallet } from '../components/WalletProvider';
 
 interface PrivacyConfig {
   pricingSelective: number; // 0=Public, 1=Selective, 2=Private
@@ -40,7 +40,7 @@ const PrivacyEnhancedBatchForm: React.FC<PrivacyEnhancedBatchFormProps> = ({
   userRole,
   isSubmitting = false
 }) => {
-  const { address } = useAccount();
+  const { address } = useWallet();
   const [formData, setFormData] = useState<BatchFormData>({
     productionDate: '',
     expiryDate: '',
@@ -177,8 +177,8 @@ const PrivacyEnhancedBatchForm: React.FC<PrivacyEnhancedBatchFormProps> = ({
 
     const submitData = {
       ...formData,
-      productionDate: productionTimestamp,
-      expiryDate: expiryTimestamp
+      productionDate: productionTimestamp.toString(),
+      expiryDate: expiryTimestamp.toString()
     };
 
     onSubmit(submitData);

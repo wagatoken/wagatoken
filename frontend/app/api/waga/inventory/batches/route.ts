@@ -25,30 +25,46 @@ export async function GET(request: NextRequest) {
       }
       
       // Check if batch is expired
-      if (batch.expiryDate && now > batch.expiryDate) {
-        status = 'expired';
-        alerts.push('Batch expired');
+      if (batch.expiryDate) {
+        const expiryTimestamp = batch.expiryDate instanceof Date
+          ? Math.floor(batch.expiryDate.getTime() / 1000)
+          : typeof batch.expiryDate === 'number'
+          ? batch.expiryDate
+          : now + 1; // Default to not expired if format unknown
+
+        if (now > expiryTimestamp) {
+          status = 'expired';
+          alerts.push('Batch expired');
+        }
       }
       
-      // Check for low inventory
-      const availableQuantity = batch.quantity - batch.mintedQuantity;
+      // Check for low inventory using inventoryActual field
+      const availableQuantity = batch.inventoryActual || batch.quantity;
       if (availableQuantity <= 10 && availableQuantity > 0) {
         status = 'low_inventory';
         alerts.push('Low inventory warning');
       }
       
       // Check for long storage
-      const daysInStorage = (now - batch.productionDate) / (24 * 60 * 60);
-      if (daysInStorage >= 180) {
-        status = 'long_storage';
-        alerts.push('Long storage warning');
+      if (batch.productionDate) {
+        const productionTimestamp = batch.productionDate instanceof Date
+          ? Math.floor(batch.productionDate.getTime() / 1000)
+          : typeof batch.productionDate === 'number'
+          ? batch.productionDate
+          : now - (30 * 24 * 60 * 60); // Default to 30 days ago if format unknown
+
+        const daysInStorage = (now - productionTimestamp) / (24 * 60 * 60);
+        if (daysInStorage >= 180) {
+          status = 'long_storage';
+          alerts.push('Long storage warning');
+        }
       }
       
       return {
         batchId: batch.batchId,
         name: batch.name || `Batch ${batch.batchId}`,
         quantity: batch.quantity,
-        mintedQuantity: batch.mintedQuantity || 0,
+        mintedQuantity: 0, // Database doesn't track minted quantity yet
         availableQuantity: availableQuantity,
         lastVerified: lastVerified,
         nextVerification: nextVerification,

@@ -78,11 +78,16 @@ contract WAGAInventoryVerification is Test {
             coffeeToken,
             batchManager,
             zkManager,
+            privacyLayer,
+            , // treasury
+            redemption,
+            , // cdpIntegration
             proofOfReserve,
             inventoryManager,
-            redemption,
             circomVerifier,
-            privacyLayer,
+            , // priceVerifier
+            , // qualityVerifier
+            , // supplyChainVerifier
             helperConfig
         ) = deployer.run();
 

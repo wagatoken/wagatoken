@@ -10,13 +10,20 @@ export interface CoffeeBatchMetadata {
     farmer: string;
     altitude: string;
     process: string;
-    roastProfile: string;
-    roastDate: string;
+    roastProfile?: string; // Optional for green beans
+    roastDate?: string; // Optional for green beans
     certifications: string[];
     cupping_notes: string[];
     batchSize: number; // Number of bags (matches quantity in smart contract)
     packagingInfo: string; // Must be "250g" or "500g" to match smart contract validation
     pricePerUnit: string; // Price in USD cents as string
+
+    // Extended properties for green and roasted beans
+    moisture_content?: number;
+    density?: number;
+    defect_count?: number;
+    cooperative_id?: string;
+    processor_id?: string;
   };
 }
 
@@ -28,16 +35,25 @@ export interface BatchCreationData {
   farmer: string;
   altitude: string;
   process: string;
-  roastProfile: string;
-  roastDate: string;
+  roastProfile?: string; // Optional for green beans
+  roastDate?: string; // Optional for green beans
   certifications: string[];
   cupping_notes: string[];
   quantity: number; // Number of bags
-  packagingInfo: "250g" | "500g";
+  packagingInfo: "250g" | "500g" | "60kg";
   pricePerUnit: string; // Price in USD, will be converted to cents
   productionDate: Date;
   expiryDate: Date;
   image?: string; // Optional image IPFS hash
+
+  // Extended fields for product type support
+  productType?: "RETAIL_BAGS" | "GREEN_BEANS" | "ROASTED_BEANS";
+  unitWeight?: string;
+  moistureContent?: number;
+  density?: number;
+  defectCount?: number;
+  cooperativeId?: string;
+  processorId?: string;
 }
 
 /**

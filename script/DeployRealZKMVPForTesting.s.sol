@@ -9,17 +9,16 @@ import {WAGAZKManager} from "../src/WAGAZKManager.sol";
 import {WAGAProofOfReserve} from "../src/WAGAProofOfReserve.sol";
 import {WAGAInventoryManagerMVP} from "../src/WAGAInventoryManagerMVP.sol";
 import {WAGACoffeeRedemption} from "../src/WAGACoffeeRedemption.sol";
+import {WAGATreasury} from "../src/WAGATreasury.sol";
 import {PrivacyLayer} from "../src/PrivacyLayer.sol";
 import {MockCircomVerifier} from "../src/MockCircomVerifier.sol";
 
 /**
  * @title DeployRealZKMVPForTesting
- * @dev Deployment script for testing with MockCircomVerifier
+ * @dev Deployment script for testing with MockCircomVerifier following HelperConfig pattern
  * @notice This script deploys the full ZK MVP system using MockCircomVerifier for testing
  */
 contract DeployRealZKMVPForTesting is Script {
-    HelperConfig public helperConfig;
-
     function run()
         external
         returns (
@@ -34,10 +33,14 @@ contract DeployRealZKMVPForTesting is Script {
             HelperConfig
         )
     {
-        helperConfig = new HelperConfig();
-        HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
+        HelperConfig helperConfig = new HelperConfig();
+        (
+            address usdcAddress,
+            address router,
+            uint256 deployerKey
+        ) = helperConfig.activeNetworkConfig();
 
-        vm.startBroadcast(config.deployerKey);
+        vm.startBroadcast(deployerKey);
 
         // 1. Deploy MockCircomVerifier for testing
         MockCircomVerifier mockVerifier = new MockCircomVerifier();
@@ -67,9 +70,9 @@ contract DeployRealZKMVPForTesting is Script {
         WAGAProofOfReserve proofOfReserve = new WAGAProofOfReserve(
             address(coffeeToken),
             address(batchManager),
-            config.router,
-            config.subscriptionId,
-            config.donId
+            router,
+            0, // subscriptionId - use default for testing
+            bytes32(0) // donId - use default for testing
         );
 
         // 8. Deploy WAGAInventoryManagerMVP
@@ -79,8 +82,9 @@ contract DeployRealZKMVPForTesting is Script {
             address(proofOfReserve)
         );
 
-        // 9. Deploy WAGACoffeeRedemption
-        WAGACoffeeRedemption redemption = new WAGACoffeeRedemption(address(coffeeToken));
+        // 9. Deploy Treasury and Redemption
+        WAGATreasury treasury = new WAGATreasury(usdcAddress);
+        WAGACoffeeRedemption redemption = new WAGACoffeeRedemption(address(coffeeToken), address(treasury));
 
         // 10. Grant roles
         coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(mockVerifier));

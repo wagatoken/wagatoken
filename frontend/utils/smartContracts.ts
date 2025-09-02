@@ -48,7 +48,7 @@ export interface ExtendedBatchCreationData extends BatchCreationData {
 }
 
 // Updated ABIs for the actual deployed contracts with product type support
-const COFFEE_TOKEN_ABI = [
+export const COFFEE_TOKEN_ABI = [
   // Legacy function for backward compatibility
   "function createBatch(uint256 productionDate, uint256 expiryDate, uint256 quantity, uint256 pricePerUnit, string calldata origin, string calldata packagingInfo, string calldata metadataURI) external onlyRole(bytes32) returns (uint256)",
 
@@ -1068,5 +1068,41 @@ export async function getBatchPrivacyConfig(batchId: string): Promise<{
     console.error('Error getting batch privacy config:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     throw new Error(`Failed to get batch privacy config: ${errorMessage}`);
+  }
+}
+
+/**
+ * Get batch product type
+ */
+export async function getBatchProductType(batchId: string): Promise<number> {
+  try {
+    const signer = await getSigner();
+    const coffeeTokenContract = getContract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, signer);
+
+    const productType = await coffeeTokenContract.getBatchProductType(batchId);
+    return productType.toNumber();
+
+  } catch (error) {
+    console.error('Error getting batch product type:', error);
+    // Default to RETAIL_BAGS (0) if error
+    return 0;
+  }
+}
+
+/**
+ * Get batch unit weight
+ */
+export async function getBatchUnitWeight(batchId: string): Promise<string> {
+  try {
+    const signer = await getSigner();
+    const coffeeTokenContract = getContract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, signer);
+
+    const unitWeight = await coffeeTokenContract.getBatchUnitWeight(batchId);
+    return unitWeight;
+
+  } catch (error) {
+    console.error('Error getting batch unit weight:', error);
+    // Return empty string if error
+    return '';
   }
 }

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol"; // why
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import {WAGACoffeeTokenCore} from "./WAGACoffeeTokenCore.sol";
+import {IWAGATreasury} from "./Interfaces/IWAGATreasury.sol";
 
 contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     /* -------------------------------------------------------------------------- */
@@ -28,6 +29,15 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         RedemptionStatus status
     );
     error WAGACoffeeRedemption__CallerDoesNotHaveRequiredRole_callHasRoleFromCoffeeToken();
+    error WAGACoffeeRedemption__PaymentRequired_requestRedemption();
+    error WAGACoffeeRedemption__PaymentNotReceived_requestRedemption();
+
+    /* -------------------------------------------------------------------------- */
+    /*                               STATE VARIABLES                             */
+    /* -------------------------------------------------------------------------- */
+
+    // Treasury contract for payment verification
+    IWAGATreasury public treasury;
 
     /* -------------------------------------------------------------------------- */
     /*                               TYPE DECLARATIONS                            */
@@ -105,9 +115,20 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     /*                                CONSTRUCTOR                                 */
     /* -------------------------------------------------------------------------- */
 
-    constructor(address _coffeeToken) /*address coffeeTokenAddress*/ {
+    constructor(address _coffeeToken, address _treasury) {
         coffeeToken = WAGACoffeeTokenCore(_coffeeToken);
-        nextRedemptionId = 1000; // Do we need to initialize this?
+        treasury = IWAGATreasury(_treasury);
+        nextRedemptionId = 1000;
+    }
+
+    /**
+     * @dev Update treasury contract address (admin only)
+     * @param _treasury New treasury contract address
+     */
+    function setTreasury(address _treasury) external {
+        // Only allow admin or the contract itself to update treasury
+        require(msg.sender == address(this) || hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Unauthorized");
+        treasury = IWAGATreasury(_treasury);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -165,6 +186,19 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
 
         if (!isMetadataVerified) {
             revert WAGACoffeeRedemption__BatchMetadataNotVerified_requestRedemption();
+        }
+
+        // Verify payment has been made for this batch
+        if (address(treasury) != address(0)) {
+            // Check if payment is required for this batch
+            (uint256 requiredPayment, ) = treasury.getBatchPaymentInfo(batchId);
+            if (requiredPayment > 0) {
+                // Check if user has paid
+                bool hasPaid = treasury.checkPaymentStatus(msg.sender, batchId);
+                if (!hasPaid) {
+                    revert WAGACoffeeRedemption__PaymentNotReceived_requestRedemption();
+                }
+            }
         }
 
         // Transfer tokens from consumer to this contract

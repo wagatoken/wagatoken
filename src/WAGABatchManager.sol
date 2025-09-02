@@ -2,6 +2,7 @@
 pragma solidity ^0.8.18;
 
 import "./Interfaces/IWAGACoffeeToken.sol";
+import "./WAGACoffeeTokenCore.sol";
 import "./Interfaces/IPrivacyLayer.sol";
 import "./WAGAViewFunctions.sol";
 
@@ -135,6 +136,7 @@ contract WAGABatchManager is WAGAViewFunctions {
     /* -------------------------------------------------------------------------- */
 
     IWAGACoffeeToken public immutable coffeeToken;
+    WAGACoffeeTokenCore public immutable coffeeTokenContract;
     IPrivacyLayer public immutable privacyLayer;
 
     // Additional batch metadata (extending what's in WAGAViewFunctions)
@@ -171,16 +173,8 @@ contract WAGABatchManager is WAGAViewFunctions {
     }
 
     function _checkCallerHasRoleFromCoffeeToken(bytes32 roleType, address caller) internal view {
-        // Use a try-catch or low-level call since interface might not have hasRole
-        (bool success, bytes memory result) = address(coffeeToken).staticcall(
-            abi.encodeWithSignature(
-                "hasRole(bytes32,address)",
-                roleType,
-                caller
-            )
-        );
-
-        if (!success || result.length == 0 || !abi.decode(result, (bool))) {
+        // Use the actual contract for direct role checking
+        if (!coffeeTokenContract.hasRole(roleType, caller)) {
             revert WAGABatchManager__CallerDoesNotHaveRequiredRole_callerHasRoleFromCoffeeToken();
         }
     }
@@ -195,19 +189,7 @@ contract WAGABatchManager is WAGAViewFunctions {
     function _hasRoleFromCoffeeToken(
         bytes32 roleType
     ) internal view returns (bool) {
-        (bool success, bytes memory result) = address(coffeeToken).staticcall(
-            abi.encodeWithSignature(
-                "hasRole(bytes32,address)",
-                roleType,
-                msg.sender
-            )
-        );
-
-        if (!success || result.length == 0) {
-            return false;
-        }
-
-        return abi.decode(result, (bool));
+        return coffeeTokenContract.hasRole(roleType, msg.sender);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -217,6 +199,7 @@ contract WAGABatchManager is WAGAViewFunctions {
 
     constructor(address _coffeeToken, address _privacyLayer) {
         coffeeToken = IWAGACoffeeToken(_coffeeToken);
+        coffeeTokenContract = WAGACoffeeTokenCore(_coffeeToken);
         privacyLayer = IPrivacyLayer(_privacyLayer);
     }
 
@@ -521,19 +504,7 @@ contract WAGABatchManager is WAGAViewFunctions {
         address account,
         bytes32 roleType
     ) internal view returns (bool) {
-        (bool success, bytes memory result) = address(coffeeToken).staticcall(
-            abi.encodeWithSignature(
-                "hasRole(bytes32,address)",
-                roleType,
-                account
-            )
-        );
-
-        if (!success || result.length == 0) {
-            return false;
-        }
-
-        return abi.decode(result, (bool));
+        return coffeeTokenContract.hasRole(roleType, account);
     }
 
     /* -------------------------------------------------------------------------- */

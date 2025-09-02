@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       result: 'success',
       details: `Manual verification completed for batch ${body.batchId}`,
       verifiedQuantity: 1000, // Mock data
-      verifiedPrice: 5000000000000000000n, // 5 ETH in wei
+      verifiedPrice: '5000000000000000000', // 5 ETH in wei
       verifiedPackaging: '250g bags',
       verifiedMetadataHash: 'QmVerifiedMetadata123'
     };
