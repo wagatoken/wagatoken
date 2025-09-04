@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import { WalletProvider } from "./components/WalletProvider";
+import { WagmiConfigProvider } from "./components/WagmiConfigProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -37,11 +38,13 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} bg-white text-gray-900 antialiased`}>
         <div className="min-h-screen flex flex-col">
-          <WalletProvider>
-            <Navbar />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </WalletProvider>
+          <WagmiConfigProvider>
+            <WalletProvider>
+              <Navbar />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </WalletProvider>
+          </WagmiConfigProvider>
         </div>
       </body>
     </html>

@@ -195,7 +195,7 @@ contract MockCircomVerifier is IZKVerifier, AccessControl {
      * @dev Get verification statistics
      * @return totalBatches Total batches with any proofs
      */
-    function getVerificationStats() external view returns (uint256 totalBatches) {
+    function getVerificationStats() external pure returns (uint256 totalBatches) {
         // This is a simplified implementation
         // In a real implementation, you'd track this more efficiently
         return 0;

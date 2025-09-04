@@ -147,13 +147,12 @@ contract WAGACDPIntegration is IWAGACDPIntegration, AccessControl, ReentrancyGua
      * @param user The user address
      * @param batchId The batch ID
      * @param amount The payment amount
-     * @param destinationCurrency The destination currency for conversion
      */
     function processCrossBorderPayment(
         address user,
         uint256 batchId,
         uint256 amount,
-        string calldata destinationCurrency
+        string calldata /* destinationCurrency */
     ) external onlyRole(PAYMENT_HANDLER_ROLE) returns (string memory chargeId) {
         // Generate unique charge ID
         chargeId = string(abi.encodePacked("cdp_", user, "_", batchId, "_", block.timestamp));

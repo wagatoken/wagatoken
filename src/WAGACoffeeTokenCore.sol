@@ -284,13 +284,17 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
             revert WAGACoffeeTokenCore__BatchDoesNotExist_mintBatch();
         }
         
-        // Get batch info from shared state
-        BatchInfo memory batch = s_batchInfo[batchId];
-        if (batch.mintedQuantity + amount > batch.quantity) {
+        // Get batch quantity from authoritative source (BatchManager)
+        (,,uint256 batchQuantity,,,,,) = batchManager.getBatchInfo(batchId);
+        
+        // Get current minted quantity from local state
+        uint256 currentMintedQuantity = s_batchInfo[batchId].mintedQuantity;
+        
+        if (currentMintedQuantity + amount > batchQuantity) {
             revert WAGACoffeeTokenCore__BatchQuantityExceeded_mintBatch();
         }
 
-        // Update minted quantity in shared state
+        // Update minted quantity in local state
         s_batchInfo[batchId].mintedQuantity += amount;
 
         // Mint ERC1155 tokens
@@ -460,5 +464,59 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
             revert WAGACoffeeTokenCore__BatchDoesNotExist_mintBatch();
         }
         return batchUnitWeight[batchId];
+    }
+
+    /**
+     * @dev Override getbatchInfo to provide authoritative batch information from BatchManager
+     * This ensures consistency by getting the batch data from the authoritative source
+     */
+    function getbatchInfo(
+        uint256 batchId
+    )
+        external
+        view
+        override
+        returns (
+            uint256 productionDate,
+            uint256 expiryDate,
+            bool isVerified,
+            uint256 quantity,
+            uint256 pricePerUnit,
+            string memory packagingInfo,
+            string memory metadataHash,
+            bool isMetadataVerified,
+            uint256 lastVerifiedTimestamp
+        )
+    {
+        if (!batchCreated[batchId]) {
+            revert WAGACoffeeTokenCore__BatchDoesNotExist_mintBatch();
+        }
+
+        // Get authoritative batch info from BatchManager
+        (
+            uint256 bmProductionDate,
+            uint256 bmExpiryDate,
+            uint256 bmQuantity,
+            uint256 bmPricePerUnit,
+            ,  // origin - not needed here
+            string memory bmPackagingInfo,
+            ,  // creator - not needed here  
+            uint256 bmTimestamp
+        ) = batchManager.getBatchInfo(batchId);
+
+        // Get verification status and metadata from local state
+        BatchInfo storage localInfo = s_batchInfo[batchId];
+
+        return (
+            bmProductionDate,
+            bmExpiryDate,
+            localInfo.isVerified,
+            bmQuantity,
+            bmPricePerUnit,
+            bmPackagingInfo,
+            localInfo.metadataHash,
+            localInfo.isMetadataVerified,
+            bmTimestamp
+        );
     }
 }

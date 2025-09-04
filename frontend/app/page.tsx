@@ -7,7 +7,7 @@ import {
   SiIpfs,
   SiChainlink
 } from 'react-icons/si';
-import { MdCheck, MdAdminPanelSettings, MdLibraryBooks, MdStorefront, MdSearch, MdCoffee, MdVerified, MdStorage } from 'react-icons/md';
+import { MdCheck, MdAdminPanelSettings, MdLibraryBooks, MdStorefront, MdSearch, MdCoffee, MdVerified, MdStorage, MdNature, MdLocalFireDepartment, MdLocalShipping, MdPublic } from 'react-icons/md';
 import { BatchInfo, getActiveBatchIds, getBatchInfoWithMetadata } from "@/utils/smartContracts";
 
 interface FeaturedBatch extends BatchInfo {
@@ -28,32 +28,52 @@ export default function HomePage() {
 
   const features = [
     {
-      title: "Admin Portal",
-      description: "Administrative interface for WAGA staff to create, verify, and manage coffee batches",
+      title: "🌱 Farm Level",
+      description: "Cooperatives create green coffee bean batches (60kg) with origin certification and quality documentation",
+      icon: <MdNature size={32} />,
+      href: "/cooperatives",
+      color: "green",
+      step: "Step 1"
+    },
+    {
+      title: "🔥 Processing Level", 
+      description: "Roasters create roasted coffee bean batches (60kg) with roasting profiles and flavor documentation",
+      icon: <MdLocalFireDepartment size={32} />,
+      href: "/roaster",
+      color: "orange",
+      step: "Step 2"
+    },
+    {
+      title: "📦 Retail Level",
+      description: "Processors create consumer-ready coffee batches (250g/500g) with ZK privacy protection",
+      icon: <MdCoffee size={32} />,
+      href: "/processor", 
+      color: "blue",
+      step: "Step 3"
+    },
+    {
+      title: "🚚 Distribution Level",
+      description: "Distributors request verified batches and redeem tokens for physical coffee delivery",
+      icon: <MdLocalShipping size={32} />,
+      href: "/distributor",
+      color: "purple",
+      step: "Step 4"
+    },
+    {
+      title: "⚙️ Management",
+      description: "Admin portal for WAGA staff to verify, manage, and oversee the entire coffee ecosystem",
       icon: <MdAdminPanelSettings size={32} />,
       href: "/admin",
-      color: "emerald"
+      color: "emerald",
+      step: "Control"
     },
     {
-      title: "Distributor Portal",
-      description: "Request verified coffee batches and redeem tokens for physical coffee delivery",
-      icon: <MdStorefront size={32} />,
-      href: "/distributor",
-      color: "blue"
-    },
-    {
-      title: "Browse Coffee",
-      description: "Explore verified coffee batches",
-      icon: <MdCoffee size={32} />,
+      title: "🌐 Public Access",
+      description: "Browse and explore verified coffee batches with transparent quality and origin information",
+      icon: <MdPublic size={32} />,
       href: "/browse",
-      color: "green"
-    },
-    {
-      title: "Documentation",
-      description: "Learn about our blockchain coffee traceability system",
-      icon: <MdLibraryBooks size={32} />,
-      href: "/docs",
-      color: "purple"
+      color: "teal",
+      step: "Explore"
     }
   ];
 
@@ -145,13 +165,19 @@ export default function HomePage() {
                 href="/admin" 
                 className="web3-gradient-button text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 web3-button-stable web3-subtle-glow min-h-[44px]"
               >
-                Admin Portal
+                🔑 Admin Portal
+              </Link>
+              <Link 
+                href="/cooperatives" 
+                className="web3-button-outline text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 web3-holographic-border web3-button-stable min-h-[44px]"
+              >
+                🌱 Cooperatives
               </Link>
               <Link 
                 href="/distributor" 
                 className="web3-button-outline text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 web3-holographic-border web3-button-stable min-h-[44px]"
               >
-                Distributor Portal
+                🚚 Distributors
               </Link>
             </div>
           </div>
@@ -247,12 +273,19 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {features.map((feature, index) => (
               <Link key={index} href={feature.href}>
                 <div className={`web3-card-feature group cursor-pointer h-full web3-quantum-blur web3-card-stable ${
                   index % 2 === 0 ? 'animate-slide-left' : 'animate-slide-right'
                 }`} style={{ animationDelay: `${index * 300}ms` }}>
+                  {feature.step && (
+                    <div className="flex justify-end mb-2">
+                      <span className={`px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 opacity-75`}>
+                        {feature.step}
+                      </span>
+                    </div>
+                  )}
                   <div className="text-5xl mb-6">
                     {feature.icon}
                   </div>
@@ -348,18 +381,25 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
             <Link 
-              href="/producer" 
+              href="/admin" 
               className="web3-button-outline text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 web3-holographic-border web3-clickable-stable min-h-[44px] flex items-center justify-center"
             >
               <MdAdminPanelSettings className="mr-2" />
-              WAGA Admin Access
+              Admin Portal
             </Link>
             <Link 
-              href="/docs" 
+              href="/cooperatives" 
               className="web3-gradient-button text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 web3-clickable-stable min-h-[44px] flex items-center justify-center"
             >
-              <MdLibraryBooks className="mr-2" />
-              Read Documentation
+              <MdCoffee className="mr-2" />
+              Cooperatives Portal
+            </Link>
+            <Link 
+              href="/processor" 
+              className="web3-button-outline text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 web3-holographic-border web3-clickable-stable min-h-[44px] flex items-center justify-center"
+            >
+              <MdStorefront className="mr-2" />
+              Processor Portal
             </Link>
           </div>
         </div>

@@ -7,11 +7,50 @@ import WalletConnect from "../WalletConnect";
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isPortalsDropdownOpen, setIsPortalsDropdownOpen] = useState(false);
   const pathname = usePathname();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
+
+  const togglePortalsDropdown = () => {
+    setIsPortalsDropdownOpen(!isPortalsDropdownOpen);
+  };
+
+  // Portal items grouped by user type
+  const portalItems = [
+    { 
+      href: '/admin', 
+      label: 'Admin Portal', 
+      description: 'Manage and verify batches',
+      category: 'Management'
+    },
+    { 
+      href: '/cooperatives', 
+      label: 'Cooperatives Portal', 
+      description: 'Create green bean batches',
+      category: 'Production'
+    },
+    { 
+      href: '/roaster', 
+      label: 'Roaster Portal', 
+      description: 'Create roasted bean batches',
+      category: 'Production'
+    },
+    { 
+      href: '/processor', 
+      label: 'Processor Portal', 
+      description: 'Create retail coffee batches',
+      category: 'Production'
+    },
+    { 
+      href: '/distributor', 
+      label: 'Distributor Portal', 
+      description: 'Request and redeem batches',
+      category: 'Distribution'
+    }
+  ];
 
   const getNavItems = () => {
     const baseItems = [
@@ -20,31 +59,14 @@ export default function Navbar() {
       { href: '/docs', label: 'Docs', public: true }
     ];
 
-    if (pathname.startsWith('/admin')) {
-      return [
-        { href: '/admin', label: 'Admin Portal', active: true },
-        { href: '/distributor', label: 'Distributor Portal' },
-        ...baseItems
-      ];
-    }
-    
-    if (pathname.startsWith('/distributor')) {
-      return [
-        { href: '/distributor', label: 'Distributor Portal', active: true },
-        { href: '/admin', label: 'Admin Portal' },
-        ...baseItems
-      ];
-    }
-
-    // Default navigation for home and other pages
-    return [
-      { href: '/admin', label: 'Admin Portal' },
-      { href: '/distributor', label: 'Distributor Portal' },
-      ...baseItems
-    ];
+    return baseItems;
   };
 
   const navItems = getNavItems();
+
+  // Check if current path is a portal
+  const isPortalActive = portalItems.some(portal => pathname.startsWith(portal.href));
+  const currentPortal = portalItems.find(portal => pathname.startsWith(portal.href));
 
   return (
     <nav className="web3-mobile-nav bg-gradient-to-r from-emerald-900 via-green-800 to-emerald-800 backdrop-blur-md border-b border-amber-500/30 transition-all duration-300 shadow-lg shadow-emerald-900/20">
@@ -77,12 +99,56 @@ export default function Navbar() {
           {/* Desktop Navigation */}
           <div className="hidden md:flex flex-1 justify-center">
             <div className="flex items-center space-x-4">
+              {/* Portals Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={togglePortalsDropdown}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center whitespace-nowrap min-w-fit ${
+                    isPortalActive
+                      ? 'web3-nav-link-active'
+                      : 'web3-nav-link'
+                  }`}
+                >
+                  {currentPortal ? currentPortal.label : 'User Portals'}
+                  <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Dropdown Menu */}
+                {isPortalsDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+                    <div className="p-2">
+                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-3 py-2">
+                        Coffee Value Chain Portals
+                      </div>
+                      {portalItems.map((portal) => (
+                        <Link
+                          key={portal.href}
+                          href={portal.href}
+                          onClick={() => setIsPortalsDropdownOpen(false)}
+                          className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${
+                            pathname.startsWith(portal.href)
+                              ? 'bg-emerald-50 text-emerald-700 border-l-4 border-emerald-500'
+                              : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="font-medium">{portal.label}</div>
+                          <div className="text-xs text-gray-500">{portal.description}</div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Regular Nav Items */}
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center whitespace-nowrap min-w-fit ${
-                    ('active' in item && item.active) || pathname === item.href
+                    pathname === item.href
                       ? 'web3-nav-link-active'
                       : 'web3-nav-link'
                   }`}
@@ -121,20 +187,50 @@ export default function Navbar() {
         {isMobileMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 border-t border-emerald-700/50 bg-gradient-to-r from-green-800/90 to-emerald-900/90">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`web3-touch-target justify-start px-3 py-3 rounded-lg text-sm font-medium transition-all duration-300 sm:text-base ${
-                    ('active' in item && item.active) || pathname === item.href
-                      ? 'web3-mobile-nav-link-active'
-                      : 'web3-mobile-nav-link'
-                  }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {/* Mobile Portals Section */}
+              <div className="py-2">
+                <div className="text-xs font-semibold text-emerald-200 uppercase tracking-wide px-3 py-2">
+                  User Portals
+                </div>
+                {portalItems.map((portal) => (
+                  <Link
+                    key={portal.href}
+                    href={portal.href}
+                    className={`web3-touch-target justify-start px-3 py-3 rounded-lg text-sm font-medium transition-all duration-300 sm:text-base ${
+                      pathname.startsWith(portal.href)
+                        ? 'web3-mobile-nav-link-active'
+                        : 'web3-mobile-nav-link'
+                    }`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <div>
+                      <div>{portal.label}</div>
+                      <div className="text-xs opacity-75">{portal.description}</div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {/* Mobile Regular Nav Items */}
+              <div className="border-t border-emerald-700/50 pt-2">
+                <div className="text-xs font-semibold text-emerald-200 uppercase tracking-wide px-3 py-2">
+                  Platform
+                </div>
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`web3-touch-target justify-start px-3 py-3 rounded-lg text-sm font-medium transition-all duration-300 sm:text-base ${
+                      pathname === item.href
+                        ? 'web3-mobile-nav-link-active'
+                        : 'web3-mobile-nav-link'
+                    }`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
               
               {/* Mobile Wallet Section */}
               <div className="px-3 py-3 border-t border-emerald-700/50 mt-4">
@@ -147,6 +243,14 @@ export default function Navbar() {
           </div>
         )}
       </div>
+
+      {/* Dropdown backdrop */}
+      {isPortalsDropdownOpen && (
+        <div 
+          className="fixed inset-0 z-40"
+          onClick={() => setIsPortalsDropdownOpen(false)}
+        />
+      )}
     </nav>
   );
 }
