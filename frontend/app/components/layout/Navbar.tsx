@@ -24,37 +24,37 @@ export default function Navbar() {
     { 
       href: '/admin', 
       label: 'Admin Portal', 
-      description: 'Manage and verify batches',
-      category: 'Management',
-      icon: <MdAdminPanelSettings className="mr-2 text-emerald-700" size={22} />
+  description: 'Manage and verify batches',
+  category: 'Management',
+  icon: <MdAdminPanelSettings className="mr-2 text-emerald-700" size={22} />
     },
     { 
       href: '/cooperatives', 
       label: 'Cooperatives Portal', 
-      description: 'Create green bean batches',
-      category: 'Production',
-      icon: <MdCoffee className="mr-2 text-green-700" size={22} />
+  description: 'Create green bean batches',
+  category: 'Production',
+  icon: <MdCoffee className="mr-2 text-green-700" size={22} />
     },
     { 
       href: '/roaster', 
       label: 'Roaster Portal', 
-      description: 'Create roasted bean batches',
-      category: 'Production',
-      icon: <MdLocalFireDepartment className="mr-2 text-orange-700" size={22} />
+  description: 'Create roasted bean batches',
+  category: 'Production',
+  icon: <MdLocalFireDepartment className="mr-2 text-orange-700" size={22} />
     },
     { 
       href: '/processor', 
       label: 'Processor Portal', 
-      description: 'Create retail coffee batches',
-      category: 'Production',
-      icon: <MdStorefront className="mr-2 text-blue-700" size={22} />
+  description: 'Create retail coffee batches',
+  category: 'Production',
+  icon: <MdStorefront className="mr-2 text-blue-700" size={22} />
     },
     { 
       href: '/distributor', 
       label: 'Distributor Portal', 
-      description: 'Request and redeem batches',
-      category: 'Distribution',
-      icon: <MdLocalShipping className="mr-2 text-purple-700" size={22} />
+  description: 'Request and redeem batches',
+  category: 'Distribution',
+  icon: <MdLocalShipping className="mr-2 text-purple-700" size={22} />
     }
   ];
 
