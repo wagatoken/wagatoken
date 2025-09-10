@@ -119,6 +119,7 @@ contract WAGAViewFunctions {
     )
         external
         view
+        virtual
         returns (
             uint256 productionDate,
             uint256 expiryDate,

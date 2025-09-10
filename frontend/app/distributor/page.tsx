@@ -2,6 +2,8 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from 'next/navigation';
+// import { useAccount } from 'wagmi';
+import { useWallet } from '../components/WalletProvider';
 import {
   getActiveBatchIds,
   getBatchInfoWithMetadata,
@@ -44,6 +46,8 @@ const PRODUCT_TYPES = {
 function DistributorPageContent() {
   const searchParams = useSearchParams();
   const selectedBatchFromBrowse = searchParams.get('batchId');
+  // const { isConnected, address } = useAccount();
+  const { address, isConnected } = useWallet();
   
   const [activeTab, setActiveTab] = useState<'request' | 'redeem'>('request');
   const [userAddress, setUserAddress] = useState<string>('');
@@ -74,22 +78,8 @@ function DistributorPageContent() {
   const [redemptionQuantity, setRedemptionQuantity] = useState<number>(1);
   const [shippingInfo, setShippingInfo] = useState<string>('');
 
-  // Connect wallet
-  const connectWallet = async () => {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({ 
-          method: 'eth_requestAccounts' 
-        });
-        setUserAddress(accounts[0]);
-      } catch (error) {
-        setError('Error connecting wallet');
-        console.error('Error connecting wallet:', error);
-      }
-    } else {
-      setError('MetaMask not found. Please install MetaMask.');
-    }
-  };
+  // Connect wallet - handled by useWallet hook
+  // Remove custom wallet connection logic since we're using useWallet
 
   // Load user roles
   const loadUserRoles = async () => {
@@ -107,15 +97,13 @@ function DistributorPageContent() {
       setLoading(true);
       const batchIds = await getActiveBatchIds();
 
-      const batchPromises = batchIds.map(async (id) => {
+        const batchPromises = batchIds.map(async (id) => {
         const [batchInfo, userBalance, productType, unitWeight] = await Promise.all([
           getBatchInfoWithMetadata(id),
-          userAddress ? getUserBatchBalance(id, userAddress) : Promise.resolve(0),
+          address ? getUserBatchBalance(id, address) : Promise.resolve(0),
           getBatchProductType(id).catch(() => 0), // Default to RETAIL_BAGS (0) if error
           getBatchUnitWeight(id).catch(() => '') // Default to empty string if error
-        ]);
-
-        // Convert product type number to string
+        ]);        // Convert product type number to string
         let productTypeString: 'RETAIL_BAGS' | 'GREEN_BEANS' | 'ROASTED_BEANS' = 'RETAIL_BAGS';
         if (productType === 1) productTypeString = 'GREEN_BEANS';
         else if (productType === 2) productTypeString = 'ROASTED_BEANS';
@@ -313,15 +301,15 @@ function DistributorPageContent() {
   };
 
   useEffect(() => {
-    connectWallet();
+    // Wallet is handled by useWallet hook - no manual connection needed
   }, []);
 
   useEffect(() => {
-    if (userAddress) {
+    if (address) {
       loadUserRoles();
       loadBatches();
     }
-  }, [userAddress]);
+  }, [address]);
 
   const TabButton = ({ tab, label, icon }: { tab: string; label: string; icon: React.ReactNode }) => (
     <button
@@ -397,7 +385,7 @@ function DistributorPageContent() {
         </div>
 
         {/* Wallet Connection */}
-        {!userAddress && (
+        {!address && (
           <div className="web3-card text-center animate-card-entrance">
             <div className="mb-4">
               <div className="flex justify-center mb-2">
@@ -408,16 +396,13 @@ function DistributorPageContent() {
                 Connect your wallet to access distributor functions
               </p>
             </div>
-            <button
-              onClick={connectWallet}
-              className="web3-metamask-button"
-            >
-              🦊 Connect MetaMask
-            </button>
+            <p className="text-gray-600 text-sm">
+              Use the wallet connection button in the navigation bar
+            </p>
           </div>
         )}
 
-        {userAddress && (
+        {address && (
           <>
             {/* Connected Wallet Info */}
             <div className="web3-card-dark animate-card-entrance mb-8">
@@ -425,7 +410,7 @@ function DistributorPageContent() {
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">Connected Wallet</h3>
                   <p className="text-gray-600 font-mono text-sm">
-                    {userAddress.substring(0, 6)}...{userAddress.substring(userAddress.length - 4)}
+                    {address.substring(0, 6)}...{address.substring(address.length - 4)}
                   </p>
                   <div className="flex items-center space-x-2 mt-2">
                     {userRoles.isVerifier && (

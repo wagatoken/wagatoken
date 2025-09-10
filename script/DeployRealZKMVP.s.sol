@@ -47,13 +47,9 @@ contract DeployRealZKMVP is Script {
         )
     {
         HelperConfig helperConfig = new HelperConfig();
-        (
-            address usdcAddress,
-            address router,
-            uint256 deployerKey
-        ) = helperConfig.activeNetworkConfig();
+        HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
 
-        vm.startBroadcast(deployerKey);
+        vm.startBroadcast(networkConfig.deployerKey);
 
         console.log("Starting WAGA MVP Deployment with Coinbase Payment Integration...");
 
@@ -74,7 +70,7 @@ contract DeployRealZKMVP is Script {
 
         // 4. Deploy Treasury with network-specific USDC
         console.log("Deploying Treasury for USDC payments...");
-        WAGATreasury treasury = new WAGATreasury(usdcAddress);
+        WAGATreasury treasury = new WAGATreasury(networkConfig.usdcAddress);
 
         // 5. Deploy Batch Manager
         console.log("Deploying Batch Manager...");
@@ -87,7 +83,7 @@ contract DeployRealZKMVP is Script {
         console.log("Deploying ZK Manager...");
         WAGAZKManager zkManager = new WAGAZKManager(
             address(coffeeToken),
-            address(priceVerifier)
+            address(circomVerifier)
         );
 
         // 7. Connect managers to token
@@ -104,14 +100,13 @@ contract DeployRealZKMVP is Script {
         // 9. Deploy CDP Integration
         console.log("Deploying CDP Integration...");
         WAGACDPIntegration cdpIntegration = new WAGACDPIntegration(
-            usdcAddress,
-            helperConfig.getActiveNetworkConfig().cdpSmartAccountFactory,
-            helperConfig.getActiveNetworkConfig().cdpPaymaster
+            networkConfig.usdcAddress,
+            networkConfig.cdpSmartAccountFactory,
+            networkConfig.cdpPaymaster
         );
 
         // 10. Deploy Proof of Reserve
         console.log("Deploying Proof of Reserve...");
-        HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
         WAGAProofOfReserve proofOfReserve = new WAGAProofOfReserve(
             address(coffeeToken),
             address(batchManager),
@@ -138,6 +133,15 @@ contract DeployRealZKMVP is Script {
         coffeeToken.grantRole(coffeeToken.REDEMPTION_ROLE(), address(redemption));
         coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(batchManager));
         coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(zkManager));
+        
+        // Grant necessary roles for InventoryManager to call batch manager functions
+        coffeeToken.grantRole(coffeeToken.DEFAULT_ADMIN_ROLE(), address(inventoryManager));
+        
+        // Grant necessary roles for ProofOfReserve
+        coffeeToken.grantRole(coffeeToken.DEFAULT_ADMIN_ROLE(), address(proofOfReserve));
+        
+        // Grant VERIFIER_ROLE to ZK Manager on CircomVerifier so it can call verification functions
+        circomVerifier.grantRole(circomVerifier.VERIFIER_ROLE(), address(zkManager));
 
         // Grant treasury admin role
         treasury.grantRole(treasury.ADMIN_ROLE(), msg.sender);

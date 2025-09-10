@@ -1,6 +1,6 @@
 import { CoinbaseWalletSDK } from '@coinbase/wallet-sdk';
 import { CBPayInstance, CBPayInstanceType, generateOnRampURL } from '@coinbase/cbpay-js';
-import { Coinbase } from '@coinbase/coinbase-sdk';
+// import { Coinbase } from '@coinbase/cdp-sdk'; // Temporarily disabled until proper import is available
 
 // Coinbase SDK Configuration
 const COINBASE_APP_NAME = 'WAGA Coffee Platform';
@@ -14,7 +14,7 @@ let coinbaseWalletProvider: any;
 let cbPayInstance: CBPayInstance;
 
 // Coinbase CDP SDK Setup
-let coinbaseSDK: Coinbase;
+let coinbaseSDK: any; // Temporarily set to any until proper import is available
 
 // Environment Variables
 const COINBASE_API_KEY = process.env.NEXT_PUBLIC_COINBASE_API_KEY;
@@ -30,8 +30,6 @@ export function initializeCoinbaseWallet(): void {
   coinbaseWalletSDK = new CoinbaseWalletSDK({
     appName: COINBASE_APP_NAME,
     appLogoUrl: COINBASE_APP_LOGO_URL,
-    darkMode: false,
-    overrideIsMetaMask: false,
   });
 
   coinbaseWalletProvider = coinbaseWalletSDK.makeWeb3Provider({
@@ -59,12 +57,9 @@ export async function initializeCoinbaseSDK(): Promise<void> {
   }
 
   try {
-    coinbaseSDK = new Coinbase({
-      apiKeyName: COINBASE_API_KEY,
-      privateKey: COINBASE_PRIVATE_KEY,
-    });
-
-    console.log('✅ Coinbase SDK initialized successfully');
+    // Temporarily disabled until proper import is available
+    console.warn('⚠️ Coinbase CDP SDK initialization temporarily disabled');
+    console.log('✅ Coinbase SDK initialization skipped (temporarily disabled)');
   } catch (error) {
     console.error('❌ Failed to initialize Coinbase SDK:', error);
   }
@@ -78,30 +73,18 @@ export function initializeCoinbasePay(): CBPayInstance {
     throw new Error('Coinbase Pay can only be initialized in browser environment');
   }
 
-  cbPayInstance = new CBPayInstance({
-    appId: COINBASE_APP_NAME,
-    widgetParameters: {
-      destinationWallets: [{
-        address: '', // Will be set dynamically
-        blockchains: ['base', 'ethereum'],
-      }],
-      presetCryptoAmount: 50, // Default $50
-      presetFiatAmount: 50, // Default $50
-      fiatCurrency: 'USD',
+  // Temporarily simplified Coinbase Pay initialization
+  // TODO: Fix Coinbase Pay SDK integration with correct parameters
+  console.warn('⚠️ Coinbase Pay initialization temporarily simplified');
+  cbPayInstance = {
+    open: () => {
+      console.log('Coinbase Pay widget would open here');
+      alert('Coinbase Pay integration is temporarily disabled. Please check back later.');
     },
-    onSuccess: (event: any) => {
-      console.log('Coinbase Pay success:', event);
-      // Handle successful payment
-      handleCoinbasePaySuccess(event);
-    },
-    onExit: (event: any) => {
-      console.log('Coinbase Pay exit:', event);
-      // Handle payment exit/cancellation
-    },
-    onEvent: (event: any) => {
-      console.log('Coinbase Pay event:', event);
-    },
-  });
+    updateWidget: () => {
+      console.log('Coinbase Pay widget update would happen here');
+    }
+  } as any;
 
   return cbPayInstance;
 }
@@ -148,23 +131,13 @@ export async function openCoinbasePayWidget(
   destinationAddress: string,
   amount: number = 50
 ): Promise<void> {
-  if (!cbPayInstance) {
-    cbPayInstance = initializeCoinbasePay();
+  console.log(`Opening Coinbase Pay widget for ${amount} USD to ${destinationAddress}`);
+  console.warn('⚠️ Coinbase Pay widget is temporarily disabled');
+
+  // Temporarily show alert instead of opening widget
+  if (typeof window !== 'undefined') {
+    alert(`Coinbase Pay integration is temporarily disabled.\n\nAmount: $${amount}\nDestination: ${destinationAddress}\n\nPlease check back later.`);
   }
-
-  // Update destination address
-  cbPayInstance.updateWidget({
-    widgetParameters: {
-      destinationWallets: [{
-        address: destinationAddress,
-        blockchains: ['base'],
-      }],
-      presetCryptoAmount: amount,
-      presetFiatAmount: amount,
-    },
-  });
-
-  cbPayInstance.open();
 }
 
 /**
@@ -178,16 +151,9 @@ export async function createCoinbaseSmartAccount(
   }
 
   try {
-    // Create a new wallet (smart account)
-    const wallet = await coinbaseSDK.createWallet();
-
-    console.log('✅ Smart account created:', wallet.getId());
-
-    return {
-      walletId: wallet.getId(),
-      address: wallet.getAddress(),
-      owner: ownerAddress,
-    };
+    // Temporarily disabled until proper import is available
+    console.warn('⚠️ Smart account creation temporarily disabled');
+    throw new Error('Coinbase CDP SDK features are temporarily disabled');
   } catch (error) {
     console.error('❌ Failed to create smart account:', error);
     throw error;
@@ -203,10 +169,9 @@ export async function getWalletBalance(walletId: string): Promise<any> {
   }
 
   try {
-    const wallet = await coinbaseSDK.getWallet(walletId);
-    const balance = await wallet.getBalance();
-
-    return balance;
+    // Temporarily disabled until proper import is available
+    console.warn('⚠️ Wallet balance check temporarily disabled');
+    throw new Error('Coinbase CDP SDK features are temporarily disabled');
   } catch (error) {
     console.error('❌ Failed to get wallet balance:', error);
     throw error;
@@ -226,21 +191,9 @@ export async function transferUSDC(
   }
 
   try {
-    const wallet = await coinbaseSDK.getWallet(walletId);
-
-    // Transfer USDC on Base
-    const transfer = await wallet.createTransfer({
-      amount: amount,
-      assetId: 'usdc', // USDC on Base
-      destination: toAddress,
-      networkId: 'base-mainnet', // Base mainnet
-    });
-
-    const result = await transfer.wait();
-
-    console.log('✅ Transfer completed:', result.getTransactionHash());
-
-    return result;
+    // Temporarily disabled until proper import is available
+    console.warn('⚠️ USDC transfer temporarily disabled');
+    throw new Error('Coinbase CDP SDK features are temporarily disabled');
   } catch (error) {
     console.error('❌ Failed to transfer USDC:', error);
     throw error;
@@ -261,30 +214,9 @@ export async function createCoinbaseCommerceCharge(
   }
 
   try {
-    // Create a charge using Coinbase Commerce
-    const charge = await coinbaseSDK.createCharge({
-      name: `WAGA Coffee Batch Payment - ${batchId}`,
-      description: `Payment for coffee batch redemption`,
-      pricing_type: 'fixed_price',
-      local_price: {
-        amount: amount.toString(),
-        currency: currency,
-      },
-      metadata: {
-        batchId: batchId,
-        userAddress: userAddress,
-        platform: 'WAGA',
-      },
-    });
-
-    console.log('✅ Coinbase Commerce charge created:', charge.id);
-
-    return {
-      chargeId: charge.id,
-      hostedUrl: charge.hosted_url,
-      amount: amount,
-      currency: currency,
-    };
+    // Temporarily disabled until proper import is available
+    console.warn('⚠️ Coinbase Commerce charge creation temporarily disabled');
+    throw new Error('Coinbase CDP SDK features are temporarily disabled');
   } catch (error) {
     console.error('❌ Failed to create Coinbase Commerce charge:', error);
     throw error;
@@ -403,19 +335,9 @@ export async function createCrossBorderPayment(
   }
 
   try {
-    // Create a cross-border transfer
-    const transfer = await coinbaseSDK.createTransfer({
-      amount: amount,
-      assetId: fromCurrency.toLowerCase(),
-      destination: recipientAddress,
-      networkId: 'base-mainnet', // Destination network
-    });
-
-    const result = await transfer.wait();
-
-    console.log('✅ Cross-border payment completed');
-
-    return result;
+    // Temporarily disabled until proper import is available
+    console.warn('⚠️ Cross-border payment temporarily disabled');
+    throw new Error('Coinbase CDP SDK features are temporarily disabled');
   } catch (error) {
     console.error('❌ Cross-border payment failed:', error);
     throw error;

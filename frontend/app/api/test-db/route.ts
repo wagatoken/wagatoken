@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '../../../db';
+import { MockDataService } from '../../../utils/mockData';
 
 export async function GET() {
   try {
@@ -23,17 +24,27 @@ export async function GET() {
       tablesCount: wagaTables.length,
       allTables: tableNames,
       status: wagaTables.length >= 6 ? 'Fully synced' : `${wagaTables.length}/6 WAGA tables available`,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      usingMockData: false
     });
   } catch (error) {
-    console.error('Database connection error:', error);
+    console.warn('Database connection failed, using mock data:', error);
+    
+    // Return mock data information instead of error
+    const mockStats = await MockDataService.getStats();
+    
     return NextResponse.json({
-      success: false,
+      success: true,
       connected: false,
-      tables: [],
-      tablesCount: 0,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString()
-    }, { status: 500 });
+      message: 'Using mock data (database not configured)',
+      tables: ['mock_batches', 'mock_users', 'mock_stats'],
+      tablesCount: 3,
+      allTables: ['mock_batches', 'mock_users', 'mock_stats'],
+      status: 'Mock data available',
+      mockStats,
+      timestamp: new Date().toISOString(),
+      usingMockData: true,
+      note: 'Set NETLIFY_DATABASE_URL or DATABASE_URL environment variable to use real database'
+    });
   }
 }

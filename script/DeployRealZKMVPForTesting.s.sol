@@ -34,13 +34,9 @@ contract DeployRealZKMVPForTesting is Script {
         )
     {
         HelperConfig helperConfig = new HelperConfig();
-        (
-            address usdcAddress,
-            address router,
-            uint256 deployerKey
-        ) = helperConfig.activeNetworkConfig();
+        HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
 
-        vm.startBroadcast(deployerKey);
+        vm.startBroadcast(networkConfig.deployerKey);
 
         // 1. Deploy MockCircomVerifier for testing
         MockCircomVerifier mockVerifier = new MockCircomVerifier();
@@ -70,7 +66,7 @@ contract DeployRealZKMVPForTesting is Script {
         WAGAProofOfReserve proofOfReserve = new WAGAProofOfReserve(
             address(coffeeToken),
             address(batchManager),
-            router,
+            networkConfig.router,
             0, // subscriptionId - use default for testing
             bytes32(0) // donId - use default for testing
         );
@@ -83,7 +79,7 @@ contract DeployRealZKMVPForTesting is Script {
         );
 
         // 9. Deploy Treasury and Redemption
-        WAGATreasury treasury = new WAGATreasury(usdcAddress);
+        WAGATreasury treasury = new WAGATreasury(networkConfig.usdcAddress);
         WAGACoffeeRedemption redemption = new WAGACoffeeRedemption(address(coffeeToken), address(treasury));
 
         // 10. Grant roles
