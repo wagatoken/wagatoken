@@ -85,12 +85,16 @@ contract DeployRealZKMVPForTesting is Script {
         // 10. Grant roles
         coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(mockVerifier));
         coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(zkManager)); // ZK Manager needs to call verifier
+        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(proofOfReserve)); // ProofOfReserve needs verifier role
         coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), msg.sender);
         coffeeToken.grantRole(coffeeToken.DISTRIBUTOR_ROLE(), msg.sender);
         coffeeToken.grantRole(coffeeToken.MINTER_ROLE(), address(proofOfReserve));
         coffeeToken.grantRole(coffeeToken.REDEMPTION_ROLE(), address(redemption));
         coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(batchManager));
         coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(zkManager));
+        
+        // Grant INVENTORY_MANAGER_ROLE to InventoryManager for inventory verification
+        coffeeToken.grantRole(coffeeToken.INVENTORY_MANAGER_ROLE(), address(inventoryManager));
 
         // Grant VERIFIER_ROLE to MockCircomVerifier
         mockVerifier.grantVerifierRole(address(zkManager));

@@ -127,6 +127,7 @@ contract DeployRealZKMVP is Script {
         console.log("Setting up roles and permissions...");
         coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(circomVerifier));
         coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(zkManager));
+        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(proofOfReserve));
         coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), msg.sender);
         coffeeToken.grantRole(coffeeToken.DISTRIBUTOR_ROLE(), msg.sender);
         coffeeToken.grantRole(coffeeToken.MINTER_ROLE(), address(proofOfReserve));
@@ -134,11 +135,8 @@ contract DeployRealZKMVP is Script {
         coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(batchManager));
         coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(zkManager));
         
-        // Grant necessary roles for InventoryManager to call batch manager functions
-        coffeeToken.grantRole(coffeeToken.DEFAULT_ADMIN_ROLE(), address(inventoryManager));
-        
-        // Grant necessary roles for ProofOfReserve
-        coffeeToken.grantRole(coffeeToken.DEFAULT_ADMIN_ROLE(), address(proofOfReserve));
+        // Grant INVENTORY_MANAGER_ROLE to InventoryManager for inventory verification
+        coffeeToken.grantRole(coffeeToken.INVENTORY_MANAGER_ROLE(), address(inventoryManager));
         
         // Grant VERIFIER_ROLE to ZK Manager on CircomVerifier so it can call verification functions
         circomVerifier.grantRole(circomVerifier.VERIFIER_ROLE(), address(zkManager));
