@@ -8,7 +8,14 @@ import {IWAGABatchManager} from "./Interfaces/IWAGABatchManager.sol";
 
 /**
  * @title WAGAProofOfReserve
- * @dev Contract for verifying coffee reserves using Chainlink Functions before minting tokens
+ * @dev Contract for verifying coffee reserves using Cha        request.completed = true;
+        request.verified = true;
+        request.lastVerifiedTimestamp = block.timestamp;
+        // Update coffeeToken state regardless of the check.
+        batchManager.updateInventory(request.batchId, verifiedQuantity);
+        batchManager.updateBatchStatus(request.batchId, true);
+        
+        emit ReserveVerificationCompleted(Functions before minting tokens
  */
 contract WAGAProofOfReserve is
     WAGAChainlinkFunctionsBase
@@ -399,10 +406,9 @@ contract WAGAProofOfReserve is
         request.verifiedPrice = verifiedPrice;
         request.verifiedPackaging = verifiedPackaging;
         request.verifiedMetadataHash = metadataHashFromResponse;
-        // Verify the batch metadata using batchManager
+        // Verify the batch metadata using batchManager (packaging and metadata only)
         batchManager.verifyBatchMetadata(
             request.batchId,
-            verifiedPrice,
             verifiedPackaging,
             metadataHashFromResponse
         );

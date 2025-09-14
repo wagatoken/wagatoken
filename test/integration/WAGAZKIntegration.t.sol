@@ -76,18 +76,16 @@ contract WAGAZKIntegration is Test {
         vm.startPrank(admin);
 
             // 1. Test batch creation with manager-based pattern
-            uint256 batchId = coffeeToken.getNextBatchId();
-            coffeeToken.batchCreated(batchId);
-            batchManager.createBatchInfo(
-                batchId,
-                block.timestamp,
-                block.timestamp + 365 days,
-                100,
-                1 ether,
-                "Origin",
-                "Standard",
-                IPrivacyLayer.PrivacyLevel(1)
+            uint256 batchId = coffeeToken.createBatch(
+                block.timestamp,         // productionDate
+                block.timestamp + 365 days, // expiryDate
+                100,                    // quantity
+                1 ether,               // pricePerUnit
+                "Origin",              // origin
+                "Standard",            // packagingInfo
+                "ipfs://test-metadata" // metadataURI
             );
+            batchManager.registerBatchCreation(batchId, "Origin", admin);
 
         assertTrue(batchId > 0, "Batch should be created");
         assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be marked as created");
@@ -143,34 +141,30 @@ contract WAGAZKIntegration is Test {
         vm.startPrank(admin);
 
             // Test Public privacy level (manager-based)
-            uint256 publicBatchId = coffeeToken.getNextBatchId();
-            coffeeToken.batchCreated(publicBatchId);
-            batchManager.createBatchInfo(
-                publicBatchId,
-                block.timestamp,
-                block.timestamp + 365 days,
-                50,
-                0.5 ether,
-                "Origin",
-                "Standard",
-                IPrivacyLayer.PrivacyLevel(0)
+            uint256 publicBatchId = coffeeToken.createBatch(
+                block.timestamp,         // productionDate
+                block.timestamp + 365 days, // expiryDate
+                50,                     // quantity
+                0.5 ether,             // pricePerUnit
+                "Origin",              // origin
+                "Standard",            // packagingInfo
+                "ipfs://test-metadata" // metadataURI
             );
+            batchManager.registerBatchCreation(publicBatchId, "Origin", admin);
 
         assertTrue(coffeeToken.isBatchCreated(publicBatchId), "Public batch should be created");
 
             // Test Private privacy level (manager-based)
-            uint256 privateBatchId = coffeeToken.getNextBatchId() + 1;
-            coffeeToken.batchCreated(privateBatchId);
-            batchManager.createBatchInfo(
-                privateBatchId,
-                block.timestamp,
-                block.timestamp + 365 days,
-                25,
-                2 ether,
-                "Origin",
-                "Standard",
-                IPrivacyLayer.PrivacyLevel(1)
+            uint256 privateBatchId = coffeeToken.createBatch(
+                block.timestamp,         // productionDate
+                block.timestamp + 365 days, // expiryDate
+                25,                     // quantity
+                2 ether,               // pricePerUnit
+                "Origin",              // origin
+                "Standard",            // packagingInfo
+                "ipfs://test-metadata" // metadataURI
             );
+            batchManager.registerBatchCreation(privateBatchId, "Origin", admin);
 
         assertTrue(coffeeToken.isBatchCreated(privateBatchId), "Private batch should be created");
 
@@ -183,18 +177,16 @@ contract WAGAZKIntegration is Test {
         vm.startPrank(admin);
 
             // Test that manager-based batch creation works
-            uint256 batchId = coffeeToken.getNextBatchId();
-            coffeeToken.batchCreated(batchId);
-            batchManager.createBatchInfo(
-                batchId,
-                block.timestamp,
-                block.timestamp + 365 days,
-                75,
-                0.75 ether,
-                "Origin",
-                "Standard",
-                IPrivacyLayer.PrivacyLevel(1)
+            uint256 batchId = coffeeToken.createBatch(
+                block.timestamp,         // productionDate
+                block.timestamp + 365 days, // expiryDate
+                75,                     // quantity
+                0.75 ether,            // pricePerUnit
+                "Origin",              // origin
+                "Standard",            // packagingInfo
+                "ipfs://test-metadata" // metadataURI
             );
+            batchManager.registerBatchCreation(batchId, "Origin", admin);
 
         assertTrue(batchId > 0, "Simple batch should be created");
         assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be marked as created");
@@ -209,8 +201,16 @@ contract WAGAZKIntegration is Test {
         vm.startPrank(user);
 
         vm.expectRevert();
-        // Try to mark batch as created without processor role
-        coffeeToken.batchCreated(coffeeToken.getNextBatchId());
+        // Try to create batch without processor role
+        coffeeToken.createBatch(
+            block.timestamp,
+            block.timestamp + 365 days,
+            100,
+            1 ether,
+            "Origin",
+            "Standard",
+            "ipfs://test-metadata"
+        );
 
         vm.stopPrank();
 
@@ -223,18 +223,16 @@ contract WAGAZKIntegration is Test {
         // Test that processors can create batches
         vm.startPrank(processor);
 
-            uint256 batchId = coffeeToken.getNextBatchId();
-            coffeeToken.batchCreated(batchId);
-            batchManager.createBatchInfo(
-                batchId,
-                block.timestamp,
-                block.timestamp + 365 days,
-                150,
-                2 ether,
-                "Origin",
-                "Standard",
-                IPrivacyLayer.PrivacyLevel(1)
+            uint256 batchId = coffeeToken.createBatch(
+                block.timestamp,         // productionDate
+                block.timestamp + 365 days, // expiryDate
+                150,                    // quantity
+                2 ether,               // pricePerUnit
+                "Origin",              // origin
+                "Standard",            // packagingInfo
+                "ipfs://test-metadata" // metadataURI
             );
+            batchManager.registerBatchCreation(batchId, "Origin", processor);
 
         assertTrue(batchId > 0, "Processor should be able to create batches");
         assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be created after creation");
@@ -248,18 +246,16 @@ contract WAGAZKIntegration is Test {
         vm.startPrank(admin);
 
             // Create a batch
-            uint256 batchId = coffeeToken.getNextBatchId();
-            coffeeToken.batchCreated(batchId);
-            batchManager.createBatchInfo(
-                batchId,
-                block.timestamp,
-                block.timestamp + 365 days,
-                200,
-                1.5 ether,
-                "Origin",
-                "Standard",
-                IPrivacyLayer.PrivacyLevel(1)
+            uint256 batchId = coffeeToken.createBatch(
+                block.timestamp,         // productionDate
+                block.timestamp + 365 days, // expiryDate
+                200,                    // quantity
+                1.5 ether,             // pricePerUnit
+                "Origin",              // origin
+                "Standard",            // packagingInfo
+                "ipfs://test-metadata" // metadataURI
             );
+            batchManager.registerBatchCreation(batchId, "Origin", admin);
 
                 // Test adding pricing proof
         bytes memory pricingProof = "individual_pricing_proof";
@@ -297,18 +293,16 @@ contract WAGAZKIntegration is Test {
         vm.startPrank(admin);
 
             // Create a batch
-            uint256 batchId = coffeeToken.getNextBatchId();
-            coffeeToken.batchCreated(batchId);
-            batchManager.createBatchInfo(
-                batchId,
-                block.timestamp,
-                block.timestamp + 365 days,
-                150,
-                1.2 ether,
-                "Origin",
-                "Standard",
-                IPrivacyLayer.PrivacyLevel(1)
+            uint256 batchId = coffeeToken.createBatch(
+                block.timestamp,         // productionDate
+                block.timestamp + 365 days, // expiryDate
+                150,                    // quantity
+                1.2 ether,             // pricePerUnit
+                "Origin",              // origin
+                "Standard",            // packagingInfo
+                "ipfs://test-metadata" // metadataURI
             );
+            batchManager.registerBatchCreation(batchId, "Origin", admin);
 
         // Test that batch was created successfully
         assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be created");
@@ -322,18 +316,16 @@ contract WAGAZKIntegration is Test {
         // Test that only processors can create batches
         vm.startPrank(processor);
 
-            uint256 processorBatchId = coffeeToken.getNextBatchId();
-            coffeeToken.batchCreated(processorBatchId);
-            batchManager.createBatchInfo(
-                processorBatchId,
-                block.timestamp,
-                block.timestamp + 365 days,
-                50,
-                0.5 ether,
-                "Origin",
-                "Standard",
-                IPrivacyLayer.PrivacyLevel(1)
+            uint256 processorBatchId = coffeeToken.createBatch(
+                block.timestamp,         // productionDate
+                block.timestamp + 365 days, // expiryDate
+                50,                     // quantity
+                0.5 ether,             // pricePerUnit
+                "Origin",              // origin
+                "Standard",            // packagingInfo
+                "ipfs://test-metadata" // metadataURI
             );
+            batchManager.registerBatchCreation(processorBatchId, "Origin", processor);
 
         // Just test that the function doesn't revert for processors
         assertTrue(processorBatchId > 0, "Processor should be able to create batches");
@@ -347,18 +339,16 @@ contract WAGAZKIntegration is Test {
         vm.startPrank(processor);
 
             // Create a batch
-            uint256 batchId = coffeeToken.getNextBatchId();
-            coffeeToken.batchCreated(batchId);
-            batchManager.createBatchInfo(
-                batchId,
-                block.timestamp,
-                block.timestamp + 365 days,
-                100,
-                1 ether,
-                "Origin",
-                "Standard",
-                IPrivacyLayer.PrivacyLevel(1)
+            uint256 batchId = coffeeToken.createBatch(
+                block.timestamp,         // productionDate
+                block.timestamp + 365 days, // expiryDate
+                100,                    // quantity
+                1 ether,               // pricePerUnit
+                "Origin",              // origin
+                "Standard",            // packagingInfo
+                "ipfs://test-metadata" // metadataURI
             );
+            batchManager.registerBatchCreation(batchId, "Origin", processor);
 
         // Test that batch was created successfully
         assertTrue(batchId > 0, "Batch should be created");

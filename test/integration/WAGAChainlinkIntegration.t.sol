@@ -104,17 +104,24 @@ contract WAGAChainlinkIntegration is Test {
         // Create a batch as processor
         vm.startPrank(PROCESSOR_USER);
 
-        testBatchId = coffeeToken.getNextBatchId();
-        coffeeToken.batchCreated(testBatchId);
-        batchManager.createBatchInfo(
+        // Create a batch as processor
+        vm.startPrank(PROCESSOR_USER);
+
+        testBatchId = coffeeToken.createBatch(
+            block.timestamp,         // productionDate
+            block.timestamp + 365 days, // expiryDate
+            1000,                   // quantity
+            50 * 1e18,             // pricePerUnit
+            "Origin",              // origin
+            "Standard",            // packagingInfo
+            "ipfs://test-metadata" // metadataURI
+        );
+
+        // Register additional batch info in batch manager
+        batchManager.registerBatchCreation(
             testBatchId,
-            block.timestamp,
-            block.timestamp + 365 days,
-            1000,
-            50 * 1e18,
             "Origin",
-            "Standard",
-            IPrivacyLayer.PrivacyLevel(1)
+            PROCESSOR_USER
         );
 
         console.log("Created test batch ID:", testBatchId);
@@ -349,7 +356,7 @@ contract WAGAChainlinkIntegration is Test {
         console.log("Mock router subscription validation test completed!");
     }
 
-    function testContractAddresses() public {
+    function testContractAddresses() public view {
         console.log("Testing contract deployment addresses...");
 
         // Test that all contracts are properly deployed

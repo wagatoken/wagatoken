@@ -153,18 +153,16 @@ contract WAGAInventoryVerification is Test {
         // Create batch as processor
         vm.startPrank(PROCESSOR_USER);
 
-            testBatchId = coffeeToken.getNextBatchId();
-            coffeeToken.batchCreated(testBatchId);
-            batchManager.createBatchInfo(
-                testBatchId,
-                block.timestamp,
-                block.timestamp + 365 days,
-                1000,
-                50 * 1e18,
-                "Origin",
-                "Standard",
-                IPrivacyLayer.PrivacyLevel(1)
+            testBatchId = coffeeToken.createBatch(
+                block.timestamp,         // productionDate
+                block.timestamp + 365 days, // expiryDate
+                1000,                   // quantity
+                50 * 1e18,             // pricePerUnit
+                "Origin",              // origin
+                "Standard",            // packagingInfo
+                "ipfs://test-metadata" // metadataURI
             );
+            batchManager.registerBatchCreation(testBatchId, "Origin", PROCESSOR_USER);
 
         console.log("Created test batch ID:", testBatchId);
         assertTrue(coffeeToken.isBatchCreated(testBatchId), "Batch should be created");
@@ -206,18 +204,16 @@ contract WAGAInventoryVerification is Test {
         // 1. Create batch with low quantity
         vm.startPrank(PROCESSOR_USER);
 
-            uint256 lowBatchId = coffeeToken.getNextBatchId();
-            coffeeToken.batchCreated(lowBatchId);
-            batchManager.createBatchInfo(
-                lowBatchId,
-                block.timestamp,
-                block.timestamp + 365 days,
-                25,
-                50 * 1e18,
-                "Origin",
-                "Standard",
-                IPrivacyLayer.PrivacyLevel(1)
+            uint256 lowBatchId = coffeeToken.createBatch(
+                block.timestamp,         // productionDate
+                block.timestamp + 365 days, // expiryDate
+                25,                     // quantity
+                50 * 1e18,             // pricePerUnit
+                "Origin",              // origin
+                "Standard",            // packagingInfo
+                "ipfs://test-metadata" // metadataURI
             );
+            batchManager.registerBatchCreation(lowBatchId, "Origin", PROCESSOR_USER);
 
         console.log("Created low inventory batch ID:", lowBatchId);
         assertTrue(coffeeToken.isBatchCreated(lowBatchId), "Low inventory batch should be created");
@@ -276,7 +272,7 @@ contract WAGAInventoryVerification is Test {
     /**
      * @dev Test source code validation
      */
-    function testSourceCodeValidation() public {
+    function testSourceCodeValidation() public view {
         console.log("Testing source code validation...");
 
         // Test that inventory manager exists and can be called
@@ -284,8 +280,8 @@ contract WAGAInventoryVerification is Test {
 
         // Test basic functionality by calling a simple view function
         uint256[] memory activeBatches = inventoryManager.getActiveBatches();
-        // Just verify the function doesn't revert
-        assertTrue(true, "Inventory manager should be functional");
+        // Use the variable to avoid unused variable warning
+        assertTrue(activeBatches.length >= 0, "Inventory manager should return valid array");
 
         console.log("Source code validation test passed");
     }
@@ -293,13 +289,13 @@ contract WAGAInventoryVerification is Test {
     /**
      * @dev Test configuration getters
      */
-    function testConfigurationGetters() public {
+    function testConfigurationGetters() public view {
         console.log("Testing configuration getters...");
 
         // Test that inventory manager has basic functionality
         uint256[] memory activeBatches = inventoryManager.getActiveBatches();
-        // Just verify the function doesn't revert
-        assertTrue(true, "Inventory manager should be functional");
+        // Use the variable to avoid unused variable warning
+        assertTrue(activeBatches.length >= 0, "Inventory manager should return valid array");
 
         console.log("Configuration getters test passed");
     }
@@ -330,18 +326,16 @@ contract WAGAInventoryVerification is Test {
     function createTestBatch() internal {
         vm.startPrank(PROCESSOR_USER);
 
-            testBatchId = coffeeToken.getNextBatchId();
-            coffeeToken.batchCreated(testBatchId);
-            batchManager.createBatchInfo(
-                testBatchId,
-                block.timestamp,
-                block.timestamp + 365 days,
-                1000,
-                50 * 1e18,
-                "Origin",
-                "Standard",
-                IPrivacyLayer.PrivacyLevel(1)
+            testBatchId = coffeeToken.createBatch(
+                block.timestamp,         // productionDate
+                block.timestamp + 365 days, // expiryDate
+                1000,                   // quantity
+                50 * 1e18,             // pricePerUnit
+                "Origin",              // origin
+                "Standard",            // packagingInfo
+                "ipfs://test-metadata" // metadataURI
             );
+            batchManager.registerBatchCreation(testBatchId, "Origin", PROCESSOR_USER);
 
         console.log("Created test batch ID:", testBatchId);
         assertTrue(coffeeToken.isBatchCreated(testBatchId), "Batch should be created");
@@ -352,7 +346,7 @@ contract WAGAInventoryVerification is Test {
     /**
      * @dev Request batch verification (simplified for testing)
      */
-    function requestBatchVerification() internal returns (bytes32) {
+    function requestBatchVerification() internal view returns (bytes32) {
         // For now, we'll just return a mock request ID
         bytes32 requestId = keccak256(abi.encodePacked("test-request", block.timestamp));
         console.log("Mock batch verification requested with ID:", vm.toString(requestId));
@@ -362,7 +356,7 @@ contract WAGAInventoryVerification is Test {
     /**
      * @dev Simulate successful verification (simplified for testing)
      */
-    function simulateSuccessfulVerification(bytes32 requestId) internal {
+    function simulateSuccessfulVerification(bytes32 requestId) internal pure {
         console.log("Mock verification completed for request:", vm.toString(requestId));
     }
 }

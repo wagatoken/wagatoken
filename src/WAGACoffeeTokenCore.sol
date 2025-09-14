@@ -14,17 +14,16 @@ import "./Interfaces/IWAGACoffeeToken.sol";
  * @title WAGACoffeeTokenCore
  * @dev Core functionality for WAGA Coffee Token system - modular version with multi-product support
  */
-contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFunctions, IWAGACoffeeToken {
+contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFunctions {
 
     mapping(uint256 => bool) public s_batchCreated; // Track created batches (for ERC1155)
 
     /**
-     * @dev Mark a batch as created (called by processor roles)
+     * @dev Internal function to mark a batch as created
      */
-    function batchCreated(uint256 batchId) external onlyRole(PROCESSOR_ROLE) {
+    function _markBatchCreated(uint256 batchId) internal {
         require(!s_batchCreated[batchId], "Batch already exists");
         s_batchCreated[batchId] = true;
-        emit BatchCreated(batchId, msg.sender, 0, 0, "");
     }
     
     /* -------------------------------------------------------------------------- */
@@ -59,6 +58,20 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
         address indexed from,
         address indexed to,
         uint256 amount
+    );
+
+    event BatchMinted(
+        uint256 indexed batchId,
+        address indexed to,
+        uint256 amount,
+        uint256 totalMinted
+    );
+
+    event BatchBurned(
+        uint256 indexed batchId,
+        address indexed from,
+        uint256 amount,
+        uint256 totalMinted
     );
 
     /* -------------------------------------------------------------------------- */
@@ -96,7 +109,7 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     // ...existing code...
 
     /**
-     * @dev Mint tokens for verified batch (called by ProofOfReserve)
+     * @dev Mint tokens for verified batch - SIMPLIFIED QUANTITY TRACKING
      */
     function mintBatch(
         address to,
@@ -107,22 +120,24 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
             revert WAGACoffeeTokenCore__BatchDoesNotExist_mintBatch();
         }
         
-        // Get batch quantity from BatchManager
-        (,,uint256 batchQuantity,,,,,) = batchManager.getBatchInfo(batchId);
+        // Get batch info from single source of truth
+        BatchInfo storage batch = s_batchInfo[batchId];
         
-        // Update minted quantity tracking in local state
-        s_batchInfo[batchId].mintedQuantity += amount;
+        // Simple validation: ensure we don't mint more than available
+        uint256 availableToMint = batch.quantity - batch.mintedQuantity;
+        require(amount <= availableToMint, "Insufficient inventory for minting");
         
-        // Enforce mint limit - total minted cannot exceed batch quantity
-        require(s_batchInfo[batchId].mintedQuantity <= batchQuantity, "Total minted exceeds batch quantity");
-        require(amount <= batchQuantity, "Mint amount exceeds batch quantity");
+        // Update minted quantity
+        batch.mintedQuantity += amount;
         
         // Mint ERC1155 tokens
         _mint(to, batchId, amount, "");
+        
+        emit BatchMinted(batchId, to, amount, batch.mintedQuantity);
     }
 
     /**
-     * @dev Burn tokens for redemption (called by RedemptionManager)
+     * @dev Burn tokens for redemption - SIMPLIFIED QUANTITY TRACKING
      */
     function burnForRedemption(
         address from,
@@ -132,21 +147,22 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
         if (!s_batchCreated[batchId]) {
             revert WAGACoffeeTokenCore__BatchDoesNotExist_burnForRedemption();
         }
+        
         uint256 balance = balanceOf(from, batchId);
         if (balance < amount) {
             revert WAGACoffeeTokenCore__InsufficientBatchQuantity_burnForRedemption();
         }
         
-        // Update minted quantity tracking - reduce by burned amount
-        if (s_batchInfo[batchId].mintedQuantity >= amount) {
-            s_batchInfo[batchId].mintedQuantity -= amount;
-        }
-        
-        // Burn the ERC1155 tokens
+        // Burn the ERC1155 tokens first
         _burn(from, batchId, amount);
         
-        // Note: Batch inventory (s_batchInfo[batchId].quantity) represents physical inventory
-        // and should be managed by BatchManager based on actual physical redemptions
+        // Update minted quantity tracking - reduce by burned amount
+        BatchInfo storage batch = s_batchInfo[batchId];
+        if (batch.mintedQuantity >= amount) {
+            batch.mintedQuantity -= amount;
+        }
+        
+        emit BatchBurned(batchId, from, amount, batch.mintedQuantity);
     }
 
     /**
@@ -169,7 +185,8 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     }
 
     /**
-     * @dev Creates a new batch for blockchain-first workflow
+     * @dev Creates a new batch - SINGLE STANDARDIZED ENTRY POINT
+     * This is the only way to create batches in the system
      */
     function createBatch(
         uint256 productionDate,
@@ -191,26 +208,45 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
         uint256 newBatchId = _nextBatchId++;
         
         // Mark batch as created in this contract
-        s_batchCreated[newBatchId] = true;
+        _markBatchCreated(newBatchId);
+
+        // Store basic batch information directly (no delegation)
+        s_batchInfo[newBatchId] = BatchInfo({
+            productionDate: productionDate,
+            expiryDate: expiryDate,
+            isVerified: false,
+            quantity: quantity,
+            mintedQuantity: 0,
+            pricePerUnit: pricePerUnit,
+            packagingInfo: packagingInfo,
+            metadataHash: "",
+            isMetadataVerified: false,
+            lastVerifiedTimestamp: 0
+        });
+
+        // Set batch as active
+        s_isActiveBatch[newBatchId] = true;
+        s_activeBatchIds.push(newBatchId);
+        s_activeBatchIndex[newBatchId] = s_activeBatchIds.length - 1;
+        allBatchIds.push(newBatchId);
 
         // Store metadata URI if provided
         if (bytes(metadataURI).length > 0) {
             s_batchMetadata[newBatchId] = metadataURI;
         }
 
-        // Delegate detailed batch creation to BatchManager if available
+        // Configure with BatchManager if available (unidirectional dependency)
         if (address(batchManager) != address(0)) {
-            batchManager.createBatchInfoWithCaller(
-                msg.sender,
+            batchManager.registerBatchCreation(
                 newBatchId,
-                productionDate,
-                expiryDate,
-                quantity,
-                pricePerUnit,
                 origin,
-                packagingInfo,
-                IPrivacyLayer.PrivacyLevel.PUBLIC
+                msg.sender
             );
+        }
+
+        // Configure privacy with default public settings
+        if (address(zkManager) != address(0)) {
+            zkManager.configureDefaultPrivacy(newBatchId);
         }
 
         emit BatchCreated(newBatchId, msg.sender, quantity, pricePerUnit, metadataURI);
@@ -238,9 +274,9 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     /* -------------------------------------------------------------------------- */
 
     /**
-     * @dev Check if batch exists (required by BatchManager)
+     * @dev Check if batch exists (overrides WAGAViewFunctions for consistency)
      */
-    function isBatchCreated(uint256 batchId) public view override(WAGAViewFunctions, IWAGACoffeeToken) returns (bool) {
+    function isBatchCreated(uint256 batchId) public view override returns (bool) {
         return s_batchCreated[batchId];
     }
 
@@ -264,10 +300,97 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     }
 
     /**
+     * @dev Get available quantity for minting (total - minted)
+     */
+    function getAvailableQuantity(uint256 batchId) external view returns (uint256) {
+        if (!s_batchCreated[batchId]) {
+            return 0;
+        }
+        BatchInfo storage batch = s_batchInfo[batchId];
+        return batch.quantity - batch.mintedQuantity;
+    }
+
+    /**
+     * @dev Get minted quantity for a batch
+     */
+    function getMintedQuantity(uint256 batchId) external view returns (uint256) {
+        if (!s_batchCreated[batchId]) {
+            return 0;
+        }
+        return s_batchInfo[batchId].mintedQuantity;
+    }
+
+    /**
      * @dev Get total number of batches created
      */
     function getTotalBatches() external view returns (uint256) {
         return _nextBatchId - 2025000001; // Subtract the starting batch ID
+    }
+
+    /**
+     * @dev Get next batch ID that will be assigned
+     */
+    function getNextBatchId() external view override returns (uint256) {
+        return _nextBatchId;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                           SYSTEM INVARIANT CHECKS                          */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Verify batch data consistency across the system
+     */
+    function verifyBatchConsistency(uint256 batchId) external view returns (bool isConsistent, string memory reason) {
+        if (!s_batchCreated[batchId]) {
+            return (false, "Batch does not exist");
+        }
+
+        BatchInfo storage batch = s_batchInfo[batchId];
+        
+        // Check basic invariants
+        if (batch.mintedQuantity > batch.quantity) {
+            return (false, "Minted quantity exceeds total quantity");
+        }
+        
+        if (batch.expiryDate <= batch.productionDate) {
+            return (false, "Expiry date must be after production date");
+        }
+        
+        if (batch.pricePerUnit == 0) {
+            return (false, "Price per unit cannot be zero");
+        }
+        
+        // Check active status consistency
+        bool isActive = s_isActiveBatch[batchId];
+        bool isExpired = block.timestamp > batch.expiryDate;
+        
+        if (isActive && isExpired) {
+            return (false, "Active batch is expired");
+        }
+        
+        return (true, "Batch data is consistent");
+    }
+
+    /**
+     * @dev Verify system-wide consistency
+     */
+    function verifySystemConsistency() external view returns (bool isConsistent, string memory reason) {
+        // Check that all active batches are in the active array
+        uint256 activeCount = s_activeBatchIds.length;
+        uint256 actualActiveCount = 0;
+        
+        for (uint256 i = 2025000001; i < _nextBatchId; i++) {
+            if (s_isActiveBatch[i]) {
+                actualActiveCount++;
+            }
+        }
+        
+        if (activeCount != actualActiveCount) {
+            return (false, "Active batch count mismatch");
+        }
+        
+        return (true, "System consistency verified");
     }
 
     /**

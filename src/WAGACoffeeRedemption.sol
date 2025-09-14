@@ -115,9 +115,27 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     /* -------------------------------------------------------------------------- */
 
     constructor(address _coffeeToken, address _treasury) {
+        require(_coffeeToken != address(0), "Invalid coffee token address");
+        require(_treasury != address(0), "Invalid treasury address");
+        
         coffeeToken = WAGACoffeeTokenCore(_coffeeToken);
         treasury = IWAGATreasury(_treasury);
         nextRedemptionId = 1000;
+    }
+
+    /**
+     * @dev Verify system configuration is valid
+     */
+    function verifyConfiguration() external view returns (bool isValid, string memory reason) {
+        if (address(treasury) == address(0)) {
+            return (false, "Treasury not configured");
+        }
+        
+        if (address(coffeeToken) == address(0)) {
+            return (false, "Coffee token not configured");
+        }
+        
+        return (true, "Configuration is valid");
     }
 
     /**
@@ -185,16 +203,18 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
             revert WAGACoffeeRedemption__BatchMetadataNotVerified_requestRedemption();
         }
 
-        // Verify payment has been made for this batch
-        if (address(treasury) != address(0)) {
-            // Check if payment is required for this batch
-            (uint256 requiredPayment, ) = treasury.getBatchPaymentInfo(batchId);
-            if (requiredPayment > 0) {
-                // Check if user has paid using the correct function
-                bool hasPaid = treasury.checkPaymentStatus(msg.sender, batchId);
-                if (!hasPaid) {
-                    revert WAGACoffeeRedemption__PaymentNotReceived_requestRedemption();
-                }
+        // MANDATORY payment verification - no optional checks
+        if (address(treasury) == address(0)) {
+            revert("Treasury contract not configured");
+        }
+        
+        // Check if payment is required for this batch
+        (uint256 requiredPayment, ) = treasury.getBatchPaymentInfo(batchId);
+        if (requiredPayment > 0) {
+            // Verify payment has been made
+            bool hasPaid = treasury.checkPaymentStatus(msg.sender, batchId);
+            if (!hasPaid) {
+                revert WAGACoffeeRedemption__PaymentNotReceived_requestRedemption();
             }
         }
 

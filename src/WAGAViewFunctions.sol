@@ -179,7 +179,7 @@ contract WAGAViewFunctions {
         return s_batchInfo[batchId].mintedQuantity;
     }
 
-    function getNextBatchId() external view returns (uint256) {
+    function getNextBatchId() external view virtual returns (uint256) {
         return _nextBatchId;
     }
 

@@ -204,21 +204,17 @@ contract WAGABaseForkTest is Test {
     function testBatchCreationOnFork() public {
         console.log("=== Testing Batch Creation on Base Sepolia Fork ===");
         
-        // Create a batch as processor
+        // Create a batch using standardized workflow
         vm.startPrank(TEST_PROCESSOR);
         
-        // Use batchManager to create batch info, then mark as created in coffeeToken
-        uint256 batchId = coffeeToken.getNextBatchId();
-        coffeeToken.batchCreated(batchId);
-        batchManager.createBatchInfo(
-            batchId,
+        uint256 batchId = coffeeToken.createBatch(
             block.timestamp,
             block.timestamp + 365 days,
             1000,
             75 * 1e18,
             "Origin",
             "Standard",
-            IPrivacyLayer.PrivacyLevel(1)
+            "ipfs://test-metadata"
         );
         
         console.log("Created batch ID on fork:", batchId);
@@ -238,19 +234,16 @@ contract WAGABaseForkTest is Test {
     function testZKProofIntegrationOnFork() public {
         console.log("=== Testing ZK Proof Integration on Fork ===");
         
-        // First create a batch
+        // Create a batch using standardized workflow
         vm.prank(TEST_PROCESSOR);
-        uint256 batchId = coffeeToken.getNextBatchId();
-        coffeeToken.batchCreated(batchId);
-        batchManager.createBatchInfo(
-            batchId,
+        uint256 batchId = coffeeToken.createBatch(
             block.timestamp,
             block.timestamp + 365 days,
             1000,
             50 * 1e18,
             "Origin",
             "Standard",
-            IPrivacyLayer.PrivacyLevel(1)
+            "ipfs://test-metadata"
         );
         
         // Test ZK proof submission (using mock proofs for fork testing)
@@ -290,17 +283,14 @@ contract WAGABaseForkTest is Test {
         vm.startPrank(TEST_PROCESSOR);
         
         gasStart = gasleft();
-        uint256 batchId = coffeeToken.getNextBatchId();
-        coffeeToken.batchCreated(batchId);
-        batchManager.createBatchInfo(
-            batchId,
+        uint256 batchId = coffeeToken.createBatch(
             block.timestamp,
             block.timestamp + 365 days,
             1000,
             60 * 1e18,
             "Origin",
             "Standard",
-            IPrivacyLayer.PrivacyLevel(1)
+            "ipfs://test-metadata"
         );
         gasUsed = gasStart - gasleft();
         console.log("Batch creation gas used:", gasUsed);
@@ -354,17 +344,14 @@ contract WAGABaseForkTest is Test {
         uint256[] memory batchIds = new uint256[](3);
         vm.startPrank(TEST_PROCESSOR);
         for (uint256 i = 0; i < 3; i++) {
-            batchIds[i] = coffeeToken.getNextBatchId();
-            coffeeToken.batchCreated(batchIds[i]);
-            batchManager.createBatchInfo(
-                batchIds[i],
+            batchIds[i] = coffeeToken.createBatch(
                 block.timestamp,
                 block.timestamp + 365 days,
                 1000,
                 (50 + i * 10) * 1e18,
                 "Origin",
                 "Standard",
-                IPrivacyLayer.PrivacyLevel(1)
+                "ipfs://test-metadata"
             );
             console.log("Created batch", i, "with ID:", batchIds[i]);
         }

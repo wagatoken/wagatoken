@@ -3,15 +3,15 @@ pragma solidity ^0.8.18;
 
 import "./Interfaces/IWAGACoffeeToken.sol";
 import "./Interfaces/IZKVerifier.sol";
-import "./WAGAViewFunctions.sol";
 import "./WAGACoffeeTokenCore.sol";
 
 /**
  * @title WAGAZKManager
  * @dev Manages ZK proof verification for the Real ZK MVP system
  * @dev Handles 3 core proof types: Price, Quality, Supply Chain
+ * @dev No longer inherits WAGAViewFunctions to avoid state duplication
  */
-contract WAGAZKManager is WAGAViewFunctions {
+contract WAGAZKManager {
     /* -------------------------------------------------------------------------- */
     /*                                   Constants                                */
     /* -------------------------------------------------------------------------- */
@@ -100,6 +100,19 @@ contract WAGAZKManager is WAGAViewFunctions {
         COFFEE_TOKEN = IWAGACoffeeToken(_coffeeToken);
         COFFEE_TOKEN_CONTRACT = WAGACoffeeTokenCore(_coffeeToken);
         ZK_VERIFIER = IZKVerifier(_zkVerifier);
+    }
+
+    /**
+     * @dev Configure default privacy settings for a batch
+     * Called by WAGACoffeeTokenCore during batch creation
+     */
+    function configureDefaultPrivacy(uint256 batchId) external {
+        // Only allow coffee token contract to call this
+        require(msg.sender == address(COFFEE_TOKEN), "Only coffee token can configure privacy");
+        
+        // Set default public privacy configuration
+        // This is a placeholder - actual privacy configuration should be done through PrivacyLayer
+        emit ZKProofAdded(batchId, bytes32(0), IZKVerifier.ProofType.PRICE_COMPETITIVENESS, "Default Public", msg.sender);
     }
 
     /* -------------------------------------------------------------------------- */

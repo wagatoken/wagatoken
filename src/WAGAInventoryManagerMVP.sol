@@ -215,13 +215,14 @@ contract WAGAInventoryManagerMVP is Ownable {
             return (false, false, false);
         }
 
-        // Get batch info from batch manager to reduce stack usage
+        // Get batch info from coffee token core to reduce stack usage
         (
             ,
             uint256 expiryDate,
+            ,
             uint256 quantity,
             ,,,,
-        ) = batchManager.getBatchInfo(batchId);
+        ) = coffeeToken.getBatchInfo(batchId);
 
         isExpired = block.timestamp > expiryDate;
         isLowInventory = quantity > 0 && quantity <= lowInventoryThreshold;

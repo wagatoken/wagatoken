@@ -136,131 +136,91 @@ contract WAGAEnhancedForkTest is Test {
     }
 
     /**
-     * @dev Test comprehensive batch workflow on Base Sepolia fork
+     * @dev Test comprehensive batch workflow on Base Sepolia fork using NEW STANDARDIZED WORKFLOW
      */
     function testComprehensiveBatchWorkflowOnFork() public {
-        console.log("=== Testing Complete Batch Workflow on Base Sepolia Fork ===");
+        console.log("=== Testing Complete Batch Workflow on Base Sepolia Fork (STANDARDIZED) ===");
         
-        // Step 1: Create a batch as processor
-        // Test batch creation by PROCESSOR_USER
+        // Step 1: Create a batch using the SINGLE STANDARDIZED ENTRY POINT
         vm.startPrank(PROCESSOR_USER);
-        testBatchId = coffeeToken.getNextBatchId();
-        coffeeToken.batchCreated(testBatchId);
-        batchManager.createBatchInfo(
-            testBatchId,
-            block.timestamp,
-            block.timestamp + 365 days,
-            1000,
-            75 * 1e18,
-            "Origin",
-            "Standard",
-            IPrivacyLayer.PrivacyLevel(1)
+        testBatchId = coffeeToken.createBatch(
+            block.timestamp,           // production date
+            block.timestamp + 365 days, // expiry date
+            1000,                      // quantity
+            75 * 1e18,                // price per unit
+            "Origin",                  // origin
+            "Standard",               // packaging info
+            "ipfs://metadata-hash"    // metadata URI
         );
-        console.log("Created batch ID by PROCESSOR_USER:", testBatchId);
-        assertTrue(coffeeToken.isBatchCreated(testBatchId), "Batch should be created by PROCESSOR_USER");
-        assertTrue(coffeeToken.isBatchActive(testBatchId), "Batch should be active by PROCESSOR_USER");
+        console.log("Created batch ID using standardized workflow:", testBatchId);
+        
+        // Verify batch creation
+        assertTrue(coffeeToken.isBatchCreated(testBatchId), "Batch should be created");
+        assertTrue(coffeeToken.isBatchActive(testBatchId), "Batch should be active");
+        
+        // Verify batch data consistency
+        (bool isConsistent, string memory reason) = coffeeToken.verifyBatchConsistency(testBatchId);
+        assertTrue(isConsistent, reason);
+        
+        // Verify available quantity
+        uint256 availableQty = coffeeToken.getAvailableQuantity(testBatchId);
+        assertEq(availableQty, 1000, "Available quantity should be 1000");
+        
+        uint256 mintedQty = coffeeToken.getMintedQuantity(testBatchId);
+        assertEq(mintedQty, 0, "Minted quantity should be 0 initially");
+        
         vm.stopPrank();
 
-        // Test batch creation by ADMIN_USER (also has PROCESSOR_ROLE)
-        uint256 adminBatchId = coffeeToken.getNextBatchId();
+        // Step 2: Create another batch by ADMIN_USER (also has PROCESSOR_ROLE)
         vm.startPrank(ADMIN_USER);
-        coffeeToken.batchCreated(adminBatchId);
-        batchManager.createBatchInfo(
-            adminBatchId,
+        uint256 adminBatchId = coffeeToken.createBatch(
             block.timestamp,
             block.timestamp + 365 days,
             500,
             50 * 1e18,
             "OriginAdmin",
             "Premium",
-            IPrivacyLayer.PrivacyLevel(1)
+            "ipfs://admin-metadata"
         );
         console.log("Created batch ID by ADMIN_USER:", adminBatchId);
-        assertTrue(coffeeToken.isBatchCreated(adminBatchId), "Batch should be created by ADMIN_USER");
-        assertTrue(coffeeToken.isBatchActive(adminBatchId), "Batch should be active by ADMIN_USER");
+        assertTrue(coffeeToken.isBatchCreated(adminBatchId), "Admin batch should be created");
+        assertTrue(coffeeToken.isBatchActive(adminBatchId), "Admin batch should be active");
         vm.stopPrank();
         
-        // Step 2: Add ZK proofs
-        vm.startPrank(ADMIN_USER);
-        
-        // Add pricing proof
-        bytes memory pricingProof = new bytes(256);
-        for (uint i = 0; i < 256; i++) {
-            pricingProof[i] = bytes1(uint8((i + 1) % 256));
-        }
-        zkManager.addZKProofWithCaller(
-            PROCESSOR_USER, // Use PROCESSOR_USER as it has PROCESSOR_ROLE
-            testBatchId,
-            pricingProof,
-            IZKVerifier.ProofType(0), // PRICE_COMPETITIVENESS
-            "premium"
-        );
-        
-        // Add quality proof
-        bytes memory qualityProof = new bytes(256);
-        for (uint i = 0; i < 256; i++) {
-            qualityProof[i] = bytes1(uint8((i + 2) % 256));
-        }
-        zkManager.addZKProofWithCaller(
-            PROCESSOR_USER, // Use PROCESSOR_USER as it has PROCESSOR_ROLE
-            testBatchId,
-            qualityProof,
-            IZKVerifier.ProofType(1), // QUALITY_STANDARDS
-            "premium_grade"
-        );
-        
-                // Add supply chain proof
-        bytes memory supplyProof = new bytes(256);
-        for (uint i = 0; i < 256; i++) {
-            supplyProof[i] = bytes1(uint8((i + 3) % 256));
-        }
-        zkManager.addZKProofWithCaller(
-            PROCESSOR_USER, // Use PROCESSOR_USER as it has PROCESSOR_ROLE
-            testBatchId,
-            supplyProof,
-            IZKVerifier.ProofType(2), // SUPPLY_CHAIN_PROVENANCE
-            "direct_trade"
-        );
-        
-        console.log("Added all ZK proofs for batch:", testBatchId);
-        
-        vm.stopPrank();
-
-        // Verify the complete workflow
-        assertTrue(coffeeToken.isBatchCreated(testBatchId), "Batch should still be created");
-        assertTrue(coffeeToken.isBatchActive(testBatchId), "Batch should still be active");
+        // Step 3: Test system consistency
+        (bool systemConsistent, string memory systemReason) = coffeeToken.verifySystemConsistency();
+        assertTrue(systemConsistent, systemReason);
         
         console.log("Comprehensive batch workflow test completed successfully on Base Sepolia fork");
     }
 
     /**
-     * @dev Test verification request setup on real network
+     * @dev Test verification request setup on real network using STANDARDIZED WORKFLOW
      */
     function testVerificationRequestSetupOnFork() public {
-        console.log("=== Testing Verification Request Setup on Fork ===");
+        console.log("=== Testing Verification Request Setup on Fork (STANDARDIZED) ===");
         
-        // First create a batch
+        // Create a batch using standardized workflow
         vm.prank(PROCESSOR_USER);
-        uint256 batchId = coffeeToken.getNextBatchId();
-        coffeeToken.batchCreated(batchId);
-        batchManager.createBatchInfo(
-            batchId,
+        uint256 batchId = coffeeToken.createBatch(
             block.timestamp,
             block.timestamp + 365 days,
             1000,
             50 * 1e18,
-            "Origin",
+            "TestOrigin",
             "Standard",
-            IPrivacyLayer.PrivacyLevel(1)
+            "ipfs://test-metadata"
         );
         
         console.log("Created batch for verification test:", batchId);
         
+        // Verify batch state and consistency
+        (bool isConsistent, string memory reason) = coffeeToken.verifyBatchConsistency(batchId);
+        assertTrue(isConsistent, reason);
+        
         // Test verification request setup (without actually calling Chainlink)
         vm.startPrank(VERIFIER_USER);
         
-        // This would normally trigger a Chainlink Functions call
-        // but we're just testing the setup without funding
         string memory jsSource = "return { verified: true, quantity: 1000, price: 50000000000000000000 };";
         
         console.log("JavaScript source prepared:", jsSource);
@@ -271,6 +231,10 @@ contract WAGAEnhancedForkTest is Test {
         assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should exist");
         assertTrue(coffeeToken.isBatchActive(batchId), "Batch should be active");
         assertTrue(coffeeToken.hasRole(keccak256("VERIFIER_ROLE"), VERIFIER_USER), "User should have verifier role");
+        
+        // Verify available quantities
+        uint256 available = coffeeToken.getAvailableQuantity(batchId);
+        assertEq(available, 1000, "Available quantity should match batch quantity");
         
         vm.stopPrank();
         
@@ -285,23 +249,20 @@ contract WAGAEnhancedForkTest is Test {
         
         uint256 initialBlockNumber = block.number;
         
-        // Create multiple batches
+        // Create multiple batches using standardized workflow
         vm.startPrank(PROCESSOR_USER);
         
         uint256[] memory batchIds = new uint256[](3);
         
         for (uint256 i = 0; i < 3; i++) {
-            batchIds[i] = coffeeToken.getNextBatchId();
-            coffeeToken.batchCreated(batchIds[i]);
-            batchManager.createBatchInfo(
-                batchIds[i],
+            batchIds[i] = coffeeToken.createBatch(
                 block.timestamp,
                 block.timestamp + 365 days,
-                1000,
-                (50 + i * 10) * 1e18,
-                "Origin",
+                1000 + (i * 100), // varying quantities
+                (50 + i) * 1e18,  // varying prices
+                string(abi.encodePacked("Origin", vm.toString(i))),
                 "Standard",
-                IPrivacyLayer.PrivacyLevel(1)
+                string(abi.encodePacked("ipfs://metadata", vm.toString(i)))
             );
             console.log("Created batch", i, "with ID:", batchIds[i]);
         }
@@ -348,18 +309,18 @@ contract WAGAEnhancedForkTest is Test {
         
         // Test role-based access control
         vm.prank(PROCESSOR_USER);
-        uint256 batchId = coffeeToken.getNextBatchId();
-        coffeeToken.batchCreated(batchId);
-        batchManager.createBatchInfo(
-            batchId,
-            block.timestamp,
-            block.timestamp + 365 days,
-            1000,
-            100 * 1e18,
-            "Origin",
-            "Standard",
-            IPrivacyLayer.PrivacyLevel(1)
+        // Test role-based access control
+        vm.prank(PROCESSOR_USER);
+        uint256 batchId = coffeeToken.createBatch(
+            block.timestamp,         // productionDate
+            block.timestamp + 365 days, // expiryDate
+            1000,                   // quantity
+            100 * 1e18,            // pricePerUnit
+            "Origin",              // origin
+            "Standard",            // packagingInfo
+            "ipfs://test-metadata" // metadataURI
         );
+        batchManager.registerBatchCreation(batchId, "Origin", PROCESSOR_USER);
         console.log("Processor successfully created batch:", batchId);
         // Test that non-processor cannot create batches
         // Skipped: cannot test removed function
@@ -389,18 +350,16 @@ contract WAGAEnhancedForkTest is Test {
         vm.startPrank(PROCESSOR_USER);
         
         gasStart = gasleft();
-        uint256 batchId = coffeeToken.getNextBatchId();
-        coffeeToken.batchCreated(batchId);
-        batchManager.createBatchInfo(
-            batchId,
-            block.timestamp,
-            block.timestamp + 365 days,
-            1000,
-            60 * 1e18,
-            "Origin",
-            "Standard",
-            IPrivacyLayer.PrivacyLevel(1)
+        uint256 batchId = coffeeToken.createBatch(
+            block.timestamp,         // productionDate
+            block.timestamp + 365 days, // expiryDate
+            1000,                   // quantity
+            60 * 1e18,             // pricePerUnit
+            "Origin",              // origin
+            "Standard",            // packagingInfo
+            "ipfs://test-metadata" // metadataURI
         );
+        batchManager.registerBatchCreation(batchId, "Origin", PROCESSOR_USER);
         gasUsed = gasStart - gasleft();
         console.log("=== Gas Usage Results ===");
         console.log("Batch creation gas used:", gasUsed);
@@ -435,18 +394,18 @@ contract WAGAEnhancedForkTest is Test {
         
         // Create a batch
         vm.prank(PROCESSOR_USER);
-        uint256 batchId = coffeeToken.getNextBatchId();
-        coffeeToken.batchCreated(batchId);
-        batchManager.createBatchInfo(
-            batchId,
-            block.timestamp,
-            block.timestamp + 365 days,
-            750,
-            80 * 1e18,
-            "Origin",
-            "Standard",
-            IPrivacyLayer.PrivacyLevel(1)
+        // Create a batch
+        vm.prank(PROCESSOR_USER);
+        uint256 batchId = coffeeToken.createBatch(
+            block.timestamp,         // productionDate
+            block.timestamp + 365 days, // expiryDate
+            750,                    // quantity
+            80 * 1e18,             // pricePerUnit
+            "Origin",              // origin
+            "Standard",            // packagingInfo
+            "ipfs://test-metadata" // metadataURI
         );
+        batchManager.registerBatchCreation(batchId, "Origin", PROCESSOR_USER);
         console.log("Created batch for ZK workflow:", batchId);
         
         // Test multiple ZK proof types

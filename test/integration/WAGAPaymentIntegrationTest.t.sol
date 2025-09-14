@@ -178,18 +178,16 @@ contract WAGAPaymentIntegrationTest is Test {
 
         // Step 1: Admin creates a batch
         vm.startPrank(processor);
-        uint256 actualBatchId = coffeeToken.getNextBatchId();
-        coffeeToken.batchCreated(actualBatchId);
-        batchManager.createBatchInfo(
-            actualBatchId,
-            block.timestamp,
-            block.timestamp + 365 days,
-            QUANTITY,
-            PRICE_PER_UNIT,
-            "Ethiopia",
-            "60kg bags",
-            IPrivacyLayer.PrivacyLevel(1)
+        uint256 actualBatchId = coffeeToken.createBatch(
+            block.timestamp,         // productionDate
+            block.timestamp + 365 days, // expiryDate
+            QUANTITY,               // quantity
+            PRICE_PER_UNIT,        // pricePerUnit
+            "Ethiopia",            // origin
+            "60kg bags",           // packagingInfo
+            "ipfs://test-metadata" // metadataURI
         );
+        batchManager.registerBatchCreation(actualBatchId, "Ethiopia", processor);
         console.log("Batch created with ID:", actualBatchId);
         console.log("Batch creation test completed successfully");
         vm.stopPrank();
@@ -200,18 +198,16 @@ contract WAGAPaymentIntegrationTest is Test {
 
         // Step 1: Create batch
         vm.startPrank(processor);
-        uint256 batchId = coffeeToken.getNextBatchId();
-        coffeeToken.batchCreated(batchId);
-        batchManager.createBatchInfo(
-            batchId,
-            block.timestamp,
-            block.timestamp + 365 days,
-            QUANTITY,
-            PRICE_PER_UNIT,
-            "Colombia",
-            "60kg bags",
-            IPrivacyLayer.PrivacyLevel(1)
+        uint256 batchId = coffeeToken.createBatch(
+            block.timestamp,         // productionDate
+            block.timestamp + 365 days, // expiryDate
+            QUANTITY,               // quantity
+            PRICE_PER_UNIT,        // pricePerUnit
+            "Colombia",            // origin
+            "60kg bags",           // packagingInfo
+            "ipfs://test-metadata" // metadataURI
         );
+        batchManager.registerBatchCreation(batchId, "Colombia", processor);
         console.log("Created batch with ID:", batchId);
         vm.stopPrank();
 
@@ -255,18 +251,16 @@ contract WAGAPaymentIntegrationTest is Test {
 
         // Step 1: Create international batch using manager-based pattern
         vm.startPrank(processor);
-        uint256 internationalBatchId = coffeeToken.getNextBatchId();
-        coffeeToken.batchCreated(internationalBatchId);
-        batchManager.createBatchInfo(
-            internationalBatchId,
-            block.timestamp,
-            block.timestamp + 365 days,
-            QUANTITY,
-            PRICE_PER_UNIT * 2, // Higher price for international
-            "Vietnam",
-            "60kg bags",
-            IPrivacyLayer.PrivacyLevel(1)
+        uint256 internationalBatchId = coffeeToken.createBatch(
+            block.timestamp,         // productionDate
+            block.timestamp + 365 days, // expiryDate
+            QUANTITY,               // quantity
+            PRICE_PER_UNIT * 2,    // pricePerUnit - Higher price for international
+            "Vietnam",             // origin
+            "60kg bags",           // packagingInfo
+            "ipfs://test-metadata" // metadataURI
         );
+        batchManager.registerBatchCreation(internationalBatchId, "Vietnam", processor);
         vm.stopPrank();
 
         // Set up batch payment for this specific batch
@@ -294,18 +288,16 @@ contract WAGAPaymentIntegrationTest is Test {
 
         // Step 1: Create batch using manager-based pattern
         vm.startPrank(processor);
-        uint256 batchId = coffeeToken.getNextBatchId();
-        coffeeToken.batchCreated(batchId);
-        batchManager.createBatchInfo(
-            batchId,
-            block.timestamp,
-            block.timestamp + 365 days,
-            QUANTITY,
-            PRICE_PER_UNIT,
-            "Brazil",
-            "60kg bags",
-            IPrivacyLayer.PrivacyLevel(1)
+        uint256 batchId = coffeeToken.createBatch(
+            block.timestamp,         // productionDate
+            block.timestamp + 365 days, // expiryDate
+            QUANTITY,               // quantity
+            PRICE_PER_UNIT,        // pricePerUnit
+            "Brazil",              // origin
+            "60kg bags",           // packagingInfo
+            "ipfs://test-metadata" // metadataURI
         );
+        batchManager.registerBatchCreation(batchId, "Brazil", processor);
         vm.stopPrank();
 
         // Set up batch payment for this specific batch
@@ -328,18 +320,16 @@ contract WAGAPaymentIntegrationTest is Test {
 
         // Step 1: Create batch and make payment using manager-based pattern
         vm.startPrank(processor);
-        uint256 batchId = coffeeToken.getNextBatchId();
-        coffeeToken.batchCreated(batchId);
-        batchManager.createBatchInfo(
-            batchId,
-            block.timestamp,
-            block.timestamp + 365 days,
-            QUANTITY,
-            PRICE_PER_UNIT,
-            "Kenya",
-            "60kg bags",
-            IPrivacyLayer.PrivacyLevel(1)
+        uint256 batchId = coffeeToken.createBatch(
+            block.timestamp,         // productionDate
+            block.timestamp + 365 days, // expiryDate
+            QUANTITY,               // quantity
+            PRICE_PER_UNIT,        // pricePerUnit
+            "Kenya",               // origin
+            "60kg bags",           // packagingInfo
+            "ipfs://test-metadata" // metadataURI
         );
+        batchManager.registerBatchCreation(batchId, "Kenya", processor);
         vm.stopPrank();
 
         // Set up batch payment for this specific batch
@@ -374,18 +364,16 @@ contract WAGAPaymentIntegrationTest is Test {
 
         // Step 1: Create batch using manager-based pattern
         vm.startPrank(processor);
-        uint256 batchId = coffeeToken.getNextBatchId();
-        coffeeToken.batchCreated(batchId);
-        batchManager.createBatchInfo(
-            batchId,
-            block.timestamp,
-            block.timestamp + 365 days,
-            QUANTITY,
-            PRICE_PER_UNIT,
-            "Guatemala",
-            "60kg bags",
-            IPrivacyLayer.PrivacyLevel(1)
+        uint256 batchId = coffeeToken.createBatch(
+            block.timestamp,         // productionDate
+            block.timestamp + 365 days, // expiryDate
+            QUANTITY,               // quantity
+            PRICE_PER_UNIT,        // pricePerUnit
+            "Guatemala",           // origin
+            "60kg bags",           // packagingInfo
+            "ipfs://test-metadata" // metadataURI
         );
+        batchManager.registerBatchCreation(batchId, "Guatemala", processor);
 
         // Step 2: Process verification and mint tokens
         processBatchVerification(batchId);
