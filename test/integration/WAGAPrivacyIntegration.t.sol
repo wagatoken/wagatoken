@@ -77,11 +77,18 @@ contract WAGAPrivacyIntegration is Test {
 
         // Create a batch
         vm.startPrank(processor);
-        uint256 batchId = coffeeToken.createBatchSimple(
-            1000,
-            1 ether,
-            "ipfs://QmTestBatch"
-        );
+            uint256 batchId = coffeeToken.getNextBatchId();
+            coffeeToken.batchCreated(batchId);
+            batchManager.createBatchInfo(
+                batchId,
+                block.timestamp,
+                block.timestamp + 365 days,
+                1000,
+                1 ether,
+                "Origin",
+                "Standard",
+                IPrivacyLayer.PrivacyLevel(1)
+            );
         vm.stopPrank();
 
         // Test pricing proof verification
@@ -105,11 +112,18 @@ contract WAGAPrivacyIntegration is Test {
 
         // Create a batch
         vm.startPrank(processor);
-        uint256 batchId = coffeeToken.createBatchSimple(
-            500,
-            0.5 ether,
-            "ipfs://QmQualityTest"
-        );
+            uint256 batchId = coffeeToken.getNextBatchId();
+            coffeeToken.batchCreated(batchId);
+            batchManager.createBatchInfo(
+                batchId,
+                block.timestamp,
+                block.timestamp + 365 days,
+                500,
+                0.5 ether,
+                "Origin",
+                "Standard",
+                IPrivacyLayer.PrivacyLevel(1)
+            );
         vm.stopPrank();
 
         // Test quality proof verification
@@ -133,11 +147,18 @@ contract WAGAPrivacyIntegration is Test {
 
         // Create a batch
         vm.startPrank(processor);
-        uint256 batchId = coffeeToken.createBatchSimple(
-            750,
-            0.75 ether,
-            "ipfs://QmSupplyChainTest"
-        );
+            uint256 batchId = coffeeToken.getNextBatchId();
+            coffeeToken.batchCreated(batchId);
+            batchManager.createBatchInfo(
+                batchId,
+                block.timestamp,
+                block.timestamp + 365 days,
+                750,
+                0.75 ether,
+                "Origin",
+                "Standard",
+                IPrivacyLayer.PrivacyLevel(1)
+            );
         vm.stopPrank();
 
         // Test supply chain proof verification
@@ -159,17 +180,40 @@ contract WAGAPrivacyIntegration is Test {
     function testBatchCreationWithZK() public {
         console.log("Testing batch creation with ZK integration...");
 
-        // Test that processors can create batches
+        // Test batch creation by processor
         vm.startPrank(processor);
-
-        uint256 batchId1 = coffeeToken.createBatchSimple(200, 0.2 ether, "ipfs://QmBatch1");
-        uint256 batchId2 = coffeeToken.createBatchSimple(300, 0.3 ether, "ipfs://QmBatch2");
-
-        assertTrue(coffeeToken.isBatchCreated(batchId1), "First batch should be created");
-        assertTrue(coffeeToken.isBatchCreated(batchId2), "Second batch should be created");
-
-        console.log("Batch creation with ZK integration test passed");
-
+        uint256 batchId1 = coffeeToken.getNextBatchId();
+        coffeeToken.batchCreated(batchId1);
+        batchManager.createBatchInfo(
+            batchId1,
+            block.timestamp,
+            block.timestamp + 365 days,
+            200,
+            0.2 ether,
+            "Origin",
+            "Standard",
+            IPrivacyLayer.PrivacyLevel(1)
+        );
+        assertTrue(coffeeToken.isBatchCreated(batchId1), "First batch should be created by processor");
         vm.stopPrank();
+
+        // Test batch creation by admin (also has PROCESSOR_ROLE)
+        vm.startPrank(admin);
+        uint256 batchId2 = coffeeToken.getNextBatchId();
+        coffeeToken.batchCreated(batchId2);
+        batchManager.createBatchInfo(
+            batchId2,
+            block.timestamp,
+            block.timestamp + 365 days,
+            300,
+            0.3 ether,
+            "Origin",
+            "Standard",
+            IPrivacyLayer.PrivacyLevel(1)
+        );
+        assertTrue(coffeeToken.isBatchCreated(batchId2), "Second batch should be created by admin");
+        vm.stopPrank();
+
+        console.log("Batch creation with ZK integration test passed for both processor and admin");
     }
 }

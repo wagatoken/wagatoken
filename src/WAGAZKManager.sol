@@ -4,6 +4,7 @@ pragma solidity ^0.8.18;
 import "./Interfaces/IWAGACoffeeToken.sol";
 import "./Interfaces/IZKVerifier.sol";
 import "./WAGAViewFunctions.sol";
+import "./WAGACoffeeTokenCore.sol";
 
 /**
  * @title WAGAZKManager
@@ -46,8 +47,9 @@ contract WAGAZKManager is WAGAViewFunctions {
     /*                              State Variables                              */
     /* -------------------------------------------------------------------------- */
 
-    IWAGACoffeeToken public immutable coffeeToken;
-    IZKVerifier public immutable zkVerifier;
+    IWAGACoffeeToken public immutable COFFEE_TOKEN;
+    WAGACoffeeTokenCore public immutable COFFEE_TOKEN_CONTRACT;
+    IZKVerifier public immutable ZK_VERIFIER;
 
     // ZK proof storage
     mapping(uint256 => ZKProof) public batchZKProofs;
@@ -76,28 +78,13 @@ contract WAGAZKManager is WAGAViewFunctions {
     /* -------------------------------------------------------------------------- */
 
     modifier callerHasRoleFromCoffeeToken(bytes32 roleType) {
-        // Use a try-catch or low-level call since interface might not have hasRole
-        (bool success, bytes memory result) = address(coffeeToken).staticcall(
-            abi.encodeWithSignature("hasRole(bytes32,address)", roleType, msg.sender)
-        );
-        
-        if (!success || result.length == 0 || !abi.decode(result, (bool))) {
-            revert WAGAZKManager__CallerDoesNotHaveRequiredRole_callerHasRoleFromCoffeeToken();
-        }
+        _checkCallerHasRoleFromCoffeeToken(roleType, msg.sender);
         _;
     }
 
     function _checkCallerHasRoleFromCoffeeToken(bytes32 roleType, address caller) internal view {
-        // Use a try-catch or low-level call since interface might not have hasRole
-        (bool success, bytes memory result) = address(coffeeToken).staticcall(
-            abi.encodeWithSignature(
-                "hasRole(bytes32,address)",
-                roleType,
-                caller
-            )
-        );
-
-        if (!success || result.length == 0 || !abi.decode(result, (bool))) {
+        // Check if the caller has the specific role in the coffee token contract
+        if (!COFFEE_TOKEN_CONTRACT.hasRole(roleType, caller)) {
             revert WAGAZKManager__CallerDoesNotHaveRequiredRole_callerHasRoleFromCoffeeToken();
         }
     }
@@ -110,8 +97,9 @@ contract WAGAZKManager is WAGAViewFunctions {
         address _coffeeToken,
         address _zkVerifier
     ) {
-        coffeeToken = IWAGACoffeeToken(_coffeeToken);
-        zkVerifier = IZKVerifier(_zkVerifier);
+        COFFEE_TOKEN = IWAGACoffeeToken(_coffeeToken);
+        COFFEE_TOKEN_CONTRACT = WAGACoffeeTokenCore(_coffeeToken);
+        ZK_VERIFIER = IZKVerifier(_zkVerifier);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -127,18 +115,18 @@ contract WAGAZKManager is WAGAViewFunctions {
         IZKVerifier.ProofType proofType,
         string calldata publicClaim
     ) external callerHasRoleFromCoffeeToken(PROCESSOR_ROLE) {
-        if (!coffeeToken.isBatchCreated(batchId)) {
+        if (!COFFEE_TOKEN.isBatchCreated(batchId)) {
             revert WAGAZKManager__BatchDoesNotExist_addZKProof();
         }
 
         // Verify ZK proof based on type
         bool verified = false;
         if (proofType == IZKVerifier.ProofType.PRICE_COMPETITIVENESS) {
-            verified = zkVerifier.verifyPriceCompetitiveness(batchId, zkProofData, new uint256[](0), publicClaim);
+            verified = ZK_VERIFIER.verifyPriceCompetitiveness(batchId, zkProofData, new uint256[](0), publicClaim);
         } else if (proofType == IZKVerifier.ProofType.QUALITY_STANDARDS) {
-            verified = zkVerifier.verifyQualityStandards(batchId, zkProofData, new uint256[](0), publicClaim);
+            verified = ZK_VERIFIER.verifyQualityStandards(batchId, zkProofData, new uint256[](0), publicClaim);
         } else if (proofType == IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE) {
-            verified = zkVerifier.verifySupplyChainProvenance(batchId, zkProofData, new uint256[](0), publicClaim);
+            verified = ZK_VERIFIER.verifySupplyChainProvenance(batchId, zkProofData, new uint256[](0), publicClaim);
         }
 
         if (!verified) {
@@ -176,18 +164,18 @@ contract WAGAZKManager is WAGAViewFunctions {
         // Check that the original caller has PROCESSOR_ROLE
         _checkCallerHasRoleFromCoffeeToken(PROCESSOR_ROLE, originalCaller);
 
-        if (!coffeeToken.isBatchCreated(batchId)) {
+        if (!COFFEE_TOKEN.isBatchCreated(batchId)) {
             revert WAGAZKManager__BatchDoesNotExist_addZKProof();
         }
 
         // Verify ZK proof based on type
         bool verified = false;
         if (proofType == IZKVerifier.ProofType.PRICE_COMPETITIVENESS) {
-            verified = zkVerifier.verifyPriceCompetitiveness(batchId, zkProofData, new uint256[](0), publicClaim);
+            verified = ZK_VERIFIER.verifyPriceCompetitiveness(batchId, zkProofData, new uint256[](0), publicClaim);
         } else if (proofType == IZKVerifier.ProofType.QUALITY_STANDARDS) {
-            verified = zkVerifier.verifyQualityStandards(batchId, zkProofData, new uint256[](0), publicClaim);
+            verified = ZK_VERIFIER.verifyQualityStandards(batchId, zkProofData, new uint256[](0), publicClaim);
         } else if (proofType == IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE) {
-            verified = zkVerifier.verifySupplyChainProvenance(batchId, zkProofData, new uint256[](0), publicClaim);
+            verified = ZK_VERIFIER.verifySupplyChainProvenance(batchId, zkProofData, new uint256[](0), publicClaim);
         }
 
         if (!verified) {
@@ -222,7 +210,7 @@ contract WAGAZKManager is WAGAViewFunctions {
         bool isValid,
         string memory publicClaim
     ) {
-        if (!coffeeToken.isBatchCreated(batchId)) {
+        if (!COFFEE_TOKEN.isBatchCreated(batchId)) {
             revert WAGAZKManager__BatchDoesNotExist_getZKProof();
         }
         
@@ -254,13 +242,13 @@ contract WAGAZKManager is WAGAViewFunctions {
     function getBatchProofStatus(uint256 batchId) external view returns (
         IZKVerifier.BatchProofStatus memory
     ) {
-        return zkVerifier.getBatchProofStatus(batchId);
+        return ZK_VERIFIER.getBatchProofStatus(batchId);
     }
 
     /**
      * @dev Check if batch has all required proofs
      */
     function hasAllRequiredProofs(uint256 batchId) external view returns (bool) {
-        return zkVerifier.hasAllRequiredProofs(batchId);
+        return ZK_VERIFIER.hasAllRequiredProofs(batchId);
     }
 }

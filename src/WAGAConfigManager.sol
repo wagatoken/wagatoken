@@ -124,7 +124,7 @@ contract WAGAConfigManager is AccessControl, Ownable {
         address _proofOfReserveManager
     ) public onlyRole(ADMIN_ROLE) {
         if (_proofOfReserveManager == address(0)) {
-            revert WAGAConfigManager__InvalidRedemptionContractAddress_setRedemptionContract();
+            revert WAGAConfigManager__InvalidProofOfReserveManagerAddress_setProofOfReserveManager();
         }
         if (s_proofOfReserveManager != address(0)) {
             _revokeRole(PROOF_OF_RESERVE_ROLE, s_proofOfReserveManager);

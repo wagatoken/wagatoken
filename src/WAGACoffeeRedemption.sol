@@ -56,7 +56,6 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         address consumer;
         uint256 batchId;
         uint256 quantity;
-        string deliveryAddress; // We do not need this onchain 
         uint256 requestDate;
         RedemptionStatus status;
         uint256 fulfillmentDate;
@@ -139,12 +138,10 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
      * @dev Requests redemption of coffee tokens for physical delivery
      * @param batchId Batch identifier
      * @param quantity Number of coffee bags to redeem
-     * @param deliveryAddress Physical delivery address
      */
     function requestRedemption(
         uint256 batchId,
-        uint256 quantity,
-        string memory deliveryAddress
+        uint256 quantity
     ) external nonReentrant {
         // Ensure the batch exists
         if (!coffeeToken.isBatchCreated(batchId)) {
@@ -170,7 +167,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
             bool isMetadataVerified,
             // 9th value placeholder
             
-        ) = coffeeToken.getbatchInfo(batchId);
+        ) = coffeeToken.getBatchInfo(batchId);
 
         // Get boolean flags and string data from separate mappings - already retrieved above
 
@@ -193,7 +190,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
             // Check if payment is required for this batch
             (uint256 requiredPayment, ) = treasury.getBatchPaymentInfo(batchId);
             if (requiredPayment > 0) {
-                // Check if user has paid
+                // Check if user has paid using the correct function
                 bool hasPaid = treasury.checkPaymentStatus(msg.sender, batchId);
                 if (!hasPaid) {
                     revert WAGACoffeeRedemption__PaymentNotReceived_requestRedemption();
@@ -218,7 +215,6 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
             consumer: msg.sender,
             batchId: batchId,
             quantity: quantity,
-            deliveryAddress: deliveryAddress,
             requestDate: block.timestamp,
             status: RedemptionStatus.Requested,
             fulfillmentDate: 0

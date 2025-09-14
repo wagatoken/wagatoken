@@ -28,14 +28,6 @@ interface IWAGACoffeeToken {
     function isBatchCreated(uint256 batchId) external view returns (bool);
 
     /**
-     * @dev Checks if an account has a specific role
-     * @param role The role to check
-     * @param account The account to check
-     * @return bool True if the account has the role, false otherwise
-     */
-    function hasRole(bytes32 role, address account) external view returns (bool);
-
-    /**
      * @dev Creates a new batch for blockchain-first workflow
      * @param productionDate Timestamp when the batch was produced
      * @param expiryDate Timestamp when the batch expires

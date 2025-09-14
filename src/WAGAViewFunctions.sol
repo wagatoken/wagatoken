@@ -114,10 +114,10 @@ contract WAGAViewFunctions {
      * @return isMetadataVerified Whether metadata is verified
      * @return lastVerifiedTimestamp Timestamp of last verification
      */
-    function getbatchInfo(
+    function getBasicBatchInfo(
         uint256 batchId
     )
-        external
+        public
         view
         virtual
         returns (
@@ -172,7 +172,7 @@ contract WAGAViewFunctions {
      * @param batchId ID of the batch to query
      * @return Minted quantity of tokens for batch
      */
-    function getBatchMintedQuantity(uint256 batchId) external view returns (uint256) {
+    function getBatchMintedQuantity(uint256 batchId) external view virtual returns (uint256) {
         if (!isBatchCreated(batchId)) {
             revert WAGAViewFunctions__BatchDoesNotExist_getBatchQuantity();
         }

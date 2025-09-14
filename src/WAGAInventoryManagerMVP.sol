@@ -101,7 +101,7 @@ contract WAGAInventoryManagerMVP is Ownable {
             }
             
             // Get batch expiry date
-            (, uint256 expiryDate,,,,,,,) = coffeeToken.getbatchInfo(batchId);
+            (, uint256 expiryDate,,,,,,,) = coffeeToken.getBatchInfo(batchId);
             
             // Check if batch is expired
             if (currentTime > expiryDate && !isExpiredBatch[batchId]) {
@@ -165,7 +165,7 @@ contract WAGAInventoryManagerMVP is Ownable {
             }
             
             // Get current quantity
-            (,,, uint256 quantity,,,,,) = coffeeToken.getbatchInfo(batchId);
+            (,,, uint256 quantity,,,,,) = coffeeToken.getBatchInfo(batchId);
             
             // Check if quantity is low
             if (quantity > 0 && quantity <= lowInventoryThreshold) {

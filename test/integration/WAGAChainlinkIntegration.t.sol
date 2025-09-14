@@ -104,10 +104,17 @@ contract WAGAChainlinkIntegration is Test {
         // Create a batch as processor
         vm.startPrank(PROCESSOR_USER);
 
-        testBatchId = coffeeToken.createBatchSimple(
-            1000, // quantity
-            50 * 1e18, // pricePerUnit (50 ETH)
-            "ipfs://QmTestBatch123" // metadataURI
+        testBatchId = coffeeToken.getNextBatchId();
+        coffeeToken.batchCreated(testBatchId);
+        batchManager.createBatchInfo(
+            testBatchId,
+            block.timestamp,
+            block.timestamp + 365 days,
+            1000,
+            50 * 1e18,
+            "Origin",
+            "Standard",
+            IPrivacyLayer.PrivacyLevel(1)
         );
 
         console.log("Created test batch ID:", testBatchId);

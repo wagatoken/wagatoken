@@ -1,3 +1,4 @@
+import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
@@ -206,10 +207,18 @@ contract WAGABaseForkTest is Test {
         // Create a batch as processor
         vm.startPrank(TEST_PROCESSOR);
         
-        uint256 batchId = coffeeToken.createBatchSimple(
-            1000, // quantity
-            75 * 1e18, // pricePerUnit (75 ETH per unit)
-            "ipfs://QmForkTestBatch123" // metadataURI
+        // Use batchManager to create batch info, then mark as created in coffeeToken
+        uint256 batchId = coffeeToken.getNextBatchId();
+        coffeeToken.batchCreated(batchId);
+        batchManager.createBatchInfo(
+            batchId,
+            block.timestamp,
+            block.timestamp + 365 days,
+            1000,
+            75 * 1e18,
+            "Origin",
+            "Standard",
+            IPrivacyLayer.PrivacyLevel(1)
         );
         
         console.log("Created batch ID on fork:", batchId);
@@ -231,10 +240,17 @@ contract WAGABaseForkTest is Test {
         
         // First create a batch
         vm.prank(TEST_PROCESSOR);
-        uint256 batchId = coffeeToken.createBatchSimple(
+        uint256 batchId = coffeeToken.getNextBatchId();
+        coffeeToken.batchCreated(batchId);
+        batchManager.createBatchInfo(
+            batchId,
+            block.timestamp,
+            block.timestamp + 365 days,
             1000,
             50 * 1e18,
-            "ipfs://QmZKTestBatch"
+            "Origin",
+            "Standard",
+            IPrivacyLayer.PrivacyLevel(1)
         );
         
         // Test ZK proof submission (using mock proofs for fork testing)
@@ -274,16 +290,21 @@ contract WAGABaseForkTest is Test {
         vm.startPrank(TEST_PROCESSOR);
         
         gasStart = gasleft();
-        uint256 batchId = coffeeToken.createBatchSimple(
+        uint256 batchId = coffeeToken.getNextBatchId();
+        coffeeToken.batchCreated(batchId);
+        batchManager.createBatchInfo(
+            batchId,
+            block.timestamp,
+            block.timestamp + 365 days,
             1000,
             60 * 1e18,
-            "ipfs://QmGasTestBatch"
+            "Origin",
+            "Standard",
+            IPrivacyLayer.PrivacyLevel(1)
         );
         gasUsed = gasStart - gasleft();
-        
         console.log("Batch creation gas used:", gasUsed);
         console.log("Created batch ID:", batchId);
-        
         vm.stopPrank();
         
         // Test batch query gas usage
@@ -329,21 +350,24 @@ contract WAGABaseForkTest is Test {
         
         uint256 initialBlockNumber = block.number;
         
-        // Create multiple batches
-        vm.startPrank(TEST_PROCESSOR);
-        
+        // Create multiple batches as TEST_PROCESSOR
         uint256[] memory batchIds = new uint256[](3);
-        
+        vm.startPrank(TEST_PROCESSOR);
         for (uint256 i = 0; i < 3; i++) {
-            batchIds[i] = coffeeToken.createBatchSimple(
-                1000, // quantity
-                (50 + i * 10) * 1e18, // Different prices
-                string.concat("ipfs://QmPersistenceTest", vm.toString(i))
+            batchIds[i] = coffeeToken.getNextBatchId();
+            coffeeToken.batchCreated(batchIds[i]);
+            batchManager.createBatchInfo(
+                batchIds[i],
+                block.timestamp,
+                block.timestamp + 365 days,
+                1000,
+                (50 + i * 10) * 1e18,
+                "Origin",
+                "Standard",
+                IPrivacyLayer.PrivacyLevel(1)
             );
-            
             console.log("Created batch", i, "with ID:", batchIds[i]);
         }
-        
         vm.stopPrank();
         
         // Advance fork state

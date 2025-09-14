@@ -205,7 +205,7 @@ contract WAGAProofOfReserve is
             string memory metadataHash,
             , // bool isMetadataVerified - unused
             // uint256 lastVerifiedTimestamp - unused
-        ) = coffeeToken.getbatchInfo(batchId);
+        ) = coffeeToken.getBatchInfo(batchId);
 
         // Prepare arguments for Chainlink Functions
         string[] memory args = new string[](6);
@@ -294,7 +294,7 @@ contract WAGAProofOfReserve is
             string memory metadataHash,
             , // bool isMetadataVerified - unused
             // uint256 lastVerifiedTimestamp - unused
-        ) = coffeeToken.getbatchInfo(batchId);
+        ) = coffeeToken.getBatchInfo(batchId);
 
         // Prepare arguments for Chainlink Functions
         string[] memory args = new string[](6);

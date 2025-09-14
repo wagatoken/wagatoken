@@ -1,3 +1,4 @@
+import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
@@ -176,36 +177,43 @@ contract WAGAPaymentIntegrationTest is Test {
         console.log("Starting End-to-End Payment Flow Test");
 
         // Step 1: Admin creates a batch
-        vm.prank(admin);
-        uint256 actualBatchId = coffeeToken.createBatch(
+        vm.startPrank(processor);
+        uint256 actualBatchId = coffeeToken.getNextBatchId();
+        coffeeToken.batchCreated(actualBatchId);
+        batchManager.createBatchInfo(
+            actualBatchId,
             block.timestamp,
             block.timestamp + 365 days,
             QUANTITY,
             PRICE_PER_UNIT,
             "Ethiopia",
             "60kg bags",
-            "ipfs://batch-metadata"
+            IPrivacyLayer.PrivacyLevel(1)
         );
-
         console.log("Batch created with ID:", actualBatchId);
         console.log("Batch creation test completed successfully");
+        vm.stopPrank();
     }
 
     function testCoinbasePaymentIntegration() public {
         console.log("Testing Coinbase Payment Integration");
 
         // Step 1: Create batch
-        vm.prank(admin);
-        uint256 batchId = coffeeToken.createBatch(
+        vm.startPrank(processor);
+        uint256 batchId = coffeeToken.getNextBatchId();
+        coffeeToken.batchCreated(batchId);
+        batchManager.createBatchInfo(
+            batchId,
             block.timestamp,
             block.timestamp + 365 days,
             QUANTITY,
             PRICE_PER_UNIT,
             "Colombia",
             "60kg bags",
-            "ipfs://coinbase-batch"
+            IPrivacyLayer.PrivacyLevel(1)
         );
         console.log("Created batch with ID:", batchId);
+        vm.stopPrank();
 
         // Set up batch payment for this specific batch
         vm.prank(deployerAdmin);
@@ -245,17 +253,21 @@ contract WAGAPaymentIntegrationTest is Test {
         // This would typically involve multiple currencies
         // For now, we'll simulate the flow
 
-        // Step 1: Create international batch
-        vm.prank(admin);
-        uint256 internationalBatchId = coffeeToken.createBatch(
+        // Step 1: Create international batch using manager-based pattern
+        vm.startPrank(processor);
+        uint256 internationalBatchId = coffeeToken.getNextBatchId();
+        coffeeToken.batchCreated(internationalBatchId);
+        batchManager.createBatchInfo(
+            internationalBatchId,
             block.timestamp,
             block.timestamp + 365 days,
             QUANTITY,
             PRICE_PER_UNIT * 2, // Higher price for international
             "Vietnam",
             "60kg bags",
-            "ipfs://international-batch"
+            IPrivacyLayer.PrivacyLevel(1)
         );
+        vm.stopPrank();
 
         // Set up batch payment for this specific batch
         vm.prank(admin);
@@ -280,17 +292,21 @@ contract WAGAPaymentIntegrationTest is Test {
     function testPaymentFailureScenarios() public {
         console.log("Testing Payment Failure Scenarios");
 
-        // Step 1: Create batch
-        vm.prank(admin);
-        uint256 batchId = coffeeToken.createBatch(
+        // Step 1: Create batch using manager-based pattern
+        vm.startPrank(processor);
+        uint256 batchId = coffeeToken.getNextBatchId();
+        coffeeToken.batchCreated(batchId);
+        batchManager.createBatchInfo(
+            batchId,
             block.timestamp,
             block.timestamp + 365 days,
             QUANTITY,
             PRICE_PER_UNIT,
             "Brazil",
             "60kg bags",
-            "ipfs://failure-test-batch"
+            IPrivacyLayer.PrivacyLevel(1)
         );
+        vm.stopPrank();
 
         // Set up batch payment for this specific batch
         vm.prank(deployerAdmin);
@@ -310,17 +326,21 @@ contract WAGAPaymentIntegrationTest is Test {
     function testTreasuryDistribution() public {
         console.log("Testing Treasury Distribution");
 
-        // Step 1: Create batch and make payment
-        vm.prank(admin);
-        uint256 batchId = coffeeToken.createBatch(
+        // Step 1: Create batch and make payment using manager-based pattern
+        vm.startPrank(processor);
+        uint256 batchId = coffeeToken.getNextBatchId();
+        coffeeToken.batchCreated(batchId);
+        batchManager.createBatchInfo(
+            batchId,
             block.timestamp,
             block.timestamp + 365 days,
             QUANTITY,
             PRICE_PER_UNIT,
             "Kenya",
             "60kg bags",
-            "ipfs://distribution-test"
+            IPrivacyLayer.PrivacyLevel(1)
         );
+        vm.stopPrank();
 
         // Set up batch payment for this specific batch
         vm.prank(deployerAdmin);
@@ -352,16 +372,19 @@ contract WAGAPaymentIntegrationTest is Test {
     function testRedemptionWithoutPayment() public {
         console.log("Testing Redemption Without Payment");
 
-        // Step 1: Create batch
-        vm.prank(admin);
-        uint256 batchId = coffeeToken.createBatch(
+        // Step 1: Create batch using manager-based pattern
+        vm.startPrank(processor);
+        uint256 batchId = coffeeToken.getNextBatchId();
+        coffeeToken.batchCreated(batchId);
+        batchManager.createBatchInfo(
+            batchId,
             block.timestamp,
             block.timestamp + 365 days,
             QUANTITY,
             PRICE_PER_UNIT,
             "Guatemala",
             "60kg bags",
-            "ipfs://no-payment-batch"
+            IPrivacyLayer.PrivacyLevel(1)
         );
 
         // Step 2: Process verification and mint tokens
@@ -375,7 +398,7 @@ contract WAGAPaymentIntegrationTest is Test {
         // Step 5: Try to request redemption without payment
         vm.prank(distributor);
         vm.expectRevert();
-        redemption.requestRedemption(batchId, 10, "Test Address");
+        redemption.requestRedemption(batchId, 10);
 
         console.log("Redemption Without Payment Test PASSED");
     }
@@ -393,7 +416,17 @@ contract WAGAPaymentIntegrationTest is Test {
         // For testing, we'll simulate successful verification by calling the contract directly
 
         // Debug: Check batch info before minting
-        (uint256 productionDate, uint256 expiryDate, bool isVerified, uint256 quantity, uint256 pricePerUnit, string memory packagingInfo, string memory metadataHash, bool isMetadataVerified, uint256 lastVerifiedTimestamp) = coffeeToken.getbatchInfo(batchId);
+        (
+            ,  // uint256 productionDate
+            ,  // uint256 expiryDate
+            ,  // bool isVerified
+            uint256 quantity,
+            ,  // uint256 pricePerUnit
+            ,  // string memory packagingInfo
+            ,  // string memory metadataHash
+            ,  // bool isMetadataVerified
+               // uint256 lastVerifiedTimestamp
+        ) = coffeeToken.getBatchInfo(batchId);
         uint256 mintedQuantity = coffeeToken.getBatchMintedQuantity(batchId);
         
         console.log("Batch quantity:", quantity);
