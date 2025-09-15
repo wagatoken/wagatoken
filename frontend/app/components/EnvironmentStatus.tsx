@@ -32,6 +32,16 @@ interface ServiceStatus {
     connected: boolean;
     network: string;
     contracts: boolean;
+    contractDetails?: {
+      core: number;
+      management: number;
+      financial: number;
+      operational: number;
+      zkVerifiers: number;
+      total: number;
+    };
+    networkValid?: boolean;
+    chainId?: number;
   };
   database: {
     connected: boolean;
@@ -50,42 +60,118 @@ export default function EnvironmentStatus() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const validateContractDeployment = (): { isValid: boolean; details: any } => {
+    // Core contracts (2 expected)
+    const coreContracts = [
+      process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_CORE_ADDRESS,
+      process.env.NEXT_PUBLIC_WAGA_COFFEE_VIEWS_ADDRESS
+    ].filter(Boolean);
+    
+    // Management contracts (3 expected)
+    const managementContracts = [
+      process.env.NEXT_PUBLIC_WAGA_BATCH_MANAGER_ADDRESS,
+      process.env.NEXT_PUBLIC_WAGA_ZK_MANAGER_ADDRESS,
+      process.env.NEXT_PUBLIC_PRIVACY_LAYER_ADDRESS
+    ].filter(Boolean);
+    
+    // Financial contracts (3 expected)
+    const financialContracts = [
+      process.env.NEXT_PUBLIC_WAGA_TREASURY_ADDRESS,
+      process.env.NEXT_PUBLIC_WAGA_COFFEE_REDEMPTION_ADDRESS,
+      process.env.NEXT_PUBLIC_WAGA_CDP_INTEGRATION_ADDRESS
+    ].filter(Boolean);
+    
+    // Operational contracts (2 expected)
+    const operationalContracts = [
+      process.env.NEXT_PUBLIC_WAGA_PROOF_OF_RESERVE_ADDRESS,
+      process.env.NEXT_PUBLIC_WAGA_INVENTORY_MANAGER_ADDRESS
+    ].filter(Boolean);
+    
+    // ZK Verifier contracts (4 expected)
+    const zkVerifierContracts = [
+      process.env.NEXT_PUBLIC_CIRCOM_VERIFIER_ADDRESS,
+      process.env.NEXT_PUBLIC_PRICE_VERIFIER_ADDRESS,
+      process.env.NEXT_PUBLIC_QUALITY_VERIFIER_ADDRESS,
+      process.env.NEXT_PUBLIC_SUPPLY_CHAIN_VERIFIER_ADDRESS
+    ].filter(Boolean);
+    
+    const details = {
+      core: coreContracts.length,
+      management: managementContracts.length,
+      financial: financialContracts.length,
+      operational: operationalContracts.length,
+      zkVerifiers: zkVerifierContracts.length,
+      total: coreContracts.length + managementContracts.length + financialContracts.length + operationalContracts.length + zkVerifierContracts.length
+    };
+    
+    // Debug logging to see what's missing
+    if (typeof window !== 'undefined') {
+      console.log('Contract validation details:', {
+        core: { expected: 2, found: coreContracts.length, contracts: coreContracts },
+        management: { expected: 3, found: managementContracts.length, contracts: managementContracts },
+        financial: { expected: 3, found: financialContracts.length, contracts: financialContracts },
+        operational: { expected: 2, found: operationalContracts.length, contracts: operationalContracts },
+        zkVerifiers: { expected: 4, found: zkVerifierContracts.length, contracts: zkVerifierContracts },
+        total: `${details.total}/14`
+      });
+    }
+    
+    const isValid = details.total >= 14; // All 14 core contracts expected
+    
+    return { isValid, details };
+  };
+
   useEffect(() => {
-    const checkEnvironment = async () => {
+  const checkEnvironment = async () => {
+    try {
+      // Check IPFS status
+      const ipfsResponse = await fetch('/api/debug/pinata');
+      if (!ipfsResponse.ok) {
+        throw new Error(`IPFS check failed: ${ipfsResponse.status}`);
+      }
+      const ipfsData = await ipfsResponse.json();
+      setStatus(ipfsData);
+
+      // Check wallet network if available
+      let walletChainId: number | undefined;
+      let isCorrectNetwork = false;
+      
       try {
-        // Check IPFS status
-        const ipfsResponse = await fetch('/api/debug/pinata');
-        if (!ipfsResponse.ok) {
-          throw new Error(`IPFS check failed: ${ipfsResponse.status}`);
+        if (typeof window !== 'undefined' && window.ethereum) {
+          const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+          walletChainId = parseInt(chainId, 16);
+          isCorrectNetwork = walletChainId === 84532; // Base Sepolia chain ID
         }
-        const ipfsData = await ipfsResponse.json();
-        setStatus(ipfsData);
+      } catch (walletError) {
+        console.warn('Could not check wallet network:', walletError);
+      }
 
-        // Check all services status
-        const servicesStatus: ServiceStatus = {
-          ipfs: {
-            connected: ipfsData.environment.hasJWT,
-            authenticated: ipfsData.pinataAuth?.authenticated || false,
-            gateway: ipfsData.gatewayAccess?.ok || false
-          },
-          blockchain: {
-            connected: !!(process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS),
-            network: 'Base Sepolia',
-            contracts: !!(process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS && 
-                         process.env.NEXT_PUBLIC_WAGA_PROOF_OF_RESERVE_ADDRESS)
-          },
-          database: {
-            connected: false,
-            synced: false,
-            tables: 0
-          },
-          chainlink: {
-            available: !!(process.env.NEXT_PUBLIC_CHAINLINK_FUNCTIONS_ROUTER),
-            subscriptionActive: !!(process.env.NEXT_PUBLIC_CHAINLINK_SUBSCRIPTION_ID)
-          }
-        };
-
-        // Test database connection
+      // Check all services status
+      const contractValidation = validateContractDeployment();
+      const servicesStatus: ServiceStatus = {
+        ipfs: {
+          connected: ipfsData.environment.hasJWT,
+          authenticated: ipfsData.pinataAuth?.authenticated || false,
+          gateway: ipfsData.gatewayAccess?.ok || false
+        },
+        blockchain: {
+          connected: !!(process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_CORE_ADDRESS),
+          network: 'Base Sepolia',
+          contracts: contractValidation.isValid,
+          contractDetails: contractValidation.details,
+          networkValid: isCorrectNetwork,
+          chainId: walletChainId
+        },
+        database: {
+          connected: false,
+          synced: false,
+          tables: 0
+        },
+        chainlink: {
+          available: !!(process.env.NEXT_PUBLIC_CHAINLINK_DON_ID),
+          subscriptionActive: !!(process.env.NEXT_PUBLIC_CHAINLINK_SUBSCRIPTION_ID)
+        }
+      };        // Test database connection
         try {
           const dbResponse = await fetch('/api/test-db');
           if (dbResponse.ok) {
@@ -198,22 +284,24 @@ export default function EnvironmentStatus() {
               </div>
               <div>
                 <h4 className="text-gray-900 font-medium">IPFS Storage</h4>
-                <p className="text-gray-500 text-xs">Pinata Gateway</p>
+                <p className="text-gray-500 text-xs">Pinata Dedicated Gateway</p>
               </div>
             </div>
             <div className={`w-3 h-3 rounded-full ${
-              serviceStatus.ipfs.connected && serviceStatus.ipfs.authenticated
+              serviceStatus.ipfs.connected && serviceStatus.ipfs.authenticated && serviceStatus.ipfs.gateway
                 ? 'bg-green-500 shadow-green-500/50 shadow-sm' 
+                : serviceStatus.ipfs.connected
+                ? 'bg-yellow-500 shadow-yellow-500/50 shadow-sm'
                 : 'bg-red-500 shadow-red-500/50 shadow-sm'
             }`} />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">Connection</span>
+              <span className="text-gray-600">JWT Token</span>
               <span className={`font-medium ${
                 serviceStatus.ipfs.connected ? 'text-green-700' : 'text-red-700'
               }`}>
-                {serviceStatus.ipfs.connected ? 'Active' : 'Disconnected'}
+                {serviceStatus.ipfs.connected ? 'Present' : 'Missing'}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
@@ -224,6 +312,19 @@ export default function EnvironmentStatus() {
                 {serviceStatus.ipfs.authenticated ? 'Verified' : 'Failed'}
               </span>
             </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Gateway</span>
+              <span className={`font-medium ${
+                serviceStatus.ipfs.gateway ? 'text-green-700' : 'text-red-700'
+              }`}>
+                {serviceStatus.ipfs.gateway ? 'Accessible' : 'Offline'}
+              </span>
+            </div>
+            {status?.environment?.gatewayUrl && (
+              <div className="text-xs text-gray-500 mt-2">
+                Gateway: {status.environment.gatewayUrl}
+              </div>
+            )}
           </div>
         </div>
 
@@ -236,32 +337,69 @@ export default function EnvironmentStatus() {
               </div>
               <div>
                 <h4 className="text-gray-900 font-medium">Blockchain</h4>
-                <p className="text-gray-500 text-xs">{serviceStatus.blockchain.network}</p>
+                <p className="text-gray-500 text-xs">{serviceStatus.blockchain.network} (84532)</p>
               </div>
             </div>
             <div className={`w-3 h-3 rounded-full ${
-              serviceStatus.blockchain.connected && serviceStatus.blockchain.contracts
+              serviceStatus.blockchain.connected && serviceStatus.blockchain.contracts && serviceStatus.blockchain.networkValid !== false
                 ? 'bg-green-500 shadow-green-500/50 shadow-sm' 
+                : serviceStatus.blockchain.connected && serviceStatus.blockchain.networkValid === false
+                ? 'bg-yellow-500 shadow-yellow-500/50 shadow-sm'
                 : 'bg-red-500 shadow-red-500/50 shadow-sm'
             }`} />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">Network</span>
+              <span className="text-gray-600">Configuration</span>
               <span className={`font-medium ${
                 serviceStatus.blockchain.connected ? 'text-green-700' : 'text-red-700'
               }`}>
-                {serviceStatus.blockchain.connected ? 'Connected' : 'Offline'}
+                {serviceStatus.blockchain.connected ? 'Ready' : 'Missing'}
               </span>
             </div>
+            {serviceStatus.blockchain.chainId && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Wallet Network</span>
+                <span className={`font-medium ${
+                  serviceStatus.blockchain.networkValid ? 'text-green-700' : 'text-amber-700'
+                }`}>
+                  {serviceStatus.blockchain.networkValid ? 
+                    'Base Sepolia ✓' : 
+                    `Chain ${serviceStatus.blockchain.chainId} ⚠️`
+                  }
+                </span>
+              </div>
+            )}
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600">Contracts</span>
               <span className={`font-medium ${
                 serviceStatus.blockchain.contracts ? 'text-green-700' : 'text-red-700'
               }`}>
-                {serviceStatus.blockchain.contracts ? 'Deployed' : 'Missing'}
+                {serviceStatus.blockchain.contractDetails ? 
+                  `${serviceStatus.blockchain.contractDetails.total}/14 Deployed` : 
+                  'Not Deployed'
+                }
               </span>
             </div>
+            {serviceStatus.blockchain.contractDetails && (
+              <div className="text-xs text-gray-500 mt-2 space-y-1">
+                <div className="flex justify-between">
+                  <span>Core:</span> <span>{serviceStatus.blockchain.contractDetails.core}/2</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Management:</span> <span>{serviceStatus.blockchain.contractDetails.management}/3</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Financial:</span> <span>{serviceStatus.blockchain.contractDetails.financial}/3</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Operational:</span> <span>{serviceStatus.blockchain.contractDetails.operational}/2</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>ZK Verifiers:</span> <span>{serviceStatus.blockchain.contractDetails.zkVerifiers}/4</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -357,19 +495,31 @@ export default function EnvironmentStatus() {
               <h5 className="font-medium text-amber-900 mb-1">System Alerts</h5>
               <ul className="text-amber-800 text-sm space-y-1">
                 {!serviceStatus.ipfs.connected && (
-                  <li>• IPFS configuration required - check environment variables</li>
+                  <li>• IPFS configuration required - check Pinata JWT token</li>
                 )}
-                {!serviceStatus.blockchain.contracts && (
-                  <li>• Smart contracts not detected on current network</li>
+                {!serviceStatus.ipfs.authenticated && serviceStatus.ipfs.connected && (
+                  <li>• IPFS authentication failed - verify Pinata credentials</li>
+                )}
+                {!serviceStatus.blockchain.connected && (
+                  <li>• Core contract address missing - check NEXT_PUBLIC_WAGA_COFFEE_TOKEN_CORE_ADDRESS</li>
+                )}
+                {serviceStatus.blockchain.connected && !serviceStatus.blockchain.contracts && (
+                  <li>• Incomplete smart contract deployment - {serviceStatus.blockchain.contractDetails?.total || 0}/14 contracts found</li>
+                )}
+                {serviceStatus.blockchain.chainId && !serviceStatus.blockchain.networkValid && (
+                  <li>• Wrong network detected - switch to Base Sepolia (Chain ID: 84532)</li>
                 )}
                 {!serviceStatus.database.connected && (
-                  <li>• Database connection unavailable</li>
+                  <li>• Database connection unavailable - check NETLIFY_DATABASE_URL</li>
                 )}
                 {serviceStatus.database.connected && !serviceStatus.database.synced && (
                   <li>• Database schema incomplete ({serviceStatus.database.tables}/6 tables)</li>
                 )}
                 {!serviceStatus.chainlink.available && (
-                  <li>• Chainlink Functions not configured</li>
+                  <li>• Chainlink DON ID not configured - check NEXT_PUBLIC_CHAINLINK_DON_ID</li>
+                )}
+                {!serviceStatus.chainlink.subscriptionActive && (
+                  <li>• Chainlink subscription not configured - check NEXT_PUBLIC_CHAINLINK_SUBSCRIPTION_ID</li>
                 )}
               </ul>
             </div>
