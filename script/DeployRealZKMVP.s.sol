@@ -129,6 +129,7 @@ contract DeployRealZKMVP is Script {
         coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(zkManager));
         coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(proofOfReserve));
         coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), msg.sender);
+        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), address(coffeeToken)); // Coffee token needs to call batch manager
         coffeeToken.grantRole(coffeeToken.DISTRIBUTOR_ROLE(), msg.sender);
         coffeeToken.grantRole(coffeeToken.MINTER_ROLE(), address(proofOfReserve));
         coffeeToken.grantRole(coffeeToken.REDEMPTION_ROLE(), address(redemption));

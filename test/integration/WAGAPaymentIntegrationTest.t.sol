@@ -1,8 +1,8 @@
-import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
 import {Test, console} from "forge-std/Test.sol";
+import {DeployRealZKMVPForTesting} from "../../script/DeployRealZKMVPForTesting.s.sol";
 
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
 import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
@@ -11,10 +11,6 @@ import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
-import {MockFunctionsRouter} from "../mocks/MockFunctionsRouter.sol";
-import {MockFunctionsHelper} from "../mocks/MockFunctionsHelper.sol";
-import {MockFunctionsClient} from "../mocks/MockFunctionsClient.sol";
-import {MockPrivacyLayer} from "../mocks/MockPrivacyLayer.sol";
 
 contract WAGAPaymentIntegrationTest is Test {
     // Core contracts
@@ -25,12 +21,11 @@ contract WAGAPaymentIntegrationTest is Test {
     WAGACoffeeRedemption public redemption;
     WAGAInventoryManagerMVP public inventoryManager;
 
+    // Deployment contract
+    DeployRealZKMVPForTesting public deployer;
+
     // Mock contracts
     MockUSDC public mockUSDC;
-    MockFunctionsRouter public mockRouter;
-    MockFunctionsHelper public mockHelper;
-    MockFunctionsClient public mockClient;
-    MockPrivacyLayer public mockPrivacyLayer;
 
     // Test accounts
     address public deployerAdmin; // Will be set to test contract address
@@ -46,8 +41,8 @@ contract WAGAPaymentIntegrationTest is Test {
     uint256 public constant TOTAL_PAYMENT = PRICE_PER_UNIT * QUANTITY / 100; // Convert to USDC decimals
 
     function setUp() public {
-        // Deploy contracts directly for testing (this was working before)
-        deployContractsDirectly();
+        // Deploy contracts using the deployment script
+        deployContracts();
 
         // Setup roles and permissions for test accounts
         setupTestEnvironment();
@@ -56,13 +51,43 @@ contract WAGAPaymentIntegrationTest is Test {
         fundTestAccounts();
     }
 
+    function deployContracts() internal {
+        deployerAdmin = address(this);
+        deployer = new DeployRealZKMVPForTesting();
+        
+        // Run the deployment
+        (
+            coffeeToken,
+            batchManager,
+            zkManager,
+            ,  // proofOfReserve
+            inventoryManager,
+            redemption,
+            ,  // mockVerifier
+            ,  // privacyLayer
+               // helperConfig
+        ) = deployer.run();
+
+        console.log("Starting WAGA MVP Deployment with Coinbase Payment Integration...");
+        console.log("Deployment Complete!");
+        console.log("Coffee Token:", address(coffeeToken));
+        console.log("Redemption:", address(redemption));
+
+        // Get treasury from redemption contract
+        treasury = WAGATreasury(address(redemption.treasury()));
+        console.log("Treasury:", address(treasury));
+
+        // Create a separate MockUSDC for testing (the deployment uses a different USDC)
+        mockUSDC = new MockUSDC();
+    }
+
     function setupTestEnvironment() internal {
-        // Set test account references
-        deployerAdmin = address(this); // The test contract address
-
-        // Grant roles to test accounts
-        vm.startPrank(deployerAdmin);
-
+        // Use the default anvil account address which gets DEFAULT_ADMIN_ROLE from deployment
+        address deployer_address = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266; // Default anvil account
+        
+        // Grant roles using the deployer address which has DEFAULT_ADMIN_ROLE  
+        vm.startPrank(deployer_address);
+        
         // Grant roles to test accounts
         coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), admin);
         coffeeToken.grantRole(coffeeToken.DISTRIBUTOR_ROLE(), distributor);
@@ -71,52 +96,21 @@ contract WAGAPaymentIntegrationTest is Test {
         coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), admin);
         // Grant MINTER_ROLE to admin for testing token minting
         coffeeToken.grantRole(coffeeToken.MINTER_ROLE(), admin);
+        
+        // IMPORTANT: Grant PROCESSOR_ROLE to the coffee token contract itself
+        // This is needed because coffee token calls batch manager functions internally
+        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), address(coffeeToken));
 
         // Grant treasury roles
-        treasury.grantRole(treasury.ADMIN_ROLE(), admin);
+        treasury.grantRole(treasury.DEFAULT_ADMIN_ROLE(), admin);
         treasury.grantRole(treasury.PAYMENT_PROCESSOR_ROLE(), admin);
 
         // Set batch payment in treasury
         treasury.setBatchPayment(BATCH_ID, TOTAL_PAYMENT);
 
         vm.stopPrank();
-    }
-
-    function deployContractsDirectly() internal {
-        // Set deployerAdmin to the test contract address
-        deployerAdmin = address(this);
-
-        // Deploy mock USDC
-        mockUSDC = new MockUSDC();
-
-        // Deploy mock privacy layer
-        mockPrivacyLayer = new MockPrivacyLayer();
-
-        // Deploy core contracts with deployerAdmin as the deployer
-        vm.startPrank(deployerAdmin);
-
-        // Deploy coffee token
-        coffeeToken = new WAGACoffeeTokenCore("");
-
-        // Deploy treasury with USDC address
-        treasury = new WAGATreasury(address(mockUSDC));
-
-        // Deploy batch manager with mock privacy layer
-        batchManager = new WAGABatchManager(
-            address(coffeeToken),
-            address(mockPrivacyLayer)
-        );
-
-        // Deploy redemption
-        redemption = new WAGACoffeeRedemption(
-            address(coffeeToken),
-            address(treasury)
-        );
-
-        // Connect managers to token
-        coffeeToken.setManagerAddresses(address(batchManager), address(0)); // zkManager not needed
-
-        vm.stopPrank();
+        
+        console.log("WAGAPaymentIntegrationTest setup complete");
     }
 
     function fundTestAccounts() internal {
@@ -152,11 +146,14 @@ contract WAGAPaymentIntegrationTest is Test {
 
         // Check if roles are properly set up
         bool adminHasProcessorRole = coffeeToken.hasRole(coffeeToken.PROCESSOR_ROLE(), admin);
+        bool processorHasProcessorRole = coffeeToken.hasRole(coffeeToken.PROCESSOR_ROLE(), processor);
         bool deployerHasAdminRole = coffeeToken.hasRole(coffeeToken.DEFAULT_ADMIN_ROLE(), deployerAdmin);
 
         console.log("Admin address:", admin);
+        console.log("Processor address:", processor);
         console.log("DeployerAdmin address:", deployerAdmin);
         console.log("Admin has PROCESSOR_ROLE:", adminHasProcessorRole);
+        console.log("Processor has PROCESSOR_ROLE:", processorHasProcessorRole);
         console.log("DeployerAdmin has DEFAULT_ADMIN_ROLE:", deployerHasAdminRole);
 
         // Check BatchManager's coffee token reference

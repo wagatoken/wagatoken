@@ -104,9 +104,6 @@ contract WAGAChainlinkIntegration is Test {
         // Create a batch as processor
         vm.startPrank(PROCESSOR_USER);
 
-        // Create a batch as processor
-        vm.startPrank(PROCESSOR_USER);
-
         testBatchId = coffeeToken.createBatch(
             block.timestamp,         // productionDate
             block.timestamp + 365 days, // expiryDate
