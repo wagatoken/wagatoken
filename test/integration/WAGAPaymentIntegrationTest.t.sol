@@ -79,6 +79,11 @@ contract WAGAPaymentIntegrationTest is Test {
 
         // Create a separate MockUSDC for testing (the deployment uses a different USDC)
         mockUSDC = new MockUSDC();
+        
+        // Update treasury to use our test MockUSDC instead of the hardcoded address
+        address deployer_address = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266; // Default anvil account
+        vm.prank(deployer_address);
+        treasury.updateUSDCAddress(address(mockUSDC));
     }
 
     function setupTestEnvironment() internal {
@@ -102,7 +107,7 @@ contract WAGAPaymentIntegrationTest is Test {
         coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), address(coffeeToken));
 
         // Grant treasury roles
-        treasury.grantRole(treasury.DEFAULT_ADMIN_ROLE(), admin);
+        treasury.grantRole(treasury.ADMIN_ROLE(), admin);
         treasury.grantRole(treasury.PAYMENT_PROCESSOR_ROLE(), admin);
 
         // Set batch payment in treasury
@@ -209,7 +214,7 @@ contract WAGAPaymentIntegrationTest is Test {
         vm.stopPrank();
 
         // Set up batch payment for this specific batch
-        vm.prank(deployerAdmin);
+        vm.prank(admin);
         treasury.setBatchPayment(batchId, TOTAL_PAYMENT);
         console.log("Set batch payment for batch:", batchId);
 
@@ -298,7 +303,7 @@ contract WAGAPaymentIntegrationTest is Test {
         vm.stopPrank();
 
         // Set up batch payment for this specific batch
-        vm.prank(deployerAdmin);
+        vm.prank(admin);
         treasury.setBatchPayment(batchId, TOTAL_PAYMENT);
 
         // Step 2: Try to pay without sufficient allowance
@@ -330,7 +335,7 @@ contract WAGAPaymentIntegrationTest is Test {
         vm.stopPrank();
 
         // Set up batch payment for this specific batch
-        vm.prank(deployerAdmin);
+        vm.prank(admin);
         treasury.setBatchPayment(batchId, TOTAL_PAYMENT);
 
         // Make payment
@@ -378,6 +383,7 @@ contract WAGAPaymentIntegrationTest is Test {
         // Step 3: Request verification (simulated)
 
         // Step 4: Simulate successful verification
+        vm.stopPrank(); // Stop processor prank before simulation
         simulateVerificationSuccess(batchId);
 
         // Step 5: Try to request redemption without payment

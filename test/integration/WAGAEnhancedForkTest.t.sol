@@ -309,8 +309,6 @@ contract WAGAEnhancedForkTest is Test {
         
         // Test role-based access control
         vm.prank(PROCESSOR_USER);
-        // Test role-based access control
-        vm.prank(PROCESSOR_USER);
         uint256 batchId = coffeeToken.createBatch(
             block.timestamp,         // productionDate
             block.timestamp + 365 days, // expiryDate
@@ -328,11 +326,14 @@ contract WAGAEnhancedForkTest is Test {
         console.log("Role-based access control verified on Base Sepolia fork");
         
         // Test contract roles
-        // InventoryManager needs DEFAULT_ADMIN_ROLE to call batch manager functions
-        bytes32 adminRole = coffeeToken.DEFAULT_ADMIN_ROLE();
+        // InventoryManager needs INVENTORY_MANAGER_ROLE for inventory verification
+        bytes32 inventoryRole = coffeeToken.INVENTORY_MANAGER_ROLE();
+        bytes32 verifierRole = coffeeToken.VERIFIER_ROLE();
+        bytes32 minterRole = coffeeToken.MINTER_ROLE();
         
-        assertTrue(coffeeToken.hasRole(adminRole, address(inventoryManager)), "InventoryManager should have DEFAULT_ADMIN_ROLE");
-        assertTrue(coffeeToken.hasRole(adminRole, address(proofOfReserve)), "ProofOfReserve should have DEFAULT_ADMIN_ROLE");
+        assertTrue(coffeeToken.hasRole(inventoryRole, address(inventoryManager)), "InventoryManager should have INVENTORY_MANAGER_ROLE");
+        assertTrue(coffeeToken.hasRole(verifierRole, address(proofOfReserve)), "ProofOfReserve should have VERIFIER_ROLE");
+        assertTrue(coffeeToken.hasRole(minterRole, address(proofOfReserve)), "ProofOfReserve should have MINTER_ROLE");
         
         console.log("Contract role assignments verified on Base Sepolia fork");
     }
@@ -392,8 +393,6 @@ contract WAGAEnhancedForkTest is Test {
     function testZKProofWorkflowOnFork() public {
         console.log("=== Testing ZK Proof Workflow on Fork ===");
         
-        // Create a batch
-        vm.prank(PROCESSOR_USER);
         // Create a batch
         vm.prank(PROCESSOR_USER);
         uint256 batchId = coffeeToken.createBatch(

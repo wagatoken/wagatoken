@@ -10,6 +10,8 @@ import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 import {MockCircomVerifier} from "../../src/MockCircomVerifier.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
+import {DeployRealZKMVPForTesting} from "../../script/DeployRealZKMVPForTesting.s.sol";
+import {HelperConfig} from "../../script/HelperConfig.s.sol";
 
 /**
  * @title StandardizedWorkflowTest
@@ -25,46 +27,67 @@ contract StandardizedWorkflowTest is Test {
     MockCircomVerifier public mockVerifier;
     MockUSDC public mockUSDC;
 
-    address public admin = address(0x1);
-    address public processor = address(0x2);
+    // Use addresses from the deployment script
+    address public admin;
+    address public processor;
     address public consumer = address(0x3);
 
     function setUp() public {
-        vm.startPrank(admin);
+        console.log("Starting WAGA MVP Deployment for StandardizedWorkflowTest...");
+        
+        // Deploy using the deployment script
+        DeployRealZKMVPForTesting deployer = new DeployRealZKMVPForTesting();
+        (
+            WAGACoffeeTokenCore deployedCoffeeToken,
+            WAGABatchManager deployedBatchManager,
+            WAGAZKManager deployedZKManager,
+            ,  // WAGAProofOfReserve - not needed for this test
+            ,  // WAGAInventoryManagerMVP - not needed for this test
+            WAGACoffeeRedemption deployedRedemption,
+            MockCircomVerifier deployedMockVerifier,
+            PrivacyLayer deployedPrivacyLayer,
+            HelperConfig helperConfig
+        ) = deployer.run();
 
-        // Deploy mock USDC
+        // Get the network config to access admin and processor addresses
+        HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
+
+        // Assign deployed contracts to test variables
+        coffeeToken = deployedCoffeeToken;
+        batchManager = deployedBatchManager;
+        zkManager = deployedZKManager;
+        redemption = deployedRedemption;
+        privacyLayer = deployedPrivacyLayer;
+        mockVerifier = deployedMockVerifier;
+        
+        // For testing, use default accounts since this is local anvil
+        admin = vm.addr(networkConfig.deployerKey);
+        processor = admin;  // Use same account for simplicity in unit tests
+
+        console.log("Deployment Complete!");
+        console.log("Coffee Token:", address(coffeeToken));
+        console.log("Redemption:", address(redemption));
+        
+        // Create and configure MockUSDC for testing
         mockUSDC = new MockUSDC();
-
-        // Deploy core coffee token first
-        coffeeToken = new WAGACoffeeTokenCore("https://example.com/");
-
-        // Deploy privacy layer
-        privacyLayer = new PrivacyLayer(address(coffeeToken));
-
-        // Deploy batch manager
-        batchManager = new WAGABatchManager(address(coffeeToken), address(privacyLayer));
-
-        // Deploy mock verifier
-        mockVerifier = new MockCircomVerifier();
-
-        // Deploy ZK manager
-        zkManager = new WAGAZKManager(address(coffeeToken), address(mockVerifier));
-
-        // Deploy treasury
+        
+        // Deploy treasury with mockUSDC (deployed by this test contract)
         treasury = new WAGATreasury(address(mockUSDC));
 
-        // Deploy redemption contract
-        redemption = new WAGACoffeeRedemption(address(coffeeToken), address(treasury));
-
-        // Set up coffee token with managers
-        coffeeToken.setManagerAddresses(address(batchManager), address(zkManager));
-
-        // Grant roles
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), processor);
-        coffeeToken.grantRole(keccak256("MINTER_ROLE"), admin);
-        coffeeToken.grantRole(keccak256("REDEMPTION_ROLE"), address(redemption));
-
+        console.log("Treasury:", address(treasury));
+        
+        // Grant additional roles for testing
+        vm.startPrank(admin);
+        // Grant PROCESSOR_ROLE to processor account for testing
+        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), processor);
+        // Grant MINTER_ROLE to admin for minting tests
+        coffeeToken.grantRole(coffeeToken.MINTER_ROLE(), admin);
         vm.stopPrank();
+        
+        // Grant ADMIN_ROLE to admin on treasury (using test contract as deployer)
+        treasury.grantRole(treasury.ADMIN_ROLE(), admin);
+        
+        console.log("StandardizedWorkflowTest setup complete");
     }
 
     /**
@@ -106,6 +129,9 @@ contract StandardizedWorkflowTest is Test {
             ,
         ) = coffeeToken.getBatchInfo(batchId);
 
+        // Verify timestamps are reasonable (should be current block.timestamp)
+        assertEq(productionDate, block.timestamp, "Production date should match");
+        assertEq(expiryDate, block.timestamp + 365 days, "Expiry date should match");
         assertEq(quantity, 1000, "Quantity should match");
         assertEq(pricePerUnit, 50 * 1e18, "Price should match");
         assertEq(packagingInfo, "250g", "Packaging should match");
@@ -218,7 +244,7 @@ contract StandardizedWorkflowTest is Test {
 
         // Try redemption without payment - should fail
         vm.prank(consumer);
-        vm.expectRevert("Treasury contract not configured");
+        vm.expectRevert("WAGACoffeeRedemption__BatchNotVerified_requestRedemption()");
         redemption.requestRedemption(batchId, 50);
 
         // This test shows the mandatory payment verification is working
