@@ -18,6 +18,8 @@ const INVENTORY_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_WAGA_INVENTORY_MANAGER
 const REDEMPTION_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_WAGA_REDEMPTION_CONTRACT_ADDRESS!;
 const TREASURY_ADDRESS = process.env.NEXT_PUBLIC_WAGA_TREASURY_ADDRESS!;
 const CDP_INTEGRATION_ADDRESS = process.env.NEXT_PUBLIC_WAGA_CDP_INTEGRATION_ADDRESS!;
+const ACCESS_CONTROL_ADDRESS = process.env.NEXT_PUBLIC_WAGA_ACCESS_CONTROL_ADDRESS!;
+const CONFIG_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_WAGA_CONFIG_MANAGER_ADDRESS!;
 
 // ZK Contract addresses
 const ZK_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_WAGA_ZK_MANAGER_ADDRESS!;
@@ -77,6 +79,13 @@ export const COFFEE_TOKEN_ABI = [
   "function MINTER_ROLE() external view returns (bytes32)",
   "function REDEMPTION_ROLE() external view returns (bytes32)",
   "function FULFILLER_ROLE() external view returns (bytes32)",
+  "function PROCESSOR_ROLE() external view returns (bytes32)",
+  "function COOPERATIVE_ROLE() external view returns (bytes32)",
+  "function DISTRIBUTOR_ROLE() external view returns (bytes32)",
+  "function grantRole(bytes32 role, address account) external",
+  "function revokeRole(bytes32 role, address account) external",
+  "function getUserAccessLevel(address account) external view returns (string)",
+  "function canCreateBatches(address account) external view returns (bool)",
   "event BatchCreated(uint256 indexed batchId, string ipfsUri)",
   "event BatchIPFSUpdated(uint256 indexed batchId, string newIpfsUri)",
   "event TokensMinted(address indexed to, uint256 indexed batchId, uint256 amount)",
@@ -805,6 +814,19 @@ export async function getUserRoles(userAddress?: string): Promise<{
   isMinter: boolean;
   isRedemption: boolean;
   isFulfiller: boolean;
+  isProcessor: boolean;
+  isCooperative: boolean;
+  isDistributor: boolean;
+  isZkVerifier: boolean;
+  ADMIN_ROLE?: boolean;
+  VERIFIER_ROLE?: boolean;
+  MINTER_ROLE?: boolean;
+  REDEMPTION_ROLE?: boolean;
+  FULFILLER_ROLE?: boolean;
+  PROCESSOR_ROLE?: boolean;
+  COOPERATIVE_ROLE?: boolean;
+  DISTRIBUTOR_ROLE?: boolean;
+  ZK_VERIFIER_ROLE?: boolean;
 }> {
   try {
     const signer = await getSigner();
@@ -812,27 +834,92 @@ export async function getUserRoles(userAddress?: string): Promise<{
 
     const address = userAddress || await signer.getAddress();
     
-    const [adminRole, verifierRole, minterRole, redemptionRole, fulfillerRole] = await Promise.all([
+    // Get all role hashes
+    const [
+      adminRole, 
+      verifierRole, 
+      minterRole, 
+      redemptionRole, 
+      fulfillerRole,
+      processorRole,
+      cooperativeRole,
+      distributorRole
+    ] = await Promise.all([
       coffeeTokenContract.ADMIN_ROLE(),
       coffeeTokenContract.VERIFIER_ROLE(),
       coffeeTokenContract.MINTER_ROLE(),
       coffeeTokenContract.REDEMPTION_ROLE(),
-      coffeeTokenContract.FULFILLER_ROLE()
+      coffeeTokenContract.FULFILLER_ROLE(),
+      coffeeTokenContract.PROCESSOR_ROLE(),
+      coffeeTokenContract.COOPERATIVE_ROLE(),
+      coffeeTokenContract.DISTRIBUTOR_ROLE()
     ]);
 
-    const [isAdmin, isVerifier, isMinter, isRedemption, isFulfiller] = await Promise.all([
+    // Check all roles
+    const [
+      isAdmin, 
+      isVerifier, 
+      isMinter, 
+      isRedemption, 
+      isFulfiller,
+      isProcessor,
+      isCooperative,
+      isDistributor
+    ] = await Promise.all([
       coffeeTokenContract.hasRole(adminRole, address),
       coffeeTokenContract.hasRole(verifierRole, address),
       coffeeTokenContract.hasRole(minterRole, address),
       coffeeTokenContract.hasRole(redemptionRole, address),
-      coffeeTokenContract.hasRole(fulfillerRole, address)
+      coffeeTokenContract.hasRole(fulfillerRole, address),
+      coffeeTokenContract.hasRole(processorRole, address),
+      coffeeTokenContract.hasRole(cooperativeRole, address),
+      coffeeTokenContract.hasRole(distributorRole, address)
     ]);
 
-    return { isAdmin, isVerifier, isMinter, isRedemption, isFulfiller };
+    return { 
+      isAdmin, 
+      isVerifier, 
+      isMinter, 
+      isRedemption, 
+      isFulfiller,
+      isProcessor,
+      isCooperative,
+      isDistributor,
+      isZkVerifier: false, // ZK verifier role may not be available in all contracts
+      // Also provide role keys for easier access
+      ADMIN_ROLE: isAdmin,
+      VERIFIER_ROLE: isVerifier,
+      MINTER_ROLE: isMinter,
+      REDEMPTION_ROLE: isRedemption,
+      FULFILLER_ROLE: isFulfiller,
+      PROCESSOR_ROLE: isProcessor,
+      COOPERATIVE_ROLE: isCooperative,
+      DISTRIBUTOR_ROLE: isDistributor,
+      ZK_VERIFIER_ROLE: false
+    };
 
   } catch (error) {
     console.error('Error checking user roles:', error);
-    return { isAdmin: false, isVerifier: false, isMinter: false, isRedemption: false, isFulfiller: false };
+    return { 
+      isAdmin: false, 
+      isVerifier: false, 
+      isMinter: false, 
+      isRedemption: false, 
+      isFulfiller: false,
+      isProcessor: false,
+      isCooperative: false,
+      isDistributor: false,
+      isZkVerifier: false,
+      ADMIN_ROLE: false,
+      VERIFIER_ROLE: false,
+      MINTER_ROLE: false,
+      REDEMPTION_ROLE: false,
+      FULFILLER_ROLE: false,
+      PROCESSOR_ROLE: false,
+      COOPERATIVE_ROLE: false,
+      DISTRIBUTOR_ROLE: false,
+      ZK_VERIFIER_ROLE: false
+    };
   }
 }
 
@@ -1110,5 +1197,409 @@ export async function getBatchUnitWeight(batchId: string): Promise<string> {
     console.error('Error getting batch unit weight:', error);
     // Return empty string if error
     return '';
+  }
+}
+
+/**
+ * Generate ZK proof hash (placeholder implementation)
+ * In production, this would integrate with actual ZK circuit compilation
+ */
+async function generateZKProofHash(
+  proofType: 'pricing' | 'quality' | 'supplyChain',
+  batchData: any,
+  sensitiveData: any
+): Promise<string> {
+  try {
+    // Placeholder implementation - generates deterministic hash based on data
+    const proofInput = JSON.stringify({
+      type: proofType,
+      batchData: batchData,
+      sensitiveData: sensitiveData,
+      timestamp: Date.now()
+    });
+    
+    // In production, this would:
+    // 1. Compile the appropriate circom circuit (PricePrivacyCircuit.circom, etc.)
+    // 2. Generate witness with the sensitive data
+    // 3. Generate actual ZK proof
+    // 4. Return the proof hash
+    
+    // For now, create a deterministic hash
+    const encoder = new TextEncoder();
+    const data = encoder.encode(proofInput);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    return `zk_proof_${proofType}_${hashHex.substring(0, 16)}`;
+  } catch (error) {
+    console.error(`Error generating ZK proof hash for ${proofType}:`, error);
+    throw new Error(`Failed to generate ZK proof hash: ${error}`);
+  }
+}
+
+/**
+ * Generate encrypted data hash for sensitive information
+ */
+async function generateEncryptedDataHash(sensitiveData: any): Promise<string> {
+  try {
+    // In production, this would:
+    // 1. Encrypt the sensitive data using AES or similar
+    // 2. Store encrypted data securely (IPFS private, secure storage)
+    // 3. Return hash of encrypted data
+    
+    const dataToEncrypt = JSON.stringify(sensitiveData);
+    const encoder = new TextEncoder();
+    const data = encoder.encode(dataToEncrypt);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    return `encrypted_${hashHex.substring(0, 16)}`;
+  } catch (error) {
+    console.error('Error generating encrypted data hash:', error);
+    throw new Error(`Failed to generate encrypted data hash: ${error}`);
+  }
+}
+
+/**
+ * Complete privacy-enhanced batch creation workflow
+ * Integrates standard blockchain-first workflow with privacy features
+ */
+export async function createPrivacyEnhancedBatch(
+  batchData: ExtendedBatchCreationData,
+  privacyConfig: {
+    pricingPrivate: boolean;
+    qualityPrivate: boolean;
+    supplyChainPrivate: boolean;
+    sensitiveData: {
+      pricing?: any;
+      quality?: any;
+      supplyChain?: any;
+    };
+  }
+): Promise<{
+  batchId: string;
+  ipfsUri: string;
+  metadataHash: string;
+  transactionHash: string;
+  qrCodeDataUrl: string;
+  verificationQR: string;
+  privacyHashes: {
+    pricingProofHash?: string;
+    qualityProofHash?: string;
+    supplyChainProofHash?: string;
+    encryptedDataHash: string;
+  };
+}> {
+  try {
+    console.log('🔐 Starting privacy-enhanced batch creation workflow...');
+
+    // Step 1: Create standard batch using blockchain-first workflow
+    console.log('📦 Creating standard batch with blockchain-first workflow...');
+    const standardResult = await createBatchBlockchainFirst(batchData);
+
+    // Step 2: Generate ZK proof hashes for enabled privacy features
+    console.log('🔒 Generating ZK proof hashes...');
+    const privacyHashes: {
+      pricingProofHash?: string;
+      qualityProofHash?: string;
+      supplyChainProofHash?: string;
+      encryptedDataHash: string;
+    } = {
+      encryptedDataHash: await generateEncryptedDataHash(privacyConfig.sensitiveData)
+    };
+
+    if (privacyConfig.pricingPrivate && privacyConfig.sensitiveData.pricing) {
+      privacyHashes.pricingProofHash = await generateZKProofHash(
+        'pricing',
+        batchData,
+        privacyConfig.sensitiveData.pricing
+      );
+    }
+
+    if (privacyConfig.qualityPrivate && privacyConfig.sensitiveData.quality) {
+      privacyHashes.qualityProofHash = await generateZKProofHash(
+        'quality',
+        batchData,
+        privacyConfig.sensitiveData.quality
+      );
+    }
+
+    if (privacyConfig.supplyChainPrivate && privacyConfig.sensitiveData.supplyChain) {
+      privacyHashes.supplyChainProofHash = await generateZKProofHash(
+        'supplyChain',
+        batchData,
+        privacyConfig.sensitiveData.supplyChain
+      );
+    }
+
+    // Step 3: Set privacy configuration on blockchain
+    console.log('🛡️ Configuring privacy settings on blockchain...');
+    try {
+      const signer = await getSigner();
+      const privacyLayerContract = getContract(PRIVACY_LAYER_ADDRESS, PRIVACY_LAYER_ABI, signer);
+
+      // Create privacy config for the batch
+      await privacyLayerContract.createPrivacyConfig(
+        standardResult.batchId,
+        await signer.getAddress()
+      );
+
+      // Set privacy levels (0 = public, 1 = selective, 2 = private)
+      const pricingLevel = privacyConfig.pricingPrivate ? 2 : 0;
+      const qualityLevel = privacyConfig.qualityPrivate ? 2 : 0;
+      const supplyChainLevel = privacyConfig.supplyChainPrivate ? 2 : 0;
+
+      await privacyLayerContract.setBatchPrivacy(
+        standardResult.batchId,
+        pricingLevel,
+        qualityLevel,
+        supplyChainLevel
+      );
+
+      console.log('✅ Privacy configuration set successfully');
+    } catch (privacyError) {
+      console.warn('⚠️ Privacy configuration failed (non-blocking):', privacyError);
+      // Privacy setup failure doesn't block the main workflow
+    }
+
+    // Step 4: Enhanced database sync with privacy data
+    console.log('💾 Syncing privacy-enhanced batch to database...');
+    try {
+      const { syncBatchToDatabase } = await import('./databaseSync');
+      const syncResult = await syncBatchToDatabase({
+        batchId: standardResult.batchId,
+        transactionHash: standardResult.transactionHash,
+        ipfsUri: standardResult.ipfsUri,
+        metadataHash: standardResult.metadataHash,
+        batchData
+      });
+      
+      if (syncResult.success) {
+        console.log('💾 Privacy-enhanced database sync: ✅ completed');
+      } else {
+        console.warn('💾 Privacy-enhanced database sync: ❌ failed (non-blocking)', syncResult.error);
+      }
+    } catch (dbError) {
+      console.warn('💾 Privacy-enhanced database sync: ❌ failed (non-blocking)', dbError);
+    }
+
+    console.log('🎉 Privacy-enhanced batch creation completed successfully!');
+
+    return {
+      ...standardResult,
+      privacyHashes
+    };
+
+  } catch (error) {
+    console.error('❌ Error in privacy-enhanced batch creation workflow:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    throw new Error(`Privacy-enhanced batch creation failed: ${errorMessage}`);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            ROLE MANAGEMENT                                 */
+/* -------------------------------------------------------------------------- */
+
+export async function grantUserRole(userAddress: string, roleName: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
+  try {
+    const signer = await getSigner();
+    const accessControlContract = new ethers.Contract(ACCESS_CONTROL_ADDRESS, COFFEE_TOKEN_ABI, signer);
+    
+    // Get the role hash
+    let roleHash: string;
+    switch (roleName.toUpperCase()) {
+      case 'ADMIN':
+        roleHash = await accessControlContract.ADMIN_ROLE();
+        break;
+      case 'PROCESSOR':
+        roleHash = await accessControlContract.PROCESSOR_ROLE();
+        break;
+      case 'COOPERATIVE':
+        roleHash = await accessControlContract.COOPERATIVE_ROLE();
+        break;
+      case 'DISTRIBUTOR':
+        roleHash = await accessControlContract.DISTRIBUTOR_ROLE();
+        break;
+      case 'VERIFIER':
+        roleHash = await accessControlContract.VERIFIER_ROLE();
+        break;
+      case 'MINTER':
+        roleHash = await accessControlContract.MINTER_ROLE();
+        break;
+      case 'REDEMPTION':
+        roleHash = await accessControlContract.REDEMPTION_ROLE();
+        break;
+      case 'FULFILLER':
+        roleHash = await accessControlContract.FULFILLER_ROLE();
+        break;
+      default:
+        throw new Error(`Unknown role: ${roleName}`);
+    }
+
+    // Check if current user has admin role
+    const adminRole = await accessControlContract.ADMIN_ROLE();
+    const hasAdminRole = await accessControlContract.hasRole(adminRole, await signer.getAddress());
+    
+    if (!hasAdminRole) {
+      throw new Error('Only admins can grant roles');
+    }
+
+    // Grant the role
+    const tx = await accessControlContract.grantRole(roleHash, userAddress);
+    await tx.wait();
+
+    return {
+      success: true,
+      txHash: tx.hash
+    };
+
+  } catch (error) {
+    console.error('Error granting role:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+export async function revokeUserRole(userAddress: string, roleName: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
+  try {
+    const signer = await getSigner();
+    const accessControlContract = new ethers.Contract(ACCESS_CONTROL_ADDRESS, COFFEE_TOKEN_ABI, signer);
+    
+    // Get the role hash
+    let roleHash: string;
+    switch (roleName.toUpperCase()) {
+      case 'ADMIN':
+        roleHash = await accessControlContract.ADMIN_ROLE();
+        break;
+      case 'PROCESSOR':
+        roleHash = await accessControlContract.PROCESSOR_ROLE();
+        break;
+      case 'COOPERATIVE':
+        roleHash = await accessControlContract.COOPERATIVE_ROLE();
+        break;
+      case 'DISTRIBUTOR':
+        roleHash = await accessControlContract.DISTRIBUTOR_ROLE();
+        break;
+      case 'VERIFIER':
+        roleHash = await accessControlContract.VERIFIER_ROLE();
+        break;
+      case 'MINTER':
+        roleHash = await accessControlContract.MINTER_ROLE();
+        break;
+      case 'REDEMPTION':
+        roleHash = await accessControlContract.REDEMPTION_ROLE();
+        break;
+      case 'FULFILLER':
+        roleHash = await accessControlContract.FULFILLER_ROLE();
+        break;
+      default:
+        throw new Error(`Unknown role: ${roleName}`);
+    }
+
+    // Check if current user has admin role
+    const adminRole = await accessControlContract.ADMIN_ROLE();
+    const hasAdminRole = await accessControlContract.hasRole(adminRole, await signer.getAddress());
+    
+    if (!hasAdminRole) {
+      throw new Error('Only admins can revoke roles');
+    }
+
+    // Revoke the role
+    const tx = await accessControlContract.revokeRole(roleHash, userAddress);
+    await tx.wait();
+
+    return {
+      success: true,
+      txHash: tx.hash
+    };
+
+  } catch (error) {
+    console.error('Error revoking role:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+export async function checkUserRole(userAddress: string, roleName: string): Promise<boolean> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const accessControlContract = new ethers.Contract(ACCESS_CONTROL_ADDRESS, COFFEE_TOKEN_ABI, provider);
+    
+    // Get the role hash
+    let roleHash: string;
+    switch (roleName.toUpperCase()) {
+      case 'ADMIN':
+        roleHash = await accessControlContract.ADMIN_ROLE();
+        break;
+      case 'PROCESSOR':
+        roleHash = await accessControlContract.PROCESSOR_ROLE();
+        break;
+      case 'COOPERATIVE':
+        roleHash = await accessControlContract.COOPERATIVE_ROLE();
+        break;
+      case 'DISTRIBUTOR':
+        roleHash = await accessControlContract.DISTRIBUTOR_ROLE();
+        break;
+      case 'VERIFIER':
+        roleHash = await accessControlContract.VERIFIER_ROLE();
+        break;
+      case 'MINTER':
+        roleHash = await accessControlContract.MINTER_ROLE();
+        break;
+      case 'REDEMPTION':
+        roleHash = await accessControlContract.REDEMPTION_ROLE();
+        break;
+      case 'FULFILLER':
+        roleHash = await accessControlContract.FULFILLER_ROLE();
+        break;
+      default:
+        return false;
+    }
+
+    return await accessControlContract.hasRole(roleHash, userAddress);
+
+  } catch (error) {
+    console.error('Error checking user role:', error);
+    return false;
+  }
+}
+
+export async function getUserAccessLevel(userAddress: string): Promise<string> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const accessControlContract = new ethers.Contract(ACCESS_CONTROL_ADDRESS, COFFEE_TOKEN_ABI, provider);
+    
+    return await accessControlContract.getUserAccessLevel(userAddress);
+
+  } catch (error) {
+    console.error('Error getting user access level:', error);
+    return 'Public';
+  }
+}
+
+export async function getAllUserRoles(userAddress: string): Promise<string[]> {
+  try {
+    const roles = ['ADMIN', 'PROCESSOR', 'COOPERATIVE', 'DISTRIBUTOR', 'VERIFIER', 'MINTER', 'REDEMPTION', 'FULFILLER'];
+    const userRoles: string[] = [];
+
+    for (const role of roles) {
+      const hasRole = await checkUserRole(userAddress, role);
+      if (hasRole) {
+        userRoles.push(role);
+      }
+    }
+
+    return userRoles;
+
+  } catch (error) {
+    console.error('Error getting all user roles:', error);
+    return [];
   }
 }

@@ -14,6 +14,7 @@ import {
   MdStorage,
   MdStorefront,
   MdTimeline,
+  MdSwapHoriz,
   MdDashboard,
   MdSettings,
   MdWarning,
@@ -35,7 +36,9 @@ import {
   getUserRoles,
   grantUserRole,
   revokeUserRole,
-  createPrivacyEnhancedBatch,
+  checkUserRole,
+  getAllUserRoles,
+  getUserAccessLevel,
 } from "@/utils/smartContracts";
 import { 
   SystemFallbacks, 
@@ -55,7 +58,7 @@ import {
 } from "@/utils/inventoryManager";
 import EnvironmentStatus from "@/app/components/EnvironmentStatus";
 import { useWallet } from "@/app/components/WalletProvider";
-import PrivacyEnhancedBatchForm from "@/app/components/PrivacyEnhancedBatchForm";
+import ProgressiveForm from "@/app/components/ProgressiveForm";
 
 interface BatchDisplay {
   batchId: string;
@@ -87,9 +90,10 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
+  const [batchCreationMode, setBatchCreationMode] = useState<'standard' | 'privacy-enhanced'>('standard');
   const [batches, setBatches] = useState<BatchDisplay[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<string>("");
-  const [batchCreationMode, setBatchCreationMode] = useState<'standard' | 'privacy-enhanced'>('standard');
+  const [isProgressiveMode, setIsProgressiveMode] = useState<boolean>(true);
   
   // Stats and inventory state
   const [stats, setStats] = useState({
@@ -128,14 +132,17 @@ export default function AdminPage() {
     verification: string;
   } | null>(null);
 
-  // Role Management state
-  const [roleManagement, setRoleManagement] = useState({
-    selectedAddress: '',
-    selectedRole: '',
-    userRoles: {} as any,
-    isLoadingRoles: false,
-    roleChangeLoading: false
+  // Role management state
+  const [roleForm, setRoleForm] = useState({
+    userAddress: '',
+    roleName: 'PROCESSOR'
   });
+  const [roleUsers, setRoleUsers] = useState<Array<{
+    address: string;
+    roles: string[];
+    accessLevel: string;
+  }>>([]);
+  const [roleManagementLoading, setRoleManagementLoading] = useState(false);
 
   // Product types
   const PRODUCT_TYPES = {
@@ -156,60 +163,6 @@ export default function AdminPage() {
       sizes: ['60kg'],
       description: 'Roasted coffee beans for further processing',
       requiresRole: 'ROASTER_ROLE'
-    }
-  };
-
-  // Available roles for management
-  const AVAILABLE_ROLES = {
-    ADMIN_ROLE: {
-      label: 'Admin',
-      description: 'Full system administration privileges',
-      category: 'Core'
-    },
-    COOPERATIVE_ROLE: {
-      label: 'Cooperative',
-      description: 'Create and manage green bean batches',
-      category: 'Supply Chain'
-    },
-    PROCESSOR_ROLE: {
-      label: 'Processor',
-      description: 'Process green beans into retail products',
-      category: 'Supply Chain'
-    },
-    ROASTER_ROLE: {
-      label: 'Roaster',
-      description: 'Roast green beans and create roasted bean batches',
-      category: 'Supply Chain'
-    },
-    DISTRIBUTOR_ROLE: {
-      label: 'Distributor',
-      description: 'Distribute and sell coffee products',
-      category: 'Supply Chain'
-    },
-    VERIFIER_ROLE: {
-      label: 'Verifier',
-      description: 'Verify batch quality and authenticity',
-      category: 'Quality'
-    },
-    ZK_VERIFIER_ROLE: {
-      label: 'ZK Verifier',
-      description: 'Verify zero-knowledge proofs',
-      category: 'Privacy'
-    },
-    MINTER_ROLE: {
-      label: 'Minter',
-      description: 'Mint new tokens for verified batches',
-      category: 'Token'
-    },
-    FULFILLER_ROLE: {
-      label: 'Fulfiller',
-      description: 'Fulfill coffee redemption orders',
-      category: 'Operations'
-    },
-    REDEMPTION_ROLE: {
-      label: 'Redemption Manager',
-      description: 'Manage coffee redemption processes',
-      category: 'Operations'
     }
   };
 
@@ -259,82 +212,7 @@ export default function AdminPage() {
     }
   };
 
-  // Load user roles for display
-  const loadUserRoles = async (userAddress: string) => {
-    if (!userAddress || !isConnected) return;
-    
-    setRoleManagement(prev => ({ ...prev, isLoadingRoles: true }));
-    try {
-      const roles = await getUserRoles(userAddress);
-      setRoleManagement(prev => ({ 
-        ...prev, 
-        userRoles: roles,
-        isLoadingRoles: false 
-      }));
-    } catch (error) {
-      console.error('Error loading user roles:', error);
-      setError('Failed to load user roles');
-      setRoleManagement(prev => ({ ...prev, isLoadingRoles: false }));
-    }
-  };
-
-  // Grant role to user
-  const grantRole = async () => {
-    if (!roleManagement.selectedAddress || !roleManagement.selectedRole) {
-      setError('Please select both an address and a role');
-      return;
-    }
-
-    setRoleManagement(prev => ({ ...prev, roleChangeLoading: true }));
-    try {
-      // Extract role name without '_ROLE' suffix
-      const roleName = roleManagement.selectedRole.replace('_ROLE', '');
-      
-      const result = await grantUserRole(roleManagement.selectedAddress, roleName);
-      if (result.success) {
-        setSuccess(`Successfully granted ${AVAILABLE_ROLES[roleManagement.selectedRole as keyof typeof AVAILABLE_ROLES]?.label} role to ${roleManagement.selectedAddress}`);
-        
-        // Refresh user roles
-        await loadUserRoles(roleManagement.selectedAddress);
-      } else {
-        setError(result.error || 'Failed to grant role');
-      }
-    } catch (error) {
-      console.error('Error granting role:', error);
-      setError('Failed to grant role. Please check your permissions.');
-    } finally {
-      setRoleManagement(prev => ({ ...prev, roleChangeLoading: false }));
-    }
-  };
-
-  // Revoke role from user
-  const revokeRole = async (role: string) => {
-    if (!roleManagement.selectedAddress) {
-      setError('Please select an address');
-      return;
-    }
-
-    setRoleManagement(prev => ({ ...prev, roleChangeLoading: true }));
-    try {
-      // Extract role name without '_ROLE' suffix
-      const roleName = role.replace('_ROLE', '');
-      
-      const result = await revokeUserRole(roleManagement.selectedAddress, roleName);
-      if (result.success) {
-        setSuccess(`Successfully revoked ${AVAILABLE_ROLES[role as keyof typeof AVAILABLE_ROLES]?.label} role from ${roleManagement.selectedAddress}`);
-        
-        // Refresh user roles
-        await loadUserRoles(roleManagement.selectedAddress);
-      } else {
-        setError(result.error || 'Failed to revoke role');
-      }
-    } catch (error) {
-      console.error('Error revoking role:', error);
-      setError('Failed to revoke role. Please check your permissions.');
-    } finally {
-      setRoleManagement(prev => ({ ...prev, roleChangeLoading: false }));
-    }
-  };
+  // Simple load batches function
   const loadBatches = async () => {
     if (!isConnected || !address) return;
     
@@ -399,8 +277,8 @@ export default function AdminPage() {
           },
           {
             batchId: "2", 
-            name: "Ethiopian Sidamo",
-            origin: "Ethiopia",
+            name: "Colombian Supremo",
+            origin: "Colombia",
             quantity: 75,
             packagingInfo: "500g", 
             pricePerUnit: "0.08",
@@ -529,68 +407,6 @@ export default function AdminPage() {
     }
   };
 
-  // Handle privacy-enhanced batch creation
-  const handlePrivacyEnhancedBatchCreation = async (data: any) => {
-    if (!isConnected || !address) {
-      setError('Please connect your wallet to create privacy-enhanced batches');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError('');
-      setSuccess('');
-
-      console.log('🔐 Creating privacy-enhanced admin batch...');
-      console.log('   Data:', data);
-
-      // Create privacy-enhanced batch using the integrated workflow
-      const result = await createPrivacyEnhancedBatch(
-        {
-          // Map form data to expected format
-          productionDate: new Date(data.productionDate),
-          expiryDate: new Date(data.expiryDate),
-          quantity: data.quantity,
-          pricePerUnit: data.pricePerUnit.toString(),
-          origin: data.origin,
-          packagingInfo: data.packagingInfo,
-          unitWeight: data.unitWeight,
-          productType: data.productType || 'RETAIL_BAGS',
-          cooperativeId: data.privacyConfig.sensitiveData.supplyChain?.cooperativeId,
-          processorId: data.privacyConfig.sensitiveData.supplyChain?.processorId,
-          name: `Admin Coffee - ${data.origin}`,
-          description: `Privacy-enhanced coffee from ${data.origin}`,
-          farmer: data.privacyConfig.sensitiveData.supplyChain?.farmerIdentity || 'Private',
-          altitude: '1200-1800m', // Default altitude
-          process: 'Washed', // Default processing method
-          roastProfile: 'Medium', // Default roast profile
-          roastDate: new Date().toISOString().split('T')[0], // Today as roast date
-          certifications: data.privacyConfig.sensitiveData.supplyChain?.certificationDetails ? 
-            [data.privacyConfig.sensitiveData.supplyChain.certificationDetails] : [],
-          cupping_notes: data.privacyConfig.sensitiveData.quality?.gradingNotes ? 
-            [data.privacyConfig.sensitiveData.quality.gradingNotes] : [],
-          image: ''
-        },
-        data.privacyConfig
-      );
-
-      setSuccess(`Privacy-enhanced batch created successfully! Batch ID: ${result.batchId}`);
-      console.log('✅ Privacy-enhanced admin batch created:', result);
-
-      // Reset form mode to standard
-      setBatchCreationMode('standard');
-
-      // Reload batches
-      await loadBatches();
-
-    } catch (error) {
-      console.error('❌ Error creating privacy-enhanced admin batch:', error);
-      setError(error instanceof Error ? error.message : 'Failed to create privacy-enhanced batch');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Verify batch 
   const verifyBatch = async () => {
     try {
@@ -628,6 +444,85 @@ export default function AdminPage() {
     }
   };
 
+  // Role management functions
+  const handleGrantRole = async () => {
+    if (!roleForm.userAddress || !roleForm.roleName) {
+      setError('Please fill in all role fields');
+      return;
+    }
+
+    try {
+      setRoleManagementLoading(true);
+      setError('');
+      setSuccess('');
+
+      const result = await grantUserRole(roleForm.userAddress, roleForm.roleName);
+      
+      if (result.success) {
+        setSuccess(`✅ Role ${roleForm.roleName} granted to ${roleForm.userAddress} successfully!`);
+        setRoleForm({ userAddress: '', roleName: 'PROCESSOR' });
+        await loadRoleUsers(); // Refresh the role users list
+      } else {
+        setError(`❌ Failed to grant role: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error granting role:', error);
+      setError(`❌ Error granting role: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setRoleManagementLoading(false);
+    }
+  };
+
+  const handleRevokeRole = async (userAddress: string, roleName: string) => {
+    try {
+      setRoleManagementLoading(true);
+      setError('');
+      setSuccess('');
+
+      const result = await revokeUserRole(userAddress, roleName);
+      
+      if (result.success) {
+        setSuccess(`✅ Role ${roleName} revoked from ${userAddress} successfully!`);
+        await loadRoleUsers(); // Refresh the role users list
+      } else {
+        setError(`❌ Failed to revoke role: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error revoking role:', error);
+      setError(`❌ Error revoking role: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setRoleManagementLoading(false);
+    }
+  };
+
+  const loadRoleUsers = async () => {
+    // This would load all users with roles - for demo purposes, we'll show current user
+    if (address) {
+      try {
+        const userRoles = await getAllUserRoles(address);
+        const accessLevel = await getUserAccessLevel(address) || 'Public';
+        
+        setRoleUsers([{
+          address,
+          roles: userRoles,
+          accessLevel
+        }]);
+      } catch (error) {
+        console.error('Error loading role users:', error);
+        setRoleUsers([]);
+      }
+    }
+  };
+
+  const checkUserRoleStatus = async (userAddress: string, roleName: string): Promise<boolean> => {
+    try {
+      return await checkUserRole(userAddress, roleName);
+    } catch (error) {
+      console.error('Error checking user role:', error);
+      return false;
+    }
+  };
+
   // Initialize system status on mount
   useEffect(() => {
     checkAndSetSystemStatus();
@@ -639,8 +534,14 @@ export default function AdminPage() {
     }
   }, [isConnected, address, systemStatus]);
 
+  useEffect(() => {
+    if (activeTab === 'settings' && address) {
+      loadRoleUsers();
+    }
+  }, [activeTab, address]);
+
   return (
-    <div className="min-h-screen web3-section">
+    <div className="web3-page-content min-h-screen web3-section">
       <div className="max-w-7xl mx-auto web3-page-spacing relative z-10">
         {/* Environment Status Check */}
         <EnvironmentStatus />
@@ -857,50 +758,346 @@ export default function AdminPage() {
 
             {activeTab === 'create' && (
               <div className="space-y-8">
+                {/* Error/Success Messages */}
+                {error && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-700">{error}</p>
+                  </div>
+                )}
+
+                {success && (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-green-700">{success}</p>
+                  </div>
+                )}
+
                 {/* Batch Creation Mode Selector */}
-                <div className="web3-card animate-card-entrance">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                    <MdCreate size={24} />
-                    Create Coffee Batch
-                  </h2>
+                <div className="web3-card">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                    <MdCreate className="w-6 h-6 mr-2 text-purple-600" />
+                    Create Coffee Batch (Admin)
+                  </h3>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  <div className="flex space-x-4 mb-6">
                     <button
                       onClick={() => setBatchCreationMode('standard')}
-                      className={`p-6 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 ${
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                         batchCreationMode === 'standard'
-                          ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg'
-                          : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
                     >
-                      <MdCreate size={32} className="mx-auto mb-3 text-purple-600" />
-                      <h3 className="font-semibold text-lg mb-2 text-gray-900">Standard Creation</h3>
-                      <p className="text-gray-600 text-sm">Create regular coffee batches with public metadata</p>
+                      Standard Batch Creation
                     </button>
-                    
                     <button
                       onClick={() => setBatchCreationMode('privacy-enhanced')}
-                      className={`p-6 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 ${
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                         batchCreationMode === 'privacy-enhanced'
-                          ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg'
-                          : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
                     >
-                      <MdSecurity size={32} className="mx-auto mb-3 text-purple-600" />
-                      <h3 className="font-semibold text-lg mb-2 text-gray-900">Privacy Enhanced</h3>
-                      <p className="text-gray-600 text-sm">Create batches with encrypted sensitive data and ZK proofs</p>
+                      <MdSecurity size={16} />
+                      Privacy-Enhanced Creation
                     </button>
                   </div>
 
                   {batchCreationMode === 'privacy-enhanced' ? (
-                    <PrivacyEnhancedBatchForm
-                      onSubmit={handlePrivacyEnhancedBatchCreation}
-                      userRole="ADMIN"
-                      isSubmitting={loading}
+                    <ProgressiveForm
+                      batchForm={batchForm}
+                      handleInputChange={handleInputChange}
+                      handleArrayInputChange={handleArrayInputChange}
+                      onSubmit={createBatch}
+                      loading={loading}
                     />
                   ) : (
-                    /* Standard Traditional Form */
-                    <div className="space-y-8">
+                    <>
+                      {/* Standard Form Content */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Left Column - Form */}
+                        <div className="space-y-6">
+                          {/* Product Type Selection */}
+                          <div className="web3-form-section">
+                            <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                              <MdCoffee className="w-5 h-5 mr-2" />
+                              Product Type
+                            </h4>
+                            <div className="grid grid-cols-1 gap-3">
+                              {Object.entries(PRODUCT_TYPES).map(([key, product]) => (
+                                <div
+                                  key={key}
+                                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-300 ${
+                                    batchForm.productType === key
+                                      ? 'border-purple-500 bg-purple-50 shadow-md'
+                                      : 'border-gray-200 hover:border-gray-300'
+                                  }`}
+                                  onClick={() => {
+                                    setBatchForm(prev => ({
+                                      ...prev,
+                                      productType: key as keyof typeof PRODUCT_TYPES,
+                                      packagingInfo: product.sizes[0] as "250g" | "500g" | "60kg",
+                                      unitWeight: product.sizes[0]
+                                    }));
+                                  }}
+                                >
+                                  <h5 className="font-semibold text-gray-900 mb-1">{product.label}</h5>
+                                  <p className="text-sm text-gray-600 mb-2">{product.description}</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {product.sizes.map(size => (
+                                      <span key={size} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                                        {size}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <p className="text-xs text-purple-600 mt-2">
+                                    Requires: {product.requiresRole.replace('_ROLE', '').replace('_', ' ')}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Basic Information */}
+                          <div className="web3-form-section">
+                            <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                              <MdCoffee className="w-5 h-5 mr-2" />
+                              Basic Information
+                            </h4>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Batch Name <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  value={batchForm.name}
+                                  onChange={(e) => handleInputChange('name', e.target.value)}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                                  placeholder="e.g., Ethiopian Yirgacheffe Premium"
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Origin <span className="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={batchForm.origin}
+                                    onChange={(e) => handleInputChange('origin', e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                                    placeholder="e.g., Yirgacheffe, Ethiopia"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Farmer/Producer <span className="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={batchForm.farmer}
+                                    onChange={(e) => handleInputChange('farmer', e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                                    placeholder="e.g., Mulugeta Dukamo"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Quantity <span className="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={batchForm.quantity}
+                                    onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 0)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                                    placeholder="e.g., 100"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Price per Unit (ETH) <span className="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={batchForm.pricePerUnit}
+                                    onChange={(e) => handleInputChange('pricePerUnit', e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                                    placeholder="e.g., 0.045"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Submit Button */}
+                          <div className="web3-form-section">
+                            <button
+                              onClick={createBatch}
+                              disabled={loading}
+                              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-4 rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 focus:ring-4 focus:ring-purple-300 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                              {loading ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                  Creating Batch...
+                                </>
+                              ) : (
+                                <>
+                                  <MdCreate size={20} />
+                                  Create Coffee Batch
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Right Column - Additional Info */}
+                        <div className="space-y-6">
+                          {/* Processing Information */}
+                          <div className="web3-form-section">
+                            <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                              <MdGrade className="w-5 h-5 mr-2" />
+                              Processing Details
+                            </h4>
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Processing Method
+                                  </label>
+                                  <select
+                                    value={batchForm.process}
+                                    onChange={(e) => handleInputChange('process', e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                                  >
+                                    <option value="">Select Process</option>
+                                    <option value="Washed">Washed</option>
+                                    <option value="Natural">Natural</option>
+                                    <option value="Honey">Honey</option>
+                                    <option value="Semi-washed">Semi-washed</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Roast Profile
+                                  </label>
+                                  <select
+                                    value={batchForm.roastProfile}
+                                    onChange={(e) => handleInputChange('roastProfile', e.target.value as any)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                                  >
+                                    <option value="Light">Light</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Dark">Dark</option>
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Description
+                                </label>
+                                <textarea
+                                  value={batchForm.description}
+                                  onChange={(e) => handleInputChange('description', e.target.value)}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                                  rows={3}
+                                  placeholder="Describe the coffee batch characteristics..."
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Dates */}
+                          <div className="web3-form-section">
+                            <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                              <MdTimeline className="w-5 h-5 mr-2" />
+                              Important Dates
+                            </h4>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Production Date
+                                </label>
+                                <input
+                                  type="date"
+                                  value={batchForm.productionDate.toISOString().split('T')[0]}
+                                  onChange={(e) => handleInputChange('productionDate', new Date(e.target.value))}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Expiry Date
+                                </label>
+                                <input
+                                  type="date"
+                                  value={batchForm.expiryDate.toISOString().split('T')[0]}
+                                  onChange={(e) => handleInputChange('expiryDate', new Date(e.target.value))}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Roast Date
+                                </label>
+                                <input
+                                  type="date"
+                                  value={batchForm.roastDate}
+                                  onChange={(e) => handleInputChange('roastDate', e.target.value)}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Quality Information */}
+                          <div className="web3-form-section">
+                            <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                              <MdVerified className="w-5 h-5 mr-2" />
+                              Quality & Location
+                            </h4>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Altitude (meters)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={batchForm.altitude}
+                                  onChange={(e) => handleInputChange('altitude', e.target.value)}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                                  placeholder="e.g., 1800-2200"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Packaging Info
+                                </label>
+                                <select
+                                  value={batchForm.packagingInfo}
+                                  onChange={(e) => handleInputChange('packagingInfo', e.target.value as any)}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                                >
+                                  <option value="250g">250g Bags</option>
+                                  <option value="500g">500g Bags</option>
+                                  <option value="60kg">60kg Sacks</option>
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+                
                 {/* Product Type Selection */}
                 <div className="web3-form-section">
                   <h3 className="flex items-center gap-2">
@@ -1074,6 +1271,96 @@ export default function AdminPage() {
                   </div>
                 </div>
 
+                {/* Product-Specific Fields */}
+                {batchForm.productType && batchForm.productType !== 'RETAIL_BAGS' && (
+                  <div className="web3-form-section">
+                    <h3 className="flex items-center gap-2">
+                      <MdGrade size={20} />
+                      Product Specifications
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div>
+                        <label className="web3-form-label">
+                          Moisture Content (%)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="20"
+                          value={batchForm.moistureContent || ''}
+                          onChange={(e) => handleInputChange('moistureContent', parseFloat(e.target.value) || 0)}
+                          className="web3-ethereum-input w-full"
+                          placeholder="e.g., 12.5"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="web3-form-label">
+                          Density (g/cm³)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="2"
+                          value={batchForm.density || ''}
+                          onChange={(e) => handleInputChange('density', parseFloat(e.target.value) || 0)}
+                          className="web3-ethereum-input w-full"
+                          placeholder="e.g., 0.75"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="web3-form-label">
+                          Defect Count
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={batchForm.defectCount || ''}
+                          onChange={(e) => handleInputChange('defectCount', parseInt(e.target.value) || 0)}
+                          className="web3-ethereum-input w-full"
+                          placeholder="e.g., 5"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Cooperative/Processor Information */}
+                    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {batchForm.productType === 'GREEN_BEANS' && (
+                        <div>
+                          <label className="web3-form-label">
+                            Cooperative Ethereum Address
+                          </label>
+                          <input
+                            type="text"
+                            value={batchForm.cooperativeId || ''}
+                            onChange={(e) => handleInputChange('cooperativeId', e.target.value)}
+                            className="web3-ethereum-input w-full"
+                            placeholder="0x..."
+                          />
+                        </div>
+                      )}
+
+                      {batchForm.productType === 'ROASTED_BEANS' && (
+                        <div>
+                          <label className="web3-form-label">
+                            Processor/Roaster Ethereum Address
+                          </label>
+                          <input
+                            type="text"
+                            value={batchForm.processorId || ''}
+                            onChange={(e) => handleInputChange('processorId', e.target.value)}
+                            className="web3-ethereum-input w-full"
+                            placeholder="0x..."
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Quality & Certifications Section */}
                 <div className="web3-form-section">
                   <h3 className="flex items-center gap-2">
@@ -1226,9 +1513,8 @@ export default function AdminPage() {
                     </div>
                   )}
                 </button>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1433,214 +1719,176 @@ export default function AdminPage() {
             {activeTab === 'settings' && (
               <div className="space-y-8">
                 {/* Role Management Section */}
-                <div className="web3-card animate-card-entrance">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <div className="web3-card">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                     <MdSettings size={24} />
                     Role Management
                   </h3>
-                  <p className="text-gray-600 mb-6">
-                    Grant and revoke roles for cooperatives, processors, roasters, and other system participants.
-                  </p>
-
-                  {/* Address Selection */}
-                  <div className="space-y-6">
-                    <div>
-                      <label className="web3-form-label">
-                        User Address
-                      </label>
-                      <div className="flex gap-3">
+                  <p className="text-gray-600 mb-6">Grant and revoke user roles for platform access control.</p>
+                  
+                  {/* Grant Role Form */}
+                  <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                    <h4 className="font-semibold text-lg mb-4">Grant Role to User</h4>
+                    <div className="grid md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          User Address
+                        </label>
                         <input
                           type="text"
-                          value={roleManagement.selectedAddress}
-                          onChange={(e) => setRoleManagement(prev => ({ 
-                            ...prev, 
-                            selectedAddress: e.target.value 
-                          }))}
-                          className="web3-ethereum-input flex-1"
-                          placeholder="0x... (Ethereum address)"
+                          value={roleForm.userAddress}
+                          onChange={(e) => setRoleForm({...roleForm, userAddress: e.target.value})}
+                          placeholder="0x..."
+                          className="web3-input w-full"
                         />
-                        <button
-                          onClick={() => loadUserRoles(roleManagement.selectedAddress)}
-                          disabled={!roleManagement.selectedAddress || roleManagement.isLoadingRoles}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Role
+                        </label>
+                        <select
+                          value={roleForm.roleName}
+                          onChange={(e) => setRoleForm({...roleForm, roleName: e.target.value})}
+                          className="web3-input w-full"
                         >
-                          {roleManagement.isLoadingRoles ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          ) : (
-                            'Load Roles'
-                          )}
-                        </button>
+                          <option value="PROCESSOR">Processor</option>
+                          <option value="COOPERATIVE">Cooperative</option>
+                          <option value="DISTRIBUTOR">Distributor</option>
+                          <option value="VERIFIER">Verifier</option>
+                          <option value="MINTER">Minter</option>
+                          <option value="REDEMPTION">Redemption</option>
+                          <option value="FULFILLER">Fulfiller</option>
+                          <option value="ADMIN">Admin</option>
+                        </select>
                       </div>
                     </div>
+                    <button
+                      onClick={handleGrantRole}
+                      disabled={roleManagementLoading || !roleForm.userAddress || !roleForm.roleName}
+                      className="web3-button-primary flex items-center gap-2"
+                    >
+                      {roleManagementLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Granting Role...
+                        </>
+                      ) : (
+                        <>
+                          <MdCheck size={20} />
+                          Grant Role
+                        </>
+                      )}
+                    </button>
+                  </div>
 
-                    {/* Current Roles Display */}
-                    {roleManagement.selectedAddress && (
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-3">Current Roles</h4>
-                        <div className="space-y-3">
-                          {Object.entries(AVAILABLE_ROLES).map(([roleKey, roleInfo]) => {
-                            const hasRole = roleManagement.userRoles[roleKey] || 
-                                           roleManagement.userRoles[roleKey.toLowerCase().replace('_role', '')] ||
-                                           false;
-                            
-                            return (
-                              <div key={roleKey} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-3">
-                                    <span className={`w-3 h-3 rounded-full ${
-                                      hasRole ? 'bg-green-500' : 'bg-gray-300'
-                                    }`}></span>
-                                    <div>
-                                      <h5 className="font-medium text-gray-900">{roleInfo.label}</h5>
-                                      <p className="text-sm text-gray-600">{roleInfo.description}</p>
+                  {/* Current Users with Roles */}
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <h4 className="font-semibold text-lg mb-4">Users with Roles</h4>
+                    {roleUsers.length > 0 ? (
+                      <div className="space-y-4">
+                        {roleUsers.map((user, index) => (
+                          <div key={index} className="bg-white rounded-lg p-4 border">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <p className="font-mono text-sm text-gray-600 mb-2">
+                                  {user.address}
+                                </p>
+                                <p className="text-sm text-gray-500 mb-3">
+                                  Access Level: <span className="font-semibold">{user.accessLevel}</span>
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {user.roles.map((role, roleIndex) => (
+                                    <div key={roleIndex} className="flex items-center gap-2">
+                                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        {role}
+                                      </span>
+                                      <button
+                                        onClick={() => handleRevokeRole(user.address, role)}
+                                        disabled={roleManagementLoading}
+                                        className="text-red-600 hover:text-red-800 transition-colors"
+                                        title="Revoke this role"
+                                      >
+                                        <MdClose size={16} />
+                                      </button>
                                     </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className={`px-2 py-1 text-xs rounded-full ${
-                                    hasRole 
-                                      ? 'bg-green-100 text-green-800' 
-                                      : 'bg-gray-100 text-gray-600'
-                                  }`}>
-                                    {hasRole ? 'Active' : 'Inactive'}
-                                  </span>
-                                  {hasRole && (
-                                    <button
-                                      onClick={() => revokeRole(roleKey)}
-                                      disabled={roleManagement.roleChangeLoading}
-                                      className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50"
-                                    >
-                                      Revoke
-                                    </button>
+                                  ))}
+                                  {user.roles.length === 0 && (
+                                    <span className="text-gray-500 text-sm">No roles assigned</span>
                                   )}
                                 </div>
                               </div>
-                            );
-                          })}
-                        </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
+                    ) : (
+                      <p className="text-gray-500 text-center py-4">
+                        No users with roles found. Connect your wallet to see your roles.
+                      </p>
                     )}
+                  </div>
+                </div>
 
-                    {/* Grant New Role */}
-                    <div className="border-t border-gray-200 pt-6">
-                      <h4 className="font-semibold text-gray-900 mb-4">Grant New Role</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* System Configuration Section */}
+                <div className="web3-card">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                    <MdDashboard size={24} />
+                    System Configuration
+                  </h3>
+                  <p className="text-gray-600 mb-6">Configure system parameters and platform settings.</p>
+                  
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-semibold mb-2">Inventory Thresholds</h4>
+                      <p className="text-sm text-gray-600 mb-3">Configure low inventory alerts and verification intervals.</p>
+                      <div className="space-y-3">
                         <div>
-                          <label className="web3-form-label">
-                            Select Role
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Low Inventory Threshold
                           </label>
-                          <select
-                            value={roleManagement.selectedRole}
-                            onChange={(e) => setRoleManagement(prev => ({ 
-                              ...prev, 
-                              selectedRole: e.target.value 
-                            }))}
-                            className="web3-ethereum-input w-full"
-                          >
-                            <option value="">Choose a role...</option>
-                            {Object.entries(AVAILABLE_ROLES).map(([roleKey, roleInfo]) => (
-                              <option key={roleKey} value={roleKey}>
-                                {roleInfo.label} - {roleInfo.category}
-                              </option>
-                            ))}
-                          </select>
+                          <input
+                            type="number"
+                            value={inventoryThresholds.lowInventoryThreshold}
+                            onChange={(e) => setInventoryThresholds({
+                              ...inventoryThresholds, 
+                              lowInventoryThreshold: parseInt(e.target.value)
+                            })}
+                            className="web3-input w-full text-sm"
+                          />
                         </div>
-                        <div className="flex items-end">
-                          <button
-                            onClick={grantRole}
-                            disabled={!roleManagement.selectedAddress || !roleManagement.selectedRole || roleManagement.roleChangeLoading}
-                            className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                          >
-                            {roleManagement.roleChangeLoading ? (
-                              <div className="flex items-center justify-center gap-2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                Processing...
-                              </div>
-                            ) : (
-                              'Grant Role'
-                            )}
-                          </button>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Verification Interval (days)
+                          </label>
+                          <input
+                            type="number"
+                            value={inventoryThresholds.verificationInterval / (24 * 60 * 60)}
+                            onChange={(e) => setInventoryThresholds({
+                              ...inventoryThresholds, 
+                              verificationInterval: parseInt(e.target.value) * 24 * 60 * 60
+                            })}
+                            className="web3-input w-full text-sm"
+                          />
                         </div>
                       </div>
-                      {roleManagement.selectedRole && (
-                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                          <p className="text-sm text-blue-800">
-                            <strong>Selected Role:</strong> {AVAILABLE_ROLES[roleManagement.selectedRole as keyof typeof AVAILABLE_ROLES]?.description}
-                          </p>
-                        </div>
-                      )}
                     </div>
-                  </div>
-                </div>
-
-                {/* Quick Role Templates */}
-                <div className="web3-card animate-card-entrance">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6">Quick Setup Templates</h3>
-                  <p className="text-gray-600 mb-4">
-                    Quickly grant common role combinations for different user types.
-                  </p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                      <h4 className="font-semibold text-gray-900 mb-2">Cooperative Setup</h4>
-                      <p className="text-sm text-gray-600 mb-3">
-                        Grant COOPERATIVE_ROLE for green bean batch creation
+                    
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-semibold mb-2">Privacy Settings</h4>
+                      <p className="text-sm text-gray-600 mb-3">Enable enhanced privacy features for batch creation.</p>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={isProgressiveMode}
+                          onChange={(e) => setIsProgressiveMode(e.target.checked)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm">Enable Progressive Privacy Mode</span>
+                      </label>
+                      <p className="text-xs text-gray-500 mt-2">
+                        When enabled, sensitive batch information will be encrypted using zero-knowledge proofs.
                       </p>
-                      <button
-                        onClick={() => setRoleManagement(prev => ({ 
-                          ...prev, 
-                          selectedRole: 'COOPERATIVE_ROLE' 
-                        }))}
-                        className="w-full px-3 py-2 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
-                      >
-                        Select Cooperative Role
-                      </button>
                     </div>
-
-                    <div className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                      <h4 className="font-semibold text-gray-900 mb-2">Processor Setup</h4>
-                      <p className="text-sm text-gray-600 mb-3">
-                        Grant PROCESSOR_ROLE for retail coffee processing
-                      </p>
-                      <button
-                        onClick={() => setRoleManagement(prev => ({ 
-                          ...prev, 
-                          selectedRole: 'PROCESSOR_ROLE' 
-                        }))}
-                        className="w-full px-3 py-2 text-sm bg-amber-100 text-amber-700 rounded hover:bg-amber-200 transition-colors"
-                      >
-                        Select Processor Role
-                      </button>
-                    </div>
-
-                    <div className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                      <h4 className="font-semibold text-gray-900 mb-2">Roaster Setup</h4>
-                      <p className="text-sm text-gray-600 mb-3">
-                        Grant ROASTER_ROLE for roasted bean creation
-                      </p>
-                      <button
-                        onClick={() => setRoleManagement(prev => ({ 
-                          ...prev, 
-                          selectedRole: 'ROASTER_ROLE' 
-                        }))}
-                        className="w-full px-3 py-2 text-sm bg-orange-100 text-orange-700 rounded hover:bg-orange-200 transition-colors"
-                      >
-                        Select Roaster Role
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* System Settings */}
-                <div className="web3-card animate-card-entrance">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6">System Settings</h3>
-                  <p className="text-gray-600">
-                    Configure global system parameters and platform settings.
-                  </p>
-                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">
-                      Additional system configuration options will be available here.
-                    </p>
                   </div>
                 </div>
               </div>

@@ -326,7 +326,7 @@ function DistributorPageContent() {
   );
 
   return (
-    <div className="min-h-screen web3-section">
+    <div className="web3-page-content min-h-screen web3-section">
       <div className="max-w-7xl mx-auto web3-page-spacing relative z-10">
         {/* Header */}
         <div className="mb-12 animate-card-entrance">
