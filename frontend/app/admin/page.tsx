@@ -14,12 +14,12 @@ import {
   MdStorage,
   MdStorefront,
   MdTimeline,
-  MdSwapHoriz,
   MdDashboard,
   MdSettings,
   MdWarning,
   MdError,
   MdInfo,
+  MdSecurity,
 } from "react-icons/md";
 import {
   generateCoffeeMetadata,
@@ -52,7 +52,7 @@ import {
 } from "@/utils/inventoryManager";
 import EnvironmentStatus from "@/app/components/EnvironmentStatus";
 import { useWallet } from "@/app/components/WalletProvider";
-import ProgressiveForm from "@/app/components/ProgressiveForm";
+import PrivacyEnhancedBatchForm from "@/app/components/PrivacyEnhancedBatchForm";
 
 interface BatchDisplay {
   batchId: string;
@@ -86,7 +86,7 @@ export default function AdminPage() {
   const [success, setSuccess] = useState<string>("");
   const [batches, setBatches] = useState<BatchDisplay[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<string>("");
-  const [isProgressiveMode, setIsProgressiveMode] = useState<boolean>(true);
+  const [batchCreationMode, setBatchCreationMode] = useState<'standard' | 'privacy-enhanced'>('standard');
   
   // Stats and inventory state
   const [stats, setStats] = useState({
@@ -125,6 +125,15 @@ export default function AdminPage() {
     verification: string;
   } | null>(null);
 
+  // Role Management state
+  const [roleManagement, setRoleManagement] = useState({
+    selectedAddress: '',
+    selectedRole: '',
+    userRoles: {} as any,
+    isLoadingRoles: false,
+    roleChangeLoading: false
+  });
+
   // Product types
   const PRODUCT_TYPES = {
     RETAIL_BAGS: {
@@ -144,6 +153,60 @@ export default function AdminPage() {
       sizes: ['60kg'],
       description: 'Roasted coffee beans for further processing',
       requiresRole: 'ROASTER_ROLE'
+    }
+  };
+
+  // Available roles for management
+  const AVAILABLE_ROLES = {
+    ADMIN_ROLE: {
+      label: 'Admin',
+      description: 'Full system administration privileges',
+      category: 'Core'
+    },
+    COOPERATIVE_ROLE: {
+      label: 'Cooperative',
+      description: 'Create and manage green bean batches',
+      category: 'Supply Chain'
+    },
+    PROCESSOR_ROLE: {
+      label: 'Processor',
+      description: 'Process green beans into retail products',
+      category: 'Supply Chain'
+    },
+    ROASTER_ROLE: {
+      label: 'Roaster',
+      description: 'Roast green beans and create roasted bean batches',
+      category: 'Supply Chain'
+    },
+    DISTRIBUTOR_ROLE: {
+      label: 'Distributor',
+      description: 'Distribute and sell coffee products',
+      category: 'Supply Chain'
+    },
+    VERIFIER_ROLE: {
+      label: 'Verifier',
+      description: 'Verify batch quality and authenticity',
+      category: 'Quality'
+    },
+    ZK_VERIFIER_ROLE: {
+      label: 'ZK Verifier',
+      description: 'Verify zero-knowledge proofs',
+      category: 'Privacy'
+    },
+    MINTER_ROLE: {
+      label: 'Minter',
+      description: 'Mint new tokens for verified batches',
+      category: 'Token'
+    },
+    FULFILLER_ROLE: {
+      label: 'Fulfiller',
+      description: 'Fulfill coffee redemption orders',
+      category: 'Operations'
+    },
+    REDEMPTION_ROLE: {
+      label: 'Redemption Manager',
+      description: 'Manage coffee redemption processes',
+      category: 'Operations'
     }
   };
 
@@ -193,7 +256,88 @@ export default function AdminPage() {
     }
   };
 
-  // Simple load batches function
+  // Load user roles for display
+  const loadUserRoles = async (userAddress: string) => {
+    if (!userAddress || !isConnected) return;
+    
+    setRoleManagement(prev => ({ ...prev, isLoadingRoles: true }));
+    try {
+      const roles = await getUserRoles(userAddress);
+      setRoleManagement(prev => ({ 
+        ...prev, 
+        userRoles: roles,
+        isLoadingRoles: false 
+      }));
+    } catch (error) {
+      console.error('Error loading user roles:', error);
+      setError('Failed to load user roles');
+      setRoleManagement(prev => ({ ...prev, isLoadingRoles: false }));
+    }
+  };
+
+  // Grant role to user
+  const grantRole = async () => {
+    if (!roleManagement.selectedAddress || !roleManagement.selectedRole) {
+      setError('Please select both an address and a role');
+      return;
+    }
+
+    setRoleManagement(prev => ({ ...prev, roleChangeLoading: true }));
+    try {
+      // Import role management functions
+      const { grantUserRole } = await import('@/utils/smartContracts');
+      
+      // Extract role name without '_ROLE' suffix
+      const roleName = roleManagement.selectedRole.replace('_ROLE', '');
+      
+      const result = await grantUserRole(roleManagement.selectedAddress, roleName);
+      if (result.success) {
+        setSuccess(`Successfully granted ${AVAILABLE_ROLES[roleManagement.selectedRole as keyof typeof AVAILABLE_ROLES]?.label} role to ${roleManagement.selectedAddress}`);
+        
+        // Refresh user roles
+        await loadUserRoles(roleManagement.selectedAddress);
+      } else {
+        setError(result.error || 'Failed to grant role');
+      }
+    } catch (error) {
+      console.error('Error granting role:', error);
+      setError('Failed to grant role. Please check your permissions.');
+    } finally {
+      setRoleManagement(prev => ({ ...prev, roleChangeLoading: false }));
+    }
+  };
+
+  // Revoke role from user
+  const revokeRole = async (role: string) => {
+    if (!roleManagement.selectedAddress) {
+      setError('Please select an address');
+      return;
+    }
+
+    setRoleManagement(prev => ({ ...prev, roleChangeLoading: true }));
+    try {
+      // Import role management functions
+      const { revokeUserRole } = await import('@/utils/smartContracts');
+      
+      // Extract role name without '_ROLE' suffix
+      const roleName = role.replace('_ROLE', '');
+      
+      const result = await revokeUserRole(roleManagement.selectedAddress, roleName);
+      if (result.success) {
+        setSuccess(`Successfully revoked ${AVAILABLE_ROLES[role as keyof typeof AVAILABLE_ROLES]?.label} role from ${roleManagement.selectedAddress}`);
+        
+        // Refresh user roles
+        await loadUserRoles(roleManagement.selectedAddress);
+      } else {
+        setError(result.error || 'Failed to revoke role');
+      }
+    } catch (error) {
+      console.error('Error revoking role:', error);
+      setError('Failed to revoke role. Please check your permissions.');
+    } finally {
+      setRoleManagement(prev => ({ ...prev, roleChangeLoading: false }));
+    }
+  };
   const loadBatches = async () => {
     if (!isConnected || !address) return;
     
@@ -258,8 +402,8 @@ export default function AdminPage() {
           },
           {
             batchId: "2", 
-            name: "Colombian Supremo",
-            origin: "Colombia",
+            name: "Ethiopian Sidamo",
+            origin: "Ethiopia",
             quantity: 75,
             packagingInfo: "500g", 
             pricePerUnit: "0.08",
@@ -383,6 +527,71 @@ export default function AdminPage() {
     } catch (err) {
       console.error('Error creating batch:', err);
       setError(err instanceof Error ? err.message : 'Failed to create batch');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle privacy-enhanced batch creation
+  const handlePrivacyEnhancedBatchCreation = async (data: any) => {
+    if (!isConnected || !address) {
+      setError('Please connect your wallet to create privacy-enhanced batches');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+      setSuccess('');
+
+      // Import the privacy-enhanced function
+      const { createPrivacyEnhancedBatch } = await import('@/utils/smartContracts');
+
+      console.log('🔐 Creating privacy-enhanced admin batch...');
+      console.log('   Data:', data);
+
+      // Create privacy-enhanced batch using the integrated workflow
+      const result = await createPrivacyEnhancedBatch(
+        {
+          // Map form data to expected format
+          productionDate: new Date(data.productionDate),
+          expiryDate: new Date(data.expiryDate),
+          quantity: data.quantity,
+          pricePerUnit: data.pricePerUnit.toString(),
+          origin: data.origin,
+          packagingInfo: data.packagingInfo,
+          unitWeight: data.unitWeight,
+          productType: data.productType || 'RETAIL_BAGS',
+          cooperativeId: data.privacyConfig.sensitiveData.supplyChain?.cooperativeId,
+          processorId: data.privacyConfig.sensitiveData.supplyChain?.processorId,
+          name: `Admin Coffee - ${data.origin}`,
+          description: `Privacy-enhanced coffee from ${data.origin}`,
+          farmer: data.privacyConfig.sensitiveData.supplyChain?.farmerIdentity || 'Private',
+          altitude: '1200-1800m', // Default altitude
+          process: 'Washed', // Default processing method
+          roastProfile: 'Medium', // Default roast profile
+          roastDate: new Date().toISOString().split('T')[0], // Today as roast date
+          certifications: data.privacyConfig.sensitiveData.supplyChain?.certificationDetails ? 
+            [data.privacyConfig.sensitiveData.supplyChain.certificationDetails] : [],
+          cupping_notes: data.privacyConfig.sensitiveData.quality?.gradingNotes ? 
+            [data.privacyConfig.sensitiveData.quality.gradingNotes] : [],
+          image: ''
+        },
+        data.privacyConfig
+      );
+
+      setSuccess(`Privacy-enhanced batch created successfully! Batch ID: ${result.batchId}`);
+      console.log('✅ Privacy-enhanced admin batch created:', result);
+
+      // Reset form mode to standard
+      setBatchCreationMode('standard');
+
+      // Reload batches
+      await loadBatches();
+
+    } catch (error) {
+      console.error('❌ Error creating privacy-enhanced admin batch:', error);
+      setError(error instanceof Error ? error.message : 'Failed to create privacy-enhanced batch');
     } finally {
       setLoading(false);
     }
@@ -653,32 +862,51 @@ export default function AdminPage() {
             )}
 
             {activeTab === 'create' && (
-              <div>
-                {/* Mode Toggle Button */}
-                <div className="mb-6 flex justify-end">
-                  <button
-                    onClick={() => setIsProgressiveMode(!isProgressiveMode)}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all duration-300 shadow-md hover:shadow-lg"
-                  >
-                    <MdSwapHoriz size={20} />
-                    {isProgressiveMode ? 'Switch to Traditional Form' : 'Switch to Step-by-Step Form'}
-                  </button>
-                </div>
+              <div className="space-y-8">
+                {/* Batch Creation Mode Selector */}
+                <div className="web3-card animate-card-entrance">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <MdCreate size={24} />
+                    Create Coffee Batch
+                  </h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <button
+                      onClick={() => setBatchCreationMode('standard')}
+                      className={`p-6 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 ${
+                        batchCreationMode === 'standard'
+                          ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg'
+                          : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                      }`}
+                    >
+                      <MdCreate size={32} className="mx-auto mb-3 text-purple-600" />
+                      <h3 className="font-semibold text-lg mb-2 text-gray-900">Standard Creation</h3>
+                      <p className="text-gray-600 text-sm">Create regular coffee batches with public metadata</p>
+                    </button>
+                    
+                    <button
+                      onClick={() => setBatchCreationMode('privacy-enhanced')}
+                      className={`p-6 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 ${
+                        batchCreationMode === 'privacy-enhanced'
+                          ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg'
+                          : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                      }`}
+                    >
+                      <MdSecurity size={32} className="mx-auto mb-3 text-purple-600" />
+                      <h3 className="font-semibold text-lg mb-2 text-gray-900">Privacy Enhanced</h3>
+                      <p className="text-gray-600 text-sm">Create batches with encrypted sensitive data and ZK proofs</p>
+                    </button>
+                  </div>
 
-                {/* Progressive Form */}
-                {isProgressiveMode ? (
-                  <ProgressiveForm
-                    batchForm={batchForm}
-                    handleInputChange={handleInputChange}
-                    handleArrayInputChange={handleArrayInputChange}
-                    onSubmit={createBatch}
-                    loading={loading}
-                  />
-                ) : (
-                  /* Traditional Form */
-                  <div className="web3-premium-card animate-card-entrance">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Coffee Batch</h2>
-                
+                  {batchCreationMode === 'privacy-enhanced' ? (
+                    <PrivacyEnhancedBatchForm
+                      onSubmit={handlePrivacyEnhancedBatchCreation}
+                      userRole="ADMIN"
+                      isSubmitting={loading}
+                    />
+                  ) : (
+                    /* Standard Traditional Form */
+                    <div className="space-y-8">
                 {/* Product Type Selection */}
                 <div className="web3-form-section">
                   <h3 className="flex items-center gap-2">
@@ -852,96 +1080,6 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Product-Specific Fields */}
-                {batchForm.productType && batchForm.productType !== 'RETAIL_BAGS' && (
-                  <div className="web3-form-section">
-                    <h3 className="flex items-center gap-2">
-                      <MdGrade size={20} />
-                      Product Specifications
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div>
-                        <label className="web3-form-label">
-                          Moisture Content (%)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="20"
-                          value={batchForm.moistureContent || ''}
-                          onChange={(e) => handleInputChange('moistureContent', parseFloat(e.target.value) || 0)}
-                          className="web3-ethereum-input w-full"
-                          placeholder="e.g., 12.5"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="web3-form-label">
-                          Density (g/cm³)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          max="2"
-                          value={batchForm.density || ''}
-                          onChange={(e) => handleInputChange('density', parseFloat(e.target.value) || 0)}
-                          className="web3-ethereum-input w-full"
-                          placeholder="e.g., 0.75"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="web3-form-label">
-                          Defect Count
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={batchForm.defectCount || ''}
-                          onChange={(e) => handleInputChange('defectCount', parseInt(e.target.value) || 0)}
-                          className="web3-ethereum-input w-full"
-                          placeholder="e.g., 5"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Cooperative/Processor Information */}
-                    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {batchForm.productType === 'GREEN_BEANS' && (
-                        <div>
-                          <label className="web3-form-label">
-                            Cooperative Ethereum Address
-                          </label>
-                          <input
-                            type="text"
-                            value={batchForm.cooperativeId || ''}
-                            onChange={(e) => handleInputChange('cooperativeId', e.target.value)}
-                            className="web3-ethereum-input w-full"
-                            placeholder="0x..."
-                          />
-                        </div>
-                      )}
-
-                      {batchForm.productType === 'ROASTED_BEANS' && (
-                        <div>
-                          <label className="web3-form-label">
-                            Processor/Roaster Ethereum Address
-                          </label>
-                          <input
-                            type="text"
-                            value={batchForm.processorId || ''}
-                            onChange={(e) => handleInputChange('processorId', e.target.value)}
-                            className="web3-ethereum-input w-full"
-                            placeholder="0x..."
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 {/* Quality & Certifications Section */}
                 <div className="web3-form-section">
                   <h3 className="flex items-center gap-2">
@@ -1094,8 +1232,9 @@ export default function AdminPage() {
                     </div>
                   )}
                 </button>
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -1298,9 +1437,218 @@ export default function AdminPage() {
             )}
 
             {activeTab === 'settings' && (
-              <div className="web3-card">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">Admin Settings</h3>
-                <p className="text-gray-600">Configure system parameters, role permissions, and platform settings.</p>
+              <div className="space-y-8">
+                {/* Role Management Section */}
+                <div className="web3-card animate-card-entrance">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <MdSettings size={24} />
+                    Role Management
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    Grant and revoke roles for cooperatives, processors, roasters, and other system participants.
+                  </p>
+
+                  {/* Address Selection */}
+                  <div className="space-y-6">
+                    <div>
+                      <label className="web3-form-label">
+                        User Address
+                      </label>
+                      <div className="flex gap-3">
+                        <input
+                          type="text"
+                          value={roleManagement.selectedAddress}
+                          onChange={(e) => setRoleManagement(prev => ({ 
+                            ...prev, 
+                            selectedAddress: e.target.value 
+                          }))}
+                          className="web3-ethereum-input flex-1"
+                          placeholder="0x... (Ethereum address)"
+                        />
+                        <button
+                          onClick={() => loadUserRoles(roleManagement.selectedAddress)}
+                          disabled={!roleManagement.selectedAddress || roleManagement.isLoadingRoles}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {roleManagement.isLoadingRoles ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          ) : (
+                            'Load Roles'
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Current Roles Display */}
+                    {roleManagement.selectedAddress && (
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-3">Current Roles</h4>
+                        <div className="space-y-3">
+                          {Object.entries(AVAILABLE_ROLES).map(([roleKey, roleInfo]) => {
+                            const hasRole = roleManagement.userRoles[roleKey] || 
+                                           roleManagement.userRoles[roleKey.toLowerCase().replace('_role', '')] ||
+                                           false;
+                            
+                            return (
+                              <div key={roleKey} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3">
+                                    <span className={`w-3 h-3 rounded-full ${
+                                      hasRole ? 'bg-green-500' : 'bg-gray-300'
+                                    }`}></span>
+                                    <div>
+                                      <h5 className="font-medium text-gray-900">{roleInfo.label}</h5>
+                                      <p className="text-sm text-gray-600">{roleInfo.description}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className={`px-2 py-1 text-xs rounded-full ${
+                                    hasRole 
+                                      ? 'bg-green-100 text-green-800' 
+                                      : 'bg-gray-100 text-gray-600'
+                                  }`}>
+                                    {hasRole ? 'Active' : 'Inactive'}
+                                  </span>
+                                  {hasRole && (
+                                    <button
+                                      onClick={() => revokeRole(roleKey)}
+                                      disabled={roleManagement.roleChangeLoading}
+                                      className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50"
+                                    >
+                                      Revoke
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Grant New Role */}
+                    <div className="border-t border-gray-200 pt-6">
+                      <h4 className="font-semibold text-gray-900 mb-4">Grant New Role</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="web3-form-label">
+                            Select Role
+                          </label>
+                          <select
+                            value={roleManagement.selectedRole}
+                            onChange={(e) => setRoleManagement(prev => ({ 
+                              ...prev, 
+                              selectedRole: e.target.value 
+                            }))}
+                            className="web3-ethereum-input w-full"
+                          >
+                            <option value="">Choose a role...</option>
+                            {Object.entries(AVAILABLE_ROLES).map(([roleKey, roleInfo]) => (
+                              <option key={roleKey} value={roleKey}>
+                                {roleInfo.label} - {roleInfo.category}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex items-end">
+                          <button
+                            onClick={grantRole}
+                            disabled={!roleManagement.selectedAddress || !roleManagement.selectedRole || roleManagement.roleChangeLoading}
+                            className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                          >
+                            {roleManagement.roleChangeLoading ? (
+                              <div className="flex items-center justify-center gap-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                Processing...
+                              </div>
+                            ) : (
+                              'Grant Role'
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      {roleManagement.selectedRole && (
+                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <p className="text-sm text-blue-800">
+                            <strong>Selected Role:</strong> {AVAILABLE_ROLES[roleManagement.selectedRole as keyof typeof AVAILABLE_ROLES]?.description}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Role Templates */}
+                <div className="web3-card animate-card-entrance">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6">Quick Setup Templates</h3>
+                  <p className="text-gray-600 mb-4">
+                    Quickly grant common role combinations for different user types.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                      <h4 className="font-semibold text-gray-900 mb-2">Cooperative Setup</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Grant COOPERATIVE_ROLE for green bean batch creation
+                      </p>
+                      <button
+                        onClick={() => setRoleManagement(prev => ({ 
+                          ...prev, 
+                          selectedRole: 'COOPERATIVE_ROLE' 
+                        }))}
+                        className="w-full px-3 py-2 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                      >
+                        Select Cooperative Role
+                      </button>
+                    </div>
+
+                    <div className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                      <h4 className="font-semibold text-gray-900 mb-2">Processor Setup</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Grant PROCESSOR_ROLE for retail coffee processing
+                      </p>
+                      <button
+                        onClick={() => setRoleManagement(prev => ({ 
+                          ...prev, 
+                          selectedRole: 'PROCESSOR_ROLE' 
+                        }))}
+                        className="w-full px-3 py-2 text-sm bg-amber-100 text-amber-700 rounded hover:bg-amber-200 transition-colors"
+                      >
+                        Select Processor Role
+                      </button>
+                    </div>
+
+                    <div className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                      <h4 className="font-semibold text-gray-900 mb-2">Roaster Setup</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Grant ROASTER_ROLE for roasted bean creation
+                      </p>
+                      <button
+                        onClick={() => setRoleManagement(prev => ({ 
+                          ...prev, 
+                          selectedRole: 'ROASTER_ROLE' 
+                        }))}
+                        className="w-full px-3 py-2 text-sm bg-orange-100 text-orange-700 rounded hover:bg-orange-200 transition-colors"
+                      >
+                        Select Roaster Role
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* System Settings */}
+                <div className="web3-card animate-card-entrance">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6">System Settings</h3>
+                  <p className="text-gray-600">
+                    Configure global system parameters and platform settings.
+                  </p>
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-600">
+                      Additional system configuration options will be available here.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
           </>

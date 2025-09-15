@@ -49,6 +49,8 @@ export default function RoasterPortal() {
   const [success, setSuccess] = useState<string | null>(null);
   const [hasRoasterRole, setHasRoasterRole] = useState(false);
   const [roleChecking, setRoleChecking] = useState(true);
+  const [selectedBatch, setSelectedBatch] = useState<any>(null);
+  const [showBatchModal, setShowBatchModal] = useState(false);
 
   // Batch creation form
   const [batchForm, setBatchForm] = useState<RoasterBatchData>({
@@ -87,6 +89,7 @@ export default function RoasterPortal() {
     { id: 'dashboard', label: 'Dashboard', icon: MdDashboard },
     { id: 'roast', label: 'Roasting', icon: MdLocalFireDepartment },
     { id: 'inventory', label: 'Inventory', icon: MdInventory },
+    { id: 'qr-codes', label: 'QR Codes', icon: MdQrCode },
     { id: 'analytics', label: 'Analytics', icon: MdAnalytics },
     { id: 'settings', label: 'Settings', icon: MdSettings },
   ];
@@ -259,6 +262,111 @@ export default function RoasterPortal() {
     }
   };
 
+  const handlePrivacyEnhancedBatchCreation = async (data: any) => {
+    if (!isConnected || !hasRoasterRole) {
+      setError('Please connect your wallet and ensure you have roaster permissions');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+
+      // Import the privacy-enhanced function
+      const { createPrivacyEnhancedBatch } = await import('../../utils/smartContracts');
+
+      console.log('🔐 Creating privacy-enhanced roaster batch...');
+      console.log('   Data:', data);
+
+      // Create privacy-enhanced batch using the integrated workflow
+      const result = await createPrivacyEnhancedBatch(
+        {
+          // Map form data to expected format
+          productionDate: new Date(data.productionDate),
+          expiryDate: new Date(data.expiryDate),
+          quantity: data.quantity,
+          pricePerUnit: data.pricePerUnit.toString(),
+          origin: data.origin,
+          packagingInfo: data.packagingInfo,
+          unitWeight: data.unitWeight,
+          productType: 'ROASTED_BEANS', // Roasters create roasted beans
+          processorId: `roaster_${address}`, // Generate roaster ID
+          name: `Roasted Beans - ${data.origin}`,
+          description: `Privacy-enhanced roasted beans from ${data.origin}`,
+          farmer: data.privacyConfig.sensitiveData.supplyChain?.farmerIdentity || 'Private',
+          altitude: '1200-1800m', // Default altitude
+          process: 'Washed', // Default processing method
+          roastProfile: 'Medium', // Default roast profile
+          roastDate: new Date().toISOString().split('T')[0], // Today as roast date
+          certifications: data.privacyConfig.sensitiveData.supplyChain?.certificationDetails ? 
+            [data.privacyConfig.sensitiveData.supplyChain.certificationDetails] : [],
+          cupping_notes: data.privacyConfig.sensitiveData.quality?.gradingNotes ? 
+            [data.privacyConfig.sensitiveData.quality.gradingNotes] : [],
+          image: ''
+        },
+        data.privacyConfig
+      );
+
+      setSuccess(`Privacy-enhanced roasted batch created successfully! Batch ID: ${result.batchId}`);
+      console.log('✅ Privacy-enhanced roaster batch created:', result);
+
+      // Reset form mode to standard
+      setBatchCreationMode('standard');
+
+    } catch (error) {
+      console.error('❌ Error creating privacy-enhanced roaster batch:', error);
+      setError(error instanceof Error ? error.message : 'Failed to create privacy-enhanced batch');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewBatch = (batch: any) => {
+    setSelectedBatch(batch);
+    setShowBatchModal(true);
+  };
+
+  // QR Code generation for roasted batches
+  const generateQRCodes = async () => {
+    if (!selectedBatch) {
+      setError('Please select a batch first');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Mock IPFS URI for demo
+      const mockIpfsUri = `ipfs://Qm${selectedBatch.batchId}MockHash`;
+      
+      const comprehensiveQR = await generateBatchQRCode(
+        selectedBatch.batchId, 
+        selectedBatch.metadata || {},
+        mockIpfsUri
+      );
+      const verificationQR = await generateSimpleVerificationQR(selectedBatch.batchId);
+
+      setGeneratedQRs({
+        comprehensive: comprehensiveQR,
+        verification: verificationQR
+      });
+
+      setSuccess('QR codes generated successfully!');
+    } catch (error) {
+      console.error('Error generating QR codes:', error);
+      setError('Failed to generate QR codes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const closeBatchModal = () => {
+    setSelectedBatch(null);
+    setShowBatchModal(false);
+  };
+
   if (roleChecking && !DISABLE_AUTH_FOR_TESTING) {
     return (
       <div className="web3-premium-card animate-card-entrance">
@@ -302,7 +410,7 @@ export default function RoasterPortal() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50">
+    <div className="web3-page-content min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50">
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-700 to-red-600 bg-clip-text text-transparent mb-4">
@@ -421,12 +529,17 @@ export default function RoasterPortal() {
                         <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Completed</span>
                       </td>
                       <td className="px-6 py-4">
-                        <button className="text-orange-600 hover:text-orange-800 font-medium">View Details</button>
+                        <button 
+                          onClick={() => handleViewBatch({ batchId: 'WAG-R001', origin: 'Ethiopian Yirgacheffe', roastProfile: 'Medium-Light', roastDate: '2024-01-15', quantity: '50 bags', status: 'Completed' })}
+                          className="text-orange-600 hover:text-orange-800 font-medium hover:underline transition-colors"
+                        >
+                          View Details
+                        </button>
                       </td>
                     </tr>
                     <tr className="bg-white border-b hover:bg-gray-50">
                       <td className="px-6 py-4 font-medium text-gray-900">WAG-R002</td>
-                      <td className="px-6 py-4">Colombian Huila</td>
+                      <td className="px-6 py-4">Ethiopian Sidamo</td>
                       <td className="px-6 py-4">Medium</td>
                       <td className="px-6 py-4">2024-01-14</td>
                       <td className="px-6 py-4">75</td>
@@ -480,11 +593,7 @@ export default function RoasterPortal() {
 
               {batchCreationMode === 'privacy-enhanced' ? (
                 <PrivacyEnhancedBatchForm
-                  onSubmit={(data) => {
-                    console.log('Privacy-enhanced roasted batch data:', data);
-                    // TODO: Implement privacy-enhanced batch creation
-                    setError('Privacy-enhanced batch creation not yet implemented');
-                  }}
+                  onSubmit={handlePrivacyEnhancedBatchCreation}
                   userRole="ROASTER"
                   isSubmitting={loading}
                 />
@@ -692,7 +801,7 @@ export default function RoasterPortal() {
                   <div className="space-y-4">
                     <div className="p-4 border border-orange-200 rounded-lg bg-orange-50">
                       <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-semibold text-gray-900">Colombian Huila</h4>
+                        <h4 className="font-semibold text-gray-900">Ethiopian Sidamo</h4>
                         <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">Roasting</span>
                       </div>
                       <p className="text-sm text-gray-600 mb-2">Medium Profile • 75kg • Drum Roaster</p>
@@ -704,7 +813,7 @@ export default function RoasterPortal() {
                     
                     <div className="p-4 border border-gray-200 rounded-lg">
                       <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-semibold text-gray-900">Brazilian Santos</h4>
+                        <h4 className="font-semibold text-gray-900">Ethiopian Harrar</h4>
                         <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">Queued</span>
                       </div>
                       <p className="text-sm text-gray-600 mb-2">Dark Profile • 100kg • Drum Roaster</p>
@@ -762,6 +871,111 @@ export default function RoasterPortal() {
           </div>
         )}
 
+        {activeTab === 'qr-codes' && (
+          <div className="space-y-8">
+            {/* QR Code Generation */}
+            <div className="web3-card">
+              <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                <MdQrCode className="w-6 h-6 mr-2 text-orange-600" />
+                Generate QR Codes for Roasted Bean Batches
+              </h3>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Batch for QR Generation
+                </label>
+                <select
+                  value={selectedBatch?.batchId || ''}
+                  onChange={(e) => {
+                    // For demo purposes, create a mock batch
+                    if (e.target.value) {
+                      setSelectedBatch({
+                        batchId: e.target.value,
+                        name: `Roasted Batch ${e.target.value}`,
+                        metadata: {}
+                      });
+                    } else {
+                      setSelectedBatch(null);
+                    }
+                  }}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
+                >
+                  <option value="">Select a roasted batch...</option>
+                  <option value="WAG-ROAST-001">Premium Dark Roast (WAG-ROAST-001)</option>
+                  <option value="WAG-ROAST-002">Single Origin Medium (WAG-ROAST-002)</option>
+                  <option value="WAG-ROAST-003">Light Roast Ethiopian (WAG-ROAST-003)</option>
+                </select>
+              </div>
+
+              <button
+                onClick={generateQRCodes}
+                disabled={loading || !selectedBatch}
+                className="bg-gradient-to-r from-orange-600 to-red-600 text-white px-6 py-3 rounded-lg font-medium hover:from-orange-700 hover:to-red-700 focus:ring-4 focus:ring-orange-300 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Generating QR Codes...
+                  </>
+                ) : (
+                  <>
+                    <MdQrCode size={20} />
+                    Generate QR Codes
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Generated QR Codes Display */}
+            {generatedQRs && (
+              <div className="web3-card">
+                <h2 className="flex items-center gap-3 text-2xl font-bold text-gray-900 mb-6">
+                  <MdLocalFireDepartment size={24} />
+                  Generated Roasted Bean QR Codes
+                </h2>
+                
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div className="text-center">
+                    <h3 className="font-semibold mb-4">Comprehensive Batch QR Code</h3>
+                    <div className="bg-white p-4 rounded-lg border mb-4">
+                      <img 
+                        src={generatedQRs.comprehensive} 
+                        alt="Comprehensive QR Code" 
+                        className="mx-auto max-w-full h-auto"
+                      />
+                    </div>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Contains complete roasted bean batch information including roast profile, date, origin traceability, and flavor notes
+                    </p>
+                    <button className="btn-secondary">
+                      <MdFileDownload className="w-4 h-4 mr-2" />
+                      Download PNG
+                    </button>
+                  </div>
+                  
+                  <div className="text-center">
+                    <h3 className="font-semibold mb-4">Simple Verification QR Code</h3>
+                    <div className="bg-white p-4 rounded-lg border mb-4">
+                      <img 
+                        src={generatedQRs.verification} 
+                        alt="Verification QR Code" 
+                        className="mx-auto max-w-full h-auto"
+                      />
+                    </div>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Quick verification code for roasted bean authentication and quality certification
+                    </p>
+                    <button className="btn-secondary">
+                      <MdFileDownload className="w-4 h-4 mr-2" />
+                      Download PNG
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'analytics' && (
           <div className="web3-card">
             <h3 className="text-xl font-bold text-gray-900 mb-6">Roasting Analytics</h3>
@@ -777,6 +991,53 @@ export default function RoasterPortal() {
         )}
 
       </div>
+
+      {/* Batch Details Modal */}
+      {showBatchModal && selectedBatch && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="web3-premium-card max-w-2xl w-full max-h-96 overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Roast Batch Details</h2>
+              <button
+                onClick={closeBatchModal}
+                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-2">Basic Information</h3>
+                <p><span className="font-medium">Batch ID:</span> {selectedBatch.batchId}</p>
+                <p><span className="font-medium">Origin:</span> {selectedBatch.origin}</p>
+                <p><span className="font-medium">Roast Profile:</span> {selectedBatch.roastProfile}</p>
+                <p><span className="font-medium">Quantity:</span> {selectedBatch.quantity}</p>
+              </div>
+              
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-2">Roasting Details</h3>
+                <p><span className="font-medium">Roast Date:</span> {selectedBatch.roastDate}</p>
+                <p>
+                  <span className="font-medium">Status:</span> 
+                  <span className="ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                    {selectedBatch.status}
+                  </span>
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={closeBatchModal}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
