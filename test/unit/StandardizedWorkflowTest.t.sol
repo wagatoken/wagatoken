@@ -165,7 +165,7 @@ contract StandardizedWorkflowTest is Test {
 
         // Try to mint more than available
         vm.prank(admin);
-        vm.expectRevert("Insufficient inventory for minting");
+        vm.expectRevert(WAGACoffeeTokenCore.InsufficientInventory.selector);
         coffeeToken.mintBatch(consumer, batchId, 800);
 
         // Mint exactly the remaining amount

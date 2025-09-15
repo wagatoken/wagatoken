@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 // import { useAccount } from 'wagmi';
-import { MdDashboard, MdLocalFireDepartment, MdInventory, MdAnalytics, MdSettings, MdAdd, MdSearch, MdFilterList, MdFileDownload, MdCoffee, MdLocationOn, MdGrade, MdVerified, MdRefresh, MdInfo, MdQrCode, MdStore } from 'react-icons/md';
+import { MdDashboard, MdLocalFireDepartment, MdInventory, MdAnalytics, MdSettings, MdAdd, MdSearch, MdFilterList, MdFileDownload, MdCoffee, MdLocationOn, MdGrade, MdVerified, MdRefresh, MdInfo, MdQrCode, MdStore, MdSecurity } from 'react-icons/md';
 import { ethers } from 'ethers';
 import { useWallet } from '../components/WalletProvider';
 import { createBatchBlockchainFirst } from '../../utils/smartContracts';
 import { generateBatchQRCode, generateSimpleVerificationQR, CoffeeBatchMetadata } from '../../utils/ipfsMetadata';
+import PrivacyEnhancedBatchForm from '../components/PrivacyEnhancedBatchForm';
 
 const DISABLE_AUTH_FOR_TESTING = true; // Set to false to re-enable authentication
 
@@ -42,6 +43,7 @@ export default function RoasterPortal() {
   // const { isConnected, address } = useAccount();
   const { address, isConnected } = useWallet();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [batchCreationMode, setBatchCreationMode] = useState<'standard' | 'privacy-enhanced'>('standard');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -445,6 +447,50 @@ export default function RoasterPortal() {
         {/* Roasting Tab - Enhanced Form */}
         {activeTab === 'roast' && (
           <div className="space-y-8">
+            {/* Batch Creation Mode Selector */}
+            <div className="web3-card">
+              <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                <MdLocalFireDepartment className="w-6 h-6 mr-2 text-orange-600" />
+                Create Roasted Bean Batch
+              </h3>
+              
+              <div className="flex space-x-4 mb-6">
+                <button
+                  onClick={() => setBatchCreationMode('standard')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    batchCreationMode === 'standard'
+                      ? 'bg-orange-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Standard Batch Creation
+                </button>
+                <button
+                  onClick={() => setBatchCreationMode('privacy-enhanced')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                    batchCreationMode === 'privacy-enhanced'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <MdSecurity size={16} />
+                  Privacy-Enhanced Creation
+                </button>
+              </div>
+
+              {batchCreationMode === 'privacy-enhanced' ? (
+                <PrivacyEnhancedBatchForm
+                  onSubmit={(data) => {
+                    console.log('Privacy-enhanced roasted batch data:', data);
+                    // TODO: Implement privacy-enhanced batch creation
+                    setError('Privacy-enhanced batch creation not yet implemented');
+                  }}
+                  userRole="ROASTER"
+                  isSubmitting={loading}
+                />
+              ) : (
+                <>
+                  {/* Standard Form Content */}
             {/* Error/Success Messages */}
             {error && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -702,6 +748,9 @@ export default function RoasterPortal() {
                   </div>
                 )}
               </div>
+            </div>
+                </>
+              )}
             </div>
           </div>
         )}

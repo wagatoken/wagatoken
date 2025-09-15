@@ -1,0 +1,228 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.18;
+
+import {Test, console} from "forge-std/Test.sol";
+import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
+import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
+import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
+import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
+import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
+import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
+import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
+import {MockCircomVerifier} from "../../src/MockCircomVerifier.sol";
+import {DeployRealZKMVPForTesting} from "../../script/DeployRealZKMVPForTesting.s.sol";
+import {HelperConfig} from "../../script/HelperConfig.s.sol";
+
+/**
+ * @title RoleBasedBatchCreationTest
+ * @dev Test the new role-based batch creation functionality
+ * @notice Ensures cooperatives, roasters, and processors can all create batches
+ */
+contract RoleBasedBatchCreationTest is Test {
+    DeployRealZKMVPForTesting deployer;
+    HelperConfig helperConfig;
+    
+    WAGACoffeeTokenCore coffeeToken;
+    WAGABatchManager batchManager;
+    WAGAZKManager zkManager;
+    WAGAProofOfReserve proofOfReserve;
+    WAGAInventoryManagerMVP inventoryManager;
+    WAGACoffeeRedemption redemption;
+    MockCircomVerifier mockVerifier;
+    PrivacyLayer privacyLayer;
+
+    // Test addresses
+    address admin;
+    address testUser;
+    
+    // Test constants
+    uint256 constant PRODUCTION_DATE = 1700000000; // Nov 2023
+    uint256 constant EXPIRY_DATE = 1731536000; // Nov 2024
+    uint256 constant QUANTITY = 100;
+    uint256 constant PRICE_PER_UNIT = 250; // $2.50
+    string constant ORIGIN = "Ethiopia, Yirgacheffe";
+    string constant PACKAGING_INFO = "60kg bags";
+    string constant METADATA_URI = "ipfs://test-metadata-hash";
+
+    function setUp() public {
+        deployer = new DeployRealZKMVPForTesting();
+        
+        // Deploy the contracts
+        (
+            coffeeToken,
+            batchManager,
+            zkManager,
+            proofOfReserve,
+            inventoryManager,
+            redemption,
+            mockVerifier,
+            privacyLayer,
+            helperConfig
+        ) = deployer.run();
+        
+        // Get admin address from deployer key
+        HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
+        admin = vm.addr(networkConfig.deployerKey);
+        
+        // Create a test user
+        testUser = makeAddr("testUser");
+    }
+    
+    function testCooperativeCanCreateBatch() public {
+        // Grant cooperative role to testUser
+        vm.prank(admin);
+        coffeeToken.grantRole(keccak256("COOPERATIVE_ROLE"), testUser);
+        
+        // Cooperative creates batch
+        vm.prank(testUser);
+        uint256 batchId = coffeeToken.createBatch(
+            PRODUCTION_DATE,
+            EXPIRY_DATE,
+            QUANTITY,
+            PRICE_PER_UNIT,
+            ORIGIN,
+            PACKAGING_INFO,
+            METADATA_URI
+        );
+        
+        // Verify batch was created
+        assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be created");
+        assertTrue(coffeeToken.isBatchActive(batchId), "Batch should be active");
+    }
+    
+    function testRoasterCanCreateBatch() public {
+        // Grant roaster role to testUser
+        vm.prank(admin);
+        coffeeToken.grantRole(keccak256("ROASTER_ROLE"), testUser);
+        
+        // Roaster creates batch
+        vm.prank(testUser);
+        uint256 batchId = coffeeToken.createBatch(
+            PRODUCTION_DATE,
+            EXPIRY_DATE,
+            QUANTITY,
+            PRICE_PER_UNIT,
+            "Colombia, Huila",
+            PACKAGING_INFO,
+            METADATA_URI
+        );
+        
+        // Verify batch was created
+        assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be created");
+        assertTrue(coffeeToken.isBatchActive(batchId), "Batch should be active");
+    }
+    
+    function testProcessorCanCreateBatch() public {
+        // Grant processor role to testUser
+        vm.prank(admin);
+        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), testUser);
+        
+        // Processor creates batch
+        vm.prank(testUser);
+        uint256 batchId = coffeeToken.createBatch(
+            PRODUCTION_DATE,
+            EXPIRY_DATE,
+            QUANTITY,
+            PRICE_PER_UNIT,
+            "Brazil, Cerrado",
+            PACKAGING_INFO,
+            METADATA_URI
+        );
+        
+        // Verify batch was created
+        assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be created");
+        assertTrue(coffeeToken.isBatchActive(batchId), "Batch should be active");
+    }
+    
+    function testAdminCanCreateBatch() public {
+        // Admin creates batch (already has admin role)
+        vm.prank(admin);
+        uint256 batchId = coffeeToken.createBatch(
+            PRODUCTION_DATE,
+            EXPIRY_DATE,
+            QUANTITY,
+            PRICE_PER_UNIT,
+            "Guatemala, Antigua",
+            PACKAGING_INFO,
+            METADATA_URI
+        );
+        
+        // Verify batch was created
+        assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be created");
+        assertTrue(coffeeToken.isBatchActive(batchId), "Batch should be active");
+    }
+    
+    function testUnauthorizedUserCannotCreateBatch() public {
+        // Unauthorized user tries to create batch (should fail)
+        vm.expectRevert(WAGACoffeeTokenCore.CallerNotAuthorized.selector);
+        vm.prank(testUser); // testUser has no role
+        coffeeToken.createBatch(
+            PRODUCTION_DATE,
+            EXPIRY_DATE,
+            QUANTITY,
+            PRICE_PER_UNIT,
+            "Kenya, Nyeri",
+            PACKAGING_INFO,
+            METADATA_URI
+        );
+    }
+    
+    function testRevokedRoleCannotCreateBatch() public {
+        // Grant cooperative role to testUser
+        vm.prank(admin);
+        coffeeToken.grantRole(keccak256("COOPERATIVE_ROLE"), testUser);
+        
+        // Verify user can create batch
+        vm.prank(testUser);
+        uint256 batchId1 = coffeeToken.createBatch(
+            PRODUCTION_DATE,
+            EXPIRY_DATE,
+            QUANTITY,
+            PRICE_PER_UNIT,
+            "Peru, Cajamarca",
+            PACKAGING_INFO,
+            METADATA_URI
+        );
+        assertTrue(coffeeToken.isBatchCreated(batchId1), "First batch should be created");
+        
+        // Revoke role
+        vm.prank(admin);
+        coffeeToken.revokeRole(keccak256("COOPERATIVE_ROLE"), testUser);
+        
+        // Try to create batch again (should fail)
+        vm.expectRevert(WAGACoffeeTokenCore.CallerNotAuthorized.selector);
+        vm.prank(testUser);
+        coffeeToken.createBatch(
+            PRODUCTION_DATE,
+            EXPIRY_DATE,
+            QUANTITY,
+            PRICE_PER_UNIT,
+            "Honduras, Copan",
+            PACKAGING_INFO,
+            METADATA_URI
+        );
+    }
+    
+    function testMultipleRolesCanCreateBatches() public {
+        // Grant multiple roles to testUser
+        vm.startPrank(admin);
+        coffeeToken.grantRole(keccak256("COOPERATIVE_ROLE"), testUser);
+        coffeeToken.grantRole(keccak256("ROASTER_ROLE"), testUser);
+        vm.stopPrank();
+        
+        // User with multiple roles can create batch
+        vm.prank(testUser);
+        uint256 batchId = coffeeToken.createBatch(
+            PRODUCTION_DATE,
+            EXPIRY_DATE,
+            QUANTITY,
+            PRICE_PER_UNIT,
+            "Jamaica, Blue Mountain",
+            PACKAGING_INFO,
+            METADATA_URI
+        );
+        
+        assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be created");
+        assertTrue(coffeeToken.isBatchActive(batchId), "Batch should be active");
+    }
+}

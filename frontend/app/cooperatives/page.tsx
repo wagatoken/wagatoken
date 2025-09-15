@@ -8,10 +8,11 @@ const DISABLE_AUTH_FOR_TESTING = true;
 import React, { useState, useEffect } from 'react';
 // import { useAccount } from 'wagmi';
 import { ethers } from 'ethers';
-import { MdCoffee, MdLocationOn, MdGrade, MdVerified, MdRefresh, MdInfo, MdQrCode, MdInventory, MdAgriculture, MdNature, MdDashboard, MdAnalytics, MdSettings, MdHistory, MdFileDownload, MdFileUpload, MdSearch, MdFilterList, MdVisibility, MdEdit, MdDelete, MdAdd } from 'react-icons/md';
+import { MdCoffee, MdLocationOn, MdGrade, MdVerified, MdRefresh, MdInfo, MdQrCode, MdInventory, MdAgriculture, MdNature, MdDashboard, MdAnalytics, MdSettings, MdHistory, MdFileDownload, MdFileUpload, MdSearch, MdFilterList, MdVisibility, MdEdit, MdDelete, MdAdd, MdSecurity } from 'react-icons/md';
 import { useWallet } from '../components/WalletProvider';
-// import { createBatchBlockchainFirst } from '../../utils/smartContracts';
-// import { generateBatchQRCode, generateSimpleVerificationQR, CoffeeBatchMetadata } from '../../utils/ipfsMetadata';
+import { createBatchBlockchainFirst } from '../../utils/smartContracts';
+import { generateBatchQRCode, generateSimpleVerificationQR, CoffeeBatchMetadata } from '../../utils/ipfsMetadata';
+import PrivacyEnhancedBatchForm from '../components/PrivacyEnhancedBatchForm';
 
 // Batch creation data type for cooperatives
 interface CooperativeBatchData {
@@ -49,6 +50,7 @@ export default function CooperativesPortal() {
   const [hasCooperativeRole, setHasCooperativeRole] = useState(false);
   const [roleChecking, setRoleChecking] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [batchCreationMode, setBatchCreationMode] = useState<'standard' | 'privacy-enhanced'>('standard');
 
   // Dashboard data
   const [batches, setBatches] = useState<any[]>([]);
@@ -104,11 +106,6 @@ export default function CooperativesPortal() {
 
     try {
       setRoleChecking(true);
-      // TODO: Implement smart contract role checking
-      // For now, we'll assume cooperative role is granted
-      setHasCooperativeRole(true);
-      
-      /*
       // Import contract utilities
       const { getContract, getSigner, COFFEE_TOKEN_ABI } = await import('../../utils/smartContracts');
       const coffeeTokenAddress = process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS;
@@ -125,7 +122,6 @@ export default function CooperativesPortal() {
       const hasRole = await coffeeTokenContract.hasRole(cooperativeRole, address);
 
       setHasCooperativeRole(hasRole);
-      */
     } catch (error) {
       console.error('Error checking cooperative role:', error);
       setError('Failed to verify cooperative permissions');
@@ -188,14 +184,6 @@ export default function CooperativesPortal() {
       setError(null);
       setSuccess(null);
 
-      // TODO: Implement blockchain batch creation
-      // For now, we'll simulate batch creation
-      const batchId = `COOP-${Date.now()}`;
-      
-      setSuccess(`Green bean batch created successfully! Batch ID: ${batchId}`);
-
-      // TODO: Generate QR codes when IPFS integration is ready
-      /*
       // Create batch using blockchain-first workflow
       const result = await createBatchBlockchainFirst({
         ...batchForm,
@@ -232,7 +220,6 @@ export default function CooperativesPortal() {
         comprehensive: qrCodeDataUrl,
         verification: verificationQR
       });
-      */
 
       // Reset form
       setBatchForm({
@@ -497,9 +484,49 @@ export default function CooperativesPortal() {
       )}
 
       {activeTab === 'create' && (
-        <div className="web3-card">{/* Batch Creation Form */}
-      <div className="web3-premium-card animate-card-entrance">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Green Coffee Bean Batch</h2>
+        <div className="space-y-8">
+          {/* Batch Creation Mode Selector */}
+          <div className="web3-card">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Green Coffee Bean Batch</h2>
+            
+            <div className="flex space-x-4 mb-6">
+              <button
+                onClick={() => setBatchCreationMode('standard')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  batchCreationMode === 'standard'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Standard Batch Creation
+              </button>
+              <button
+                onClick={() => setBatchCreationMode('privacy-enhanced')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                  batchCreationMode === 'privacy-enhanced'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <MdSecurity size={16} />
+                Privacy-Enhanced Creation
+              </button>
+            </div>
+
+            {batchCreationMode === 'privacy-enhanced' ? (
+              <PrivacyEnhancedBatchForm
+                onSubmit={(data) => {
+                  console.log('Privacy-enhanced batch data:', data);
+                  // TODO: Implement privacy-enhanced batch creation
+                  setError('Privacy-enhanced batch creation not yet implemented');
+                }}
+                userRole="COOPERATIVE"
+                isSubmitting={loading}
+              />
+            ) : (
+              <>
+                {/* Standard Batch Creation Form */}
+                <div className="web3-premium-card animate-card-entrance">
 
         {/* Error/Success Messages */}
         {error && (
@@ -867,6 +894,9 @@ export default function CooperativesPortal() {
           </div>
         </div>
       )}
+              </>
+            )}
+          </div>
         </div>
       )}
 

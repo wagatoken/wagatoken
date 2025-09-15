@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 // import { useAccount } from 'wagmi';
-import { MdDashboard, MdBuild, MdInventory, MdAnalytics, MdSettings, MdAdd, MdSearch, MdFilterList, MdFileDownload, MdCoffee, MdLocationOn, MdGrade, MdVerified, MdRefresh, MdInfo, MdQrCode } from 'react-icons/md';
+import { MdDashboard, MdBuild, MdInventory, MdAnalytics, MdSettings, MdAdd, MdSearch, MdFilterList, MdFileDownload, MdCoffee, MdLocationOn, MdGrade, MdVerified, MdRefresh, MdInfo, MdQrCode, MdSecurity } from 'react-icons/md';
 import { ethers } from 'ethers';
 import { useWallet } from '../components/WalletProvider';
 import { createBatchBlockchainFirst } from '../../utils/smartContracts';
 import { generateBatchQRCode, generateSimpleVerificationQR, CoffeeBatchMetadata } from '../../utils/ipfsMetadata';
+import PrivacyEnhancedBatchForm from '../components/PrivacyEnhancedBatchForm';
 
 const DISABLE_AUTH_FOR_TESTING = true; // Set to false to re-enable authentication
 
@@ -34,6 +35,7 @@ export default function ProcessorPortal() {
   // const { isConnected, address } = useAccount();
   const { address, isConnected } = useWallet();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [batchCreationMode, setBatchCreationMode] = useState<'standard' | 'privacy-enhanced'>('standard');
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -434,6 +436,51 @@ export default function ProcessorPortal() {
               </div>
             )}
 
+            {/* Batch Creation Mode Selector */}
+            <div className="web3-card">
+              <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                <MdBuild className="w-6 h-6 mr-2 text-amber-600" />
+                Create Retail Coffee Batch
+              </h3>
+              
+              <div className="flex space-x-4 mb-6">
+                <button
+                  onClick={() => setBatchCreationMode('standard')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    batchCreationMode === 'standard'
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Standard Batch Creation
+                </button>
+                <button
+                  onClick={() => setBatchCreationMode('privacy-enhanced')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                    batchCreationMode === 'privacy-enhanced'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <MdSecurity size={16} />
+                  Privacy-Enhanced Creation
+                </button>
+              </div>
+
+              {batchCreationMode === 'privacy-enhanced' ? (
+                <PrivacyEnhancedBatchForm
+                  onSubmit={(data) => {
+                    console.log('Privacy-enhanced processor batch data:', data);
+                    // TODO: Implement privacy-enhanced batch creation
+                    setError('Privacy-enhanced batch creation not yet implemented');
+                  }}
+                  userRole="PROCESSOR"
+                  isSubmitting={loading}
+                />
+              ) : (
+                <>
+                  {/* Standard Form Content */}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Left Column - Form */}
               <div className="web3-card">
@@ -673,6 +720,9 @@ export default function ProcessorPortal() {
                   </div>
                 )}
               </div>
+            </div>
+                </>
+              )}
             </div>
           </div>
         )}

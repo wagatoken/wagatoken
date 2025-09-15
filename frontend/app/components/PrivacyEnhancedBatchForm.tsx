@@ -31,7 +31,7 @@ interface BatchFormData {
 
 interface PrivacyEnhancedBatchFormProps {
   onSubmit: (data: BatchFormData) => void;
-  userRole: 'ADMIN' | 'PROCESSOR';
+  userRole: 'ADMIN' | 'PROCESSOR' | 'COOPERATIVE' | 'ROASTER';
   isSubmitting?: boolean;
 }
 

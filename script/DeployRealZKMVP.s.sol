@@ -142,8 +142,16 @@ contract DeployRealZKMVP is Script {
         coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(batchManager));
         coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(zkManager));
         
+        // Grant ADMIN_ROLE to deployer for role management
+        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), msg.sender);
+        
         // Grant INVENTORY_MANAGER_ROLE to InventoryManager for inventory verification
         coffeeToken.grantRole(coffeeToken.INVENTORY_MANAGER_ROLE(), address(inventoryManager));
+        
+        // Grant deployer ability to manage cooperative and roaster roles
+        // This allows the deployer to grant COOPERATIVE_ROLE and ROASTER_ROLE to actual stakeholders later
+        console.log("Granting role management permissions to deployer...");
+        // Note: ADMIN_ROLE already has permission to grant other roles
         
         // Grant VERIFIER_ROLE to ZK Manager on CircomVerifier so it can call verification functions
         circomVerifier.grantRole(circomVerifier.VERIFIER_ROLE(), address(zkManager));
@@ -166,6 +174,10 @@ contract DeployRealZKMVP is Script {
         console.log("Treasury:", address(treasury));
         console.log("Redemption:", address(redemption));
         console.log("CDP Integration:", address(cdpIntegration));
+        console.log("");
+        console.log("IMPORTANT: After deployment, grant COOPERATIVE_ROLE and ROASTER_ROLE");
+        console.log("to actual stakeholders using the coffee token's grantRole function.");
+        console.log("All stakeholders with these roles can create batches.");
 
         return (
             coffeeToken,
@@ -185,3 +197,24 @@ contract DeployRealZKMVP is Script {
         );
     }
 }
+
+
+/**
+
+== Return ==
+0: contract WAGACoffeeTokenCore 0x440146a5B87f28ab901D6268139181e07fb36e05
+1: contract WAGABatchManager 0xa215A65CD9565d1c1336a8cB0DF3B9994f4f471F
+2: contract WAGAZKManager 0x79f476822073d0B4075b980D21c3fC0977410e70
+3: contract PrivacyLayer 0xf5259f49433d4dC6CFF2cAB77Cea707aF554f540
+4: contract WAGATreasury 0x75E2C46DF97cC53e8A31a1A564B987790D685177
+5: contract WAGACoffeeRedemption 0xb886AD129f764cDbD128f6B96d9345334842AA6d
+6: contract WAGACDPIntegration 0x3C5d7c7472144523917c817d199e875d18fBAaBA
+7: contract WAGAProofOfReserve 0xE794464994fC1084346C1643354Bbf7d8e3c0Ad3
+8: contract WAGAInventoryManagerMVP 0x8A72F2d8Def334B0E99A3522126662bDf4Dd3AE1
+9: contract CircomVerifier 0x0b2d83D75Cf2525d8C7D40476157ea0B3aE33776
+10: contract Groth16Verifier 0x0c8431117460D5bA4c981861bfc7DE9FCcF8F632
+11: contract Groth16Verifier 0x9b9692C019CC2E104F9E7189ccfdDAab6c7368b1
+12: contract Groth16Verifier 0xD21a65E672Ad2BD4760A03EC23913Cfa61192811
+13: contract HelperConfig 0xC7f2Cf4845C6db0e1a1e91ED41Bcd0FcC1b0E141
+
+ */

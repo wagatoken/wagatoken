@@ -89,6 +89,7 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager {
     error TokenTransferFailed();
     error InvalidMetadataHash();
     error MetadataNotVerified();
+    error InsufficientInventory();
     error BatchNotFound();    /* -------------------------------------------------------------------------- */
     /*                                   Events                                   */
     /* -------------------------------------------------------------------------- */
@@ -145,6 +146,23 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager {
         _grantRole(ADMIN_ROLE, msg.sender);
     }
 
+    /* -------------------------------------------------------------------------- */
+    /*                                 Modifiers                                  */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Only admins, processors, cooperatives, or roasters can create batches
+     */
+    modifier onlyBatchCreator() {
+        if (!(hasRole(ADMIN_ROLE, msg.sender) || 
+              hasRole(PROCESSOR_ROLE, msg.sender) ||
+              hasRole(COOPERATIVE_ROLE, msg.sender) ||
+              hasRole(ROASTER_ROLE, msg.sender))) {
+            revert CallerNotAuthorized();
+        }
+        _;
+    }
+
     /**
      * @dev Set manager contracts (admin only)
      */
@@ -173,7 +191,9 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager {
         
         // Simple validation: ensure we don't mint more than available
         uint256 availableToMint = batch.quantity - batch.mintedQuantity;
-        require(amount <= availableToMint, "Insufficient inventory for minting");
+        if (amount > availableToMint) {
+            revert InsufficientInventory();
+        }
         
         // Update minted quantity
         batch.mintedQuantity += amount;
@@ -235,6 +255,13 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager {
     /**
      * @dev Creates a new batch - SINGLE STANDARDIZED ENTRY POINT
      * This is the only way to create batches in the system
+     * @param productionDate Timestamp when the coffee was produced
+     * @param expiryDate Timestamp when the batch expires
+     * @param quantity Number of units in the batch
+     * @param pricePerUnit Price per unit in cents (e.g., 1234 = $12.34)
+     * @param origin Origin/region where coffee was grown
+     * @param packagingInfo Packaging format (e.g., "60kg bags", "250g bags")
+     * @param metadataURI IPFS URI containing batch metadata
      */
     function createBatch(
         uint256 productionDate,
@@ -244,7 +271,7 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager {
         string memory origin,
         string memory packagingInfo,
         string memory metadataURI
-    ) external onlyRole(PROCESSOR_ROLE) returns (uint256) {
+    ) external onlyBatchCreator returns (uint256) {
         if (quantity == 0) {
             revert BatchDoesNotExist();
         }
@@ -264,7 +291,7 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager {
             mintedQuantity: 0,
             pricePerUnit: pricePerUnit,
             packagingInfo: packagingInfo,
-            metadataHash: "",
+            metadataHash: "", // Will be set when metadata is verified
             isMetadataVerified: false,
             lastVerifiedTimestamp: 0
         });
@@ -308,7 +335,9 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager {
         if (!isBatchCreated(batchId)) {
             revert BatchDoesNotExist();
         }
-        require(bytes(ipfsUri).length > 0, "IPFS URI cannot be empty");
+        if (bytes(ipfsUri).length == 0) {
+            revert InvalidMetadataHash();
+        }
         
         s_batchMetadata[batchId] = ipfsUri;
         // Additional metadata update logic can be added here
