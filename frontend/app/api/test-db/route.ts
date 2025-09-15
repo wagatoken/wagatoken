@@ -13,7 +13,15 @@ export async function GET() {
     const tableNames = result.rows.map((row: any) => row.table_name);
     
     // Check for expected WAGA tables
-    const expectedTables = ['batch_table', 'verification_table', 'user_table', 'token_table', 'inventory_table', 'redemption_table'];
+    const expectedTables = [
+      'waga_coffee_batches', 
+      'verification_requests', 
+      'user_roles', 
+      'batch_token_balances', 
+      'inventory_audits', 
+      'redemption_requests',
+      'batch_requests'
+    ];
     const wagaTables = tableNames.filter(name => expectedTables.includes(name));
     
     return NextResponse.json({
@@ -23,7 +31,7 @@ export async function GET() {
       tables: wagaTables,
       tablesCount: wagaTables.length,
       allTables: tableNames,
-      status: wagaTables.length >= 6 ? 'Fully synced' : `${wagaTables.length}/6 WAGA tables available`,
+      status: wagaTables.length >= 6 ? 'Fully synced' : `${wagaTables.length}/7 WAGA tables available`,
       timestamp: new Date().toISOString(),
       usingMockData: false
     });
