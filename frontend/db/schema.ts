@@ -200,3 +200,29 @@ export const batchTokenBalances = pgTable('batch_token_balances', {
   createdAt: timestamp().notNull().defaultNow(),
   updatedAt: timestamp().notNull().defaultNow()
 });
+
+// Batch Requests - Track batch requests from smart contract (matches BatchRequest struct)
+export const batchRequests = pgTable('batch_requests', {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  batchId: bigint('batch_id', { mode: 'number' }).notNull(), // References blockchain batch ID
+  requester: varchar({ length: 42 }).notNull(), // Address that made the request
+  requestedQuantity: integer().notNull(), // Amount of tokens requested
+  requestDetails: text(), // String details about the request
+  requestTimestamp: bigint('request_timestamp', { mode: 'number' }).notNull(), // Block timestamp
+  isFulfilled: boolean().notNull().default(false), // Whether the request has been fulfilled
+  fulfilledQuantity: integer().default(0), // Amount that was actually fulfilled
+  fulfilledTimestamp: bigint('fulfilled_timestamp', { mode: 'number' }), // When fulfilled
+  
+  // Additional tracking fields
+  requestIndex: integer().notNull(), // Index in contract mapping
+  transactionHash: varchar({ length: 66 }), // Transaction hash of request
+  blockNumber: bigint('block_number', { mode: 'number' }), // Block number of request
+  
+  // Status tracking
+  status: varchar({ length: 20 }).notNull().default('pending'), // 'pending', 'fulfilled', 'cancelled'
+  processedBy: varchar({ length: 42 }), // Admin who processed
+  processedAt: timestamp(), // When processed in our system
+  
+  createdAt: timestamp().notNull().defaultNow(),
+  updatedAt: timestamp().notNull().defaultNow()
+});

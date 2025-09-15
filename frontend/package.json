@@ -17,7 +17,6 @@
     "@coinbase/wallet-sdk": "^4.3.7",
     "@metamask/sdk": "^0.33.0",
     "@netlify/neon": "^0.1.0",
-    "@react-native-async-storage/async-storage": "^2.2.0",
     "@tanstack/react-query": "^5.85.8",
     "@types/qrcode": "^1.5.5",
     "@web3icons/react": "^4.0.22",
@@ -27,11 +26,13 @@
     "pinata": "^1.0.0",
     "postgres": "^3.4.7",
     "qrcode": "^1.5.4",
-    "react": "^18",
-    "react-dom": "^18",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-icons": "^5.5.0",
     "styled-jsx": "^5.1.7",
-    "wagmi": "^2.16.9"
+    "viem": "^2.21.54",
+    "wagmi": "^2.16.9",
+    "zustand": "^5.0.2"
   },
   "devDependencies": {
     "@types/node": "^20",

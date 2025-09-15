@@ -135,26 +135,23 @@ export async function mockGetBatchInfoWithMetadata(batchId: string): Promise<{
     name: batch.name || `Coffee Batch #${batchId}`,
     description: batch.description || 'Premium coffee batch created in mock mode',
     image: `https://via.placeholder.com/400x400/8B4513/FFFFFF?text=Batch+${batchId}`,
-    external_url: `https://waga.coffee/batch/${batchId}`,
-    attributes: [
-      { trait_type: 'Origin', value: batch.origin || 'Mock Origin' },
-      { trait_type: 'Quality Grade', value: batch.qualityGrade || 'AA' },
-      { trait_type: 'Processing Method', value: batch.processingMethod || 'Washed' },
-      { trait_type: 'Batch Size', value: batch.quantity?.toString() || '100' },
-      { trait_type: 'Product Type', value: batch.productType || 'RETAIL_BAGS' }
-    ],
     properties: {
-      batchId,
-      blockchainId: batchId,
-      productType: batch.productType || 'RETAIL_BAGS',
-      unitWeight: batch.unitWeight || batch.packagingInfo || '250g',
-      farmer: batch.farmer || 'Mock Farmer',
       origin: batch.origin || 'Mock Origin',
-      quantity: batch.quantity || 100,
-      pricePerUnit: batch.pricePerUnit || '25.00',
+      farmer: batch.farmer || 'Mock Farmer',
+      altitude: batch.altitude || '1200m',
+      process: batch.processingMethod || 'Washed',
+      roastProfile: batch.roastProfile || 'Medium',
+      roastDate: batch.roastDate || new Date().toISOString().split('T')[0],
+      certifications: batch.certifications || ['Organic', 'Fair Trade'],
+      cupping_notes: batch.cuppingNotes || ['Chocolate', 'Citrus', 'Smooth'],
+      batchSize: batch.quantity || 100,
       packagingInfo: batch.packagingInfo || '250g',
-      isVerified: batch.isVerified || false,
-      createdAt: batch.createdAt?.toISOString() || new Date().toISOString()
+      pricePerUnit: (parseFloat(batch.pricePerUnit?.toString() || '25.00') * 100).toString(), // Convert to cents
+      moisture_content: batch.moistureContent,
+      density: batch.density,
+      defect_count: batch.defectCount,
+      cooperative_id: batch.cooperativeId,
+      processor_id: batch.processorId
     }
   };
   

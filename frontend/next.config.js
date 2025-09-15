@@ -18,6 +18,9 @@ const nextConfig = {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
+      // Handle React Native dependencies that shouldn't be bundled in browser
+      '@react-native-async-storage/async-storage': false,
+      'react-native': false,
     };
     
     // Ensure styled-jsx is properly handled
@@ -28,13 +31,22 @@ const nextConfig = {
       };
     }
     
+    // Handle externals for React Native packages
+    config.externals = config.externals || [];
+    if (!isServer) {
+      config.externals.push({
+        '@react-native-async-storage/async-storage': 'commonjs @react-native-async-storage/async-storage',
+        'react-native': 'commonjs react-native',
+      });
+    }
+    
     return config;
   },
   // Experimental features for better compatibility
   experimental: {
     esmExternals: false,
   },
-  // Optimize for serverless functions
+  // Optimize for serverless functions  
   output: 'standalone',
 }
 
