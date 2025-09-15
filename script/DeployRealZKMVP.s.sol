@@ -7,6 +7,7 @@ import {HelperConfig} from "./HelperConfig.s.sol";
 
 // Core WAGA Contracts
 import {WAGACoffeeTokenCore} from "../src/WAGACoffeeTokenCore.sol";
+import {WAGACoffeeViews} from "../src/WAGACoffeeViews.sol";
 import {WAGABatchManager} from "../src/WAGABatchManager.sol";
 import {WAGAZKManager} from "../src/WAGAZKManager.sol";
 import {PrivacyLayer} from "../src/PrivacyLayer.sol";
@@ -63,6 +64,11 @@ contract DeployRealZKMVP is Script {
         // 2. Deploy WAGACoffeeTokenCore (baseURI will be updated later)
         console.log("Deploying Core Coffee Token...");
         WAGACoffeeTokenCore coffeeToken = new WAGACoffeeTokenCore("");
+
+        // 2b. Deploy WAGACoffeeViews for view functions
+        console.log("Deploying Coffee Views...");
+        WAGACoffeeViews coffeeViews = new WAGACoffeeViews(address(coffeeToken));
+        console.log("Coffee Views:", address(coffeeViews));
 
         // 3. Deploy Privacy Layer
         console.log("Deploying Privacy Layer...");

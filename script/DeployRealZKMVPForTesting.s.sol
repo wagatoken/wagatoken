@@ -4,6 +4,7 @@ pragma solidity ^0.8.18;
 import {Script} from "forge-std/Script.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 import {WAGACoffeeTokenCore} from "../src/WAGACoffeeTokenCore.sol";
+import {WAGACoffeeViews} from "../src/WAGACoffeeViews.sol";
 import {WAGABatchManager} from "../src/WAGABatchManager.sol";
 import {WAGAZKManager} from "../src/WAGAZKManager.sol";
 import {WAGAProofOfReserve} from "../src/WAGAProofOfReserve.sol";
@@ -43,6 +44,9 @@ contract DeployRealZKMVPForTesting is Script {
 
         // 2. Deploy WAGACoffeeTokenCore first
         WAGACoffeeTokenCore coffeeToken = new WAGACoffeeTokenCore("https://ipfs.io/ipfs/");
+
+        // 2b. Deploy WAGACoffeeViews for view functions  
+        WAGACoffeeViews coffeeViews = new WAGACoffeeViews(address(coffeeToken));
 
         // 3. Deploy PrivacyLayer with coffee token reference
         PrivacyLayer privacyLayer = new PrivacyLayer(address(coffeeToken));

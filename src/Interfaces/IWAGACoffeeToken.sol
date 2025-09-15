@@ -63,5 +63,35 @@ interface IWAGACoffeeToken {
         uint256 batchId,
         string memory ipfsUri
     ) external;
+
+    /**
+     * @dev Get complete batch information
+     */
+    function getBatchInfo(uint256 batchId) external view returns (
+        uint256 productionDate,
+        uint256 expiryDate,
+        bool isVerified,
+        uint256 quantity,
+        uint256 pricePerUnit,
+        string memory packagingInfo,
+        string memory metadataHash,
+        bool isMetadataVerified,
+        uint256 lastVerifiedTimestamp
+    );
+
+    /**
+     * @dev Get next batch ID that will be assigned
+     */
+    function getNextBatchId() external view returns (uint256);
+
+    /**
+     * @dev Get minted quantity for a batch
+     */
+    function getMintedQuantity(uint256 batchId) external view returns (uint256);
+
+    /**
+     * @dev Get available quantity for a batch
+     */
+    function getAvailableQuantity(uint256 batchId) external view returns (uint256);
 }
 

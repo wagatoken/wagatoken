@@ -1,0 +1,31 @@
+{
+  "name": "waga-chainlink-functions",
+  "version": "1.0.0",
+  "description": "Chainlink Functions integration for WAGA Coffee traceability",
+  "main": "scripts/deploy-chainlink-functions.js",
+  "scripts": {
+    "deploy:functions": "node scripts/deploy-chainlink-functions.js",
+    "test:chainlink": "forge script script/ChainlinkFunctionsIntegrationTest.s.sol:ChainlinkFunctionsIntegrationTest --rpc-url $BASE_SEPOLIA_RPC_URL --private-key $PRIVATE_KEY_SEP --broadcast",
+    "verify:functions": "node scripts/verify-functions-setup.js",
+    "upload:source": "echo 'Please upload chainlink/functions-source.js manually to https://functions.chain.link/'",
+    "monitor:subscription": "echo 'Monitor your subscription at https://functions.chain.link/'"
+  },
+  "dependencies": {
+    "@chainlink/functions-toolkit": "^0.2.9",
+    "ethers": "^6.8.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "prettier": "^3.0.0"
+  },
+  "keywords": [
+    "chainlink",
+    "functions",
+    "waga",
+    "coffee",
+    "traceability",
+    "blockchain"
+  ],
+  "author": "WAGA Team",
+  "license": "MIT"
+}
