@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "WAGA - Onchain Coffee  OffChain Impact",
-    description: "Fair and Transparent farm to cup",
+    description: "Fair and Transparent from Farm to Cup",
     type: "website",
   },
 };
