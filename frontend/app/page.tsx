@@ -329,44 +329,65 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            <div className="web3-card text-center web3-glass-morphism web3-card-stable">
-              <div className="flex justify-center mb-4 web3-subtle-glow">
-                <NetworkEthereum size={48} variant="branded" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+            <div className="web3-card text-center web3-glass-morphism web3-card-stable flex flex-col justify-between h-full">
+              <div>
+                <div className="flex justify-center mb-4 web3-subtle-glow">
+                  <NetworkEthereum size={48} variant="branded" />
+                </div>
+                <h3 className="text-xl font-bold mb-3 web3-gradient-text">Smart Contracts</h3>
+                <p className="mb-4 web3-text-stable">
+                  ERC-1155 tokens represent verified coffee batches 
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-3 web3-gradient-text">Smart Contracts</h3>
-              <p className="mb-4 web3-text-stable">
-                ERC-1155 tokens represent verified coffee batches 
-              </p>
-              <div className="web3-badge web3-badge-success flex items-center gap-1">
+              <div className="web3-badge web3-badge-success flex items-center gap-1 justify-center">
                 <MdCheck size={16} />
                 <span>Deployed & Verified</span>
               </div>
             </div>
 
-            <div className="web3-card text-center web3-glass-morphism web3-card-stable" style={{ animationDelay: '0.2s' }}>
-              <div className="flex justify-center mb-4 web3-subtle-glow">
-                <SiChainlink size={48} />
+            <div className="web3-card text-center web3-glass-morphism web3-card-stable flex flex-col justify-between h-full" style={{ animationDelay: '0.2s' }}>
+              <div>
+                <div className="flex justify-center mb-4 web3-subtle-glow">
+                  <SiChainlink size={48} />
+                </div>
+                <h3 className="text-xl font-bold mb-3 web3-gradient-text">Chainlink Oracles</h3>
+                <p className="mb-4 web3-text-stable">
+                  Decentralized verification of coffee inventory through Chainlink Functions
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-3 web3-gradient-text">Chainlink Oracles</h3>
-              <p className="mb-4 web3-text-stable">
-                Decentralized verification of coffee inventory through Chainlink Functions
-              </p>
               <div className="web3-badge web3-badge-info">
                 Base Testnet Active
               </div>
             </div>
 
-            <div className="web3-card text-center web3-glass-morphism web3-card-stable" style={{ animationDelay: '0.4s' }}>
-              <div className="flex justify-center mb-4 web3-subtle-glow">
-                <SiIpfs size={48} />
+            <div className="web3-card text-center web3-glass-morphism web3-card-stable flex flex-col justify-between h-full" style={{ animationDelay: '0.4s' }}>
+              <div>
+                <div className="flex justify-center mb-4 web3-subtle-glow">
+                  <SiIpfs size={48} />
+                </div>
+                <h3 className="text-xl font-bold mb-3 web3-gradient-text">IPFS Storage</h3>
+                <p className="mb-4 web3-text-stable">
+                  Immutable metadata storage via Pinata for complete transparency
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-3 web3-gradient-text">IPFS Storage</h3>
-              <p className="mb-4 web3-text-stable">
-                Immutable metadata storage via Pinata for complete transparency
-              </p>
               <div className="web3-badge web3-badge-warning">
                 Pinata Integrated
+              </div>
+            </div>
+
+            <div className="web3-card text-center web3-glass-morphism web3-card-stable flex flex-col justify-between h-full" style={{ animationDelay: '0.6s' }}>
+              <div>
+                <div className="flex justify-center mb-4 web3-subtle-glow">
+                  <div className="text-4xl">🔐</div>
+                </div>
+                <h3 className="text-xl font-bold mb-3 web3-gradient-text">ZK Privacy</h3>
+                <p className="mb-4 web3-text-stable">
+                  Zero-Knowledge proofs protect sensitive business data while maintaining transparency
+                </p>
+              </div>
+              <div className="web3-badge web3-badge-purple">
+                Privacy Protected
               </div>
             </div>
           </div>
