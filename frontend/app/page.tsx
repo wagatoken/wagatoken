@@ -20,7 +20,7 @@ export default function HomePage() {
   const [featuredBatches, setFeaturedBatches] = useState<FeaturedBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState([
-    { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" />, theme: "blockchain" },
+    { label: "Smart Contracts Deployed", value: "13", icon: <NetworkEthereum size={24} variant="branded" />, theme: "blockchain" },
     { label: "Coffee Batches Tracked", value: "Loading...", icon: <MdCoffee size={24} />, theme: "coffee" },
     { label: "Verified Batches", value: "Loading...", icon: <MdVerified size={24} />, theme: "verification" },
     { label: "IPFS Storage", value: "Active", icon: <MdStorage size={24} />, theme: "storage" },
@@ -111,7 +111,7 @@ export default function HomePage() {
       const verificationRate = totalBatches > 0 ? Math.round((verifiedBatches / totalBatches) * 100) : 0;
         
       setStats([
-        { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" />, theme: "blockchain" },
+        { label: "Smart Contracts Deployed", value: "13", icon: <NetworkEthereum size={24} variant="branded" />, theme: "blockchain" },
         { label: "Coffee Batches Tracked", value: `${totalBatches}`, icon: <MdCoffee size={24} />, theme: "coffee" },
         { label: "Verification Rate", value: `${verificationRate}%`, icon: <MdVerified size={24} />, theme: "verification" },
         { label: "IPFS Storage", value: "Active", icon: <MdStorage size={24} />, theme: "storage" },
@@ -121,7 +121,7 @@ export default function HomePage() {
       console.error('Error fetching featured batches:', error);
       // Show actual blockchain data even if zero - no fake fallback values
       setStats([
-        { label: "Smart Contracts Deployed", value: "4", icon: <NetworkEthereum size={24} variant="branded" />, theme: "blockchain" },
+        { label: "Smart Contracts Deployed", value: "13", icon: <NetworkEthereum size={24} variant="branded" />, theme: "blockchain" },
         { label: "Coffee Batches Tracked", value: "0", icon: <MdCoffee size={24} />, theme: "coffee" },
         { label: "Verification Rate", value: "0%", icon: <MdVerified size={24} />, theme: "verification" },
         { label: "IPFS Storage", value: "Active", icon: <MdStorage size={24} />, theme: "storage" },

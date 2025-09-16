@@ -90,7 +90,7 @@ export default function About() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <div className="flex flex-col items-center space-y-2">
                   <NetworkEthereum size={32} variant="branded" />
-                  <div className="text-2xl font-bold web3-gradient-text">4</div>
+                  <div className="text-2xl font-bold web3-gradient-text">13</div>
                   <div className="text-sm text-gray-600">Smart Contracts</div>
                 </div>
                 <div className="flex flex-col items-center space-y-2">
