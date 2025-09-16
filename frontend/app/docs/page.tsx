@@ -10,7 +10,7 @@ export default function Docs() {
         <div className="web3-card animate-card-entrance">
           <h1 className="text-4xl font-bold web3-gradient-text mb-8">Documentation</h1>
           <p className="text-lg text-gray-800 mb-8">
-            Welcome to the WAGA Tokenized Coffee Platform! Here you'll learn how to navigate our privacy-enhanced blockchain system for Ethiopian coffee trading. Our smart contracts use Zero-Knowledge (ZK) proofs to protect sensitive business information while ensuring complete transparency and traceability from bean to cup. Whether you're a coffee processor, distributor, or curious coffee lover, these guides will help you understand how we're transforming coffee trading with advanced Web3 technology.
+            Welcome to the WAGA Tokenized Coffee Platform! Here you'll learn how to navigate our privacy-enhanced blockchain system for coffee trading. Our smart contracts use Zero-Knowledge (ZK) proofs to protect sensitive business information while ensuring complete transparency and traceability from bean to cup. Whether you're a coffee processor, distributor, or curious coffee lover, these guides will help you understand how we're transforming coffee trading with advanced Web3 technology.
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
