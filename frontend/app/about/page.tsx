@@ -5,7 +5,8 @@ import {
   MdAgriculture,
   MdTimeline,
   MdGrade,
-  MdStorage
+  MdStorage,
+  MdSecurity
 } from 'react-icons/md';
 
 export default function About() {
@@ -23,12 +24,12 @@ export default function About() {
                 />
               </div>
             </div>
-            <h1 className="text-4xl font-bold web3-gradient-text-harmonized mb-6">About WAGA Coffee Platform</h1>
+            <h1 className="text-4xl font-bold web3-gradient-text-harmonized mb-6">About WAGA Tokenized Coffee Platform</h1>
           </div>
           
           <div className="space-y-6 text-gray-700">
             <p className="text-lg leading-relaxed">
-              WAGA Coffee Platform revolutionizes the coffee supply chain by tokenizing premium roasted coffee from highland regions. 
+              WAGA is a digital transformation of the coffee supply chain that tokenizes premium roasted coffee from highland regions. 
               Our blockchain-powered platform ensures complete traceability from farm to cup, managed by WAGA administrators who work directly with local farmers.
             </p>
             
@@ -52,8 +53,22 @@ export default function About() {
                 </h2>
                 <p className="text-gray-700 leading-relaxed">
                   Built on Base Testnet with Chainlink Functions for inventory verification and IPFS for 
-                  decentralized metadata storage. Our smart contracts ensure data integrity, transparency, 
-                  and immutable proof of origin for every coffee batch.
+                  decentralized metadata storage. Our smart contracts leverage Zero-Knowledge (ZK) cryptography 
+                  to protect sensitive business information while ensuring data integrity, transparency, 
+                  and immutable proof of origin for every coffee batch. Our three specialized ZK circuits 
+                  (Price, Quality, and Supply Chain) enable privacy-enhanced trading.
+                </p>
+              </div>
+
+              <div className="space-y-4 animate-card-entrance" style={{ animationDelay: '500ms' }}>
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
+                  <MdSecurity size={24} className="text-indigo-600" />
+                  <span>Privacy Protection</span>
+                </h2>
+                <p className="text-gray-700 leading-relaxed">
+                  Our Zero-Knowledge privacy technology protects sensitive business information while maintaining 
+                  complete transparency. Farmers can prove quality standards, distributors can verify fair pricing, 
+                  and supply chain integrity is maintained—all without exposing proprietary data or competitive advantages.
                 </p>
               </div>
 

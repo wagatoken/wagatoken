@@ -7,7 +7,7 @@ import {
   SiIpfs,
   SiChainlink
 } from 'react-icons/si';
-import { MdCheck, MdAdminPanelSettings, MdLibraryBooks, MdStorefront, MdSearch, MdCoffee, MdVerified, MdStorage, MdNature, MdLocalFireDepartment, MdLocalShipping, MdPublic } from 'react-icons/md';
+import { MdCheck, MdAdminPanelSettings, MdLibraryBooks, MdStorefront, MdSearch, MdCoffee, MdVerified, MdStorage, MdNature, MdLocalFireDepartment, MdLocalShipping, MdPublic, MdSecurity } from 'react-icons/md';
 import { BatchInfo, getActiveBatchIds, getBatchInfoWithMetadata } from "@/utils/smartContracts";
 
 interface FeaturedBatch extends BatchInfo {
@@ -28,7 +28,7 @@ export default function HomePage() {
 
   const features = [
     {
-      title: "🌱 Farm Level",
+      title: "Farm Level",
       description: "Cooperatives create green coffee bean batches (60kg) with origin certification and quality documentation",
       icon: <MdNature size={32} />,
       href: "/cooperatives",
@@ -36,7 +36,7 @@ export default function HomePage() {
       step: "Step 1"
     },
     {
-      title: "🔥 Processing Level", 
+      title: "Processing Level", 
       description: "Roasters create roasted coffee bean batches (60kg) with roasting profiles and flavor documentation",
       icon: <MdLocalFireDepartment size={32} />,
       href: "/roaster",
@@ -44,7 +44,7 @@ export default function HomePage() {
       step: "Step 2"
     },
     {
-      title: "📦 Retail Level",
+      title: "Retail Level",
       description: "Processors create consumer-ready coffee batches (250g/500g) with ZK privacy protection",
       icon: <MdCoffee size={32} />,
       href: "/processor", 
@@ -52,7 +52,7 @@ export default function HomePage() {
       step: "Step 3"
     },
     {
-      title: "🚚 Distribution Level",
+      title: "Distribution Level",
       description: "Distributors request verified batches and redeem tokens for physical coffee delivery",
       icon: <MdLocalShipping size={32} />,
       href: "/distributor",
@@ -60,7 +60,7 @@ export default function HomePage() {
       step: "Step 4"
     },
     {
-      title: "⚙️ Management",
+      title: "Management",
       description: "Admin portal for WAGA staff to verify, manage, and oversee the entire coffee ecosystem",
       icon: <MdAdminPanelSettings size={32} />,
       href: "/admin",
@@ -68,7 +68,7 @@ export default function HomePage() {
       step: "Control"
     },
     {
-      title: "🌐 Public Access",
+      title: "Public Access",
       description: "Browse and explore verified coffee batches with transparent quality and origin information",
       icon: <MdPublic size={32} />,
       href: "/browse",
@@ -379,7 +379,7 @@ export default function HomePage() {
             <div className="web3-card text-center web3-glass-morphism web3-card-stable flex flex-col justify-between h-full" style={{ animationDelay: '0.6s' }}>
               <div>
                 <div className="flex justify-center mb-4 web3-subtle-glow">
-                  <div className="text-4xl">🔐</div>
+                  <MdSecurity className="text-4xl text-indigo-600" />
                 </div>
                 <h3 className="text-xl font-bold mb-3 web3-gradient-text">ZK Privacy</h3>
                 <p className="mb-4 web3-text-stable">

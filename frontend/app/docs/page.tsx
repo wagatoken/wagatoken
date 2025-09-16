@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { MdRocket, MdAdminPanelSettings, MdBusiness, MdSecurity, MdStorage, MdCode, MdHandshake, MdSearch, MdLink, MdBarChart, MdCheckCircle, MdCoffee, MdLock, MdPublic } from 'react-icons/md';
+import { SiChainlink } from 'react-icons/si';
+import DynamicPlatformStats from '../components/DynamicPlatformStats';
 
 export default function Docs() {
   return (
@@ -7,97 +10,97 @@ export default function Docs() {
         <div className="web3-card animate-card-entrance">
           <h1 className="text-4xl font-bold web3-gradient-text mb-8">Documentation</h1>
           <p className="text-lg text-gray-800 mb-8">
-            Welcome to the WAGA Coffee Platform! Here you'll learn how to navigate our privacy-enhanced blockchain system for Ethiopian coffee trading. We use cutting-edge Zero-Knowledge (ZK) proofs to protect sensitive business information while ensuring complete transparency and traceability from bean to cup. Whether you're a coffee processor, distributor, or curious coffee lover, these guides will help you understand how we're revolutionizing coffee trading with advanced Web3 technology.
+            Welcome to the WAGA Tokenized Coffee Platform! Here you'll learn how to navigate our privacy-enhanced blockchain system for Ethiopian coffee trading. Our smart contracts use Zero-Knowledge (ZK) proofs to protect sensitive business information while ensuring complete transparency and traceability from bean to cup. Whether you're a coffee processor, distributor, or curious coffee lover, these guides will help you understand how we're transforming coffee trading with advanced Web3 technology.
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Link href="/docs/guides/getting-started" className="web3-card-feature animate-card-entrance block hover:shadow-lg transition-shadow" style={{ animationDelay: '100ms' }}>
+            <Link href="/docs/guides/getting-started" className="web3-card-feature animate-card-entrance block hover:shadow-lg transition-shadow flex flex-col h-full" style={{ animationDelay: '100ms' }}>
               <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center space-x-2">
-                <span className="text-2xl">🚀</span>
+                <MdRocket className="text-2xl text-emerald-600" />
                 <span>Getting Started</span>
               </h3>
-              <p className="text-gray-800 text-sm mb-4 leading-relaxed">
-                New to the platform? Start here! Learn how to connect your wallet, understand our coffee tokenization system, and discover how blockchain technology ensures every cup of Ethiopian coffee is authentic and traceable.
+              <p className="text-gray-800 text-sm mb-4 leading-relaxed flex-grow">
+                New to the platform? Start here! Learn how to connect your wallet to our smart contracts, understand our ERC1155 coffee tokenization system, and discover how our blockchain code ensures every cup of Ethiopian coffee is authentic and traceable through immutable records.
               </p>
-              <span className="web3-button-outline text-sm inline-block">
+              <span className="web3-button-outline text-sm inline-block mt-auto">
                 Read Guide →
               </span>
             </Link>
             
-            <Link href="/docs/guides/admin" className="web3-card-feature animate-card-entrance block hover:shadow-lg transition-shadow" style={{ animationDelay: '200ms' }}>
+            <Link href="/docs/guides/admin" className="web3-card-feature animate-card-entrance block hover:shadow-lg transition-shadow flex flex-col h-full" style={{ animationDelay: '200ms' }}>
               <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center space-x-2">
-                <span className="text-2xl">🏭</span>
+                <MdAdminPanelSettings className="text-2xl text-blue-600" />
                 <span>WAGA Admin Guide</span>
               </h3>
-              <p className="text-gray-800 text-sm mb-4 leading-relaxed">
-                Are you a coffee processor or cooperative? This comprehensive guide covers batch creation, quality verification, IPFS metadata storage, and ZK-proof generation for privacy-enhanced coffee trading. Learn how to protect sensitive business data while maintaining transparency.
+              <p className="text-gray-800 text-sm mb-4 leading-relaxed flex-grow">
+                Are you a coffee processor or cooperative? This comprehensive guide covers batch creation through smart contracts, quality verification using Chainlink Functions, IPFS metadata storage via Pinata, and ZK-proof generation using Circom circuits for privacy-enhanced coffee trading. Learn how our Solidity contracts protect sensitive business data while maintaining transparency.
               </p>
-              <span className="web3-button-outline text-sm inline-block">
+              <span className="web3-button-outline text-sm inline-block mt-auto">
                 Admin Portal →
               </span>
             </Link>
             
-            <Link href="/docs/guides/distributor" className="web3-card-feature animate-card-entrance block hover:shadow-lg transition-shadow" style={{ animationDelay: '300ms' }}>
+            <Link href="/docs/guides/distributor" className="web3-card-feature animate-card-entrance block hover:shadow-lg transition-shadow flex flex-col h-full" style={{ animationDelay: '300ms' }}>
               <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center space-x-2">
-                <span className="text-2xl">🏢</span>
+                <MdBusiness className="text-2xl text-purple-600" />
                 <span>Distributor Guide</span>
               </h3>
-              <p className="text-gray-800 text-sm mb-4 leading-relaxed">
-                Ready to distribute Ethiopian coffee? Learn about our inventory-free distribution model, USDC payment processing, staking requirements, and how ZK privacy protection ensures competitive advantages while maintaining supply chain transparency.
+              <p className="text-gray-800 text-sm mb-4 leading-relaxed flex-grow">
+                Ready to distribute Ethiopian coffee? Learn about our inventory-free distribution model using smart contract automation, USDC payment processing through our Treasury contract, staking requirements managed by our Solidity code, and how ZK privacy circuits ensure competitive advantages while maintaining supply chain transparency.
               </p>
-              <span className="web3-button-outline text-sm inline-block">
+              <span className="web3-button-outline text-sm inline-block mt-auto">
                 Learn More →
               </span>
             </Link>
             
-            <Link href="/docs/guides/chainlink" className="web3-card-feature animate-card-entrance block hover:shadow-lg transition-shadow" style={{ animationDelay: '400ms' }}>
+            <Link href="/docs/guides/chainlink" className="web3-card-feature animate-card-entrance block hover:shadow-lg transition-shadow flex flex-col h-full" style={{ animationDelay: '400ms' }}>
               <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center space-x-2">
-                <span className="text-2xl">🔗</span>
+                <SiChainlink className="text-2xl text-blue-500" />
                 <span>Chainlink Integration</span>
               </h3>
-              <p className="text-gray-800 text-sm mb-4 leading-relaxed">
-                Curious about our oracle integration? Discover how we use Chainlink Functions for automated inventory verification, proof of reserve, and real-world data integration to ensure coffee quality and availability.
+              <p className="text-gray-800 text-sm mb-4 leading-relaxed flex-grow">
+                Curious about our oracle integration? Discover how our smart contracts use Chainlink Functions JavaScript code for automated inventory verification, proof of reserve calculations, and real-world data integration to ensure coffee quality and availability through decentralized oracles.
               </p>
-              <span className="web3-button-outline text-sm inline-block">
+              <span className="web3-button-outline text-sm inline-block mt-auto">
                 Technical Docs →
               </span>
             </Link>
             
-            <Link href="/docs/guides/zk-privacy" className="web3-card-feature animate-card-entrance block hover:shadow-lg transition-shadow" style={{ animationDelay: '450ms' }}>
+            <Link href="/docs/guides/zk-privacy" className="web3-card-feature animate-card-entrance block hover:shadow-lg transition-shadow flex flex-col h-full" style={{ animationDelay: '450ms' }}>
               <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center space-x-2">
-                <span className="text-2xl">🔒</span>
+                <MdSecurity className="text-2xl text-indigo-600" />
                 <span>ZK Privacy Protection</span>
               </h3>
-              <p className="text-gray-800 text-sm mb-4 leading-relaxed">
-                Learn how Zero-Knowledge proofs protect sensitive business information while maintaining transparency. Understand our three privacy circuits: Price, Quality, and Supply Chain protection for competitive advantage.
+              <p className="text-gray-800 text-sm mb-4 leading-relaxed flex-grow">
+                Learn how our Circom circuits and Groth16 proving system protect sensitive business information while maintaining transparency. Understand our three specialized ZK verification contracts: PricePrivacyCircuit.circom, QualityTierCircuit.circom, and SupplyChainPrivacyCircuit.circom for competitive advantage protection.
               </p>
-              <span className="web3-button-outline text-sm inline-block">
+              <span className="web3-button-outline text-sm inline-block mt-auto">
                 Privacy Guide →
               </span>
             </Link>
             
-            <Link href="/docs/guides/ipfs-storage" className="web3-card-feature animate-card-entrance block hover:shadow-lg transition-shadow" style={{ animationDelay: '500ms' }}>
+            <Link href="/docs/guides/ipfs-storage" className="web3-card-feature animate-card-entrance block hover:shadow-lg transition-shadow flex flex-col h-full" style={{ animationDelay: '500ms' }}>
               <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center space-x-2">
-                <span className="text-2xl">📡</span>
+                <MdStorage className="text-2xl text-orange-600" />
                 <span>IPFS Storage</span>
               </h3>
-              <p className="text-gray-800 text-sm mb-4 leading-relaxed">
-                Wondering about our decentralized storage? Learn how we use IPFS and Pinata to store coffee batch metadata, images, and documents in a decentralized, tamper-proof way that ensures data permanence and privacy.
+              <p className="text-gray-800 text-sm mb-4 leading-relaxed flex-grow">
+                Wondering about our decentralized storage? Learn how our smart contracts integrate with IPFS through Pinata's API to store coffee batch metadata, images, and documents in a decentralized, tamper-proof way that ensures data permanence and privacy through content-addressed storage.
               </p>
-              <span className="web3-button-outline text-sm inline-block">
+              <span className="web3-button-outline text-sm inline-block mt-auto">
                 View Details →
               </span>
             </Link>
             
-            <Link href="/docs/guides/smart-contracts" className="web3-card-feature animate-card-entrance block hover:shadow-lg transition-shadow" style={{ animationDelay: '600ms' }}>
+            <Link href="/docs/guides/smart-contracts" className="web3-card-feature animate-card-entrance block hover:shadow-lg transition-shadow flex flex-col h-full" style={{ animationDelay: '600ms' }}>
               <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center space-x-2">
-                <span className="text-2xl">🛠️</span>
+                <MdCode className="text-2xl text-green-600" />
                 <span>Smart Contracts</span>
               </h3>
-              <p className="text-gray-800 text-sm mb-4 leading-relaxed">
-                Deep dive into our smart contract architecture! Explore how our ERC1155 tokens, batch management, ZK-proof verification, privacy layer, and USDC payment systems work together on Base Sepolia to create a trustless coffee trading platform.
+              <p className="text-gray-800 text-sm mb-4 leading-relaxed flex-grow">
+                Deep dive into our Solidity smart contract architecture! Explore how our ERC1155 multi-token standard, WAGABatchManager contract, ZK-proof verification through CircomVerifier.sol, PrivacyLayer.sol implementation, and USDC payment systems work together on Base Sepolia to create a trustless coffee trading platform.
               </p>
-              <span className="web3-button-outline text-sm inline-block">
+              <span className="web3-button-outline text-sm inline-block mt-auto">
                 Contract Docs →
               </span>
             </Link>
@@ -105,13 +108,13 @@ export default function Docs() {
 
           <div className="mt-12 web3-card-feature animate-card-entrance" style={{ animationDelay: '700ms' }}>
             <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-              <span className="text-3xl">🔍</span>
+              <MdSearch className="text-3xl text-blue-600" />
               <span>Quick Reference</span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="web3-card">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                  <span>🔗</span>
+                  <MdLink className="text-xl text-emerald-600" />
                   <span>Smart Contract Addresses</span>
                 </h3>
                 <div className="space-y-3 text-sm">
@@ -156,49 +159,22 @@ export default function Docs() {
                     </div>
                 </div>
               </div>
-              <div className="web3-card">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                  <span>📊</span>
-                  <span>Platform Stats</span>
-                </h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">Active Coffee Batches:</span>
-                    <span className="text-emerald-600 font-bold">25+</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">IPFS Files Stored:</span>
-                    <span className="text-emerald-600 font-bold">150+</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">Verification Rate:</span>
-                    <span className="text-emerald-600 font-bold">100%</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">ZK Proofs Generated:</span>
-                    <span className="text-emerald-600 font-bold">150+</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">Network Status:</span>
-                    <span className="text-emerald-600 font-bold">🟢 Active</span>
-                  </div>
-                </div>
-              </div>
+              <DynamicPlatformStats />
             </div>
             
             <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="web3-stat-card">
-                <div className="text-3xl mb-2">☕</div>
+                <MdCoffee className="text-3xl text-amber-600 mb-2" />
                 <div className="text-2xl font-bold text-emerald-600">Ethiopian</div>
                 <div className="text-sm text-gray-800">Premium Coffee Origins</div>
               </div>
               <div className="web3-stat-card">
-                <div className="text-3xl mb-2">🔒</div>
+                <MdLock className="text-3xl text-purple-600 mb-2" />
                 <div className="text-2xl font-bold text-purple-600">ZK-Protected</div>
                 <div className="text-sm text-gray-800">Privacy-Enhanced Trading</div>
               </div>
               <div className="web3-stat-card">
-                <div className="text-3xl mb-2">🌍</div>
+                <MdPublic className="text-3xl text-blue-600 mb-2" />
                 <div className="text-2xl font-bold text-blue-600">Global</div>
                 <div className="text-sm text-gray-800">USDC Payment Processing</div>
               </div>
@@ -206,11 +182,14 @@ export default function Docs() {
           </div>
 
           <div className="mt-12 bg-emerald-50 p-6 rounded-lg">
-            <h2 className="text-xl font-bold text-emerald-800 mb-3">🤝 How WAGA Works</h2>
+            <h2 className="text-xl font-bold text-emerald-800 mb-3 flex items-center space-x-2">
+              <MdHandshake className="text-2xl" />
+              <span>How WAGA Works</span>
+            </h2>
             <p className="text-emerald-700 mb-4">
-              WAGA revolutionizes the coffee industry by bringing transparency and traceability to every cup while protecting sensitive business information through Zero-Knowledge proofs. 
-              Our privacy-enhanced blockchain platform ensures that every bean can be traced from the Ethiopian highlands to your table, 
-              with the added benefit of protecting trade secrets and competitive advantages.
+              WAGA transforms the coffee industry by bringing transparency and traceability to every cup while protecting sensitive business information through Zero-Knowledge proofs. 
+              Our privacy-enhanced tokenized coffee platform features three specialized ZK circuits (Price, Quality, and Supply Chain) that ensure every bean can be traced from farm to table, 
+              with the added benefit of protecting trade secrets and competitive advantages using cutting-edge cryptographic technology.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link href="/browse" className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium">

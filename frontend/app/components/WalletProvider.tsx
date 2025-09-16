@@ -37,7 +37,7 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
       try {
         const MMSDK = new MetaMaskSDK({
           dappMetadata: {
-            name: "WAGA Coffee Platform",
+            name: "WAGA Tokenized Coffee Platform",
             url: typeof window !== "undefined" ? window.location.host : "",
           },
           preferDesktop: false,

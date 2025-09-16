@@ -2,7 +2,7 @@
 
 import { useWallet } from "./WalletProvider";
 import { WalletMetamask } from "@web3icons/react";
-import { FaLink } from "react-icons/fa";
+import { FaLink, FaUnlock } from "react-icons/fa";
 import { MdAccessTime } from "react-icons/md";
 
 const formatAddress = (addr: string) => {
@@ -61,9 +61,9 @@ export default function WalletConnectButton() {
         </div>
         <button
           onClick={disconnectWallet}
-          className="web3-wallet-disconnect-btn text-white font-bold transition-all duration-200 px-2 py-1 rounded-lg border-2 shadow-md hover:scale-105 active:scale-95"
+          className="web3-wallet-disconnect-btn text-white font-bold transition-all duration-200 px-2 py-1 rounded-lg border-2 shadow-md hover:scale-105 active:scale-95 flex items-center"
         >
-          🔓
+          <FaUnlock />
         </button>
       </div>
     );

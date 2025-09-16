@@ -361,13 +361,20 @@ export default function EnvironmentStatus() {
             {serviceStatus.blockchain.chainId && (
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">Wallet Network</span>
-                <span className={`font-medium ${
+                <span className={`font-medium flex items-center space-x-1 ${
                   serviceStatus.blockchain.networkValid ? 'text-green-700' : 'text-amber-700'
                 }`}>
-                  {serviceStatus.blockchain.networkValid ? 
-                    'Base Sepolia ✓' : 
-                    `Chain ${serviceStatus.blockchain.chainId} ⚠️`
-                  }
+                  {serviceStatus.blockchain.networkValid ? (
+                    <>
+                      <MdCheckCircle className="text-green-600" />
+                      <span>Base Sepolia</span>
+                    </>
+                  ) : (
+                    <>
+                      <MdWarning className="text-amber-600" />
+                      <span>Chain {serviceStatus.blockchain.chainId}</span>
+                    </>
+                  )}
                 </span>
               </div>
             )}

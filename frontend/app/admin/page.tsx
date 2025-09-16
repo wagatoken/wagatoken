@@ -55,6 +55,7 @@ import {
   performPeriodicChecks
 } from "@/utils/inventoryManager";
 import EnvironmentStatus from "@/app/components/EnvironmentStatus";
+import DynamicPlatformStats from "@/app/components/DynamicPlatformStats";
 import { useWallet } from "@/app/components/WalletProvider";
 import PrivacyEnhancedBatchForm from "@/app/components/PrivacyEnhancedBatchForm";
 
@@ -1014,6 +1015,49 @@ export default function AdminPage() {
                   </div>
                 </div>
 
+                {/* Real-Time Platform Statistics */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2">
+                    <DynamicPlatformStats />
+                  </div>
+                  <div className="web3-card">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+                      <MdAnalytics className="text-purple-600" />
+                      <span>Admin Quick Actions</span>
+                    </h3>
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => setActiveTab('create')}
+                        className="w-full flex items-center space-x-2 p-3 text-left bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+                      >
+                        <MdCreate className="text-emerald-600" />
+                        <span className="font-medium text-emerald-800">Create New Batch</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('verify')}
+                        className="w-full flex items-center space-x-2 p-3 text-left bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                      >
+                        <MdVerified className="text-blue-600" />
+                        <span className="font-medium text-blue-800">Verify & Mint</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('inventory')}
+                        className="w-full flex items-center space-x-2 p-3 text-left bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+                      >
+                        <MdStorage className="text-amber-600" />
+                        <span className="font-medium text-amber-800">Manage Inventory</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('settings')}
+                        className="w-full flex items-center space-x-2 p-3 text-left bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+                      >
+                        <MdSettings className="text-purple-600" />
+                        <span className="font-medium text-purple-800">Role Management</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Recent Activity */}
                 <div className="web3-card">
                   <h3 className="text-xl font-bold text-gray-900 mb-6">Recent Batch Activity</h3>
@@ -1389,8 +1433,9 @@ export default function AdminPage() {
                 <div className="web3-form-section">
                   <h3>Description</h3>
                   <div>
-                    <label className="web3-form-label">
-                      📖 Batch Description<span className="required">*</span>
+                    <label className="web3-form-label flex items-center space-x-2">
+                      <MdCreate className="text-emerald-600" />
+                      <span>Batch Description<span className="required">*</span></span>
                     </label>
                     <textarea
                       value={batchForm.description || ''}
@@ -1405,7 +1450,8 @@ export default function AdminPage() {
                 {/* ZK Privacy Configuration Section */}
                 <div className="web3-form-section">
                   <h3 className="flex items-center gap-2">
-                    🔐 Privacy Configuration
+                    <MdSecurity className="text-indigo-600" />
+                    Privacy Configuration
                   </h3>
                   <ZKConfigurationPanel
                     zkConfig={zkConfig}

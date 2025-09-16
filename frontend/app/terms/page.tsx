@@ -18,7 +18,7 @@ export default function TermsOfService() {
 
             <h2 className="text-2xl font-semibold text-white mt-8 mb-4">Welcome to WAGA</h2>
             <p>
-              Thanks for using WAGA Coffee Platform. These terms govern your use of our blockchain-based coffee traceability platform. By using WAGA, you agree to these terms. If you don't agree, please don't use our platform.
+              Thanks for using WAGA Tokenized Coffee Platform. These terms govern your use of our blockchain-based coffee traceability platform. By using WAGA, you agree to these terms. If you don't agree, please don't use our platform.
             </p>
 
             <p className="mt-4">

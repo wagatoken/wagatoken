@@ -53,8 +53,8 @@ export default function GettingStartedGuide() {
               
               <div className="space-y-6">
                 <p className="text-gray-700 leading-relaxed">
-                  WAGA Coffee Platform is a transformative blockchain-powered coffee traceability system that tokenizes premium Ethiopian coffee. 
-                  Our platform ensures complete transparency from farm to cup through Web3 technology.
+                  WAGA is a tokenized coffee platform that uses smart contracts to track premium Ethiopian coffee from farm to cup. 
+                  Our ERC1155 smart contracts create digital tokens representing real coffee batches, while our ZK-proof system protects sensitive business data like pricing and quality metrics.
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -18,7 +18,7 @@ export default function PrivacyPolicy() {
 
             <h2 className="text-2xl font-semibold text-white mt-8 mb-4">Who We Are</h2>
             <p>
-              WAGA Coffee Platform is a blockchain-based coffee traceability system connecting coffee farmers, distributors, and consumers. We're building something meaningful - a platform that brings transparency to coffee supply chains while respecting your privacy.
+              WAGA Tokenized Coffee Platform is a blockchain-based coffee traceability system connecting coffee farmers, distributors, and consumers. We're building something meaningful - a platform that brings transparency to coffee supply chains while respecting your privacy.
             </p>
 
             <h2 className="text-2xl font-semibold text-white mt-8 mb-4">What Information We Collect</h2>

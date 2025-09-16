@@ -120,7 +120,7 @@ export default function AdminGuide() {
               
               <div className="space-y-6">
                 <p className="text-gray-700 leading-relaxed">
-                  The Admin Portal provides a comprehensive interface for managing all aspects of the WAGA coffee platform.
+                  The Admin Portal provides a comprehensive interface for managing all aspects of the WAGA tokenized coffee platform.
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

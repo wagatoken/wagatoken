@@ -36,7 +36,7 @@ export default function DistributorGuide() {
               </div>
               <div className="ml-3">
                 <p className="text-sm text-emerald-700">
-                  <strong>Revolutionary Model:</strong> Distributors manage coffee tokens and redeem them when customers 
+                  <strong>Inventory-Free Model:</strong> Distributors manage coffee tokens and redeem them when customers 
                   place orders and pay. End customers receive physical coffee without handling blockchain tokens directly.
                 </p>
               </div>
@@ -520,7 +520,7 @@ export default function DistributorGuide() {
               
               <div className="space-y-6">
                 <p className="text-gray-700 leading-relaxed">
-                  The revolutionary aspect of WAGA's distributor model is the complete elimination of inventory overhead 
+                  The key benefit of WAGA's distributor model is the complete elimination of inventory overhead 
                   and advance capital requirements through smart contract automation.
                 </p>
 

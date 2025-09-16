@@ -9,8 +9,11 @@ import {
 } from '@web3icons/react';
 import { 
   FaTwitter, 
+  FaGithub, 
   FaTelegram, 
-  FaLinkedin 
+  FaDiscord,
+  FaFlag,
+  FaLinkedin
 } from 'react-icons/fa';
 import { 
   SiChainlink, 
@@ -43,7 +46,7 @@ export default function Footer() {
               Tokenizing premium roasted coffee from highland regions. Farm-to-cup traceability powered by blockchain technology.
             </p>
             <div className="flex items-center space-x-2 text-xs web3-navbar-subtitle mb-4">
-              <span>🇪🇹</span>
+              <FaFlag className="text-green-600" />
               <span>Proudly Ethiopian</span>
             </div>
             <div className="flex space-x-2">
@@ -167,7 +170,7 @@ export default function Footer() {
         <div className="mt-12 pt-8 border-t border-amber-500/20">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="web3-footer-copyright text-sm mb-4 md:mb-0">
-              © {currentYear} WAGA Coffee Platform. All rights reserved.
+              © {currentYear} WAGA Tokenized Coffee Platform. All rights reserved.
             </div>
             
             <div className="flex items-center space-x-6 text-xs">

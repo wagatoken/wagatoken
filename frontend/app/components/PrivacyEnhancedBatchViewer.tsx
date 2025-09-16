@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import { MdPublic, MdLock, MdSecurity, MdHelp, MdCheckCircle } from 'react-icons/md';
 import { useWallet } from '../components/WalletProvider';
 
 interface PrivacyConfig {
@@ -197,10 +198,10 @@ const PrivacyEnhancedBatchViewer: React.FC<PrivacyEnhancedBatchViewerProps> = ({
 
   const getPrivacyIcon = (level: number) => {
     switch (level) {
-      case 0: return '🌐';
-      case 1: return '🔒';
-      case 2: return '🔐';
-      default: return '❓';
+      case 0: return <MdPublic className="text-green-600" />;
+      case 1: return <MdLock className="text-orange-600" />;
+      case 2: return <MdSecurity className="text-red-600" />;
+      default: return <MdHelp className="text-gray-600" />;
     }
   };
 
@@ -219,13 +220,13 @@ const PrivacyEnhancedBatchViewer: React.FC<PrivacyEnhancedBatchViewerProps> = ({
         
         <div className="flex items-center space-x-2">
           {batchData.isVerified && (
-            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-              ✓ Verified
+            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium flex items-center">
+              <MdCheckCircle className="mr-1" /> Verified
             </span>
           )}
           {batchData.isMetadataVerified && (
-            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-              ✓ Metadata Verified
+            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium flex items-center">
+              <MdCheckCircle className="mr-1" /> Metadata Verified
             </span>
           )}
         </div>
