@@ -46,10 +46,8 @@ const nextConfig = {
   experimental: {
     esmExternals: false,
   },
-  // Optimize for serverless functions with proper routing
+  // Optimize for serverless functions
   output: 'standalone',
-  // Ensure proper static generation for docs
-  skipTrailingSlashRedirect: false,
 }
 
 module.exports = nextConfig

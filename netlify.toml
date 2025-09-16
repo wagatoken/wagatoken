@@ -16,52 +16,6 @@ NEXT_PRIVATE_STANDALONE = "true"
 node_bundler = "esbuild"
 external_node_modules = ["styled-jsx"]
 
-# Specific Next.js API route configuration  
-[[edge_functions]]
-function = "api-handler"
-path = "/api/*"
-
-# Fix for documentation routes with trailing slashes
-[[redirects]]
-from = "/docs"
-to = "/docs/"
-status = 301
-
-[[redirects]]
-from = "/docs/guides/*"
-to = "/docs/guides/:splat/"
-status = 301
-
-[[redirects]]
-from = "/docs/guides/getting-started"
-to = "/docs/guides/getting-started/"
-status = 301
-
-[[redirects]]
-from = "/docs/guides/admin"
-to = "/docs/guides/admin/"
-status = 301
-
-[[redirects]]
-from = "/docs/guides/distributor"
-to = "/docs/guides/distributor/"
-status = 301
-
-[[redirects]]
-from = "/docs/guides/chainlink"
-to = "/docs/guides/chainlink/"
-status = 301
-
-[[redirects]]
-from = "/docs/guides/ipfs-storage"
-to = "/docs/guides/ipfs-storage/"
-status = 301
-
-[[redirects]]
-from = "/docs/guides/smart-contracts"
-to = "/docs/guides/smart-contracts/"
-status = 301
-
 # Headers for better security and performance
 [[headers]]
 for = "/*"
