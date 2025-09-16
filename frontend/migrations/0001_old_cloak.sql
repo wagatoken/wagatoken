@@ -1,0 +1,100 @@
+CREATE TABLE "batch_privacy_configs" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "batch_privacy_configs_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"batch_id" bigint NOT NULL,
+	"privacyLevel" varchar(20) DEFAULT 'public' NOT NULL,
+	"pricePrivate" boolean DEFAULT false NOT NULL,
+	"qualityPrivate" boolean DEFAULT false NOT NULL,
+	"supplyChainPrivate" boolean DEFAULT false NOT NULL,
+	"quantityPrivate" boolean DEFAULT false NOT NULL,
+	"farmerDetailsPrivate" boolean DEFAULT false NOT NULL,
+	"configuredBy" varchar(42) NOT NULL,
+	"configurationReason" text,
+	"authorizedViewers" json DEFAULT '[]'::json,
+	"accessExpiry" timestamp,
+	"configuredAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "batch_privacy_configs_batch_id_unique" UNIQUE("batch_id")
+);
+--> statement-breakpoint
+CREATE TABLE "protected_batch_data" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "protected_batch_data_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"batch_id" bigint NOT NULL,
+	"dataType" varchar(50) NOT NULL,
+	"dataCategory" varchar(30) NOT NULL,
+	"dataHash" varchar(64) NOT NULL,
+	"salt" varchar(64) NOT NULL,
+	"encryptedData" text,
+	"encryptionMethod" varchar(20) DEFAULT 'AES-256-GCM',
+	"dataOwner" varchar(42) NOT NULL,
+	"accessLevel" varchar(20) DEFAULT 'private' NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "zk_circuit_configs" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "zk_circuit_configs_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"circuitName" varchar(100) NOT NULL,
+	"circuitVersion" varchar(20) DEFAULT '1.0.0' NOT NULL,
+	"verifierContractAddress" varchar(42) NOT NULL,
+	"circuitDescription" text,
+	"circuitWasmHash" varchar(64),
+	"circuitZkeyHash" varchar(64),
+	"provingKeyHash" varchar(64),
+	"maxConstraints" integer,
+	"maxPublicSignals" integer,
+	"trustedSetupHash" varchar(64),
+	"isActive" boolean DEFAULT true NOT NULL,
+	"deploymentNetwork" varchar(20) DEFAULT 'base-sepolia' NOT NULL,
+	"deployedBy" varchar(42) NOT NULL,
+	"deployedAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "zk_circuit_configs_circuitName_unique" UNIQUE("circuitName")
+);
+--> statement-breakpoint
+CREATE TABLE "zk_proofs" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "zk_proofs_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"proofId" varchar(64) NOT NULL,
+	"batch_id" bigint NOT NULL,
+	"proofType" varchar(30) NOT NULL,
+	"proofHash" varchar(64) NOT NULL,
+	"proofData" json NOT NULL,
+	"publicSignals" json NOT NULL,
+	"publicClaim" text NOT NULL,
+	"isVerified" boolean DEFAULT false NOT NULL,
+	"verificationTransactionHash" varchar(66),
+	"verification_block_number" bigint,
+	"verification_gas_used" bigint,
+	"circuitName" varchar(100) NOT NULL,
+	"circuitVersion" varchar(20) DEFAULT '1.0.0' NOT NULL,
+	"verifierContractAddress" varchar(42),
+	"proofGeneratorAddress" varchar(42) NOT NULL,
+	"generatedAt" timestamp DEFAULT now() NOT NULL,
+	"verifiedAt" timestamp,
+	"expiresAt" timestamp,
+	"verificationError" text,
+	"retryCount" integer DEFAULT 0 NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "zk_proofs_proofId_unique" UNIQUE("proofId")
+);
+--> statement-breakpoint
+CREATE TABLE "zk_verification_history" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "zk_verification_history_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"proofId" varchar(64) NOT NULL,
+	"batch_id" bigint NOT NULL,
+	"verificationAttempt" integer NOT NULL,
+	"verificationMethod" varchar(30) NOT NULL,
+	"verifierAddress" varchar(42),
+	"verificationResult" varchar(20) NOT NULL,
+	"verificationDetails" json,
+	"gas_used" bigint,
+	"verificationFee" numeric(20, 8),
+	"startedAt" timestamp DEFAULT now() NOT NULL,
+	"completedAt" timestamp,
+	"durationMs" integer,
+	"errorCode" varchar(20),
+	"errorMessage" text,
+	"transactionHash" varchar(66),
+	"block_number" bigint,
+	"blockTimestamp" timestamp
+);

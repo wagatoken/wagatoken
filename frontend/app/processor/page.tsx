@@ -7,6 +7,7 @@ import { ethers } from 'ethers';
 import { useWallet } from '../components/WalletProvider';
 import { createBatchBlockchainFirst } from '../../utils/smartContracts';
 import { generateBatchQRCode, generateSimpleVerificationQR, CoffeeBatchMetadata } from '../../utils/ipfsMetadata';
+import ZKConfigurationPanel, { ZKConfig } from '../../components/ZKConfigurationPanel';
 import PrivacyEnhancedBatchForm from '../components/PrivacyEnhancedBatchForm';
 
 const DISABLE_AUTH_FOR_TESTING = true; // Set to false to re-enable authentication
@@ -62,6 +63,17 @@ export default function ProcessorPortal() {
     pricePerUnit: '0.045',
     productionDate: new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)), // 7 days ago
     expiryDate: new Date(Date.now() + (90 * 24 * 60 * 60 * 1000)), // 90 days from now
+  });
+
+  // ZK Privacy Configuration State
+  const [zkEnabled, setZkEnabled] = useState(false);
+  const [zkConfig, setZkConfig] = useState({
+    enablePricePrivacy: false,
+    enableQualityPrivacy: false,
+    enableSupplyChainPrivacy: false,
+    pricingClaim: 'Competitive processing pricing verified',
+    qualityClaim: 'Premium processing quality standards met',
+    supplyChainClaim: 'Ethical processor supply chain verified'
   });
 
   // Generated QR codes
@@ -175,9 +187,14 @@ export default function ProcessorPortal() {
         ...batchForm,
         productType: 'RETAIL_BAGS', // Processors create retail bags
         unitWeight: batchForm.packagingInfo
-      });
+      }, zkEnabled ? zkConfig : undefined);
 
-      setSuccess(`Batch created successfully! Batch ID: ${result.batchId}`);
+      // Enhanced success message with ZK info
+      let successMessage = `Batch created successfully! Batch ID: ${result.batchId}`;
+      if (result.zkResults) {
+        successMessage += ` - Privacy features enabled (${result.zkResults.proofsGenerated.length} ZK proofs)`;
+      }
+      setSuccess(successMessage);
 
       // Generate QR codes
       console.log('Generating QR codes...');
@@ -207,7 +224,7 @@ export default function ProcessorPortal() {
         verification: verificationQR
       });
 
-      // Reset form
+      // Reset form and ZK config
       setBatchForm({
         name: '',
         description: '',
@@ -224,6 +241,17 @@ export default function ProcessorPortal() {
         pricePerUnit: '0.045',
         productionDate: new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)),
         expiryDate: new Date(Date.now() + (90 * 24 * 60 * 60 * 1000)),
+      });
+
+      // Reset ZK configuration
+      setZkEnabled(false);
+      setZkConfig({
+        enablePricePrivacy: false,
+        enableQualityPrivacy: false,
+        enableSupplyChainPrivacy: false,
+        pricingClaim: 'Competitive processing pricing verified',
+        qualityClaim: 'Premium processing quality standards met',
+        supplyChainClaim: 'Ethical processor supply chain verified'
       });
 
     } catch (error) {
@@ -746,6 +774,16 @@ export default function ProcessorPortal() {
                         />
                       </div>
                     </div>
+                  </div>
+
+                  {/* ZK Privacy Configuration */}
+                  <div className="mb-6">
+                    <ZKConfigurationPanel
+                      zkConfig={zkConfig}
+                      onConfigChange={setZkConfig}
+                      enabled={zkEnabled}
+                      onEnabledChange={setZkEnabled}
+                    />
                   </div>
                   
                   <button

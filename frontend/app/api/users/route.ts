@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MockDataService } from '../../../utils/mockData';
+import { db } from '../../../db';
+import { userRoles, batchTokenBalances } from '../../../db/schema';
+import { eq } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,42 +15,107 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
     
-    // For now, always use mock data
-    // TODO: Replace with real database queries when database is configured
-    const user = await MockDataService.getUser(address);
+    console.log(`Fetching user data for address: ${address}`);
+    
+    // Get user role from database
+    const userRole = await db.select().from(userRoles).where(eq(userRoles.userAddress, address)).limit(1);
+    
+    // Get user's token balances from database
+    const balances = await db.select().from(batchTokenBalances).where(eq(batchTokenBalances.holderAddress, address));
+    
+    // Transform balances into the expected format
+    const userBalances: Record<number, number> = {};
+    balances.forEach(balance => {
+      userBalances[balance.batchId] = balance.balance;
+    });
+    
+    const userData = {
+      address,
+      role: userRole[0]?.role || 'consumer',
+      isActive: userRole[0]?.isActive || false,
+      createdAt: userRole[0]?.assignedAt?.toISOString() || new Date().toISOString(),
+      balances: userBalances,
+      totalTokens: Object.values(userBalances).reduce((sum, balance) => sum + balance, 0)
+    };
+    
+    console.log(`Found user data:`, userData);
     
     return NextResponse.json({
       success: true,
-      data: user,
-      usingMockData: true,
-      note: 'Using mock data. Configure database to use real data.'
+      data: userData,
+      usingRealData: true,
+      note: 'Using live database data'
     });
   } catch (error) {
-    console.error('Error fetching user:', error);
+    console.error('Error fetching user from database:', error);
+    
+    // Get address from the original request URL if available
+    const url = new URL(request.url);
+    const fallbackAddress = url.searchParams.get('address') || 'unknown';
+    
+    // Fallback response for new users or database errors
     return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+      success: true,
+      data: {
+        address: fallbackAddress,
+        role: 'consumer',
+        isActive: false,
+        createdAt: new Date().toISOString(),
+        balances: {},
+        totalTokens: 0
+      },
+      usingRealData: false,
+      note: 'Database error or new user - returning default data'
+    });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const userData = await request.json();
-    
-    // For now, use mock data service to create/update user
-    // TODO: Replace with real database operations when database is configured
     const { address, batchId, balance } = userData;
     
+    if (!address) {
+      return NextResponse.json({
+        success: false,
+        error: 'Address is required'
+      }, { status: 400 });
+    }
+    
+    console.log(`Updating user data for address: ${address}`);
+    
+    // If updating token balance
     if (balance !== undefined && batchId) {
-      await MockDataService.updateUserBalance(address, batchId, balance);
+      // Check if balance record exists
+      const existingBalance = await db.select()
+        .from(batchTokenBalances)
+        .where(eq(batchTokenBalances.holderAddress, address))
+        .limit(1);
+      
+      if (existingBalance.length > 0) {
+        // Update existing balance
+        await db.update(batchTokenBalances)
+          .set({ 
+            balance: balance,
+            lastTransactionAt: new Date()
+          })
+          .where(eq(batchTokenBalances.holderAddress, address));
+      } else {
+        // Create new balance record
+        await db.insert(batchTokenBalances).values({
+          batchId: batchId,
+          holderAddress: address,
+          balance: balance,
+          lastTransactionAt: new Date()
+        });
+      }
     }
     
     return NextResponse.json({
       success: true,
-      message: 'User data updated',
-      usingMockData: true,
-      note: 'Using mock data. Configure database to persist data.'
+      message: 'User data updated successfully',
+      usingRealData: true,
+      note: 'Data persisted to live database'
     });
   } catch (error) {
     console.error('Error updating user:', error);

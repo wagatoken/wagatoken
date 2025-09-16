@@ -12,6 +12,7 @@ export interface SystemStatus {
   ipfs: boolean;
   database: boolean;
   chainlink: boolean;
+  overall?: 'healthy' | 'degraded' | 'critical';
 }
 
 // Mock data store for fallback mode
@@ -226,39 +227,51 @@ export async function checkSystemStatus(): Promise<SystemStatus> {
   };
 
   try {
-    // Check blockchain
+    // Check blockchain connection and verify we're on Base Sepolia
     if (typeof window !== 'undefined' && window.ethereum) {
       try {
-        await window.ethereum.request({ method: 'eth_accounts' });
-        status.blockchain = true;
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+        // Check if we're on Base Sepolia (0x14a34)
+        status.blockchain = chainId === '0x14a34' || chainId === '0x14a33'; // Base Sepolia or Base Mainnet
       } catch (e) {
-        console.log('Blockchain not available');
+        console.log('Blockchain not available or wrong network:', e);
       }
     }
 
-    // Check IPFS (via Pinata)
+    // Check IPFS (via Pinata) with JWT authentication
     try {
-      const response = await fetch('https://api.pinata.cloud/data/testAuthentication', {
-        headers: {
-          'pinata_api_key': process.env.NEXT_PUBLIC_PINATA_API_KEY || '',
-          'pinata_secret_api_key': process.env.NEXT_PUBLIC_PINATA_SECRET_KEY || ''
-        }
-      });
-      status.ipfs = response.ok;
+      const pinataJWT = process.env.NEXT_PUBLIC_PINATA_JWT || 
+                       (typeof window !== 'undefined' ? 
+                         (window as any).PINATA_JWT : 
+                         process.env.PINATA_JWT);
+      
+      if (pinataJWT) {
+        const response = await fetch('https://api.pinata.cloud/data/testAuthentication', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${pinataJWT}`
+          }
+        });
+        status.ipfs = response.ok;
+      } else {
+        console.log('Pinata JWT not configured');
+        status.ipfs = false;
+      }
     } catch (e) {
-      console.log('IPFS not available');
+      console.log('IPFS not available:', e);
     }
 
-    // Check database
+        // Check database connection with proper validation
     try {
       const response = await fetch('/api/test-db');
       const data = await response.json();
-      status.database = data.success;
+      // Consider healthy if connected to real database (even if not all tables exist yet)
+      status.database = data.success && data.connected && !data.usingMockData && data.coreTablesReady;
     } catch (e) {
-      console.log('Database not available');
+      console.log('Database not available:', e);
     }
 
-    // Chainlink is dependent on blockchain
+    // Chainlink is dependent on blockchain being on correct network
     status.chainlink = status.blockchain;
 
   } catch (error) {

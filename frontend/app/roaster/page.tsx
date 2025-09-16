@@ -7,6 +7,7 @@ import { ethers } from 'ethers';
 import { useWallet } from '../components/WalletProvider';
 import { createBatchBlockchainFirst } from '../../utils/smartContracts';
 import { generateBatchQRCode, generateSimpleVerificationQR, CoffeeBatchMetadata } from '../../utils/ipfsMetadata';
+import ZKConfigurationPanel, { ZKConfig } from '../../components/ZKConfigurationPanel';
 import PrivacyEnhancedBatchForm from '../components/PrivacyEnhancedBatchForm';
 
 const DISABLE_AUTH_FOR_TESTING = true; // Set to false to re-enable authentication
@@ -77,6 +78,17 @@ export default function RoasterPortal() {
     processorName: '',
     location: '',
     roastMethod: 'Drum',
+  });
+
+  // ZK Privacy Configuration State
+  const [zkEnabled, setZkEnabled] = useState(false);
+  const [zkConfig, setZkConfig] = useState({
+    enablePricePrivacy: false,
+    enableQualityPrivacy: false,
+    enableSupplyChainPrivacy: false,
+    pricingClaim: 'Premium roasted bean pricing verified',
+    qualityClaim: 'Artisan roasting quality standards met',
+    supplyChainClaim: 'Transparent roaster supply chain verified'
   });
 
   // Generated QR codes
@@ -190,14 +202,19 @@ export default function RoasterPortal() {
       setError(null);
       setSuccess(null);
 
-      // Create batch using blockchain-first workflow
+      // Create batch using blockchain-first workflow with ZK configuration
       const result = await createBatchBlockchainFirst({
         ...batchForm,
         productType: 'ROASTED_BEANS', // Roasters create roasted beans
         processorId: batchForm.processorId
-      });
+      }, zkEnabled ? zkConfig : undefined);
 
-      setSuccess(`Roasted bean batch created successfully! Batch ID: ${result.batchId}`);
+      // Enhanced success message with ZK info
+      let successMessage = `Roasted bean batch created successfully! Batch ID: ${result.batchId}`;
+      if (result.zkResults) {
+        successMessage += ` - Privacy features enabled (${result.zkResults.proofsGenerated.length} ZK proofs)`;
+      }
+      setSuccess(successMessage);
 
       // Generate QR codes
       console.log('Generating QR codes...');
@@ -227,7 +244,7 @@ export default function RoasterPortal() {
         verification: verificationQR
       });
 
-      // Reset form
+      // Reset form and ZK config
       setBatchForm({
         name: '',
         description: '',
@@ -252,6 +269,17 @@ export default function RoasterPortal() {
         processorName: '',
         location: '',
         roastMethod: 'Drum',
+      });
+
+      // Reset ZK configuration
+      setZkEnabled(false);
+      setZkConfig({
+        enablePricePrivacy: false,
+        enableQualityPrivacy: false,
+        enableSupplyChainPrivacy: false,
+        pricingClaim: 'Premium roasted bean pricing verified',
+        qualityClaim: 'Artisan roasting quality standards met',
+        supplyChainClaim: 'Transparent roaster supply chain verified'
       });
 
     } catch (error) {
@@ -772,6 +800,16 @@ export default function RoasterPortal() {
                         />
                       </div>
                     </div>
+                  </div>
+
+                  {/* ZK Privacy Configuration */}
+                  <div className="mb-6">
+                    <ZKConfigurationPanel
+                      zkConfig={zkConfig}
+                      onConfigChange={setZkConfig}
+                      enabled={zkEnabled}
+                      onEnabledChange={setZkEnabled}
+                    />
                   </div>
                   
                   <button

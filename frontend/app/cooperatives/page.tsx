@@ -5,7 +5,7 @@ import { MdDashboard, MdAdd, MdManageSearch, MdAnalytics, MdSettings, MdSearch, 
 import { useWallet } from '../components/WalletProvider';
 import { createBatchBlockchainFirst, ExtendedBatchCreationData } from '../../utils/smartContracts';
 import { generateBatchQRCode, generateSimpleVerificationQR, CoffeeBatchMetadata } from '../../utils/ipfsMetadata';
-import { MockDataService } from '../../utils/mockData';
+import ZKConfigurationPanel, { ZKConfig } from '../../components/ZKConfigurationPanel';
 import PrivacyEnhancedBatchForm from '../components/PrivacyEnhancedBatchForm';
 
 const DISABLE_AUTH_FOR_TESTING = true;
@@ -65,6 +65,17 @@ export default function CooperativePortal() {
     productionDate: new Date(),
     expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
     image: ''
+  });
+
+  // ZK Privacy Configuration State
+  const [zkEnabled, setZkEnabled] = useState(false);
+  const [zkConfig, setZkConfig] = useState({
+    enablePricePrivacy: false,
+    enableQualityPrivacy: false,
+    enableSupplyChainPrivacy: false,
+    pricingClaim: 'Fair trade pricing verified',
+    qualityClaim: 'Cooperative quality standards met',
+    supplyChainClaim: 'Ethical cooperative sourcing verified'
   });
 
   // QR code generation state
@@ -136,24 +147,41 @@ export default function CooperativePortal() {
           throw new Error('No green bean batches found on blockchain');
         }
       } catch (blockchainError) {
-        console.warn('⚠️ Blockchain data unavailable, using fallback data:', blockchainError);
+        console.warn('⚠️ Blockchain data unavailable, using database fallback:', blockchainError);
         
-        // Fallback to mock data only if blockchain fails
-        const batchData = await MockDataService.getBatches();
-        // Filter for green bean batches (cooperative-created)
-        const cooperativeBatches = batchData.filter(batch => 
-          batch.productType === 'GREEN_BEANS'
-        );
-        
-        setBatches(cooperativeBatches);
-        
-        // Update stats based on fallback data
-        setStats({
-          totalBatches: cooperativeBatches.length,
-          activeBatches: cooperativeBatches.filter(b => !b.isVerified).length, // Active = not yet verified
-          verifiedBatches: cooperativeBatches.filter(b => b.isVerified).length,
-          totalQuantity: cooperativeBatches.reduce((sum, batch) => sum + batch.quantity, 0)
-        });
+        // Fallback to database API
+        try {
+          const response = await fetch('/api/batches');
+          const data = await response.json();
+          
+          if (data.batches && data.batches.length > 0) {
+            // Filter for green bean batches (cooperative-created)
+            const cooperativeBatches = data.batches.filter((batch: any) => 
+              batch.batchDetails?.productType === 'GREEN_BEANS'
+            );
+            
+            setBatches(cooperativeBatches);
+            
+            // Update stats based on database data
+            setStats({
+              totalBatches: cooperativeBatches.length,
+              activeBatches: cooperativeBatches.filter((b: any) => b.verification?.verificationStatus === 'pending').length,
+              verifiedBatches: cooperativeBatches.filter((b: any) => b.verification?.verificationStatus === 'verified').length,
+              totalQuantity: cooperativeBatches.reduce((sum: number, batch: any) => sum + batch.quantity, 0)
+            });
+          } else {
+            throw new Error('No batches found in database');
+          }
+        } catch (dbError) {
+          console.error('Database fallback also failed:', dbError);
+          setBatches([]);
+          setStats({
+            totalBatches: 0,
+            activeBatches: 0,
+            verifiedBatches: 0,
+            totalQuantity: 0
+          });
+        }
       }
     } catch (error) {
       console.error('Error loading batch data:', error);
@@ -275,8 +303,11 @@ export default function CooperativePortal() {
         defectCount: batchForm.defectCount,
       };
 
-      // Create batch on blockchain
-      const result = await createBatchBlockchainFirst(batchData);
+      // Create batch on blockchain with ZK configuration
+      const result = await createBatchBlockchainFirst(
+        batchData,
+        zkEnabled ? zkConfig : undefined
+      );
       
       // The result already contains generated QR codes
       setGeneratedQRs({
@@ -284,7 +315,7 @@ export default function CooperativePortal() {
         verification: result.verificationQR
       });
 
-      // Reset form
+      // Reset form and ZK config
       setBatchForm({
         name: '',
         description: '',
@@ -305,7 +336,23 @@ export default function CooperativePortal() {
         image: ''
       });
 
-      setSuccess(`Green Bean Batch created successfully! Batch ID: ${result.batchId}`);
+      // Reset ZK configuration
+      setZkEnabled(false);
+      setZkConfig({
+        enablePricePrivacy: false,
+        enableQualityPrivacy: false,
+        enableSupplyChainPrivacy: false,
+        pricingClaim: 'Fair trade pricing verified',
+        qualityClaim: 'Cooperative quality standards met',
+        supplyChainClaim: 'Ethical cooperative sourcing verified'
+      });
+
+      // Enhanced success message with ZK info
+      let successMessage = `Green Bean Batch created successfully! Batch ID: ${result.batchId}`;
+      if (result.zkResults) {
+        successMessage += ` - Privacy features enabled (${result.zkResults.proofsGenerated.length} ZK proofs)`;
+      }
+      setSuccess(successMessage);
       
       // Refresh batch data to update stats and list
       await loadBatchData();
@@ -946,6 +993,16 @@ export default function CooperativePortal() {
                           </button>
                         </div>
                       </div>
+                    </div>
+
+                    {/* ZK Privacy Configuration */}
+                    <div className="web3-form-section">
+                      <ZKConfigurationPanel
+                        zkConfig={zkConfig}
+                        onConfigChange={setZkConfig}
+                        enabled={zkEnabled}
+                        onEnabledChange={setZkEnabled}
+                      />
                     </div>
 
                     {/* Create Batch Button */}

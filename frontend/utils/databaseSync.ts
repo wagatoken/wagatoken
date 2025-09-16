@@ -10,6 +10,20 @@ export interface BlockchainSyncData {
   ipfsUri: string;
   metadataHash: string;
   batchData: BatchCreationData;
+  zkConfig?: {
+    enablePricePrivacy?: boolean;
+    enableQualityPrivacy?: boolean;
+    enableSupplyChainPrivacy?: boolean;
+    pricingClaim?: string;
+    qualityClaim?: string;
+    supplyChainClaim?: string;
+  };
+  zkResults?: {
+    privacyConfigured: boolean;
+    proofsGenerated: string[];
+    privacyTransactionHash?: string;
+    error?: string;
+  };
 }
 
 /**

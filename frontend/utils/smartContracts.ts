@@ -93,10 +93,12 @@ export const COFFEE_TOKEN_ABI = [
 ];
 
 const PROOF_OF_RESERVE_ABI = [
-  "function requestReserveVerification(uint256 batchId, address recipient, string calldata source) external returns (bytes32)",
+  "function requestReserveVerification(uint256 batchId, uint256 requestId, string calldata source) external returns (bytes32)",
   "function requestInventoryVerification(uint256 batchId, string calldata source) external returns (bytes32)",
-  "function verificationRequests(bytes32 requestId) external view returns (uint256 batchId, uint256 requestQuantity, uint256 verifiedQuantity, uint256 requestPrice, uint256 verifiedPrice, string memory expectedPackaging, string memory verifiedPackaging, string memory expectedMetadataHash, string memory verifiedMetadataHash, address recipient, bool completed, bool verified, uint256 lastVerifiedTimestamp, bool shouldMint)",
-  "event ReserveVerificationRequested(bytes32 indexed requestId, uint256 indexed batchId, uint256 quantity)"
+  "function verificationRequests(bytes32 requestId) external view returns (uint256 batchId, uint256 batchQuantity, uint256 requestQuantity, uint256 verifiedQuantity, uint256 requestPrice, uint256 verifiedPrice, string memory expectedPackaging, string memory verifiedPackaging, string memory expectedMetadataHash, string memory verifiedMetadataHash, address recipient, bool completed, bool verified, uint256 lastVerifiedTimestamp, bool shouldMint)",
+  "event ReserveVerificationRequested(bytes32 indexed requestId, uint256 indexed batchId, uint256 quantity)",
+  "event ReserveVerificationCompleted(bytes32 indexed requestId, uint256 indexed batchId, bool verified)",
+  "event TokensMinted(bytes32 indexed requestId, address indexed recipient, uint256 indexed batchId, uint256 requestedQuantity, uint256 verifiedQuantity)"
 ];
 
 // ZK Manager ABI
@@ -446,18 +448,31 @@ export async function updateBatchWithIPFS(
 }
 
 /**
- * Complete blockchain-first workflow orchestrator with product type support
+ * Complete blockchain-first workflow orchestrator with ZK privacy integration
  */
-export async function createBatchBlockchainFirst(batchData: BatchCreationData | ExtendedBatchCreationData): Promise<{
+export async function createBatchBlockchainFirst(batchData: BatchCreationData | ExtendedBatchCreationData, zkConfig?: {
+  enablePricePrivacy?: boolean;
+  enableQualityPrivacy?: boolean;
+  enableSupplyChainPrivacy?: boolean;
+  pricingClaim?: string;
+  qualityClaim?: string;
+  supplyChainClaim?: string;
+}): Promise<{
   batchId: string;
   ipfsUri: string;
   metadataHash: string;
   transactionHash: string;
   qrCodeDataUrl: string;
   verificationQR: string;
+  zkResults?: {
+    privacyConfigured: boolean;
+    proofsGenerated: string[];
+    privacyTransactionHash?: string;
+  };
 }> {
   try {
     console.log('🚀 Starting blockchain-first batch creation workflow...');
+    const hasZKConfig = zkConfig && (zkConfig.enablePricePrivacy || zkConfig.enableQualityPrivacy || zkConfig.enableSupplyChainPrivacy);
 
     // Step 1: Create batch on blockchain first (with or without product type)
     let batchId: string;
@@ -477,11 +492,13 @@ export async function createBatchBlockchainFirst(batchData: BatchCreationData | 
       createTxHash = result.transactionHash;
     }
 
-    // Step 2: Generate standardized metadata with batchId
+    console.log(`✅ Batch ${batchId} created on blockchain with transaction: ${createTxHash}`);
+
+    // Step 2: Generate standardized metadata with batchId and privacy info
     console.log('📝 Generating metadata with batch ID...');
     const metadata = generateCoffeeMetadata(batchData);
 
-    // Update metadata with the actual batch ID and product type info
+    // Update metadata with the actual batch ID, product type info, and privacy features
     const updatedMetadata = {
       ...metadata,
       name: `${metadata.name} - Batch #${batchId}`,
@@ -489,6 +506,7 @@ export async function createBatchBlockchainFirst(batchData: BatchCreationData | 
         ...metadata.properties,
         batchId: batchId,
         blockchainId: batchId,
+        hasPrivacyFeatures: !!hasZKConfig,
         ...(productType !== undefined && {
           productType: Object.keys(PRODUCT_TYPES)[productType],
           productTypeId: productType
@@ -511,6 +529,16 @@ export async function createBatchBlockchainFirst(batchData: BatchCreationData | 
         }),
         ...('processorId' in batchData && batchData.processorId && {
           processorId: batchData.processorId
+        }),
+        // Add ZK configuration info
+        ...(hasZKConfig && {
+          privacyEnabled: true,
+          pricePrivate: zkConfig.enablePricePrivacy || false,
+          qualityPrivate: zkConfig.enableQualityPrivacy || false,
+          supplyChainPrivate: zkConfig.enableSupplyChainPrivacy || false,
+          pricingClaim: zkConfig.pricingClaim || 'Standard Pricing',
+          qualityClaim: zkConfig.qualityClaim || 'Quality Verified',
+          supplyChainClaim: zkConfig.supplyChainClaim || 'Origin Verified'
         })
       }
     };
@@ -522,29 +550,55 @@ export async function createBatchBlockchainFirst(batchData: BatchCreationData | 
     // Step 4: Update blockchain with IPFS data
     const { transactionHash: updateTxHash } = await updateBatchWithIPFS(batchId, ipfsUri, metadataHash);
 
-    // Step 5: Generate QR codes
+    // Step 5: ZK Privacy Configuration (if requested)
+    let zkResults: any = undefined;
+    if (hasZKConfig) {
+      console.log('🔐 Configuring privacy features...');
+      try {
+        zkResults = await configurePrivacyAndZKProofs(batchId, zkConfig);
+        console.log(`✅ Privacy configuration completed for batch ${batchId}`);
+      } catch (zkError) {
+        console.warn('❌ Privacy configuration failed (non-blocking):', zkError);
+        zkResults = {
+          privacyConfigured: false,
+          proofsGenerated: [],
+          error: zkError instanceof Error ? zkError.message : 'Unknown ZK error'
+        };
+      }
+    }
+
+    // Step 6: Generate QR codes
     console.log('🔍 Generating QR codes...');
     const qrCodeDataUrl = await generateBatchQRCode(batchId, updatedMetadata, ipfsUri);
     const verificationQR = await generateSimpleVerificationQR(batchId);
 
-    // Step 6: Sync to database (non-blocking - preserves blockchain-first integrity)
+    // Step 7: Enhanced database sync (preserves blockchain-first integrity)
     console.log('💾 Database sync status: initiating...');
-    const { syncBatchToDatabase } = await import('./databaseSync');
-    const syncResult = await syncBatchToDatabase({
-      batchId,
-      transactionHash: updateTxHash,
-      ipfsUri,
-      metadataHash,
-      batchData
-    });
-
-    if (syncResult.success) {
-      console.log('💾 Database sync status: ✅ completed');
-    } else {
-      console.log('💾 Database sync status: ❌ failed (non-blocking)');
+    try {
+      const { syncBatchToDatabase } = await import('./databaseSync');
+      const syncResult = await syncBatchToDatabase({
+        batchId,
+        transactionHash: createTxHash,
+        ipfsUri,
+        metadataHash,
+        batchData,
+        zkConfig: hasZKConfig ? zkConfig : undefined,
+        zkResults
+      });
+      
+      if (syncResult.success) {
+        console.log('💾 Database sync status: ✅ confirmed');
+      } else {
+        console.warn('💾 Database sync status: ❌ failed (non-blocking)', syncResult.error);
+      }
+    } catch (dbError) {
+      console.warn('💾 Database sync status: ❌ failed (non-blocking)', dbError);
     }
 
     console.log('🎉 Blockchain-first batch creation completed successfully!');
+    console.log(`   Batch ID: ${batchId}`);
+    console.log(`   IPFS URI: ${ipfsUri}`);
+    console.log(`   Privacy Features: ${hasZKConfig ? 'Enabled' : 'Disabled'}`);
 
     return {
       batchId,
@@ -552,7 +606,8 @@ export async function createBatchBlockchainFirst(batchData: BatchCreationData | 
       metadataHash,
       transactionHash: updateTxHash, // Return the final transaction hash
       qrCodeDataUrl,
-      verificationQR
+      verificationQR,
+      ...(zkResults && { zkResults })
     };
 
   } catch (error) {
@@ -696,18 +751,88 @@ export async function getBatchInfoWithMetadata(batchId: string): Promise<BatchIn
  */
 export async function requestBatchVerification(
   batchId: string,
+  batchRequestId: string = "0", // Default to 0 for inventory verification
   jsSource: string = `
-    // Chainlink Functions JavaScript code for batch verification
+    // WAGA Coffee verification - aligned with smart contract expectations
     const batchId = args[0];
-    const quantity = args[1];
-    const price = args[2];
-    const packaging = args[3];
-    const metadataHash = args[4];
+    const batchQuantity = args[1];
+    const requestQuantity = args[2];
+    const expectedPrice = args[3];
+    const expectedPackaging = args[4];
+    const expectedMetadataHash = args[5];
     
-    // Simulate API call to verify batch exists in database
-    const verified = true; // In production, this would be an actual API call
+    console.log('WAGA verification for batch:', batchId);
+    console.log('Expected quantity:', batchQuantity);
+    console.log('Requested quantity:', requestQuantity);
     
-    return Functions.encodeUint256(verified ? 1 : 0);
+    try {
+      // Primary verification: Check if batch exists in database
+      const batchResponse = await Functions.makeHttpRequest({
+        url: \`http://localhost:3001/api/batches/\${batchId}\`,
+        method: "GET",
+        headers: { "Content-Type": "application/json" }
+      });
+      
+      if (batchResponse.error) {
+        throw new Error(\`Batch API Error: \${batchResponse.error}\`);
+      }
+      
+      const batch = batchResponse.data;
+      if (!batch || !batch.batchId) {
+        throw new Error(\`Batch \${batchId} not found in database\`);
+      }
+      
+      // Verify core batch data
+      const verifiedQuantity = parseInt(batch.quantity) || 0;
+      const verifiedPrice = Math.round(parseFloat(batch.pricePerUnit || batch.price) * 100); // Convert to cents
+      const verifiedPackaging = batch.packagingInfo || batch.packaging || "";
+      const verifiedMetadataHash = batch.metadataHash || "";
+      
+      // Validation checks
+      if (verifiedQuantity < parseInt(requestQuantity)) {
+        throw new Error(\`Insufficient inventory: verified=\${verifiedQuantity}, requested=\${requestQuantity}\`);
+      }
+      
+      // Additional verification: Check inventory status
+      try {
+        const inventoryResponse = await Functions.makeHttpRequest({
+          url: \`http://localhost:3001/api/waga/inventory/\${batchId}\`,
+          method: "GET",
+          headers: { "Content-Type": "application/json" }
+        });
+        
+        if (inventoryResponse.data && inventoryResponse.data.actualQuantity) {
+          const actualInventory = parseInt(inventoryResponse.data.actualQuantity);
+          if (actualInventory < verifiedQuantity) {
+            console.warn(\`Inventory discrepancy: database=\${verifiedQuantity}, actual=\${actualInventory}\`);
+          }
+        }
+      } catch (inventoryError) {
+        console.warn('Inventory check failed:', inventoryError.message);
+        // Continue with verification - inventory check is supplementary
+      }
+      
+      console.log('Verification successful:', {
+        verifiedQuantity,
+        verifiedPrice,
+        verifiedPackaging: verifiedPackaging.substring(0, 20),
+        verifiedMetadataHash: verifiedMetadataHash.substring(0, 20)
+      });
+      
+      // Return in format expected by smart contract: (uint256, uint256, string, string)
+      return Functions.encodeUint256(verifiedQuantity) + 
+             Functions.encodeUint256(verifiedPrice) + 
+             Functions.encodeString(verifiedPackaging) + 
+             Functions.encodeString(verifiedMetadataHash);
+      
+    } catch (error) {
+      console.error('WAGA verification failed:', error.message);
+      // Return zeros for failed verification
+      return Functions.encodeUint256(0) + 
+             Functions.encodeUint256(0) + 
+             Functions.encodeString("") + 
+             Functions.encodeString("");
+    }
   `
 ): Promise<string> {
   try {
@@ -722,20 +847,21 @@ export async function requestBatchVerification(
     if (!hasVerifierRole) {
       throw new Error('User does not have VERIFIER_ROLE required to request verification');
     }
-
-    const userAddress = await signer.getAddress();
     
-    console.log(`Requesting verification for batch ${batchId}`);
-    const tx = await proofOfReserveContract.requestReserveVerification(
-      batchId,
-      userAddress, // recipient address for minted tokens
-      jsSource
-    );
+    console.log(`Requesting verification for batch ${batchId} with request ${batchRequestId}`);
+    
+    // Use inventory verification if no specific request ID provided
+    let tx: any;
+    if (batchRequestId === "0") {
+      tx = await proofOfReserveContract.requestInventoryVerification(batchId, jsSource);
+    } else {
+      tx = await proofOfReserveContract.requestReserveVerification(batchId, batchRequestId, jsSource);
+    }
 
-    const receipt = await tx.wait();
+    const receipt: any = await tx.wait();
     
     // Find the verification request event
-    const verificationEvent = receipt.events?.find(
+    const verificationEvent: any = receipt.events?.find(
       (event: any) => event.event === "ReserveVerificationRequested"
     );
 
@@ -743,10 +869,10 @@ export async function requestBatchVerification(
       throw new Error("ReserveVerificationRequested event not found");
     }
 
-    const requestId = verificationEvent.args.requestId;
-    console.log('Verification request submitted:', requestId);
+    const chainlinkRequestId: string = verificationEvent.args.requestId;
+    console.log('Verification request submitted:', chainlinkRequestId);
 
-    return requestId;
+    return chainlinkRequestId;
 
   } catch (error) {
     console.error('Error requesting batch verification:', error);
@@ -1396,6 +1522,114 @@ export async function createPrivacyEnhancedBatch(
     console.error('❌ Error in privacy-enhanced batch creation workflow:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     throw new Error(`Privacy-enhanced batch creation failed: ${errorMessage}`);
+  }
+}
+
+/**
+ * Configure privacy and generate ZK proofs for a batch
+ * This function is called from the enhanced createBatchBlockchainFirst workflow
+ */
+async function configurePrivacyAndZKProofs(batchId: string, zkConfig: {
+  enablePricePrivacy?: boolean;
+  enableQualityPrivacy?: boolean;
+  enableSupplyChainPrivacy?: boolean;
+  pricingClaim?: string;
+  qualityClaim?: string;
+  supplyChainClaim?: string;
+}): Promise<{
+  privacyConfigured: boolean;
+  proofsGenerated: string[];
+  privacyTransactionHash?: string;
+}> {
+  try {
+    console.log(`🔐 Configuring privacy for batch ${batchId}...`);
+    const proofsGenerated: string[] = [];
+    
+    // Step 1: Set up privacy configuration on blockchain
+    const signer = await getSigner();
+    const privacyLayerContract = getContract(PRIVACY_LAYER_ADDRESS, PRIVACY_LAYER_ABI, signer);
+    
+    // Create privacy config for the batch
+    const privacyTx = await privacyLayerContract.createPrivacyConfig(
+      batchId,
+      await signer.getAddress()
+    );
+    
+    console.log(`✅ Privacy config created for batch ${batchId}, transaction: ${privacyTx.hash}`);
+    
+    // Step 2: Generate ZK proofs for enabled privacy features
+    if (zkConfig.enablePricePrivacy) {
+      console.log('🔒 Generating price privacy proof...');
+      try {
+        // In production, this would integrate with actual ZK circuits
+        // For now, we generate a proof hash and store the claim
+        const pricingProofHash = await generateZKProofHash(
+          'pricing',
+          { batchId, claim: zkConfig.pricingClaim },
+          { sensitiveData: 'price_competitiveness_proof' }
+        );
+        
+        // Store proof hash on blockchain via WAGAZKManager
+        const zkManagerContract = getContract(ZK_MANAGER_ADDRESS, ZK_MANAGER_ABI, signer);
+        await zkManagerContract.storeProofHash(batchId, 0, pricingProofHash); // 0 = PRICE_COMPETITIVENESS
+        
+        proofsGenerated.push(`PRICE_COMPETITIVENESS: ${pricingProofHash}`);
+        console.log(`✅ Price privacy proof generated: ${pricingProofHash}`);
+      } catch (error) {
+        console.warn('❌ Price privacy proof generation failed:', error);
+      }
+    }
+    
+    if (zkConfig.enableQualityPrivacy) {
+      console.log('🔒 Generating quality privacy proof...');
+      try {
+        const qualityProofHash = await generateZKProofHash(
+          'quality',
+          { batchId, claim: zkConfig.qualityClaim },
+          { sensitiveData: 'quality_standards_proof' }
+        );
+        
+        const zkManagerContract = getContract(ZK_MANAGER_ADDRESS, ZK_MANAGER_ABI, signer);
+        await zkManagerContract.storeProofHash(batchId, 1, qualityProofHash); // 1 = QUALITY_STANDARDS
+        
+        proofsGenerated.push(`QUALITY_STANDARDS: ${qualityProofHash}`);
+        console.log(`✅ Quality privacy proof generated: ${qualityProofHash}`);
+      } catch (error) {
+        console.warn('❌ Quality privacy proof generation failed:', error);
+      }
+    }
+    
+    if (zkConfig.enableSupplyChainPrivacy) {
+      console.log('🔒 Generating supply chain privacy proof...');
+      try {
+        const supplyChainProofHash = await generateZKProofHash(
+          'supplyChain',
+          { batchId, claim: zkConfig.supplyChainClaim },
+          { sensitiveData: 'supply_chain_provenance_proof' }
+        );
+        
+        const zkManagerContract = getContract(ZK_MANAGER_ADDRESS, ZK_MANAGER_ABI, signer);
+        await zkManagerContract.storeProofHash(batchId, 2, supplyChainProofHash); // 2 = SUPPLY_CHAIN_PROVENANCE
+        
+        proofsGenerated.push(`SUPPLY_CHAIN_PROVENANCE: ${supplyChainProofHash}`);
+        console.log(`✅ Supply chain privacy proof generated: ${supplyChainProofHash}`);
+      } catch (error) {
+        console.warn('❌ Supply chain privacy proof generation failed:', error);
+      }
+    }
+    
+    // Wait for privacy configuration transaction to be mined
+    await privacyTx.wait();
+    
+    return {
+      privacyConfigured: true,
+      proofsGenerated,
+      privacyTransactionHash: privacyTx.hash
+    };
+    
+  } catch (error) {
+    console.error('❌ Error configuring privacy and ZK proofs:', error);
+    throw new Error(`Privacy configuration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

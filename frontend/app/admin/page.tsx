@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { TokenETH, WalletMetamask, NetworkEthereum } from "@web3icons/react";
+import ZKConfigurationPanel, { ZKConfig } from "../../components/ZKConfigurationPanel";
 import {
   MdCheck,
   MdClose,
@@ -242,6 +243,17 @@ export default function AdminPage() {
     expiryDate: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 days from now
   });
 
+  // ZK Privacy Configuration State
+  const [zkEnabled, setZkEnabled] = useState(false);
+  const [zkConfig, setZkConfig] = useState({
+    enablePricePrivacy: false,
+    enableQualityPrivacy: false,
+    enableSupplyChainPrivacy: false,
+    pricingClaim: 'Competitive pricing verified',
+    qualityClaim: 'Premium quality standards met',
+    supplyChainClaim: 'Ethical supply chain verified'
+  });
+
   // Check system status on component mount
   const checkAndSetSystemStatus = async () => {
     try {
@@ -478,14 +490,22 @@ export default function AdminPage() {
           unitWeight: batchForm.unitWeight || batchForm.packagingInfo || '250g'
         };
 
-        const result = await createBatchBlockchainFirst(batchData);
+        const result = await createBatchBlockchainFirst(
+          batchData,
+          zkEnabled ? zkConfig : undefined
+        );
 
         setGeneratedQRs({
           comprehensive: result.qrCodeDataUrl,
           verification: result.verificationQR
         });
         
-        setSuccess(`✅ Batch created successfully! Batch ID: ${result.batchId}`);
+        // Enhanced success message with ZK info
+        let successMessage = `✅ Batch created successfully! Batch ID: ${result.batchId}`;
+        if (result.zkResults) {
+          successMessage += `\n🔐 Privacy features enabled - ${result.zkResults.proofsGenerated.length} ZK proofs generated`;
+        }
+        setSuccess(successMessage);
       } catch (error) {
         console.warn('Blockchain creation failed, using mock mode:', error);
         
@@ -499,7 +519,7 @@ export default function AdminPage() {
         setSuccess(`✅ Batch created in demo mode! Batch ID: ${mockBatchId}`);
       }
 
-      // Reset form
+      // Reset form and ZK config
       setBatchForm({
         name: '',
         description: '',
@@ -516,6 +536,17 @@ export default function AdminPage() {
         pricePerUnit: '0.045',
         productionDate: new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)),
         expiryDate: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)),
+      });
+
+      // Reset ZK configuration
+      setZkEnabled(false);
+      setZkConfig({
+        enablePricePrivacy: false,
+        enableQualityPrivacy: false,
+        enableSupplyChainPrivacy: false,
+        pricingClaim: 'Competitive pricing verified',
+        qualityClaim: 'Premium quality standards met',
+        supplyChainClaim: 'Ethical supply chain verified'
       });
 
       // Reload batches
@@ -777,6 +808,172 @@ export default function AdminPage() {
             {/* Tab Content */}
             {activeTab === 'dashboard' && (
               <div className="space-y-8">
+                {/* System Status */}
+                <div className="web3-card animate-card-entrance">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <MdSecurity size={24} className="text-purple-600" />
+                    System Status
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    {/* Blockchain Status */}
+                    <div className={`p-4 rounded-lg border-2 transition-colors ${
+                      systemStatus.blockchain 
+                        ? 'bg-green-50 border-green-200 text-green-800' 
+                        : 'bg-red-50 border-red-200 text-red-800'
+                    }`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <NetworkEthereum size={20} />
+                        <span className="font-semibold">Blockchain</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {systemStatus.blockchain ? (
+                          <>
+                            <MdCheck size={16} className="text-green-600" />
+                            <span className="text-sm">Base Sepolia Connected</span>
+                          </>
+                        ) : (
+                          <>
+                            <MdClose size={16} className="text-red-600" />
+                            <span className="text-sm">Not Connected</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* IPFS Status */}
+                    <div className={`p-4 rounded-lg border-2 transition-colors ${
+                      systemStatus.ipfs 
+                        ? 'bg-green-50 border-green-200 text-green-800' 
+                        : 'bg-red-50 border-red-200 text-red-800'
+                    }`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <MdStorage size={20} />
+                        <span className="font-semibold">IPFS</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {systemStatus.ipfs ? (
+                          <>
+                            <MdCheck size={16} className="text-green-600" />
+                            <span className="text-sm">Pinata Connected</span>
+                          </>
+                        ) : (
+                          <>
+                            <MdClose size={16} className="text-red-600" />
+                            <span className="text-sm">Connection Failed</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Database Status */}
+                    <div className={`p-4 rounded-lg border-2 transition-colors ${
+                      systemStatus.database 
+                        ? 'bg-green-50 border-green-200 text-green-800' 
+                        : 'bg-red-50 border-red-200 text-red-800'
+                    }`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <MdStorage size={20} />
+                        <span className="font-semibold">Database</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {systemStatus.database ? (
+                          <>
+                            <MdCheck size={16} className="text-green-600" />
+                            <span className="text-sm">PostgreSQL Connected</span>
+                          </>
+                        ) : (
+                          <>
+                            <MdWarning size={16} className="text-red-600" />
+                            <span className="text-sm">Using Mock Data</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Chainlink Status */}
+                    <div className={`p-4 rounded-lg border-2 transition-colors ${
+                      systemStatus.chainlink 
+                        ? 'bg-green-50 border-green-200 text-green-800' 
+                        : 'bg-red-50 border-red-200 text-red-800'
+                    }`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <MdSecurity size={20} />
+                        <span className="font-semibold">Chainlink</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {systemStatus.chainlink ? (
+                          <>
+                            <MdCheck size={16} className="text-green-600" />
+                            <span className="text-sm">Functions Ready</span>
+                          </>
+                        ) : (
+                          <>
+                            <MdClose size={16} className="text-red-600" />
+                            <span className="text-sm">Unavailable</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Overall Status */}
+                  {systemStatus.overall && (
+                    <div className={`p-4 rounded-lg border-2 ${
+                      systemStatus.overall === 'healthy' 
+                        ? 'bg-green-50 border-green-200' 
+                        : systemStatus.overall === 'degraded'
+                        ? 'bg-yellow-50 border-yellow-200'
+                        : 'bg-red-50 border-red-200'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        {systemStatus.overall === 'healthy' && (
+                          <>
+                            <MdCheck size={20} className="text-green-600" />
+                            <span className="font-semibold text-green-800">System Healthy</span>
+                            <span className="text-green-700 ml-2">All services operational</span>
+                          </>
+                        )}
+                        {systemStatus.overall === 'degraded' && (
+                          <>
+                            <MdWarning size={20} className="text-yellow-600" />
+                            <span className="font-semibold text-yellow-800">System Degraded</span>
+                            <span className="text-yellow-700 ml-2">Some services unavailable - using fallback modes</span>
+                          </>
+                        )}
+                        {systemStatus.overall === 'critical' && (
+                          <>
+                            <MdError size={20} className="text-red-600" />
+                            <span className="font-semibold text-red-800">System Critical</span>
+                            <span className="text-red-700 ml-2">Multiple services down - limited functionality</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quick Setup Guide */}
+                  {(!systemStatus.database || !systemStatus.ipfs) && (
+                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                        <MdInfo size={16} />
+                        Setup Required
+                      </h4>
+                      <div className="space-y-2 text-sm text-blue-800">
+                        {!systemStatus.database && (
+                          <p>• Database: Set NETLIFY_DATABASE_URL in environment variables</p>
+                        )}
+                        {!systemStatus.ipfs && (
+                          <p>• IPFS: Verify PINATA_JWT is configured correctly</p>
+                        )}
+                        <p className="font-medium mt-2">
+                          See <span className="font-mono">DATABASE_SETUP.md</span> for detailed setup instructions.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="web3-card bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200">
@@ -1203,6 +1400,20 @@ export default function AdminPage() {
                       placeholder="Describe this coffee batch - origin story, flavor profile, processing details, and what makes it special..."
                     />
                   </div>
+                </div>
+
+                {/* ZK Privacy Configuration Section */}
+                <div className="web3-form-section">
+                  <h3 className="flex items-center gap-2">
+                    🔐 Privacy Configuration
+                  </h3>
+                  <ZKConfigurationPanel
+                    zkConfig={zkConfig}
+                    onConfigChange={setZkConfig}
+                    enabled={zkEnabled}
+                    onEnabledChange={setZkEnabled}
+                    className="mt-4"
+                  />
                 </div>
 
                 <button

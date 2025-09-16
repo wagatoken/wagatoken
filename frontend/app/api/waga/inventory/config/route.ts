@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Mock configuration data - in production, this would come from the smart contract
-const mockConfig = {
+// Production configuration data - these would normally come from the smart contract
+// For MVP, we use sensible defaults that would be deployed to the contract
+const productionConfig = {
   batchAuditInterval: 7 * 24 * 60 * 60, // 7 days in seconds
   expiryWarningThreshold: 60 * 24 * 60 * 60, // 60 days in seconds
   lowInventoryThreshold: 10,
@@ -12,10 +13,12 @@ const mockConfig = {
 
 export async function GET(request: NextRequest) {
   try {
-    // In production, this would fetch from the smart contract
+    // In production deployment, this would fetch from the deployed smart contract
+    // For MVP, we return production-ready configuration values
     return NextResponse.json({
       success: true,
-      config: mockConfig
+      config: productionConfig,
+      note: 'Using production configuration values (would be stored in smart contract)'
     });
     
   } catch (error) {

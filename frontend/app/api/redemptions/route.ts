@@ -1,9 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { db } from "../../../db";
+import { redemptionRequests, wagaCoffeeBatches } from "../../../db/schema";
+import { eq, desc } from "drizzle-orm";
 import { RedemptionRequest } from "@/utils/types";
-
-// Mock storage for demo - in production use a database
-const mockRedemptions = new Map<number, RedemptionRequest>();
-let nextRedemptionId = 1;
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,26 +11,51 @@ export async function GET(request: NextRequest) {
 
     console.log(`Fetching redemptions for user: ${userAddress || 'all'}`);
 
-    // Get all redemptions
-    const allRedemptions = Array.from(mockRedemptions.values());
-    
-    // Filter by user if address provided
-    const redemptions = userAddress 
-      ? allRedemptions.filter(r => r.consumer.toLowerCase() === userAddress.toLowerCase())
-      : allRedemptions;
+    // Get redemptions from database
+    let dbRedemptions;
+    if (userAddress) {
+      dbRedemptions = await db.select()
+        .from(redemptionRequests)
+        .where(eq(redemptionRequests.consumer, userAddress))
+        .orderBy(desc(redemptionRequests.requestDate));
+    } else {
+      dbRedemptions = await db.select()
+        .from(redemptionRequests)
+        .orderBy(desc(redemptionRequests.requestDate));
+    }
+
+    // Transform database records to RedemptionRequest format
+    const redemptions: RedemptionRequest[] = dbRedemptions.map(r => ({
+      redemptionId: r.redemptionId || 0,
+      consumer: r.consumer,
+      batchId: r.batchId,
+      quantity: r.quantity,
+      deliveryAddress: r.deliveryAddress,
+      requestDate: r.requestDate.toISOString(),
+      status: (r.status === 'Processing' ? 'Processing' : 
+               r.status === 'Fulfilled' ? 'Fulfilled' : 
+               r.status === 'Cancelled' ? 'Cancelled' : 'Requested') as 'Requested' | 'Processing' | 'Fulfilled' | 'Cancelled',
+      packagingInfo: r.packagingInfo || '250g',
+      trackingNumber: r.trackingNumber || undefined
+    }));
 
     console.log(`Found ${redemptions.length} redemptions`);
 
     return NextResponse.json({ 
-      redemptions: redemptions.sort((a, b) => new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime())
+      redemptions,
+      usingRealData: true,
+      note: 'Using live database data'
     }, { status: 200 });
 
   } catch (error) {
-    console.error("Error fetching redemptions:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch redemptions" },
-      { status: 500 }
-    );
+    console.error("Error fetching redemptions from database:", error);
+    
+    // Fallback to empty array if database fails
+    return NextResponse.json({
+      redemptions: [],
+      usingRealData: false,
+      note: 'Database error - returning empty list'
+    }, { status: 200 });
   }
 }
 
@@ -47,38 +71,53 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify batch exists
-    const batchResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'}/api/batches/${batchId}`);
-    if (!batchResponse.ok) {
+    console.log(`Creating redemption request for batch ${batchId}, user ${userAddress}`);
+
+    // Verify batch exists in database
+    const batch = await db.select()
+      .from(wagaCoffeeBatches)
+      .where(eq(wagaCoffeeBatches.batchId, batchId))
+      .limit(1);
+
+    if (batch.length === 0) {
       return NextResponse.json(
-        { error: `Batch ${batchId} not found` },
+        { error: `Batch ${batchId} not found in database` },
         { status: 404 }
       );
     }
 
-    const batchData = await batchResponse.json();
+    const batchData = batch[0];
 
-    // Create redemption request
-    const redemptionId = nextRedemptionId++;
-    const redemption: RedemptionRequest = {
-      redemptionId,
+    // Create redemption request in database
+    const newRedemption = await db.insert(redemptionRequests).values({
       consumer: userAddress,
-      batchId,
-      quantity,
-      deliveryAddress,
-      requestDate: new Date().toISOString(),
+      batchId: batchId,
+      quantity: quantity,
+      deliveryAddress: deliveryAddress,
+      requestDate: new Date(),
       status: 'Requested',
       packagingInfo: batchData.packaging
+    }).returning();
+
+    // Transform to RedemptionRequest format
+    const redemption: RedemptionRequest = {
+      redemptionId: newRedemption[0].redemptionId || 0,
+      consumer: newRedemption[0].consumer,
+      batchId: newRedemption[0].batchId,
+      quantity: newRedemption[0].quantity,
+      deliveryAddress: newRedemption[0].deliveryAddress,
+      requestDate: newRedemption[0].requestDate.toISOString(),
+      status: newRedemption[0].status as 'Requested',
+      packagingInfo: newRedemption[0].packagingInfo || '250g'
     };
 
-    mockRedemptions.set(redemptionId, redemption);
-
-    console.log(`✅ Redemption ${redemptionId} created for batch ${batchId}`);
+    console.log(`✅ Redemption ${redemption.redemptionId} created for batch ${batchId}`);
 
     return NextResponse.json({
       success: true,
       redemption,
-      message: `Redemption request ${redemptionId} created successfully`
+      usingRealData: true,
+      message: `Redemption request ${redemption.redemptionId} created successfully`
     }, { status: 201 });
 
   } catch (error) {
