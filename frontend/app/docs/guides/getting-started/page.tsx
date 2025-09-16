@@ -35,10 +35,11 @@ export default function GettingStartedGuide() {
             <ul className="space-y-2">
               <li><a href="#overview" className="text-emerald-600 hover:text-emerald-800">1. Platform Overview</a></li>
               <li><a href="#browse" className="text-emerald-600 hover:text-emerald-800">2. Browsing Coffee Batches</a></li>
-              <li><a href="#vmi-model" className="text-emerald-600 hover:text-emerald-800">3. Vendor Managed Inventory Model</a></li>
-              <li><a href="#distributor-role" className="text-emerald-600 hover:text-emerald-800">4. Understanding Distributor Role</a></li>
-              <li><a href="#customer-experience" className="text-emerald-600 hover:text-emerald-800">5. Customer Experience</a></li>
-              <li><a href="#verification" className="text-emerald-600 hover:text-emerald-800">6. Understanding Verification</a></li>
+              <li><a href="#privacy" className="text-emerald-600 hover:text-emerald-800">3. Privacy Protection</a></li>
+              <li><a href="#vmi-model" className="text-emerald-600 hover:text-emerald-800">4. Vendor Managed Inventory Model</a></li>
+              <li><a href="#distributor-role" className="text-emerald-600 hover:text-emerald-800">5. Understanding Distributor Role</a></li>
+              <li><a href="#customer-experience" className="text-emerald-600 hover:text-emerald-800">6. Customer Experience</a></li>
+              <li><a href="#verification" className="text-emerald-600 hover:text-emerald-800">7. Understanding Verification</a></li>
             </ul>
           </div>
 
@@ -142,10 +143,99 @@ export default function GettingStartedGuide() {
               </div>
             </section>
 
+            {/* Privacy Protection */}
+            <section id="privacy" className="web3-card">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+                <span>🔐</span>
+                <span>3. Privacy Protection</span>
+              </h2>
+              
+              <div className="space-y-6">
+                <p className="text-gray-700 leading-relaxed text-lg">
+                  WAGA protects sensitive business information while maintaining full transparency. 
+                  Think of it like having a one-way mirror - you can prove important facts without revealing your secrets.
+                </p>
+
+                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-xl border border-purple-100">
+                  <h3 className="font-bold text-purple-800 mb-4">🧠 Privacy in Simple Terms</h3>
+                  <p className="text-purple-700 leading-relaxed">
+                    Imagine you want to prove your coffee is high-quality without revealing your secret quality formula. 
+                    Or prove your pricing is fair without exposing your cost structure. That's exactly what our 
+                    Zero-Knowledge privacy system does - it proves facts without revealing the underlying data.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-green-50 p-4 rounded-lg text-center">
+                    <div className="bg-green-100 p-3 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
+                      <span className="text-2xl">💰</span>
+                    </div>
+                    <h4 className="font-semibold text-green-800 mb-2">Price Privacy</h4>
+                    <p className="text-sm text-green-700">
+                      Distributors can prove fair pricing without revealing cost structures or profit margins
+                    </p>
+                  </div>
+                  <div className="bg-blue-50 p-4 rounded-lg text-center">
+                    <div className="bg-blue-100 p-3 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
+                      <span className="text-2xl">⭐</span>
+                    </div>
+                    <h4 className="font-semibold text-blue-800 mb-2">Quality Privacy</h4>
+                    <p className="text-sm text-blue-700">
+                      Farmers and roasters can verify quality standards without exposing proprietary methods
+                    </p>
+                  </div>
+                  <div className="bg-amber-50 p-4 rounded-lg text-center">
+                    <div className="bg-amber-100 p-3 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
+                      <span className="text-2xl">🚚</span>
+                    </div>
+                    <h4 className="font-semibold text-amber-800 mb-2">Supply Chain Privacy</h4>
+                    <p className="text-sm text-amber-700">
+                      Maintain transparency about sourcing while protecting sensitive supplier relationships
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                  <div className="flex">
+                    <div className="ml-3">
+                      <p className="text-sm text-yellow-700">
+                        <strong>For Customers:</strong> Privacy protection means you get all the transparency and 
+                        verification you want, while businesses can protect their competitive advantages. 
+                        It's a win-win that enables honest business practices.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-800 mb-3">🤔 Why This Matters</h3>
+                  <p className="text-gray-700 text-sm leading-relaxed">
+                    In traditional coffee supply chains, businesses often operate in black boxes. You're told the coffee 
+                    is "high quality" or "fairly priced," but you have to take their word for it. With WAGA's privacy 
+                    protection, businesses can actually prove their claims while keeping their proprietary information 
+                    safe. This builds real trust between all parties in the coffee chain.
+                  </p>
+                </div>
+
+                <div className="bg-gradient-to-r from-emerald-50 to-blue-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-800 mb-2">🔗 Learn More</h3>
+                  <p className="text-gray-700 text-sm mb-3">
+                    Want to understand the technical details behind our privacy protection?
+                  </p>
+                  <Link 
+                    href="/docs/guides/zk-privacy" 
+                    className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
+                  >
+                    Explore ZK Privacy Guide →
+                  </Link>
+                </div>
+              </div>
+            </section>
+
             {/* Vendor Managed Inventory Model */}
             <section id="vmi-model" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>3. Vendor Managed Inventory Model</span>
+                <span>4. Vendor Managed Inventory Model</span>
               </h2>
               
               <div className="space-y-6">
@@ -218,7 +308,7 @@ export default function GettingStartedGuide() {
             {/* Understanding Distributor Role */}
             <section id="distributor-role" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>4. Understanding Distributor Role</span>
+                <span>5. Understanding Distributor Role</span>
               </h2>
               
               <div className="space-y-6">
@@ -293,7 +383,7 @@ export default function GettingStartedGuide() {
             <section id="customer-experience" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>�</span>
-                <span>5. Customer Experience</span>
+                <span>6. Customer Experience</span>
               </h2>
               
               <div className="space-y-6">
@@ -373,7 +463,7 @@ export default function GettingStartedGuide() {
             {/* Understanding Verification */}
             <section id="verification" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-                <span>6. Understanding Verification</span>
+                <span>7. Understanding Verification</span>
               </h2>
               
               <div className="space-y-6">

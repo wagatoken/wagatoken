@@ -49,8 +49,9 @@ export default function IPFSStorageGuide() {
               <li><a href="#upload-process" className="text-emerald-600 hover:text-emerald-800">4. Upload Process</a></li>
               <li><a href="#retrieval" className="text-emerald-600 hover:text-emerald-800">5. Data Retrieval</a></li>
               <li><a href="#pinning-strategy" className="text-emerald-600 hover:text-emerald-800">6. Pinning Strategy</a></li>
-              <li><a href="#security" className="text-emerald-600 hover:text-emerald-800">7. Security & Access Control</a></li>
-              <li><a href="#troubleshooting" className="text-emerald-600 hover:text-emerald-800">8. Troubleshooting</a></li>
+              <li><a href="#privacy-considerations" className="text-emerald-600 hover:text-emerald-800">7. Privacy Considerations</a></li>
+              <li><a href="#security" className="text-emerald-600 hover:text-emerald-800">8. Security & Access Control</a></li>
+              <li><a href="#troubleshooting" className="text-emerald-600 hover:text-emerald-800">9. Troubleshooting</a></li>
             </ul>
           </div>
 
@@ -619,11 +620,120 @@ async function uploadBatchMetadata(batchData, files) {
               </div>
             </section>
 
+            {/* Privacy Considerations */}
+            <section id="privacy-considerations" className="web3-card">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+                <span>🔐</span>
+                <span>7. Privacy Considerations</span>
+              </h2>
+              
+              <div className="space-y-6">
+                <p className="text-gray-700 leading-relaxed text-lg">
+                  While IPFS provides transparency and immutability, WAGA's privacy layer ensures that sensitive 
+                  business information is protected while maintaining the integrity of our traceability system.
+                </p>
+
+                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-xl border border-purple-100">
+                  <h3 className="font-bold text-purple-800 mb-4">🧠 IPFS Privacy Challenge</h3>
+                  <p className="text-purple-700 leading-relaxed">
+                    IPFS is designed for transparency - once data is on IPFS, it's public. But coffee businesses 
+                    need to protect proprietary information like quality formulas, pricing strategies, and supplier 
+                    relationships. Our solution: store public metadata on IPFS, but protect sensitive details with 
+                    Zero-Knowledge proofs.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-green-50 p-5 rounded-lg">
+                    <h3 className="font-bold text-green-800 mb-3">📂 What Goes on IPFS (Public)</h3>
+                    <ul className="text-sm text-green-700 space-y-2">
+                      <li>• <strong>Basic Batch Info:</strong> Farm name, general location, harvest date</li>
+                      <li>• <strong>Public Quality Tier:</strong> "Premium", "Specialty" (not specific scores)</li>
+                      <li>• <strong>Processing Type:</strong> Washed, Natural, Honey processed</li>
+                      <li>• <strong>Certifications:</strong> Organic, Fair Trade status</li>
+                      <li>• <strong>General Photos:</strong> Farm and coffee bean images</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-blue-50 p-5 rounded-lg">
+                    <h3 className="font-bold text-blue-800 mb-3">🔒 What's Protected (ZK Proofs)</h3>
+                    <ul className="text-sm text-blue-700 space-y-2">
+                      <li>• <strong>Specific Quality Scores:</strong> Exact cupping scores and grading details</li>
+                      <li>• <strong>Pricing Information:</strong> Purchase prices, cost breakdowns, profit margins</li>
+                      <li>• <strong>Supplier Details:</strong> Specific farmer agreements, exclusive sourcing deals</li>
+                      <li>• <strong>Process Secrets:</strong> Proprietary roasting or processing techniques</li>
+                      <li>• <strong>Volume Details:</strong> Exact quantities and inventory levels</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 p-5 rounded-lg border border-yellow-200">
+                  <h3 className="font-bold text-yellow-800 mb-4">⚖️ Privacy vs. Transparency Balance</h3>
+                  <div className="space-y-3">
+                    <div className="border-l-4 border-green-400 pl-4">
+                      <h4 className="font-semibold text-gray-800 mb-1">Public IPFS Metadata</h4>
+                      <p className="text-sm text-gray-600">
+                        Provides enough information for customers to understand coffee origin, quality level, 
+                        and processing method without exposing business-sensitive details.
+                      </p>
+                    </div>
+                    <div className="border-l-4 border-blue-400 pl-4">
+                      <h4 className="font-semibold text-gray-800 mb-1">ZK Privacy Layer</h4>
+                      <p className="text-sm text-gray-600">
+                        Allows businesses to prove important claims (quality, fair pricing, ethical sourcing) 
+                        without revealing the underlying proprietary data or competitive information.
+                      </p>
+                    </div>
+                    <div className="border-l-4 border-purple-400 pl-4">
+                      <h4 className="font-semibold text-gray-800 mb-1">Access Control</h4>
+                      <p className="text-sm text-gray-600">
+                        Sensitive documents and detailed reports are stored with restricted access, viewable 
+                        only by authorized distributors and admins with proper credentials.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-indigo-50 p-5 rounded-lg">
+                  <h3 className="font-bold text-indigo-800 mb-3">🔧 Technical Implementation</h3>
+                  <ul className="text-sm text-indigo-700 space-y-2">
+                    <li>• <strong>Metadata Sanitization:</strong> Sensitive fields are removed or anonymized before IPFS upload</li>
+                    <li>• <strong>Hash References:</strong> IPFS hashes link to public data only; private data stored separately</li>
+                    <li>• <strong>Proof Integration:</strong> ZK proofs are generated and stored alongside public metadata</li>
+                    <li>• <strong>Gateway Control:</strong> Private IPFS gateways for authorized users accessing sensitive data</li>
+                  </ul>
+                </div>
+
+                <div className="bg-gray-50 p-5 rounded-lg">
+                  <h3 className="font-bold text-gray-800 mb-3">💡 Best Practices for Data Storage</h3>
+                  <div className="text-sm text-gray-700 space-y-2">
+                    <p><strong>1. Default to Privacy:</strong> When unsure, protect the information and use ZK proofs to verify claims.</p>
+                    <p><strong>2. Consistent Classification:</strong> Use clear guidelines for what information should be public vs. private.</p>
+                    <p><strong>3. Regular Audits:</strong> Periodically review what data is stored publicly and adjust privacy settings.</p>
+                    <p><strong>4. Customer Communication:</strong> Clearly explain to customers what information is available and how privacy is protected.</p>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-emerald-50 to-blue-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-800 mb-2">🔗 Learn More About ZK Privacy</h3>
+                  <p className="text-gray-700 text-sm mb-3">
+                    Want to understand how our Zero-Knowledge privacy system works with IPFS storage?
+                  </p>
+                  <Link 
+                    href="/docs/guides/zk-privacy" 
+                    className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
+                  >
+                    ZK Privacy Technical Guide →
+                  </Link>
+                </div>
+              </div>
+            </section>
+
             {/* Security */}
             <section id="security" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>🔐</span>
-                <span>7. Security & Access Control</span>
+                <span>8. Security & Access Control</span>
               </h2>
               
               <div className="space-y-6">
@@ -712,7 +822,7 @@ async function uploadBatchMetadata(batchData, files) {
             <section id="troubleshooting" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>🔧</span>
-                <span>8. Troubleshooting</span>
+                <span>9. Troubleshooting</span>
               </h2>
               
               <div className="space-y-6">

@@ -54,12 +54,13 @@ export default function DistributorGuide() {
               <li><a href="#requirements" className="text-emerald-600 hover:text-emerald-800">2. Distributor Requirements</a></li>
               <li><a href="#staking" className="text-emerald-600 hover:text-emerald-800">3. WAGA Token Staking</a></li>
               <li><a href="#verification" className="text-emerald-600 hover:text-emerald-800">4. ERC3643 Verification Process</a></li>
-              <li><a href="#operations" className="text-emerald-600 hover:text-emerald-800">5. Inventory-Free Operations</a></li>
-              <li><a href="#customer-flow" className="text-emerald-600 hover:text-emerald-800">6. Customer Fulfillment Process</a></li>
-              <li><a href="#payments" className="text-emerald-600 hover:text-emerald-800">7. Payment & Redemption System</a></li>
-              <li><a href="#wallet-management" className="text-emerald-600 hover:text-emerald-800">8. Distributor Token Management</a></li>
-              <li><a href="#horeca" className="text-emerald-600 hover:text-emerald-800">9. HORECA & End-User Distributors</a></li>
-              <li><a href="#compliance" className="text-emerald-600 hover:text-emerald-800">10. Compliance & Reporting</a></li>
+              <li><a href="#privacy-protection" className="text-emerald-600 hover:text-emerald-800">5. Privacy Protection</a></li>
+              <li><a href="#operations" className="text-emerald-600 hover:text-emerald-800">6. Inventory-Free Operations</a></li>
+              <li><a href="#customer-flow" className="text-emerald-600 hover:text-emerald-800">7. Customer Fulfillment Process</a></li>
+              <li><a href="#payments" className="text-emerald-600 hover:text-emerald-800">8. Payment & Redemption System</a></li>
+              <li><a href="#wallet-management" className="text-emerald-600 hover:text-emerald-800">9. Distributor Token Management</a></li>
+              <li><a href="#horeca" className="text-emerald-600 hover:text-emerald-800">10. HORECA & End-User Distributors</a></li>
+              <li><a href="#compliance" className="text-emerald-600 hover:text-emerald-800">11. Compliance & Reporting</a></li>
             </ul>
           </div>
 
@@ -403,11 +404,118 @@ export default function DistributorGuide() {
               </div>
             </section>
 
+            {/* Privacy Protection */}
+            <section id="privacy-protection" className="web3-card">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+                <span>🔐</span>
+                <span>5. Privacy Protection</span>
+              </h2>
+              
+              <div className="space-y-6">
+                <p className="text-gray-700 leading-relaxed text-lg">
+                  As a WAGA distributor, you'll handle sensitive business information like pricing strategies, 
+                  customer data, and market insights. Our Zero-Knowledge privacy system protects your competitive 
+                  advantages while maintaining full transparency where needed.
+                </p>
+
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200">
+                  <h3 className="font-bold text-green-800 mb-4">🛡️ What We Protect for Distributors</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="bg-green-100 p-3 rounded-full w-16 h-16 mx-auto mb-2 flex items-center justify-center">
+                        <span className="text-2xl">💰</span>
+                      </div>
+                      <h4 className="font-semibold text-green-800 mb-1">Pricing Data</h4>
+                      <p className="text-xs text-green-700">Your markup strategies and cost structures</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="bg-green-100 p-3 rounded-full w-16 h-16 mx-auto mb-2 flex items-center justify-center">
+                        <span className="text-2xl">👥</span>
+                      </div>
+                      <h4 className="font-semibold text-green-800 mb-1">Customer Info</h4>
+                      <p className="text-xs text-green-700">Client preferences and purchase patterns</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="bg-green-100 p-3 rounded-full w-16 h-16 mx-auto mb-2 flex items-center justify-center">
+                        <span className="text-2xl">📊</span>
+                      </div>
+                      <h4 className="font-semibold text-green-800 mb-1">Market Data</h4>
+                      <p className="text-xs text-green-700">Regional demand and distribution insights</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-blue-50 p-5 rounded-lg">
+                    <h3 className="font-bold text-blue-800 mb-3">🔒 Privacy Features for Distributors</h3>
+                    <ul className="text-sm text-blue-700 space-y-2">
+                      <li>• <strong>Price Privacy:</strong> Prove fair pricing without revealing your cost structure</li>
+                      <li>• <strong>Volume Privacy:</strong> Share aggregate stats without exposing individual customer data</li>
+                      <li>• <strong>Quality Verification:</strong> Verify coffee quality without revealing supplier details</li>
+                      <li>• <strong>Compliance Proofs:</strong> Demonstrate regulatory compliance without data exposure</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-purple-50 p-5 rounded-lg">
+                    <h3 className="font-bold text-purple-800 mb-3">💼 Business Benefits</h3>
+                    <ul className="text-sm text-purple-700 space-y-2">
+                      <li>• <strong>Competitive Edge:</strong> Keep pricing strategies confidential</li>
+                      <li>• <strong>Customer Trust:</strong> Prove quality without revealing trade secrets</li>
+                      <li>• <strong>Market Position:</strong> Share success metrics without exposing methods</li>
+                      <li>• <strong>Regulatory Safety:</strong> Meet compliance without compromising privacy</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 p-5 rounded-lg border border-yellow-200">
+                  <h3 className="font-bold text-yellow-800 mb-3">🏗️ How It Works in Practice</h3>
+                  <div className="space-y-3">
+                    <div className="border-l-4 border-green-400 pl-4">
+                      <h4 className="font-semibold text-gray-800 mb-1">Scenario: Proving Fair Pricing</h4>
+                      <p className="text-sm text-gray-600">
+                        You can demonstrate to customers that your coffee prices are within fair market ranges 
+                        without revealing your exact cost structure, supplier agreements, or profit margins.
+                      </p>
+                    </div>
+                    <div className="border-l-4 border-blue-400 pl-4">
+                      <h4 className="font-semibold text-gray-800 mb-1">Scenario: Quality Assurance</h4>
+                      <p className="text-sm text-gray-600">
+                        You can verify that your coffee meets premium quality standards without exposing 
+                        proprietary grading systems or revealing sensitive supplier quality data.
+                      </p>
+                    </div>
+                    <div className="border-l-4 border-purple-400 pl-4">
+                      <h4 className="font-semibold text-gray-800 mb-1">Scenario: Compliance Reporting</h4>
+                      <p className="text-sm text-gray-600">
+                        You can prove regulatory compliance and proper sourcing practices without revealing 
+                        detailed operational procedures or supplier relationships.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-5 rounded-lg">
+                  <h3 className="font-bold text-gray-800 mb-3">🔗 Technical Implementation</h3>
+                  <p className="text-gray-700 text-sm leading-relaxed mb-3">
+                    Our privacy protection works automatically when you interact with the WAGA platform. 
+                    You don't need to understand the technical details - the system handles privacy protection 
+                    seamlessly in the background.
+                  </p>
+                  <Link 
+                    href="/docs/guides/zk-privacy" 
+                    className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+                  >
+                    Learn About ZK Privacy →
+                  </Link>
+                </div>
+              </div>
+            </section>
+
             {/* Operations */}
             <section id="operations" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <MdSettings className="text-amber-400" />
-                <span>5. Inventory-Free Operations</span>
+                <span>6. Inventory-Free Operations</span>
               </h2>
               
               <div className="space-y-6">
@@ -511,7 +619,7 @@ export default function DistributorGuide() {
             <section id="customer-flow" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <MdGroup className="mr-1" />
-                <span>6. Customer Fulfillment Process</span>
+                <span>7. Customer Fulfillment Process</span>
               </h2>
               
               <div className="space-y-6">
@@ -624,7 +732,7 @@ export default function DistributorGuide() {
             <section id="payments" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <MdPayment className="mr-1" />
-                <span>7. Payment & Redemption System</span>
+                <span>8. Payment & Redemption System</span>
               </h2>
               
               <div className="space-y-6">
@@ -748,7 +856,7 @@ export default function DistributorGuide() {
             <section id="wallet-management" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>👛</span>
-                <span>8. Distributor Token Management</span>
+                <span>9. Distributor Token Management</span>
               </h2>
               
               <div className="space-y-6">
@@ -862,7 +970,7 @@ export default function DistributorGuide() {
             <section id="horeca" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>🏨</span>
-                <span>9. HORECA & End-User Distributors</span>
+                <span>10. HORECA & End-User Distributors</span>
               </h2>
               
               <div className="space-y-6">
@@ -1000,7 +1108,7 @@ export default function DistributorGuide() {
             <section id="compliance" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <MdBalance className="text-amber-400" />
-                <span>10. Compliance & Reporting</span>
+                <span>11. Compliance & Reporting</span>
               </h2>
               
               <div className="space-y-6">

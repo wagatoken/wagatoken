@@ -45,12 +45,13 @@ export default function SmartContractsGuide() {
             <ul className="space-y-2">
               <li><a href="#overview" className="text-emerald-600 hover:text-emerald-800">1. Contract Architecture Overview</a></li>
               <li><a href="#core-contracts" className="text-emerald-600 hover:text-emerald-800">2. Core Contracts</a></li>
-              <li><a href="#deployment" className="text-emerald-600 hover:text-emerald-800">3. Deployment Information</a></li>
-              <li><a href="#interfaces" className="text-emerald-600 hover:text-emerald-800">4. Contract Interfaces</a></li>
-              <li><a href="#functions" className="text-emerald-600 hover:text-emerald-800">5. Key Functions</a></li>
-              <li><a href="#events" className="text-emerald-600 hover:text-emerald-800">6. Events & Logging</a></li>
-              <li><a href="#interaction" className="text-emerald-600 hover:text-emerald-800">7. Contract Interaction</a></li>
-              <li><a href="#security" className="text-emerald-600 hover:text-emerald-800">8. Security Considerations</a></li>
+              <li><a href="#zk-privacy" className="text-emerald-600 hover:text-emerald-800">3. ZK Privacy Layer</a></li>
+              <li><a href="#deployment" className="text-emerald-600 hover:text-emerald-800">4. Deployment Information</a></li>
+              <li><a href="#interfaces" className="text-emerald-600 hover:text-emerald-800">5. Contract Interfaces</a></li>
+              <li><a href="#functions" className="text-emerald-600 hover:text-emerald-800">6. Key Functions</a></li>
+              <li><a href="#events" className="text-emerald-600 hover:text-emerald-800">7. Events & Logging</a></li>
+              <li><a href="#interaction" className="text-emerald-600 hover:text-emerald-800">8. Contract Interaction</a></li>
+              <li><a href="#security" className="text-emerald-600 hover:text-emerald-800">9. Security Considerations</a></li>
             </ul>
           </div>
 
@@ -65,8 +66,8 @@ export default function SmartContractsGuide() {
               
               <div className="space-y-6">
                 <p className="text-gray-700 leading-relaxed">
-                  WAGA's smart contract architecture is designed for modularity, upgradability, and 
-                  seamless integration with Chainlink Functions and IPFS storage systems.
+                  WAGA's smart contract architecture is designed for modularity, upgradability, privacy protection, and 
+                  seamless integration with Zero-Knowledge proofs, Chainlink Functions, and IPFS storage systems.
                 </p>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
@@ -232,11 +233,158 @@ export default function SmartContractsGuide() {
               </div>
             </section>
 
+            {/* ZK Privacy Layer */}
+            <section id="zk-privacy" className="web3-card">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+                <span>🔐</span>
+                <span>3. ZK Privacy Layer</span>
+              </h2>
+              
+              <div className="space-y-6">
+                <p className="text-gray-700 leading-relaxed text-lg">
+                  WAGA implements cutting-edge Zero-Knowledge (ZK) cryptography to protect sensitive 
+                  business data while maintaining full transparency and verifiability on the blockchain.
+                </p>
+
+                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-xl border border-purple-100">
+                  <h3 className="font-bold text-purple-800 mb-4 text-lg">🧠 How ZK Privacy Works</h3>
+                  <p className="text-purple-700 leading-relaxed">
+                    Think of ZK proofs like a magic box that proves you know a secret without revealing the secret itself. 
+                    For example, we can prove that coffee beans are high-quality without revealing the exact quality score, 
+                    or prove that pricing is fair without exposing sensitive cost structures.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-emerald-50 p-5 rounded-lg">
+                    <h3 className="font-bold text-emerald-800 mb-3">📋 WAGAZKManager Contract</h3>
+                    <p className="text-emerald-700 text-sm mb-3">
+                      The central hub for managing all ZK operations in the WAGA ecosystem.
+                    </p>
+                    <ul className="text-sm text-emerald-600 space-y-2">
+                      <li>• <strong>Proof Verification:</strong> Validates ZK proofs from our Circom circuits</li>
+                      <li>• <strong>Privacy Configuration:</strong> Manages which data elements are private</li>
+                      <li>• <strong>Batch Processing:</strong> Efficiently handles multiple proofs simultaneously</li>
+                      <li>• <strong>Access Control:</strong> Ensures only authorized parties can submit proofs</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-blue-50 p-5 rounded-lg">
+                    <h3 className="font-bold text-blue-800 mb-3">🛡️ PrivacyLayer Contract</h3>
+                    <p className="text-blue-700 text-sm mb-3">
+                      Configures and enforces privacy policies across the entire platform.
+                    </p>
+                    <ul className="text-sm text-blue-600 space-y-2">
+                      <li>• <strong>Privacy Levels:</strong> Manages Basic, Advanced, and Enterprise tiers</li>
+                      <li>• <strong>Data Classification:</strong> Determines what information needs protection</li>
+                      <li>• <strong>User Permissions:</strong> Controls who can access different privacy features</li>
+                      <li>• <strong>Compliance:</strong> Ensures privacy settings meet regulatory requirements</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+                  <h3 className="font-bold text-yellow-800 mb-4">⚡ Three Types of Privacy Protection</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="bg-yellow-100 p-3 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
+                        <span className="text-2xl">💰</span>
+                      </div>
+                      <h4 className="font-semibold text-yellow-800 mb-2">Price Privacy</h4>
+                      <p className="text-sm text-yellow-700">
+                        Protect sensitive pricing data while proving fair market rates
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <div className="bg-yellow-100 p-3 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
+                        <span className="text-2xl">⭐</span>
+                      </div>
+                      <h4 className="font-semibold text-yellow-800 mb-2">Quality Privacy</h4>
+                      <p className="text-sm text-yellow-700">
+                        Verify coffee quality standards without exposing proprietary metrics
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <div className="bg-yellow-100 p-3 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
+                        <span className="text-2xl">🚚</span>
+                      </div>
+                      <h4 className="font-semibold text-yellow-800 mb-2">Supply Chain Privacy</h4>
+                      <p className="text-sm text-yellow-700">
+                        Maintain supply chain transparency while protecting trade secrets
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-indigo-50 p-5 rounded-lg">
+                    <h3 className="font-bold text-indigo-800 mb-3">🔧 Technical Implementation</h3>
+                    <ul className="text-sm text-indigo-700 space-y-2">
+                      <li>• <strong>Circom Circuits:</strong> Custom ZK circuits for each privacy type</li>
+                      <li>• <strong>Groth16 Protocol:</strong> Industry-standard proving system</li>
+                      <li>• <strong>Trusted Setup:</strong> Powers of Tau ceremony for security</li>
+                      <li>• <strong>Verifier Contracts:</strong> On-chain proof verification</li>
+                      <li>• <strong>IPFS Storage:</strong> Secure metadata storage with privacy protection</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-rose-50 p-5 rounded-lg">
+                    <h3 className="font-bold text-rose-800 mb-3">🎯 Business Benefits</h3>
+                    <ul className="text-sm text-rose-700 space-y-2">
+                      <li>• <strong>Competitive Advantage:</strong> Protect proprietary information</li>
+                      <li>• <strong>Regulatory Compliance:</strong> Meet privacy requirements</li>
+                      <li>• <strong>Trust Building:</strong> Prove claims without revealing secrets</li>
+                      <li>• <strong>Market Efficiency:</strong> Enable new business models</li>
+                      <li>• <strong>Risk Reduction:</strong> Minimize data exposure</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-6 rounded-lg">
+                  <h3 className="font-bold text-gray-800 mb-4">🔍 How It Works in Practice</h3>
+                  <div className="space-y-4">
+                    <div className="border-l-4 border-green-400 pl-4">
+                      <h4 className="font-semibold text-gray-800 mb-1">1. Generate Proof</h4>
+                      <p className="text-sm text-gray-600">
+                        When you need to prove something (like quality or fair pricing), our system generates 
+                        a ZK proof using your private data without exposing it.
+                      </p>
+                    </div>
+                    <div className="border-l-4 border-blue-400 pl-4">
+                      <h4 className="font-semibold text-gray-800 mb-1">2. Submit to Blockchain</h4>
+                      <p className="text-sm text-gray-600">
+                        The proof gets submitted to our smart contracts, which verify its mathematical validity 
+                        without seeing your sensitive information.
+                      </p>
+                    </div>
+                    <div className="border-l-4 border-purple-400 pl-4">
+                      <h4 className="font-semibold text-gray-800 mb-1">3. Public Verification</h4>
+                      <p className="text-sm text-gray-600">
+                        Anyone can verify that your claims are true, but they can't see your private data. 
+                        It's like having a transparent safe that proves what's inside without opening it.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-xl">
+                  <h3 className="font-bold text-gray-800 mb-3">🚀 Why This Matters for Coffee</h3>
+                  <p className="text-gray-700 leading-relaxed">
+                    In the coffee industry, information is power. Farmers need to protect their cost structures, 
+                    roasters guard their quality formulas, and distributors maintain pricing strategies. 
+                    Our ZK privacy layer lets everyone prove their claims and build trust without giving away 
+                    their competitive advantages. It's like having your cake and eating it too - complete 
+                    transparency where it matters, complete privacy where it's needed.
+                  </p>
+                </div>
+              </div>
+            </section>
+
             {/* Deployment Information */}
             <section id="deployment" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>🚀</span>
-                <span>3. Deployment Information</span>
+                <span>4. Deployment Information</span>
               </h2>
               
               <div className="space-y-6">
@@ -323,7 +471,7 @@ export default function SmartContractsGuide() {
             <section id="interfaces" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>🔌</span>
-                <span>4. Contract Interfaces</span>
+                <span>5. Contract Interfaces</span>
               </h2>
               
               <div className="space-y-6">
@@ -445,7 +593,7 @@ interface IProofOfReserve {
             <section id="functions" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>⚙️</span>
-                <span>5. Key Functions</span>
+                <span>6. Key Functions</span>
               </h2>
               
               <div className="space-y-6">
@@ -550,7 +698,7 @@ interface IProofOfReserve {
             <section id="events" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>📡</span>
-                <span>6. Events & Logging</span>
+                <span>7. Events & Logging</span>
               </h2>
               
               <div className="space-y-6">
@@ -679,7 +827,7 @@ event InventoryAdjusted(
             <section id="interaction" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>🔧</span>
-                <span>7. Contract Interaction</span>
+                <span>8. Contract Interaction</span>
               </h2>
               
               <div className="space-y-6">
@@ -827,7 +975,7 @@ async function getAllBatches() {
             <section id="security" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>🛡️</span>
-                <span>8. Security Considerations</span>
+                <span>9. Security Considerations</span>
               </h2>
               
               <div className="space-y-6">

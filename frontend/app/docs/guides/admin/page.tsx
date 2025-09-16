@@ -54,10 +54,11 @@ export default function AdminGuide() {
               <li><a href="#dashboard" className="text-emerald-600 hover:text-emerald-800">2. Admin Dashboard Overview</a></li>
               <li><a href="#create-batch" className="text-emerald-600 hover:text-emerald-800">3. Creating Coffee Batches</a></li>
               <li><a href="#ipfs-upload" className="text-emerald-600 hover:text-emerald-800">4. IPFS Metadata Management</a></li>
-              <li><a href="#verification" className="text-emerald-600 hover:text-emerald-800">5. Verification Process</a></li>
-              <li><a href="#token-management" className="text-emerald-600 hover:text-emerald-800">6. Token Minting & Management</a></li>
-              <li><a href="#chainlink" className="text-emerald-600 hover:text-emerald-800">7. Chainlink Integration</a></li>
-              <li><a href="#troubleshooting" className="text-emerald-600 hover:text-emerald-800">8. Troubleshooting</a></li>
+              <li><a href="#privacy-management" className="text-emerald-600 hover:text-emerald-800">5. Privacy Management</a></li>
+              <li><a href="#verification" className="text-emerald-600 hover:text-emerald-800">6. Verification Process</a></li>
+              <li><a href="#token-management" className="text-emerald-600 hover:text-emerald-800">7. Token Minting & Management</a></li>
+              <li><a href="#chainlink" className="text-emerald-600 hover:text-emerald-800">8. Chainlink Integration</a></li>
+              <li><a href="#troubleshooting" className="text-emerald-600 hover:text-emerald-800">9. Troubleshooting</a></li>
             </ul>
           </div>
 
@@ -319,11 +320,138 @@ export default function AdminGuide() {
               </div>
             </section>
 
+            {/* Privacy Management */}
+            <section id="privacy-management" className="web3-card">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+                <span>🔐</span>
+                <span>5. Privacy Management</span>
+              </h2>
+              
+              <div className="space-y-6">
+                <p className="text-gray-700 leading-relaxed text-lg">
+                  As an admin, you manage sensitive coffee batch data that needs to be protected while maintaining 
+                  transparency. Our Zero-Knowledge privacy system lets you prove important facts about batches 
+                  without exposing proprietary information.
+                </p>
+
+                <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-xl border border-purple-100">
+                  <h3 className="font-bold text-purple-800 mb-4">🧠 Admin Privacy Responsibilities</h3>
+                  <p className="text-purple-700 leading-relaxed">
+                    Think of yourself as the guardian of coffee secrets. You need to prove that batches meet quality 
+                    standards, are fairly priced, and properly sourced - all without revealing the specific methods, 
+                    costs, or proprietary formulas that give each farm and roaster their competitive edge.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <div className="bg-green-100 p-3 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
+                      <span className="text-2xl">⭐</span>
+                    </div>
+                    <h4 className="font-semibold text-green-800 mb-2 text-center">Quality Privacy</h4>
+                    <p className="text-sm text-green-700 text-center">
+                      Protect proprietary quality assessment methods while proving compliance with standards
+                    </p>
+                  </div>
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <div className="bg-blue-100 p-3 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
+                      <span className="text-2xl">💰</span>
+                    </div>
+                    <h4 className="font-semibold text-blue-800 mb-2 text-center">Price Privacy</h4>
+                    <p className="text-sm text-blue-700 text-center">
+                      Verify fair market pricing without exposing sensitive cost structures or profit margins
+                    </p>
+                  </div>
+                  <div className="bg-amber-50 p-4 rounded-lg">
+                    <div className="bg-amber-100 p-3 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
+                      <span className="text-2xl">🚚</span>
+                    </div>
+                    <h4 className="font-semibold text-amber-800 mb-2 text-center">Supply Chain Privacy</h4>
+                    <p className="text-sm text-amber-700 text-center">
+                      Maintain sourcing transparency while protecting supplier relationships and trade routes
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 p-5 rounded-lg border border-yellow-200">
+                  <h3 className="font-bold text-yellow-800 mb-4">🔧 Privacy Configuration Tools</h3>
+                  <div className="space-y-3">
+                    <div className="border-l-4 border-green-400 pl-4">
+                      <h4 className="font-semibold text-gray-800 mb-1">Privacy Level Settings</h4>
+                      <p className="text-sm text-gray-600">
+                        Configure which batch information is public, which requires ZK proofs, and which remains 
+                        completely private to authorized parties only.
+                      </p>
+                    </div>
+                    <div className="border-l-4 border-blue-400 pl-4">
+                      <h4 className="font-semibold text-gray-800 mb-1">ZK Proof Generation</h4>
+                      <p className="text-sm text-gray-600">
+                        Generate privacy proofs during batch creation to verify quality, pricing, or sourcing 
+                        claims without revealing the underlying data.
+                      </p>
+                    </div>
+                    <div className="border-l-4 border-purple-400 pl-4">
+                      <h4 className="font-semibold text-gray-800 mb-1">Access Control Management</h4>
+                      <p className="text-sm text-gray-600">
+                        Define who can access different levels of batch information - from public transparency 
+                        to distributor-only data to admin-only sensitive information.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-indigo-50 p-5 rounded-lg">
+                    <h3 className="font-bold text-indigo-800 mb-3">🔍 When to Use Privacy Protection</h3>
+                    <ul className="text-sm text-indigo-700 space-y-2">
+                      <li>• <strong>Farm Quality Data:</strong> Protect proprietary grading systems</li>
+                      <li>• <strong>Cost Information:</strong> Hide purchase prices and processing costs</li>
+                      <li>• <strong>Supplier Details:</strong> Maintain confidential sourcing relationships</li>
+                      <li>• <strong>Processing Methods:</strong> Protect unique roasting or processing techniques</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-rose-50 p-5 rounded-lg">
+                    <h3 className="font-bold text-rose-800 mb-3">📊 Transparency vs. Privacy Balance</h3>
+                    <ul className="text-sm text-rose-700 space-y-2">
+                      <li>• <strong>Always Public:</strong> Origin farm, basic quality level, processing type</li>
+                      <li>• <strong>ZK Proofs:</strong> Specific quality scores, pricing fairness, compliance</li>
+                      <li>• <strong>Distributor Only:</strong> Wholesale pricing, availability status</li>
+                      <li>• <strong>Admin Only:</strong> Detailed cost breakdowns, supplier contracts</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-5 rounded-lg">
+                  <h3 className="font-bold text-gray-800 mb-3">⚡ Privacy Best Practices for Admins</h3>
+                  <div className="text-sm text-gray-700 space-y-2">
+                    <p><strong>1. Default to Privacy:</strong> When in doubt, protect the information and use ZK proofs to demonstrate compliance.</p>
+                    <p><strong>2. Document Decisions:</strong> Keep records of why certain information is public vs. private for consistency.</p>
+                    <p><strong>3. Regular Review:</strong> Periodically review privacy settings as market conditions and relationships change.</p>
+                    <p><strong>4. Stakeholder Communication:</strong> Clearly explain to farmers and distributors what information is protected and why.</p>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-emerald-50 to-blue-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-800 mb-2">🔗 Learn More About Technical Implementation</h3>
+                  <p className="text-gray-700 text-sm mb-3">
+                    Want to understand how ZK privacy works under the hood?
+                  </p>
+                  <Link 
+                    href="/docs/guides/zk-privacy" 
+                    className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
+                  >
+                    ZK Privacy Technical Guide →
+                  </Link>
+                </div>
+              </div>
+            </section>
+
             {/* Verification Process */}
             <section id="verification" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>✅</span>
-                <span>5. Verification Process</span>
+                <span>6. Verification Process</span>
               </h2>
               
               <div className="space-y-6">
@@ -412,7 +540,7 @@ export default function AdminGuide() {
             <section id="token-management" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>🪙</span>
-                <span>6. Token Minting & Management</span>
+                <span>7. Token Minting & Management</span>
               </h2>
               
               <div className="space-y-6">
@@ -485,7 +613,7 @@ export default function AdminGuide() {
             <section id="chainlink" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>⚡</span>
-                <span>7. Chainlink Integration</span>
+                <span>8. Chainlink Integration</span>
               </h2>
               
               <div className="space-y-6">
@@ -534,7 +662,7 @@ export default function AdminGuide() {
             <section id="troubleshooting" className="web3-card">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <span>🔧</span>
-                <span>8. Troubleshooting</span>
+                <span>9. Troubleshooting</span>
               </h2>
               
               <div className="space-y-6">
