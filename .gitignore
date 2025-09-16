@@ -62,8 +62,7 @@ coverage/
 *.tgz
 *.tar.gz
 documentation/
-# Keep frontend/app/docs but ignore other docs
-docs/
-!frontend/app/docs/
+# Ignore root docs but keep frontend app docs
+/docs/
 # Local Netlify folder
 .netlify
