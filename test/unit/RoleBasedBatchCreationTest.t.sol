@@ -9,8 +9,8 @@ import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
 import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
-import {MockCircomVerifier} from "../../src/MockCircomVerifier.sol";
-import {DeployRealZKMVPForTesting} from "../../script/DeployRealZKMVPForTesting.s.sol";
+import {CircomVerifier} from "../../src/CircomVerifier.sol";
+import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 
 /**
@@ -19,7 +19,7 @@ import {HelperConfig} from "../../script/HelperConfig.s.sol";
  * @notice Ensures cooperatives, roasters, and processors can all create batches
  */
 contract RoleBasedBatchCreationTest is Test {
-    DeployRealZKMVPForTesting deployer;
+    DeployRealZKMVP deployer;
     HelperConfig helperConfig;
     
     WAGACoffeeTokenCore coffeeToken;
@@ -27,13 +27,13 @@ contract RoleBasedBatchCreationTest is Test {
     WAGAZKManager zkManager;
     WAGAProofOfReserve proofOfReserve;
     WAGAInventoryManagerMVP inventoryManager;
-    WAGACoffeeRedemption redemption;
-    MockCircomVerifier mockVerifier;
-    PrivacyLayer privacyLayer;
+    WAGACoffeeRedemption public redemption;
+    CircomVerifier public circomVerifier;
+    PrivacyLayer public privacyLayer;
 
-    // Test addresses
+    // Test addresses - using makeAddr pattern
     address admin;
-    address testUser;
+    address testUser = makeAddr("testUser");
     
     // Test constants
     uint256 constant PRODUCTION_DATE = 1700000000; // Nov 2023
@@ -45,27 +45,30 @@ contract RoleBasedBatchCreationTest is Test {
     string constant METADATA_URI = "ipfs://test-metadata-hash";
 
     function setUp() public {
-        deployer = new DeployRealZKMVPForTesting();
+        deployer = new DeployRealZKMVP();
         
         // Deploy the contracts
         (
             coffeeToken,
             batchManager,
             zkManager,
+            privacyLayer,
+            , // treasury
+            redemption,
+            , // cdpIntegration
             proofOfReserve,
             inventoryManager,
-            redemption,
-            mockVerifier,
-            privacyLayer,
+            , // ethiopianCompliance
+            , // ecxOracle
+            circomVerifier,
             helperConfig
         ) = deployer.run();
         
-        // Get admin address from deployer key
-        HelperConfig.NetworkConfig memory networkConfig = helperConfig.getActiveNetworkConfig();
-        admin = vm.addr(networkConfig.deployerKey);
+        // Get admin address from deployer key (already has all admin roles from deployment)
+        HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
+        admin = vm.addr(config.deployerKey);
         
-        // Create a test user
-        testUser = makeAddr("testUser");
+        // Note: testUser is created with makeAddr and has no roles initially
     }
     
     function testCooperativeCanCreateBatch() public {

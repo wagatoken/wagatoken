@@ -10,6 +10,10 @@ import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
 import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
+import {WAGATreasury} from "../../src/WAGATreasury.sol";
+import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
+import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
+import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
@@ -35,6 +39,10 @@ contract WAGAInventoryVerification is Test {
     WAGAProofOfReserve public proofOfReserve;
     WAGAInventoryManagerMVP public inventoryManager;
     WAGACoffeeRedemption public redemption;
+    WAGATreasury public treasury;
+    WAGACDPIntegration public cdpIntegration;
+    WAGAEthiopianCompliance public ethiopianCompliance;
+    WAGAECXPriceOracle public ecxOracle;
     CircomVerifier public circomVerifier;
     PrivacyLayer public privacyLayer;
 
@@ -79,15 +87,14 @@ contract WAGAInventoryVerification is Test {
             batchManager,
             zkManager,
             privacyLayer,
-            , // treasury
+            treasury,
             redemption,
-            , // cdpIntegration
+            cdpIntegration,
             proofOfReserve,
             inventoryManager,
+            ethiopianCompliance,
+            ecxOracle,
             circomVerifier,
-            , // priceVerifier
-            , // qualityVerifier
-            , // supplyChainVerifier
             helperConfig
         ) = deployer.run();
 

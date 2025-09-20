@@ -2,10 +2,16 @@
 pragma solidity ^0.8.18;
 
 import {Test, console} from "forge-std/Test.sol";
+import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
+import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 
 contract WAGATreasuryTest is Test {
+    // Deployment
+    DeployRealZKMVP public deployer;
+    HelperConfig public helperConfig;
+    
     WAGATreasury public treasury;
     MockUSDC public usdc;
 
@@ -18,16 +24,34 @@ contract WAGATreasuryTest is Test {
     uint256 public constant PAYMENT_AMOUNT = 50000000; // 50 USDC (6 decimals)
 
     function setUp() public {
-        // Deploy mock USDC
-        usdc = new MockUSDC();
+        // Deploy using the deployment script
+        deployer = new DeployRealZKMVP();
+        
+        (
+            , // coffeeToken
+            , // batchManager
+            , // zkManager
+            , // privacyLayer
+            treasury,
+            , // redemption
+            , // cdpIntegration
+            , // proofOfReserve
+            , // inventoryManager
+            , // ethiopianCompliance
+            , // ecxOracle
+            , // circomVerifier
+            helperConfig
+        ) = deployer.run();
 
-        // Deploy treasury with USDC address
-        vm.prank(admin);
-        treasury = new WAGATreasury(address(usdc));
+        // Get USDC address from helper config
+        HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
+        usdc = MockUSDC(config.usdcAddress);
+        
+        // Get admin address from deployer key (already has all admin roles from deployment)
+        admin = vm.addr(config.deployerKey);
 
-        // Setup roles
+        // Setup roles for test accounts
         vm.startPrank(admin);
-        treasury.grantRole(treasury.ADMIN_ROLE(), admin);
         treasury.grantRole(treasury.PAYMENT_PROCESSOR_ROLE(), paymentProcessor);
         vm.stopPrank();
 
@@ -37,7 +61,7 @@ contract WAGATreasuryTest is Test {
         usdc.approve(address(treasury), PAYMENT_AMOUNT * 10);
     }
 
-    function testDeployment() public {
+    function testDeployment() public view {
         assertEq(address(treasury.usdcToken()), address(usdc));
         assertTrue(treasury.hasRole(treasury.ADMIN_ROLE(), admin));
         assertTrue(treasury.hasRole(treasury.PAYMENT_PROCESSOR_ROLE(), paymentProcessor));

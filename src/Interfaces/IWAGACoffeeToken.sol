@@ -70,12 +70,10 @@ interface IWAGACoffeeToken {
     function getBatchInfo(uint256 batchId) external view returns (
         uint256 productionDate,
         uint256 expiryDate,
-        bool isVerified,
         uint256 quantity,
         uint256 pricePerUnit,
         string memory packagingInfo,
         string memory metadataHash,
-        bool isMetadataVerified,
         uint256 lastVerifiedTimestamp
     );
 

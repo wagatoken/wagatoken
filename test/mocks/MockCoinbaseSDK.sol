@@ -21,6 +21,7 @@ contract MockCoinbaseSDK is AccessControl {
         uint256 batchId;
         uint256 amount;
         string chargeId;
+        string destinationCurrency;
         uint256 timestamp;
         PaymentStatus status;
     }
@@ -37,8 +38,9 @@ contract MockCoinbaseSDK is AccessControl {
     mapping(bytes32 => bool) public processedWebhooks;
 
     // Events
-    event MockPaymentInitiated(address indexed user, uint256 indexed batchId, uint256 amount, string chargeId);
+    event MockPaymentInitiated(address indexed user, uint256 indexed batchId, uint256 amount, string chargeId, string destinationCurrency);
     event MockPaymentConfirmed(address indexed user, uint256 indexed batchId, string chargeId);
+    event MockCrossBorderPaymentProcessed(address indexed user, uint256 indexed batchId, uint256 amount, string chargeId, string destinationCurrency);
     event MockSmartAccountCreated(address indexed user, address indexed smartAccount);
     event MockWebhookProcessed(bytes32 indexed webhookId, bool success);
 
@@ -85,11 +87,12 @@ contract MockCoinbaseSDK is AccessControl {
             batchId: batchId,
             amount: amount,
             chargeId: chargeId,
+            destinationCurrency: "USD", // Default currency for non-cross-border payments
             timestamp: block.timestamp,
             status: PaymentStatus.Pending
         });
 
-        emit MockPaymentInitiated(user, batchId, amount, chargeId);
+        emit MockPaymentInitiated(user, batchId, amount, chargeId, "USD");
     }
 
     /**
@@ -140,18 +143,23 @@ contract MockCoinbaseSDK is AccessControl {
         uint256 amount,
         string calldata destinationCurrency
     ) external onlyRole(PAYMENT_HANDLER_ROLE) returns (string memory chargeId) {
-        chargeId = string(abi.encodePacked("mock_cdp_", user, "_", batchId, "_", block.timestamp));
+        require(amount > 0, "Payment amount must be greater than 0");
+        require(bytes(destinationCurrency).length > 0, "Destination currency cannot be empty");
+        
+        // Include currency in chargeId to make it unique per currency
+        chargeId = string(abi.encodePacked("mock_cdp_", destinationCurrency, "_", user, "_", batchId, "_", block.timestamp));
 
         mockPayments[chargeId] = MockPayment({
             user: user,
             batchId: batchId,
             amount: amount,
             chargeId: chargeId,
+            destinationCurrency: destinationCurrency,
             timestamp: block.timestamp,
             status: PaymentStatus.Pending
         });
 
-        emit MockPaymentInitiated(user, batchId, amount, chargeId);
+        emit MockCrossBorderPaymentProcessed(user, batchId, amount, chargeId, destinationCurrency);
         return chargeId;
     }
 
@@ -167,6 +175,13 @@ contract MockCoinbaseSDK is AccessControl {
      */
     function getUserSmartAccount(address user) external view returns (address) {
         return userSmartAccounts[user];
+    }
+
+    /**
+     * @dev Get payment currency for a charge ID
+     */
+    function getPaymentCurrency(string calldata chargeId) external view returns (string memory) {
+        return mockPayments[chargeId].destinationCurrency;
     }
 
     /**

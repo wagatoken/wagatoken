@@ -5,6 +5,7 @@ import "./Interfaces/IWAGACoffeeToken.sol";
 import "./WAGACoffeeTokenCore.sol";
 import "./Interfaces/IPrivacyLayer.sol";
 import "./Interfaces/IWAGABatchManager.sol";
+import "./Interfaces/IEthiopianCompliance.sol";
 
 /**
  * @title WAGABatchManager
@@ -12,6 +13,12 @@ import "./Interfaces/IWAGABatchManager.sol";
  * @dev No longer inherits WAGAViewFunctions to avoid state duplication
  */
 contract WAGABatchManager is IWAGABatchManager {
+    /* -------------------------------------------------------------------------- */
+    /*                                   Constants                                */
+    /* -------------------------------------------------------------------------- */
+    
+    bytes32 public constant PROOF_OF_RESERVE_ROLE = keccak256("PROOF_OF_RESERVE_ROLE");
+    
     /* -------------------------------------------------------------------------- */
     /*                                   Constants                                */
     /* -------------------------------------------------------------------------- */
@@ -37,6 +44,7 @@ contract WAGABatchManager is IWAGABatchManager {
     IWAGACoffeeToken public immutable coffeeToken;
     WAGACoffeeTokenCore public immutable coffeeTokenContract;
     IPrivacyLayer public immutable privacyLayer;
+    IEthiopianCompliance public ethiopianCompliance;
 
     // Additional batch metadata (extending what's in WAGAViewFunctions)
     mapping(uint256 => string) public batchOrigin;
@@ -44,6 +52,11 @@ contract WAGABatchManager is IWAGABatchManager {
     mapping(uint256 => address) public batchCreator;
     mapping(uint256 => uint256) public batchCreationTimestamp;
     mapping(uint256 => uint8) public batchFlags; // Bit-packed flags
+    
+    // Ethiopian compliance integration
+    mapping(uint256 => bool) public isEthiopianBatch;
+    mapping(uint256 => string) public ethiopianRegion; // Sidamo, Yirgacheffe, Harrar
+    mapping(uint256 => bool) public hasEthiopianCompliance;
 
     /* -------------------------------------------------------------------------- */
     /*                                   Events                                   */
@@ -57,6 +70,17 @@ contract WAGABatchManager is IWAGABatchManager {
 
     event BatchMetadataUpdated(uint256 indexed batchId, string metadataHash);
     event BatchInventoryUpdated(uint256 indexed batchId, uint256 verifiedQuantity);
+    event BatchVerificationStatusChanged(uint256 indexed batchId, bool isVerified);
+    event EthiopianBatchRegistered(
+        uint256 indexed batchId,
+        string region,
+        bool hasCompliance
+    );
+    event EthiopianComplianceAdded(
+        uint256 indexed batchId,
+        string complianceType,
+        string documentHash
+    );
 
     /* -------------------------------------------------------------------------- */
     /*                                Modifiers                                   */
@@ -87,6 +111,7 @@ contract WAGABatchManager is IWAGABatchManager {
         coffeeToken = IWAGACoffeeToken(_coffeeToken);
         coffeeTokenContract = WAGACoffeeTokenCore(_coffeeToken);
         privacyLayer = IPrivacyLayer(_privacyLayer);
+        // Ethiopian compliance will be set separately via setEthiopianCompliance
     }
 
     /* -------------------------------------------------------------------------- */
@@ -110,7 +135,90 @@ contract WAGABatchManager is IWAGABatchManager {
         batchCreator[batchId] = creator;
         batchCreationTimestamp[batchId] = block.timestamp;
         
+        // Check if this is an Ethiopian batch
+        if (_isEthiopianOrigin(origin)) {
+            isEthiopianBatch[batchId] = true;
+            ethiopianRegion[batchId] = _extractEthiopianRegion(origin);
+            emit EthiopianBatchRegistered(batchId, ethiopianRegion[batchId], false);
+        }
+        
         emit BatchInfoUpdated(batchId, origin, "");
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                         ETHIOPIAN COMPLIANCE FUNCTIONS                     */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Set Ethiopian compliance contract address (admin only)
+     */
+    function setEthiopianCompliance(address _ethiopianCompliance) external callerHasRoleFromCoffeeToken(DEFAULT_ADMIN_ROLE) {
+        require(_ethiopianCompliance != address(0), "Invalid Ethiopian compliance address");
+        ethiopianCompliance = IEthiopianCompliance(_ethiopianCompliance);
+    }
+
+    /**
+     * @dev Add ECTA permit for Ethiopian batch during creation
+     */
+    function addECTAPermitDuringCreation(
+        uint256 batchId,
+        IEthiopianCompliance.ECTAPermit calldata permit
+    ) external callerHasRoleFromCoffeeToken(PROCESSOR_ROLE) {
+        require(isEthiopianBatch[batchId], "Not an Ethiopian batch");
+        require(address(ethiopianCompliance) != address(0), "Ethiopian compliance not configured");
+        
+        // Add the permit through the compliance contract
+        ethiopianCompliance.addECTAPermit(batchId, permit);
+        
+        // Protect sensitive permit data in privacy layer
+        _protectEthiopianComplianceData(batchId, "ECTA_PERMIT", permit.permitDocumentHash);
+        
+        emit EthiopianComplianceAdded(batchId, "ECTA_PERMIT", permit.permitDocumentHash);
+    }
+
+    /**
+     * @dev Add quality certificate for Ethiopian batch during creation
+     */
+    function addQualityCertificateDuringCreation(
+        uint256 batchId,
+        IEthiopianCompliance.QualityCertificate calldata certificate
+    ) external callerHasRoleFromCoffeeToken(PROCESSOR_ROLE) {
+        require(isEthiopianBatch[batchId], "Not an Ethiopian batch");
+        require(address(ethiopianCompliance) != address(0), "Ethiopian compliance not configured");
+        
+        // Add the certificate through the compliance contract
+        ethiopianCompliance.addQualityCertificate(batchId, certificate);
+        
+        // Protect sensitive certificate data in privacy layer
+        _protectEthiopianComplianceData(batchId, "QUALITY_CERT", certificate.certificateHash);
+        
+        emit EthiopianComplianceAdded(batchId, "QUALITY_CERT", certificate.certificateHash);
+    }
+
+    /**
+     * @dev Add origin verification for Ethiopian batch during creation
+     */
+    function addOriginVerificationDuringCreation(
+        uint256 batchId,
+        IEthiopianCompliance.OriginVerification calldata origin
+    ) external callerHasRoleFromCoffeeToken(PROCESSOR_ROLE) {
+        require(isEthiopianBatch[batchId], "Not an Ethiopian batch");
+        require(address(ethiopianCompliance) != address(0), "Ethiopian compliance not configured");
+        
+        // Add the origin verification through the compliance contract
+        ethiopianCompliance.addOriginVerification(batchId, origin);
+        
+        // Protect sensitive origin data in privacy layer
+        _protectEthiopianComplianceData(batchId, "ORIGIN_VERIFICATION", origin.verificationDocumentHash);
+        
+        // Mark batch as having Ethiopian compliance if all requirements are met
+        bool hasCompliance = ethiopianCompliance.validateUpstreamCompliance(batchId);
+        if (hasCompliance) {
+            hasEthiopianCompliance[batchId] = true;
+            emit EthiopianBatchRegistered(batchId, ethiopianRegion[batchId], true);
+        }
+        
+        emit EthiopianComplianceAdded(batchId, "ORIGIN_VERIFICATION", origin.verificationDocumentHash);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -153,6 +261,24 @@ contract WAGABatchManager is IWAGABatchManager {
      * @dev Update batch active status (only admin)
      * @dev Note: This only sets local flags - core status is managed by WAGACoffeeTokenCore
      */
+    /**
+     * @dev Mark a batch as verified after successful proof of reserve verification
+     * @param batchId The batch to mark as verified
+     */
+    function markBatchAsVerified(
+        uint256 batchId
+    ) external callerHasRoleFromCoffeeToken(PROOF_OF_RESERVE_ROLE) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGABatchManager__BatchDoesNotExist_createBatchInfo();
+        }
+        _setBatchFlag(batchId, 0, true); // isVerified
+        
+        emit BatchVerificationStatusChanged(batchId, true);
+    }
+
+    /**
+     * @dev Update batch active status (for inventory management)
+     */
     function updateBatchStatus(
         uint256 batchId,
         bool isActive
@@ -171,7 +297,7 @@ contract WAGABatchManager is IWAGABatchManager {
         uint256 batchId,
         string calldata verifiedPackaging,
         string calldata verifiedMetadataHash
-    ) external callerHasRoleFromCoffeeToken(DEFAULT_ADMIN_ROLE) {
+    ) external callerHasRoleFromCoffeeToken(PROOF_OF_RESERVE_ROLE) {
         if (!coffeeToken.isBatchCreated(batchId)) {
             revert WAGABatchManager__BatchDoesNotExist_createBatchInfo();
         }
@@ -195,6 +321,18 @@ contract WAGABatchManager is IWAGABatchManager {
             revert WAGABatchManager__BatchDoesNotExist_getBatchInfo();
         }
         return getBatchFlag(batchId, 1); // isMetadataVerified flag
+    }
+
+    /**
+     * @dev Check if batch is verified (for redemption eligibility)
+     */
+    function isBatchVerified(
+        uint256 batchId
+    ) external view returns (bool) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGABatchManager__BatchDoesNotExist_getBatchInfo();
+        }
+        return getBatchFlag(batchId, 0); // isVerified flag
     }
 
     /**
@@ -329,5 +467,173 @@ contract WAGABatchManager is IWAGABatchManager {
     ) internal view returns (bool) {
         uint8 currentFlags = batchFlags[batchId];
         return (currentFlags & (1 << flagBit)) != 0;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                         ETHIOPIAN COMPLIANCE INTERNAL                      */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Check if origin indicates Ethiopian coffee
+     */
+    function _isEthiopianOrigin(string memory origin) internal pure returns (bool) {
+        bytes memory originBytes = bytes(origin);
+        
+        // Check for Ethiopian regions (case-insensitive)
+        return (
+            _containsIgnoreCase(originBytes, "Sidamo") ||
+            _containsIgnoreCase(originBytes, "Yirgacheffe") ||
+            _containsIgnoreCase(originBytes, "Harrar") ||
+            _containsIgnoreCase(originBytes, "Ethiopia") ||
+            _containsIgnoreCase(originBytes, "Jimma") ||
+            _containsIgnoreCase(originBytes, "Limu") ||
+            _containsIgnoreCase(originBytes, "Kaffa")
+        );
+    }
+
+    /**
+     * @dev Extract Ethiopian region from origin string
+     */
+    function _extractEthiopianRegion(string memory origin) internal pure returns (string memory) {
+        bytes memory originBytes = bytes(origin);
+        
+        if (_containsIgnoreCase(originBytes, "Sidamo")) return "Sidamo";
+        if (_containsIgnoreCase(originBytes, "Yirgacheffe")) return "Yirgacheffe";
+        if (_containsIgnoreCase(originBytes, "Harrar")) return "Harrar";
+        if (_containsIgnoreCase(originBytes, "Jimma")) return "Jimma";
+        if (_containsIgnoreCase(originBytes, "Limu")) return "Limu";
+        if (_containsIgnoreCase(originBytes, "Kaffa")) return "Kaffa";
+        
+        return "Ethiopia"; // Default if specific region not identified
+    }
+
+    /**
+     * @dev Protect Ethiopian compliance data using privacy layer
+     */
+    function _protectEthiopianComplianceData(
+        uint256 batchId,
+        string memory dataType,
+        string memory documentHash
+    ) internal {
+        // Create privacy config for Ethiopian compliance data
+        IPrivacyLayer.PrivacyConfig memory config = IPrivacyLayer.PrivacyConfig({
+            pricingPrivate: false,
+            qualityPrivate: true,
+            supplyChainPrivate: false,
+            level: IPrivacyLayer.PrivacyLevel.SELECTIVE,
+            pricingClaim: "",
+            qualityClaim: dataType,
+            supplyChainClaim: "Ethiopian Export Compliance"
+        });
+        
+        // Configure privacy with the batch creator as the original caller
+        privacyLayer.configurePrivacyWithCaller(
+            batchCreator[batchId],
+            batchId,
+            config
+        );
+        
+        // Protect the document hash data
+        privacyLayer.protectDataWithCaller(
+            batchCreator[batchId],
+            batchId,
+            dataType,
+            documentHash
+        );
+    }
+
+    /**
+     * @dev Case-insensitive string contains check
+     */
+    function _containsIgnoreCase(bytes memory data, string memory search) internal pure returns (bool) {
+        bytes memory searchBytes = bytes(search);
+        if (searchBytes.length > data.length) return false;
+        
+        for (uint256 i = 0; i <= data.length - searchBytes.length; i++) {
+            bool found = true;
+            for (uint256 j = 0; j < searchBytes.length; j++) {
+                bytes1 dataChar = data[i + j];
+                bytes1 searchChar = searchBytes[j];
+                
+                // Convert to lowercase for comparison
+                if (dataChar >= 0x41 && dataChar <= 0x5A) {
+                    dataChar = bytes1(uint8(dataChar) + 32);
+                }
+                if (searchChar >= 0x41 && searchChar <= 0x5A) {
+                    searchChar = bytes1(uint8(searchChar) + 32);
+                }
+                
+                if (dataChar != searchChar) {
+                    found = false;
+                    break;
+                }
+            }
+            if (found) return true;
+        }
+        return false;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                       ETHIOPIAN COMPLIANCE VIEW FUNCTIONS                 */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Get Ethiopian compliance status for a batch
+     */
+    function getEthiopianComplianceStatus(uint256 batchId) external view returns (
+        bool isEthiopian,
+        string memory region,
+        bool hasCompliance,
+        bool hasECTA,
+        bool hasQuality,
+        bool hasOrigin
+    ) {
+        isEthiopian = isEthiopianBatch[batchId];
+        region = ethiopianRegion[batchId];
+        hasCompliance = hasEthiopianCompliance[batchId];
+        
+        if (isEthiopian && address(ethiopianCompliance) != address(0)) {
+            (hasECTA, hasQuality, hasOrigin, ) = ethiopianCompliance.getComplianceStatus(batchId);
+        }
+    }
+
+    /**
+     * @dev Check if batch is ready for export (has all compliance)
+     */
+    function isReadyForExport(uint256 batchId) external view returns (bool) {
+        if (!isEthiopianBatch[batchId]) {
+            return true; // Non-Ethiopian batches don't need Ethiopian compliance
+        }
+        
+        return hasEthiopianCompliance[batchId] && 
+               address(ethiopianCompliance) != address(0) &&
+               ethiopianCompliance.validateUpstreamCompliance(batchId);
+    }
+
+    /**
+     * @dev Get enhanced batch info including Ethiopian compliance
+     */
+    function getBatchInfoWithCompliance(uint256 batchId) external view returns (
+        string memory origin,
+        address creator,
+        uint256 creationTimestamp,
+        bool isEthiopian,
+        string memory region,
+        bool hasCompliance,
+        bool readyForExport
+    ) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGABatchManager__BatchDoesNotExist_getBatchInfo();
+        }
+        
+        return (
+            batchOrigin[batchId],
+            batchCreator[batchId],
+            batchCreationTimestamp[batchId],
+            isEthiopianBatch[batchId],
+            ethiopianRegion[batchId],
+            hasEthiopianCompliance[batchId],
+            this.isReadyForExport(batchId)
+        );
     }
 }

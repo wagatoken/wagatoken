@@ -25,13 +25,11 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager {
     struct BatchInfo {
         uint256 productionDate;
         uint256 expiryDate;
-        bool isVerified;
         uint256 quantity;
         uint256 mintedQuantity;
         uint256 pricePerUnit;
         string packagingInfo;
         string metadataHash;
-        bool isMetadataVerified;
         uint256 lastVerifiedTimestamp;
     }
 
@@ -286,13 +284,11 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager {
         s_batchInfo[newBatchId] = BatchInfo({
             productionDate: productionDate,
             expiryDate: expiryDate,
-            isVerified: false,
             quantity: quantity,
             mintedQuantity: 0,
             pricePerUnit: pricePerUnit,
             packagingInfo: packagingInfo,
             metadataHash: "", // Will be set when metadata is verified
-            isMetadataVerified: false,
             lastVerifiedTimestamp: 0
         });
 
@@ -355,24 +351,20 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager {
     ) external view returns (
         uint256 productionDate,
         uint256 expiryDate,
-        bool isVerified,
         uint256 quantity,
         uint256 pricePerUnit,
         string memory packagingInfo,
         string memory metadataHash,
-        bool isMetadataVerified,
         uint256 lastVerifiedTimestamp
     ) {
         BatchInfo storage info = s_batchInfo[batchId];
         return (
             info.productionDate,
             info.expiryDate,
-            info.isVerified,
             info.quantity,
             info.pricePerUnit,
             info.packagingInfo,
             info.metadataHash,
-            info.isMetadataVerified,
             info.lastVerifiedTimestamp
         );
     }

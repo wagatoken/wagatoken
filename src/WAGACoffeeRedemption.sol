@@ -6,6 +6,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import {WAGACoffeeTokenCore} from "./WAGACoffeeTokenCore.sol";
 import {IWAGATreasury} from "./Interfaces/IWAGATreasury.sol";
+import {IEthiopianCompliance} from "./Interfaces/IEthiopianCompliance.sol";
+import {IWAGABatchManager} from "./Interfaces/IWAGABatchManager.sol";
 
 contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     /* -------------------------------------------------------------------------- */
@@ -31,6 +33,9 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     error WAGACoffeeRedemption__CallerDoesNotHaveRequiredRole_callHasRoleFromCoffeeToken();
     error WAGACoffeeRedemption__PaymentRequired_requestRedemption();
     error WAGACoffeeRedemption__PaymentNotReceived_requestRedemption();
+    error WAGACoffeeRedemption__EthiopianComplianceNotMet_requestRedemption();
+    error WAGACoffeeRedemption__FiatTransferNotCompleted_updateRedemptionStatus();
+    error WAGACoffeeRedemption__InvalidBankingDetails_requestRedemption();
 
     /* -------------------------------------------------------------------------- */
     /*                               STATE VARIABLES                             */
@@ -38,6 +43,12 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
 
     // Treasury contract for payment verification
     IWAGATreasury public treasury;
+    
+    // Ethiopian compliance contract
+    IEthiopianCompliance public ethiopianCompliance;
+    
+    // Batch manager contract
+    IWAGABatchManager public batchManager;
 
     /* -------------------------------------------------------------------------- */
     /*                               TYPE DECLARATIONS                            */
@@ -59,6 +70,10 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         uint256 requestDate;
         RedemptionStatus status;
         uint256 fulfillmentDate;
+        string buyerBankDetails;
+        bool requiresEthiopianCompliance;
+        bool fiatTransferCompleted;
+        string bankTransactionId;
     }
 
     /* -------------------------------------------------------------------------- */
@@ -98,6 +113,20 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         uint256 indexed redemptionId,
         uint256 fulfillmentDate // shipping date or delivery date ?
     );
+    event EthiopianComplianceValidated(
+        uint256 indexed batchId,
+        uint256 indexed redemptionId
+    );
+    event BoETradeRegistered(
+        uint256 indexed batchId,
+        address indexed buyer,
+        uint256 valueUSD,
+        uint256 valueETB
+    );
+    event FiatTransferConfirmed(
+        uint256 indexed redemptionId,
+        string bankTransactionId
+    );
 
     /* -------------------------------------------------------------------------- */
     /*                                 MODIFIERS                                  */
@@ -114,12 +143,16 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     /*                                CONSTRUCTOR                                 */
     /* -------------------------------------------------------------------------- */
 
-    constructor(address _coffeeToken, address _treasury) {
+    constructor(address _coffeeToken, address _treasury, address _ethiopianCompliance, address _batchManager) {
         require(_coffeeToken != address(0), "Invalid coffee token address");
         require(_treasury != address(0), "Invalid treasury address");
+        require(_ethiopianCompliance != address(0), "Invalid Ethiopian compliance address");
+        require(_batchManager != address(0), "Invalid batch manager address");
         
         coffeeToken = WAGACoffeeTokenCore(_coffeeToken);
         treasury = IWAGATreasury(_treasury);
+        ethiopianCompliance = IEthiopianCompliance(_ethiopianCompliance);
+        batchManager = IWAGABatchManager(_batchManager);
         nextRedemptionId = 1000;
     }
 
@@ -135,6 +168,10 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
             return (false, "Coffee token not configured");
         }
         
+        if (address(ethiopianCompliance) == address(0)) {
+            return (false, "Ethiopian compliance not configured");
+        }
+        
         return (true, "Configuration is valid");
     }
 
@@ -148,6 +185,16 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         treasury = IWAGATreasury(_treasury);
     }
 
+    /**
+     * @dev Update Ethiopian compliance contract address (admin only)
+     * @param _ethiopianCompliance New Ethiopian compliance contract address
+     */
+    function setEthiopianCompliance(address _ethiopianCompliance) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Unauthorized");
+        require(_ethiopianCompliance != address(0), "Invalid address");
+        ethiopianCompliance = IEthiopianCompliance(_ethiopianCompliance);
+    }
+
     /* -------------------------------------------------------------------------- */
     /*                              EXTERNAL FUNCTIONS                            */
     /* -------------------------------------------------------------------------- */
@@ -156,10 +203,12 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
      * @dev Requests redemption of coffee tokens for physical delivery
      * @param batchId Batch identifier
      * @param quantity Number of coffee bags to redeem
+     * @param buyerBankDetails Bank details for fiat transfer (required for Ethiopian batches)
      */
     function requestRedemption(
         uint256 batchId,
-        uint256 quantity
+        uint256 quantity,
+        string memory buyerBankDetails
     ) external nonReentrant {
         // Ensure the batch exists
         if (!coffeeToken.isBatchCreated(batchId)) {
@@ -173,21 +222,20 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
             revert WAGACoffeeRedemption__InsufficientTokenBalance_requestRedemption();
         }
 
-        // Fetch batch info
+        // Fetch batch info from coffee token (for expiry and packaging only)
         (
             ,
             uint256 expiryDate,
-            bool isVerified,
             ,
             ,
             string memory packagingInfo,
             ,
-            bool isMetadataVerified,
-            // 9th value placeholder
-            
+            // lastVerifiedTimestamp unused
         ) = coffeeToken.getBatchInfo(batchId);
 
-        // Get boolean flags and string data from separate mappings - already retrieved above
+        // Check batch verification status from batch manager (proper modular approach)
+        bool isBatchVerified = batchManager.isBatchVerified(batchId);
+        bool isMetadataVerified = batchManager.isBatchMetadataVerified(batchId);
 
         // Ensure the batch has not expired
         if (block.timestamp > expiryDate) {
@@ -195,12 +243,27 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         }
 
         // Ensure the batch is verified and metadata is verified
-        if (!isVerified) {
+        if (!isBatchVerified) {
             revert WAGACoffeeRedemption__BatchNotVerified_requestRedemption();
         }
 
         if (!isMetadataVerified) {
             revert WAGACoffeeRedemption__BatchMetadataNotVerified_requestRedemption();
+        }
+
+        // Check if this batch requires Ethiopian compliance
+        bool requiresEthiopianCompliance = _checkIfEthiopianBatch(batchId);
+        
+        if (requiresEthiopianCompliance) {
+            // Validate banking details are provided
+            if (bytes(buyerBankDetails).length == 0) {
+                revert WAGACoffeeRedemption__InvalidBankingDetails_requestRedemption();
+            }
+            
+            // Validate Ethiopian compliance
+            if (!ethiopianCompliance.validateUpstreamCompliance(batchId)) {
+                revert WAGACoffeeRedemption__EthiopianComplianceNotMet_requestRedemption();
+            }
         }
 
         // MANDATORY payment verification - no optional checks
@@ -230,21 +293,32 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         // Create redemption request
         uint256 redemptionId = nextRedemptionId;
         nextRedemptionId++; // redemptionId = nextRedemptionId + 1;
-        // Update the redemption mapping:   mapping(uint256 => RedemptionRequest) public redemptions;
+        
+        // Update the redemption mapping
         redemptions[redemptionId] = RedemptionRequest({
             consumer: msg.sender,
             batchId: batchId,
             quantity: quantity,
             requestDate: block.timestamp,
             status: RedemptionStatus.Requested,
-            fulfillmentDate: 0
+            fulfillmentDate: 0,
+            buyerBankDetails: buyerBankDetails,
+            requiresEthiopianCompliance: requiresEthiopianCompliance,
+            fiatTransferCompleted: false,
+            bankTransactionId: ""
         });
 
         // Track redemption for the consumer
-        consumerRedemptions[msg.sender].push(redemptionId); // mapping(address => uint256[]) private consumerRedemptions;
+        consumerRedemptions[msg.sender].push(redemptionId);
 
         // Increment pending redemptions counter for this batch
         batchPendingRedemptions[batchId]++;
+
+        // Handle Ethiopian compliance if required
+        if (requiresEthiopianCompliance) {
+            _handleEthiopianCompliance(batchId, msg.sender, quantity, requiredPayment, buyerBankDetails);
+            emit EthiopianComplianceValidated(batchId, redemptionId);
+        }
 
         emit RedemptionRequested(
             redemptionId,
@@ -285,6 +359,13 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
             revert WAGACoffeeRedemption__RedemptionAlreadyCancelled_updateRedemptionStatus();
         }
 
+        // For Ethiopian batches requiring fiat transfer, check completion before fulfillment
+        if (request.requiresEthiopianCompliance && status == RedemptionStatus.Fulfilled) {
+            if (!request.fiatTransferCompleted) {
+                revert WAGACoffeeRedemption__FiatTransferNotCompleted_updateRedemptionStatus();
+            }
+        }
+
         // Fixed: Only decrement if status was previously Requested and we're moving to a final state
         if (
             request.status == RedemptionStatus.Requested &&
@@ -322,6 +403,33 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         }
 
         emit RedemptionStatusUpdated(redemptionId, status);
+    }
+
+    /**
+     * @dev Confirm fiat transfer completion for Ethiopian batches
+     * @param redemptionId Redemption identifier
+     * @param bankTransactionId Bank transaction identifier
+     */
+    function confirmFiatTransfer(
+        uint256 redemptionId,
+        string memory bankTransactionId
+    ) external {
+        require(redemptionId < nextRedemptionId, "Redemption does not exist");
+        
+        RedemptionRequest storage request = redemptions[redemptionId];
+        require(request.requiresEthiopianCompliance, "Not an Ethiopian batch");
+        require(!request.fiatTransferCompleted, "Fiat transfer already completed");
+        
+        // Only authorized banking partners can confirm fiat transfers
+        require(
+            ethiopianCompliance.isAuthorizedBank(msg.sender),
+            "Not authorized banking partner"
+        );
+        
+        request.fiatTransferCompleted = true;
+        request.bankTransactionId = bankTransactionId;
+        
+        emit FiatTransferConfirmed(redemptionId, bankTransactionId);
     }
 
     /**
@@ -373,5 +481,115 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                            INTERNAL FUNCTIONS                              */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Check if a batch is from Ethiopia and requires compliance
+     * @param batchId Batch identifier
+     * @return requiresCompliance True if Ethiopian compliance is required
+     */
+    function _checkIfEthiopianBatch(uint256 batchId) internal view returns (bool requiresCompliance) {
+        // Check if the batch has Ethiopian compliance data
+        (bool hasECTA, bool hasQuality, bool hasOrigin, ) = ethiopianCompliance.getComplianceStatus(batchId);
+        return hasECTA || hasQuality || hasOrigin;
+    }
+
+    /**
+     * @dev Handle Ethiopian compliance registration and fiat transfer initiation
+     * @param batchId Batch identifier
+     * @param buyer Buyer address
+     * @param quantity Quantity being redeemed
+     * @param valueUSD Value in USD
+     * @param buyerBankDetails Buyer's banking information
+     */
+    function _handleEthiopianCompliance(
+        uint256 batchId,
+        address buyer,
+        uint256 quantity,
+        uint256 valueUSD,
+        string memory buyerBankDetails
+    ) internal {
+        // Get the batch creator as seller (this could be enhanced to track actual current holder)
+        address seller = _getBatchSeller(batchId);
+        
+        // Register trade with Bank of Ethiopia through the compliance contract
+        // Note: This requires the redemption contract to have COMPLIANCE_MANAGER_ROLE
+        ethiopianCompliance.registerTradeWithBoE(
+            batchId,
+            buyer,
+            seller,
+            quantity,
+            valueUSD,
+            buyerBankDetails
+        );
+        
+        // Emit event after successful registration
+        uint256 valueETB = ethiopianCompliance.convertUSDToETB(valueUSD);
+        emit BoETradeRegistered(batchId, buyer, valueUSD, valueETB);
+    }
+
+    /**
+     * @dev Get the seller (original creator) of a batch
+     * @param batchId Batch identifier
+     * @return seller Address of the batch seller
+     */
+    function _getBatchSeller(uint256 batchId) internal view returns (address seller) {
+        // Get batch info from batch manager which includes the creator
+        (
+            ,
+            address creator,
+            ,
+            ,
+            
+        ) = batchManager.getBatchAdditionalInfo(batchId);
+        return creator;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                            ADMIN FUNCTIONS                                 */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Emergency function to update redemption details (admin only)
+     * @param redemptionId Redemption identifier
+     * @param fiatCompleted Whether fiat transfer is completed
+     * @param transactionId Bank transaction ID
+     */
+    function emergencyUpdateRedemption(
+        uint256 redemptionId,
+        bool fiatCompleted,
+        string memory transactionId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(redemptionId < nextRedemptionId, "Redemption does not exist");
+        
+        RedemptionRequest storage request = redemptions[redemptionId];
+        request.fiatTransferCompleted = fiatCompleted;
+        request.bankTransactionId = transactionId;
+    }
+
+    /**
+     * @dev Get Ethiopian compliance details for a redemption
+     * @param redemptionId Redemption identifier
+     * @return requiresCompliance Whether Ethiopian compliance is required
+     * @return fiatCompleted Whether fiat transfer is completed
+     * @return transactionId Bank transaction ID
+     */
+    function getEthiopianComplianceStatus(uint256 redemptionId) external view returns (
+        bool requiresCompliance,
+        bool fiatCompleted,
+        string memory transactionId
+    ) {
+        require(redemptionId < nextRedemptionId, "Redemption does not exist");
+        
+        RedemptionRequest memory request = redemptions[redemptionId];
+        return (
+            request.requiresEthiopianCompliance,
+            request.fiatTransferCompleted,
+            request.bankTransactionId
+        );
     }
 }

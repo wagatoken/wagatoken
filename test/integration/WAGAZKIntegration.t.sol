@@ -2,7 +2,7 @@
 pragma solidity ^0.8.18;
 
 import {Test, console} from "forge-std/Test.sol";
-import {DeployRealZKMVPForTesting} from "../../script/DeployRealZKMVPForTesting.s.sol";
+import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
 import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
@@ -10,64 +10,85 @@ import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
 import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
+import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockCircomVerifier} from "../../src/MockCircomVerifier.sol";
+import {Groth16Verifier as PriceVerifier} from "../../src/verifiers/PricePrivacyCircuitVerifier.sol";
+import {Groth16Verifier as QualityVerifier} from "../../src/verifiers/QualityTierCircuitVerifier.sol";
+import {Groth16Verifier as SupplyChainVerifier} from "../../src/verifiers/SupplyChainPrivacyCircuitVerifier.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
 import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 
 contract WAGAZKIntegration is Test {
-    DeployRealZKMVPForTesting public deployer;
+    DeployRealZKMVP public deployer;
     WAGACoffeeTokenCore public coffeeToken;
     WAGABatchManager public batchManager;
     WAGAZKManager public zkManager;
     WAGAProofOfReserve public proofOfReserve;
     WAGAInventoryManagerMVP public inventoryManager;
     WAGACoffeeRedemption public redemption;
+    CircomVerifier public circomVerifier;
     MockCircomVerifier public mockVerifier;
     PrivacyLayer public privacyLayer;
     HelperConfig public helperConfig;
 
     address public admin;
-    address public user = address(0x2);
-    address public processor = address(0x3);
-    address public distributor = address(0x4);
+    address public user = makeAddr("user");
+    address public processor = makeAddr("processor");
+    address public distributor = makeAddr("distributor");
     
     function setUp() public {
         // Deploy the entire system using the deployment script
-        deployer = new DeployRealZKMVPForTesting();
+        deployer = new DeployRealZKMVP();
 
         (
             coffeeToken,
             batchManager,
             zkManager,
+            privacyLayer,
+            , // treasury
+            redemption,
+            , // cdpIntegration
             proofOfReserve,
             inventoryManager,
-            redemption,
-            mockVerifier,
-            privacyLayer,
+            , // ethiopianCompliance
+            , // ecxOracle
+            circomVerifier,
             helperConfig
         ) = deployer.run();
 
-        // Get the actual admin address from the deployment
-        // Use the default Anvil key (same as HelperConfig for local testing)
-        uint256 deployerKey = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
-        admin = vm.addr(deployerKey);
+        // Get the actual admin address from the deployment (deployer gets admin rights)
+        HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
+        admin = vm.addr(config.deployerKey);
 
-                // Set up test addresses and roles
+        // Set up test addresses and roles using the admin who already has admin rights
         vm.startPrank(admin);
-
-        // First, ensure admin has DEFAULT_ADMIN_ROLE
-        coffeeToken.grantRole(keccak256("DEFAULT_ADMIN_ROLE"), admin);
 
         // Grant roles to test addresses using the keccak256 hash directly
         coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), processor);
         coffeeToken.grantRole(keccak256("DISTRIBUTOR_ROLE"), distributor);
 
-        // Also grant PROCESSOR_ROLE to admin for testing ZK proofs
+        // Grant PROCESSOR_ROLE to admin for testing ZK proofs
         coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), admin);
 
-        // Grant VERIFIER_ROLE to the ZK Manager contract so it can call verifier functions
-        mockVerifier.grantVerifierRole(address(zkManager));
+        // Deploy and configure MockCircomVerifier for testing
+        mockVerifier = new MockCircomVerifier();
+        mockVerifier.grantRole(mockVerifier.VERIFIER_ROLE(), address(admin));
+        
+        // Create a new ZKManager with MockCircomVerifier for testing ZK functionality
+        // while keeping the original for other functions that don't do ZK verification
+        WAGAZKManager testZKManager = new WAGAZKManager(
+            address(coffeeToken),
+            address(mockVerifier)
+        );
+        
+        // Grant necessary roles to the test ZK Manager
+        mockVerifier.grantRole(mockVerifier.VERIFIER_ROLE(), address(testZKManager));
+        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(testZKManager));
+        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(testZKManager));
+        
+        // Replace the zkManager reference for tests that need ZK verification
+        zkManager = testZKManager;
 
         vm.stopPrank();
     }
@@ -85,7 +106,7 @@ contract WAGAZKIntegration is Test {
                 "Standard",            // packagingInfo
                 "ipfs://test-metadata" // metadataURI
             );
-            batchManager.registerBatchCreation(batchId, "Origin", admin);
+            // BatchManager.registerBatchCreation is called automatically by createBatch
 
         assertTrue(batchId > 0, "Batch should be created");
         assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be marked as created");
@@ -97,7 +118,7 @@ contract WAGAZKIntegration is Test {
         vm.startPrank(admin);
 
         // Test adding pricing proof
-        bytes memory mockPricingProof = "mock_pricing_proof";
+        bytes memory mockPricingProof = _createValidMockGroth16Proof();
         zkManager.addZKProof(
             batchId,
             mockPricingProof,
@@ -108,7 +129,7 @@ contract WAGAZKIntegration is Test {
         console.log("Pricing proof added successfully");
 
         // Test adding quality proof
-        bytes memory mockQualityProof = "mock_quality_proof";
+        bytes memory mockQualityProof = _createValidMockGroth16Proof();
         zkManager.addZKProof(
             batchId,
             mockQualityProof,
@@ -119,7 +140,7 @@ contract WAGAZKIntegration is Test {
         console.log("Quality proof added successfully");
 
         // Test adding supply chain proof
-        bytes memory mockSupplyChainProof = "mock_supply_chain_proof";
+        bytes memory mockSupplyChainProof = _createValidMockGroth16Proof();
         zkManager.addZKProof(
             batchId,
             mockSupplyChainProof,
@@ -150,7 +171,7 @@ contract WAGAZKIntegration is Test {
                 "Standard",            // packagingInfo
                 "ipfs://test-metadata" // metadataURI
             );
-            batchManager.registerBatchCreation(publicBatchId, "Origin", admin);
+            // BatchManager.registerBatchCreation is called automatically by createBatch
 
         assertTrue(coffeeToken.isBatchCreated(publicBatchId), "Public batch should be created");
 
@@ -164,7 +185,7 @@ contract WAGAZKIntegration is Test {
                 "Standard",            // packagingInfo
                 "ipfs://test-metadata" // metadataURI
             );
-            batchManager.registerBatchCreation(privateBatchId, "Origin", admin);
+            // BatchManager.registerBatchCreation is called automatically by createBatch
 
         assertTrue(coffeeToken.isBatchCreated(privateBatchId), "Private batch should be created");
 
@@ -186,7 +207,7 @@ contract WAGAZKIntegration is Test {
                 "Standard",            // packagingInfo
                 "ipfs://test-metadata" // metadataURI
             );
-            batchManager.registerBatchCreation(batchId, "Origin", admin);
+            // BatchManager.registerBatchCreation is called automatically by createBatch
 
         assertTrue(batchId > 0, "Simple batch should be created");
         assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be marked as created");
@@ -232,7 +253,7 @@ contract WAGAZKIntegration is Test {
                 "Standard",            // packagingInfo
                 "ipfs://test-metadata" // metadataURI
             );
-            batchManager.registerBatchCreation(batchId, "Origin", processor);
+            // BatchManager.registerBatchCreation is called automatically by createBatch
 
         assertTrue(batchId > 0, "Processor should be able to create batches");
         assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be created after creation");
@@ -255,10 +276,10 @@ contract WAGAZKIntegration is Test {
                 "Standard",            // packagingInfo
                 "ipfs://test-metadata" // metadataURI
             );
-            batchManager.registerBatchCreation(batchId, "Origin", admin);
+            // BatchManager.registerBatchCreation is called automatically by createBatch
 
                 // Test adding pricing proof
-        bytes memory pricingProof = "individual_pricing_proof";
+        bytes memory pricingProof = _createValidMockGroth16Proof();
         zkManager.addZKProof(
             batchId,
             pricingProof,
@@ -267,7 +288,7 @@ contract WAGAZKIntegration is Test {
         );
 
         // Test adding quality proof
-        bytes memory qualityProof = "individual_quality_proof";
+        bytes memory qualityProof = _createValidMockGroth16Proof();
         zkManager.addZKProof(
             batchId,
             qualityProof,
@@ -276,7 +297,7 @@ contract WAGAZKIntegration is Test {
         );
 
         // Test adding supply chain proof
-        bytes memory supplyChainProof = "individual_supply_chain_proof";
+        bytes memory supplyChainProof = _createValidMockGroth16Proof();
         zkManager.addZKProof(
             batchId,
             supplyChainProof,
@@ -302,7 +323,7 @@ contract WAGAZKIntegration is Test {
                 "Standard",            // packagingInfo
                 "ipfs://test-metadata" // metadataURI
             );
-            batchManager.registerBatchCreation(batchId, "Origin", admin);
+            // BatchManager.registerBatchCreation is called automatically by createBatch
 
         // Test that batch was created successfully
         assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be created");
@@ -325,7 +346,7 @@ contract WAGAZKIntegration is Test {
                 "Standard",            // packagingInfo
                 "ipfs://test-metadata" // metadataURI
             );
-            batchManager.registerBatchCreation(processorBatchId, "Origin", processor);
+            // BatchManager.registerBatchCreation is called automatically by createBatch
 
         // Just test that the function doesn't revert for processors
         assertTrue(processorBatchId > 0, "Processor should be able to create batches");
@@ -348,7 +369,7 @@ contract WAGAZKIntegration is Test {
                 "Standard",            // packagingInfo
                 "ipfs://test-metadata" // metadataURI
             );
-            batchManager.registerBatchCreation(batchId, "Origin", processor);
+            // BatchManager.registerBatchCreation is called automatically by createBatch
 
         // Test that batch was created successfully
         assertTrue(batchId > 0, "Batch should be created");
@@ -356,5 +377,32 @@ contract WAGAZKIntegration is Test {
         vm.stopPrank();
 
         console.log("Batch request functionality test passed - batch created successfully");
+    }
+    
+    /**
+     * @dev Helper function to create valid mock Groth16 proof data (256 bytes)
+     * @notice Creates structurally valid proof that will decode properly but fail verification
+     * @return 256-byte proof in Groth16 format: point A (64 bytes) + point B (128 bytes) + point C (64 bytes)
+     */
+    function _createValidMockGroth16Proof() internal pure returns (bytes memory) {
+        // Create 256 bytes of mock proof data with valid structure
+        bytes memory mockProof = new bytes(256);
+        
+        // Point A (G1 point: x, y coordinates, 32 bytes each)
+        for (uint256 i = 0; i < 64; i++) {
+            mockProof[i] = bytes1(uint8(1 + (i % 32))); // Avoid all zeros
+        }
+        
+        // Point B (G2 point: x1, x2, y1, y2 coordinates, 32 bytes each)  
+        for (uint256 i = 64; i < 192; i++) {
+            mockProof[i] = bytes1(uint8(2 + (i % 32))); // Different pattern
+        }
+        
+        // Point C (G1 point: x, y coordinates, 32 bytes each)
+        for (uint256 i = 192; i < 256; i++) {
+            mockProof[i] = bytes1(uint8(3 + (i % 32))); // Another pattern
+        }
+        
+        return mockProof;
     }
 }

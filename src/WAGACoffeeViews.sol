@@ -2,6 +2,7 @@
 pragma solidity ^0.8.18;
 
 import "./Interfaces/IWAGACoffeeToken.sol";
+import "./Interfaces/IWAGABatchManager.sol";
 
 /**
  * @title WAGACoffeeViews
@@ -10,9 +11,11 @@ import "./Interfaces/IWAGACoffeeToken.sol";
 contract WAGACoffeeViews {
     
     IWAGACoffeeToken public immutable coffeeToken;
+    IWAGABatchManager public immutable batchManager;
     
-    constructor(address _coffeeToken) {
+    constructor(address _coffeeToken, address _batchManager) {
         coffeeToken = IWAGACoffeeToken(_coffeeToken);
+        batchManager = IWAGABatchManager(_batchManager);
     }
     
     /**
@@ -40,7 +43,7 @@ contract WAGACoffeeViews {
      * @dev Get batch expiry date
      */
     function getBatchExpiryDate(uint256 batchId) external view returns (uint256) {
-        (, uint256 expiryDate,,,,,,,) = coffeeToken.getBatchInfo(batchId);
+        (, uint256 expiryDate,,,,,) = coffeeToken.getBatchInfo(batchId);
         return expiryDate;
     }
 
@@ -48,7 +51,7 @@ contract WAGACoffeeViews {
      * @dev Get batch creation date
      */
     function getBatchCreationDate(uint256 batchId) external view returns (uint256) {
-        (uint256 productionDate,,,,,,,,) = coffeeToken.getBatchInfo(batchId);
+        (uint256 productionDate,,,,,,) = coffeeToken.getBatchInfo(batchId);
         return productionDate;
     }
 
@@ -56,7 +59,7 @@ contract WAGACoffeeViews {
      * @dev Get batch last verified timestamp
      */
     function getBatchLastVerifiedTimestamp(uint256 batchId) external view returns (uint256) {
-        (,,,,,,,, uint256 lastVerifiedTimestamp) = coffeeToken.getBatchInfo(batchId);
+        (,,,,,, uint256 lastVerifiedTimestamp) = coffeeToken.getBatchInfo(batchId);
         return lastVerifiedTimestamp;
     }
 
@@ -64,23 +67,21 @@ contract WAGACoffeeViews {
      * @dev Check if batch is verified
      */
     function isBatchVerified(uint256 batchId) external view returns (bool) {
-        (,, bool isVerified,,,,,,) = coffeeToken.getBatchInfo(batchId);
-        return isVerified;
+        return batchManager.isBatchVerified(batchId);
     }
 
     /**
      * @dev Check if batch metadata is verified
      */
     function isBatchMetadataVerified(uint256 batchId) external view returns (bool) {
-        (,,,,,,, bool isMetadataVerified,) = coffeeToken.getBatchInfo(batchId);
-        return isMetadataVerified;
+        return batchManager.isBatchMetadataVerified(batchId);
     }
 
     /**
      * @dev Get batch quantity
      */
     function getBatchQuantity(uint256 batchId) external view returns (uint256) {
-        (,,, uint256 quantity,,,,,) = coffeeToken.getBatchInfo(batchId);
+        (,, uint256 quantity,,,,) = coffeeToken.getBatchInfo(batchId);
         return quantity;
     }
 
@@ -88,7 +89,7 @@ contract WAGACoffeeViews {
      * @dev Get batch price per unit
      */
     function getBatchPricePerUnit(uint256 batchId) external view returns (uint256) {
-        (,,,, uint256 pricePerUnit,,,,) = coffeeToken.getBatchInfo(batchId);
+        (,,, uint256 pricePerUnit,,,) = coffeeToken.getBatchInfo(batchId);
         return pricePerUnit;
     }
 
@@ -96,7 +97,7 @@ contract WAGACoffeeViews {
      * @dev Get batch packaging info
      */
     function getBatchPackagingInfo(uint256 batchId) external view returns (string memory) {
-        (,,,,, string memory packagingInfo,,,) = coffeeToken.getBatchInfo(batchId);
+        (,,,, string memory packagingInfo,,) = coffeeToken.getBatchInfo(batchId);
         return packagingInfo;
     }
 
@@ -104,7 +105,7 @@ contract WAGACoffeeViews {
      * @dev Get batch metadata hash
      */
     function getBatchMetadataHash(uint256 batchId) external view returns (string memory) {
-        (,,,,,, string memory metadataHash,,) = coffeeToken.getBatchInfo(batchId);
+        (,,,,, string memory metadataHash,) = coffeeToken.getBatchInfo(batchId);
         return metadataHash;
     }
 }

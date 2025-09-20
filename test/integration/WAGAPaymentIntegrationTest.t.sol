@@ -2,37 +2,46 @@
 pragma solidity ^0.8.18;
 
 import {Test, console} from "forge-std/Test.sol";
-import {DeployRealZKMVPForTesting} from "../../script/DeployRealZKMVPForTesting.s.sol";
+import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
+import {HelperConfig} from "../../script/HelperConfig.s.sol";
 
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
 import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
+import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
+import {MockFunctionsRouter} from "../mocks/MockFunctionsRouter.sol";
+import {MockFunctionsHelper} from "../mocks/MockFunctionsHelper.sol";
+import {MockFunctionsClient} from "../mocks/MockFunctionsClient.sol";
 
 contract WAGAPaymentIntegrationTest is Test {
+    // Deployment
+    DeployRealZKMVP public deployer;
+    HelperConfig public helperConfig;
+    
     // Core contracts
     WAGACoffeeTokenCore public coffeeToken;
     WAGABatchManager public batchManager;
     WAGAZKManager public zkManager;
     WAGATreasury public treasury;
     WAGACoffeeRedemption public redemption;
+    WAGAEthiopianCompliance public ethiopianCompliance;
     WAGAInventoryManagerMVP public inventoryManager;
-
-    // Deployment contract
-    DeployRealZKMVPForTesting public deployer;
 
     // Mock contracts
     MockUSDC public mockUSDC;
+    MockFunctionsRouter public mockRouter;
+    MockFunctionsHelper public mockHelper;
+    MockFunctionsClient public mockClient;
 
     // Test accounts
-    address public deployerAdmin; // Will be set to test contract address
-    address public admin = address(1);
-    address public distributor = address(2);
-    address public processor = address(3);
-    address public user = address(4);
+    address public admin = makeAddr("admin");
+    address public distributor = makeAddr("distributor");
+    address public processor = makeAddr("processor");
+    address public user = makeAddr("user");
 
     // Test constants
     uint256 public constant BATCH_ID = 12345;
@@ -41,8 +50,31 @@ contract WAGAPaymentIntegrationTest is Test {
     uint256 public constant TOTAL_PAYMENT = PRICE_PER_UNIT * QUANTITY / 100; // Convert to USDC decimals
 
     function setUp() public {
-        // Deploy contracts using the deployment script
-        deployContracts();
+        // Deploy using the deployment script
+        deployer = new DeployRealZKMVP();
+        
+        (
+            coffeeToken,
+            batchManager,
+            zkManager,
+            , // privacyLayer
+            treasury,
+            redemption,
+            , // cdpIntegration
+            , // proofOfReserve
+            inventoryManager,
+            ethiopianCompliance,
+            , // ecxOracle
+            , // circomVerifier
+            helperConfig
+        ) = deployer.run();
+
+        // Get USDC address from helper config
+        HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
+        mockUSDC = MockUSDC(config.usdcAddress);
+        
+        // Get the actual admin address from the deployment (deployer gets admin rights)
+        admin = vm.addr(config.deployerKey);
 
         // Setup roles and permissions for test accounts
         setupTestEnvironment();
@@ -51,60 +83,18 @@ contract WAGAPaymentIntegrationTest is Test {
         fundTestAccounts();
     }
 
-    function deployContracts() internal {
-        deployerAdmin = address(this);
-        deployer = new DeployRealZKMVPForTesting();
-        
-        // Run the deployment
-        (
-            coffeeToken,
-            batchManager,
-            zkManager,
-            ,  // proofOfReserve
-            inventoryManager,
-            redemption,
-            ,  // mockVerifier
-            ,  // privacyLayer
-               // helperConfig
-        ) = deployer.run();
-
-        console.log("Starting WAGA MVP Deployment with Coinbase Payment Integration...");
-        console.log("Deployment Complete!");
-        console.log("Coffee Token:", address(coffeeToken));
-        console.log("Redemption:", address(redemption));
-
-        // Get treasury from redemption contract
-        treasury = WAGATreasury(address(redemption.treasury()));
-        console.log("Treasury:", address(treasury));
-
-        // Create a separate MockUSDC for testing (the deployment uses a different USDC)
-        mockUSDC = new MockUSDC();
-        
-        // Update treasury to use our test MockUSDC instead of the hardcoded address
-        address deployer_address = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266; // Default anvil account
-        vm.prank(deployer_address);
-        treasury.updateUSDCAddress(address(mockUSDC));
-    }
-
     function setupTestEnvironment() internal {
-        // Use the default anvil account address which gets DEFAULT_ADMIN_ROLE from deployment
-        address deployer_address = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266; // Default anvil account
+        // admin is already set from deployment script (vm.addr(config.deployerKey))
         
-        // Grant roles using the deployer address which has DEFAULT_ADMIN_ROLE  
-        vm.startPrank(deployer_address);
-        
+        // Grant roles to test accounts using the admin who already has admin rights
+        vm.startPrank(admin);
+
         // Grant roles to test accounts
         coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), admin);
         coffeeToken.grantRole(coffeeToken.DISTRIBUTOR_ROLE(), distributor);
         coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), processor);
         // Also grant PROCESSOR_ROLE to admin for testing batch creation
         coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), admin);
-        // Grant MINTER_ROLE to admin for testing token minting
-        coffeeToken.grantRole(coffeeToken.MINTER_ROLE(), admin);
-        
-        // IMPORTANT: Grant PROCESSOR_ROLE to the coffee token contract itself
-        // This is needed because coffee token calls batch manager functions internally
-        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), address(coffeeToken));
 
         // Grant treasury roles
         treasury.grantRole(treasury.ADMIN_ROLE(), admin);
@@ -114,19 +104,18 @@ contract WAGAPaymentIntegrationTest is Test {
         treasury.setBatchPayment(BATCH_ID, TOTAL_PAYMENT);
 
         vm.stopPrank();
-        
-        console.log("WAGAPaymentIntegrationTest setup complete");
     }
 
     function fundTestAccounts() internal {
-        // Fund test accounts with USDC
-        vm.startPrank(deployerAdmin);
-
-        // Mint USDC to test accounts
+        // Fund addresses with ETH first
+        vm.deal(admin, 100 ether);
+        vm.deal(user, 100 ether);
+        vm.deal(distributor, 100 ether);
+        
+        // Fund test accounts with USDC following the same pattern as WAGATreasuryTest
+        // MockUSDC.mint is public and doesn't require any special authorization
         mockUSDC.mint(user, TOTAL_PAYMENT * 10);
         mockUSDC.mint(distributor, TOTAL_PAYMENT * 10);
-
-        vm.stopPrank();
 
         // Approve treasury to spend test accounts' USDC
         vm.prank(user);
@@ -151,15 +140,11 @@ contract WAGAPaymentIntegrationTest is Test {
 
         // Check if roles are properly set up
         bool adminHasProcessorRole = coffeeToken.hasRole(coffeeToken.PROCESSOR_ROLE(), admin);
-        bool processorHasProcessorRole = coffeeToken.hasRole(coffeeToken.PROCESSOR_ROLE(), processor);
-        bool deployerHasAdminRole = coffeeToken.hasRole(coffeeToken.DEFAULT_ADMIN_ROLE(), deployerAdmin);
+        bool adminHasDefaultRole = coffeeToken.hasRole(coffeeToken.DEFAULT_ADMIN_ROLE(), admin);
 
         console.log("Admin address:", admin);
-        console.log("Processor address:", processor);
-        console.log("DeployerAdmin address:", deployerAdmin);
         console.log("Admin has PROCESSOR_ROLE:", adminHasProcessorRole);
-        console.log("Processor has PROCESSOR_ROLE:", processorHasProcessorRole);
-        console.log("DeployerAdmin has DEFAULT_ADMIN_ROLE:", deployerHasAdminRole);
+        console.log("Admin has DEFAULT_ADMIN_ROLE:", adminHasDefaultRole);
 
         // Check BatchManager's coffee token reference
         address batchManagerCoffeeToken = address(batchManager.coffeeToken());
@@ -179,39 +164,36 @@ contract WAGAPaymentIntegrationTest is Test {
         console.log("Starting End-to-End Payment Flow Test");
 
         // Step 1: Admin creates a batch
-        vm.startPrank(processor);
+        vm.prank(admin);
         uint256 actualBatchId = coffeeToken.createBatch(
-            block.timestamp,         // productionDate
-            block.timestamp + 365 days, // expiryDate
-            QUANTITY,               // quantity
-            PRICE_PER_UNIT,        // pricePerUnit
-            "Ethiopia",            // origin
-            "60kg bags",           // packagingInfo
-            "ipfs://test-metadata" // metadataURI
+            block.timestamp,
+            block.timestamp + 365 days,
+            QUANTITY,
+            PRICE_PER_UNIT,
+            "Ethiopia",
+            "60kg bags",
+            "ipfs://batch-metadata"
         );
-        batchManager.registerBatchCreation(actualBatchId, "Ethiopia", processor);
+
         console.log("Batch created with ID:", actualBatchId);
         console.log("Batch creation test completed successfully");
-        vm.stopPrank();
     }
 
     function testCoinbasePaymentIntegration() public {
         console.log("Testing Coinbase Payment Integration");
 
         // Step 1: Create batch
-        vm.startPrank(processor);
+        vm.prank(admin);
         uint256 batchId = coffeeToken.createBatch(
-            block.timestamp,         // productionDate
-            block.timestamp + 365 days, // expiryDate
-            QUANTITY,               // quantity
-            PRICE_PER_UNIT,        // pricePerUnit
-            "Colombia",            // origin
-            "60kg bags",           // packagingInfo
-            "ipfs://test-metadata" // metadataURI
+            block.timestamp,
+            block.timestamp + 365 days,
+            QUANTITY,
+            PRICE_PER_UNIT,
+            "Colombia",
+            "60kg bags",
+            "ipfs://coinbase-batch"
         );
-        batchManager.registerBatchCreation(batchId, "Colombia", processor);
         console.log("Created batch with ID:", batchId);
-        vm.stopPrank();
 
         // Set up batch payment for this specific batch
         vm.prank(admin);
@@ -251,19 +233,17 @@ contract WAGAPaymentIntegrationTest is Test {
         // This would typically involve multiple currencies
         // For now, we'll simulate the flow
 
-        // Step 1: Create international batch using manager-based pattern
-        vm.startPrank(processor);
+        // Step 1: Create international batch
+        vm.prank(admin);
         uint256 internationalBatchId = coffeeToken.createBatch(
-            block.timestamp,         // productionDate
-            block.timestamp + 365 days, // expiryDate
-            QUANTITY,               // quantity
-            PRICE_PER_UNIT * 2,    // pricePerUnit - Higher price for international
-            "Vietnam",             // origin
-            "60kg bags",           // packagingInfo
-            "ipfs://test-metadata" // metadataURI
+            block.timestamp,
+            block.timestamp + 365 days,
+            QUANTITY,
+            PRICE_PER_UNIT * 2, // Higher price for international
+            "Vietnam",
+            "60kg bags",
+            "ipfs://international-batch"
         );
-        batchManager.registerBatchCreation(internationalBatchId, "Vietnam", processor);
-        vm.stopPrank();
 
         // Set up batch payment for this specific batch
         vm.prank(admin);
@@ -288,19 +268,17 @@ contract WAGAPaymentIntegrationTest is Test {
     function testPaymentFailureScenarios() public {
         console.log("Testing Payment Failure Scenarios");
 
-        // Step 1: Create batch using manager-based pattern
-        vm.startPrank(processor);
+        // Step 1: Create batch
+        vm.prank(admin);
         uint256 batchId = coffeeToken.createBatch(
-            block.timestamp,         // productionDate
-            block.timestamp + 365 days, // expiryDate
-            QUANTITY,               // quantity
-            PRICE_PER_UNIT,        // pricePerUnit
-            "Brazil",              // origin
-            "60kg bags",           // packagingInfo
-            "ipfs://test-metadata" // metadataURI
+            block.timestamp,
+            block.timestamp + 365 days,
+            QUANTITY,
+            PRICE_PER_UNIT,
+            "Brazil",
+            "60kg bags",
+            "ipfs://failure-test-batch"
         );
-        batchManager.registerBatchCreation(batchId, "Brazil", processor);
-        vm.stopPrank();
 
         // Set up batch payment for this specific batch
         vm.prank(admin);
@@ -320,19 +298,17 @@ contract WAGAPaymentIntegrationTest is Test {
     function testTreasuryDistribution() public {
         console.log("Testing Treasury Distribution");
 
-        // Step 1: Create batch and make payment using manager-based pattern
-        vm.startPrank(processor);
+        // Step 1: Create batch and make payment
+        vm.prank(admin);
         uint256 batchId = coffeeToken.createBatch(
-            block.timestamp,         // productionDate
-            block.timestamp + 365 days, // expiryDate
-            QUANTITY,               // quantity
-            PRICE_PER_UNIT,        // pricePerUnit
-            "Kenya",               // origin
-            "60kg bags",           // packagingInfo
-            "ipfs://test-metadata" // metadataURI
+            block.timestamp,
+            block.timestamp + 365 days,
+            QUANTITY,
+            PRICE_PER_UNIT,
+            "Kenya",
+            "60kg bags",
+            "ipfs://distribution-test"
         );
-        batchManager.registerBatchCreation(batchId, "Kenya", processor);
-        vm.stopPrank();
 
         // Set up batch payment for this specific batch
         vm.prank(admin);
@@ -364,18 +340,17 @@ contract WAGAPaymentIntegrationTest is Test {
     function testRedemptionWithoutPayment() public {
         console.log("Testing Redemption Without Payment");
 
-        // Step 1: Create batch using manager-based pattern
-        vm.startPrank(processor);
+        // Step 1: Create batch
+        vm.prank(admin);
         uint256 batchId = coffeeToken.createBatch(
-            block.timestamp,         // productionDate
-            block.timestamp + 365 days, // expiryDate
-            QUANTITY,               // quantity
-            PRICE_PER_UNIT,        // pricePerUnit
-            "Guatemala",           // origin
-            "60kg bags",           // packagingInfo
-            "ipfs://test-metadata" // metadataURI
+            block.timestamp,
+            block.timestamp + 365 days,
+            QUANTITY,
+            PRICE_PER_UNIT,
+            "Guatemala",
+            "60kg bags",
+            "ipfs://no-payment-batch"
         );
-        batchManager.registerBatchCreation(batchId, "Guatemala", processor);
 
         // Step 2: Process verification and mint tokens
         processBatchVerification(batchId);
@@ -383,13 +358,12 @@ contract WAGAPaymentIntegrationTest is Test {
         // Step 3: Request verification (simulated)
 
         // Step 4: Simulate successful verification
-        vm.stopPrank(); // Stop processor prank before simulation
         simulateVerificationSuccess(batchId);
 
         // Step 5: Try to request redemption without payment
         vm.prank(distributor);
         vm.expectRevert();
-        redemption.requestRedemption(batchId, 10);
+        redemption.requestRedemption(batchId, 10, "Test Address");
 
         console.log("Redemption Without Payment Test PASSED");
     }
@@ -406,33 +380,9 @@ contract WAGAPaymentIntegrationTest is Test {
         // In a real scenario, this would be handled by Chainlink Functions
         // For testing, we'll simulate successful verification by calling the contract directly
 
-        // Debug: Check batch info before minting
-        (
-            ,  // uint256 productionDate
-            ,  // uint256 expiryDate
-            ,  // bool isVerified
-            uint256 quantity,
-            ,  // uint256 pricePerUnit
-            ,  // string memory packagingInfo
-            ,  // string memory metadataHash
-            ,  // bool isMetadataVerified
-               // uint256 lastVerifiedTimestamp
-        ) = coffeeToken.getBatchInfo(batchId);
-        uint256 mintedQuantity = coffeeToken.getBatchMintedQuantity(batchId);
-        
-        console.log("Batch quantity:", quantity);
-        console.log("Batch mintedQuantity:", mintedQuantity);
-        console.log("Attempting to mint:", QUANTITY);
-
-        // Calculate how much can be minted
-        uint256 availableToMint = quantity - mintedQuantity;
-        console.log("Available to mint:", availableToMint);
-
         // This is a simplified simulation - in reality, Chainlink Functions would call back
         vm.prank(admin); // Admin simulates the Chainlink callback
-        uint256 mintAmount = availableToMint > 0 ? (availableToMint < QUANTITY ? availableToMint : QUANTITY) : 1;
-        console.log("Actually minting:", mintAmount);
-        coffeeToken.mintBatch(distributor, batchId, mintAmount);
+        coffeeToken.mintBatch(distributor, batchId, QUANTITY);
     }
 
     function testCompleteSystemIntegration() public {

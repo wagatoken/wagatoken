@@ -57,4 +57,15 @@ interface IPrivacyLayer {
         string calldata qualityClaim,
         string calldata supplyChainClaim
     ) external;
+
+    /**
+     * @dev Protect sensitive data with explicit caller
+     * Used by WAGABatchManager for Ethiopian compliance data
+     */
+    function protectDataWithCaller(
+        address originalCaller,
+        uint256 batchId,
+        string calldata dataType,
+        string calldata dataHash
+    ) external;
 }

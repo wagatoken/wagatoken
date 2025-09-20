@@ -41,12 +41,12 @@ contract WAGAChainlinkIntegration is Test {
     MockFunctionsHelper public mockHelper;
     MockFunctionsClient public mockClient;
 
-    // Test addresses
-    address public constant ADMIN_USER = address(0x1);
-    address public constant PROCESSOR_USER = address(0x2);
-    address public constant DISTRIBUTOR_USER = address(0x3);
-    address public constant VERIFIER_USER = address(0x4);
-    address public constant USER1 = address(0x5);
+    // Test addresses - using makeAddr pattern
+    address public ADMIN_USER = makeAddr("admin");
+    address public PROCESSOR_USER = makeAddr("processor");
+    address public DISTRIBUTOR_USER = makeAddr("distributor");
+    address public VERIFIER_USER = makeAddr("verifier");
+    address public USER1 = makeAddr("user1");
 
     // Test data
     uint256 public testBatchId;
@@ -65,10 +65,9 @@ contract WAGAChainlinkIntegration is Test {
             , // cdpIntegration
             proofOfReserve,
             inventoryManager,
+            , // ethiopianCompliance
+            , // ecxOracle
             circomVerifier,
-            , // priceVerifier
-            , // qualityVerifier
-            , // supplyChainVerifier
             helperConfig
         ) = deployer.run();
 
@@ -77,8 +76,9 @@ contract WAGAChainlinkIntegration is Test {
         mockHelper = new MockFunctionsHelper(address(mockRouter));
         mockClient = new MockFunctionsClient(address(mockRouter));
 
-        // Set up roles correctly
-        address deployer_address = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266; // Default anvil account
+        // Set up roles correctly using deployer who already has admin rights
+        HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
+        address deployer_address = vm.addr(config.deployerKey);
 
         // Grant roles using the deployer address which has DEFAULT_ADMIN_ROLE
         vm.startPrank(deployer_address);

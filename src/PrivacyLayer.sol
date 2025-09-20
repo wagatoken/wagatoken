@@ -128,19 +128,61 @@ contract PrivacyLayer is WAGAAccessControl, IPrivacyLayer {
     }
 
     /**
-     * @dev Update public claims after ZK proof verification
+     * @dev Update public claims for ZK verification
      */
     function updatePublicClaims(
         uint256 batchId,
         string calldata pricingClaim,
         string calldata qualityClaim,
         string calldata supplyChainClaim
-    ) external onlyZKVerifier {
-        batchPrivacyConfig[batchId].pricingClaim = pricingClaim;
-        batchPrivacyConfig[batchId].qualityClaim = qualityClaim;
-        batchPrivacyConfig[batchId].supplyChainClaim = supplyChainClaim;
+    ) external onlyBatchCreator {
+        // Get current config and update claims
+        IPrivacyLayer.PrivacyConfig storage config = batchPrivacyConfig[batchId];
+        config.pricingClaim = pricingClaim;
+        config.qualityClaim = qualityClaim;
+        config.supplyChainClaim = supplyChainClaim;
         
         emit PublicClaimsUpdated(batchId, pricingClaim, qualityClaim, supplyChainClaim);
+    }
+
+    /**
+     * @dev Protect sensitive data with explicit caller (for Ethiopian compliance)
+     */
+    function protectDataWithCaller(
+        address originalCaller,
+        uint256 batchId,
+        string calldata dataType,
+        string calldata dataHash
+    ) external {
+        // Check that the original caller has appropriate role
+        (bool success, bytes memory result) = address(coffeeToken).staticcall(
+            abi.encodeWithSignature("hasRole(bytes32,address)", keccak256("ADMIN_ROLE"), originalCaller)
+        );
+        bool hasAdminRole = success && result.length > 0 && abi.decode(result, (bool));
+
+        (success, result) = address(coffeeToken).staticcall(
+            abi.encodeWithSignature("hasRole(bytes32,address)", keccak256("PROCESSOR_ROLE"), originalCaller)
+        );
+        bool hasProcessorRole = success && result.length > 0 && abi.decode(result, (bool));
+
+        require(
+            hasAdminRole || hasProcessorRole,
+            "PrivacyLayer: Must be admin or processor"
+        );
+
+        // Create salt and hash for protecting the data
+        bytes32 salt = keccak256(abi.encodePacked(batchId, dataType, block.timestamp));
+        bytes32 dataHashBytes = keccak256(abi.encodePacked(dataHash));
+        
+        ProtectedData memory protectedData = ProtectedData({
+            dataHash: dataHashBytes,
+            salt: salt,
+            timestamp: block.timestamp,
+            dataOwner: originalCaller
+        });
+        
+        protectedBatchData[batchId][dataType] = protectedData;
+        emit DataProtected(batchId, dataType, dataHashBytes, originalCaller);
     }
 
     /* -------------------------------------------------------------------------- */

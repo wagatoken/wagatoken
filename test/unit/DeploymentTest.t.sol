@@ -12,6 +12,8 @@ import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
 import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
 import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
+import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
+import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {Groth16Verifier as PriceVerifier} from "../../src/verifiers/PricePrivacyCircuitVerifier.sol";
 import {Groth16Verifier as QualityVerifier} from "../../src/verifiers/QualityTierCircuitVerifier.sol";
@@ -29,7 +31,7 @@ contract DeploymentTest is Test {
         deployRealZKMVP = new DeployRealZKMVP();
 
         // Deploy the entire ZK MVP system
-        deployRealZKMVP.run();
+        deployRealZKMVP.runForTesting();
 
         console.log("DeployRealZKMVP deployment completed successfully!");
     }
@@ -48,10 +50,9 @@ contract DeploymentTest is Test {
             WAGACDPIntegration cdpIntegration,
             WAGAProofOfReserve proofOfReserve,
             WAGAInventoryManagerMVP inventoryManager,
+            WAGAEthiopianCompliance ethiopianCompliance,
+            WAGAECXPriceOracle ecxOracle,
             CircomVerifier circomVerifier,
-            PriceVerifier priceVerifier,
-            QualityVerifier qualityVerifier,
-            SupplyChainVerifier supplyChainVerifier,
             HelperConfig helperConfig
         ) = deployRealZKMVP.run();
 
@@ -65,10 +66,9 @@ contract DeploymentTest is Test {
         address cdpIntegrationAddr = address(cdpIntegration);
         address proofOfReserveAddr = address(proofOfReserve);
         address inventoryManagerAddr = address(inventoryManager);
+        address ethiopianComplianceAddr = address(ethiopianCompliance);
+        address ecxOracleAddr = address(ecxOracle);
         address circomVerifierAddr = address(circomVerifier);
-        address priceVerifierAddr = address(priceVerifier);
-        address qualityVerifierAddr = address(qualityVerifier);
-        address supplyChainVerifierAddr = address(supplyChainVerifier);
         address helperConfigAddr = address(helperConfig);
 
         assertTrue(coffeeTokenAddr != address(0), "CoffeeToken should be deployed");
@@ -80,11 +80,21 @@ contract DeploymentTest is Test {
         assertTrue(cdpIntegrationAddr != address(0), "CDP Integration should be deployed");
         assertTrue(proofOfReserveAddr != address(0), "ProofOfReserve should be deployed");
         assertTrue(inventoryManagerAddr != address(0), "InventoryManager should be deployed");
+        assertTrue(ethiopianComplianceAddr != address(0), "EthiopianCompliance should be deployed");
+        assertTrue(ecxOracleAddr != address(0), "ECXOracle should be deployed");
         assertTrue(circomVerifierAddr != address(0), "CircomVerifier should be deployed");
+        assertTrue(helperConfigAddr != address(0), "HelperConfig should be deployed");
+        assertTrue(proofOfReserveAddr != address(0), "ProofOfReserve should be deployed");
+        assertTrue(inventoryManagerAddr != address(0), "InventoryManager should be deployed");
+        
+        // Get verifier addresses using the getter functions
+        address priceVerifierAddr = address(deployRealZKMVP.getPriceVerifier());
+        address qualityVerifierAddr = address(deployRealZKMVP.getQualityVerifier());
+        address supplyChainVerifierAddr = address(deployRealZKMVP.getSupplyChainVerifier());
+        
         assertTrue(priceVerifierAddr != address(0), "PriceVerifier should be deployed");
         assertTrue(qualityVerifierAddr != address(0), "QualityVerifier should be deployed");
         assertTrue(supplyChainVerifierAddr != address(0), "SupplyChainVerifier should be deployed");
-        assertTrue(helperConfigAddr != address(0), "HelperConfig should be deployed");
 
         console.log("All contracts deployed successfully with valid addresses!");
         console.log("CoffeeToken:", coffeeTokenAddr);
@@ -96,11 +106,32 @@ contract DeploymentTest is Test {
         console.log("CDP Integration:", cdpIntegrationAddr);
         console.log("ProofOfReserve:", proofOfReserveAddr);
         console.log("InventoryManager:", inventoryManagerAddr);
+        console.log("EthiopianCompliance:", ethiopianComplianceAddr);
+        console.log("ECXOracle:", ecxOracleAddr);
         console.log("CircomVerifier:", circomVerifierAddr);
-        console.log("PriceVerifier:", priceVerifierAddr);
-        console.log("QualityVerifier:", qualityVerifierAddr);
-        console.log("SupplyChainVerifier:", supplyChainVerifierAddr);
         console.log("HelperConfig:", helperConfigAddr);
+    }
+
+    function testGroth16VerifiersDeployment() public {
+        deployRealZKMVP = new DeployRealZKMVP();
+
+        // Deploy the system
+        deployRealZKMVP.run();
+
+        // Test each Groth16Verifier individually
+        PriceVerifier priceVerifier = deployRealZKMVP.getPriceVerifier();
+        QualityVerifier qualityVerifier = deployRealZKMVP.getQualityVerifier();
+        SupplyChainVerifier supplyChainVerifier = deployRealZKMVP.getSupplyChainVerifier();
+
+        // Verify they are deployed and have valid addresses
+        assertTrue(address(priceVerifier) != address(0), "PriceVerifier should be deployed");
+        assertTrue(address(qualityVerifier) != address(0), "QualityVerifier should be deployed");
+        assertTrue(address(supplyChainVerifier) != address(0), "SupplyChainVerifier should be deployed");
+
+        console.log("Groth16Verifiers deployment test completed successfully!");
+        console.log("PriceVerifier:", address(priceVerifier));
+        console.log("QualityVerifier:", address(qualityVerifier));
+        console.log("SupplyChainVerifier:", address(supplyChainVerifier));
     }
 
     function testDeploymentRoleSetup() public {
@@ -109,7 +140,6 @@ contract DeploymentTest is Test {
         // Deploy and get coffee token instance
         (
             WAGACoffeeTokenCore coffeeToken,
-            ,
             ,
             ,
             ,

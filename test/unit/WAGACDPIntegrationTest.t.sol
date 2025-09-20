@@ -2,12 +2,18 @@
 pragma solidity ^0.8.18;
 
 import {Test, console} from "forge-std/Test.sol";
+import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
+import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
 import {IWAGACDPIntegration} from "../../src/Interfaces/IWAGACDPIntegration.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {MockCoinbaseSDK} from "../mocks/MockCoinbaseSDK.sol";
 
 contract WAGACDPIntegrationTest is Test {
+    // Deployment
+    DeployRealZKMVP public deployer;
+    HelperConfig public helperConfig;
+    
     WAGACDPIntegration public cdpIntegration;
     MockUSDC public usdc;
     MockCoinbaseSDK public mockCoinbaseSDK;
@@ -21,22 +27,38 @@ contract WAGACDPIntegrationTest is Test {
     uint256 public constant PAYMENT_AMOUNT = 50000000; // 50 USDC (6 decimals)
 
     function setUp() public {
-        // Deploy mock contracts
-        usdc = new MockUSDC();
+        // Deploy using the deployment script
+        deployer = new DeployRealZKMVP();
+        
+        (
+            , // coffeeToken
+            , // batchManager
+            , // zkManager
+            , // privacyLayer
+            , // treasury
+            , // redemption
+            cdpIntegration,
+            , // proofOfReserve
+            , // inventoryManager
+            , // ethiopianCompliance
+            , // ecxOracle
+            , // circomVerifier
+            helperConfig
+        ) = deployer.run();
+
+        // Get USDC address from helper config
+        HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
+        usdc = MockUSDC(config.usdcAddress);
+        
+        // Get admin address from deployer key (already has all admin roles from deployment)
+        admin = vm.addr(config.deployerKey);
+
+        // Deploy mock Coinbase SDK for testing
         vm.prank(admin);
         mockCoinbaseSDK = new MockCoinbaseSDK();
 
-        // Deploy CDP integration with USDC and mock Coinbase SDK addresses
-        vm.prank(admin);
-        cdpIntegration = new WAGACDPIntegration(
-            address(usdc),
-            address(mockCoinbaseSDK),
-            address(mockCoinbaseSDK) // Using mock for paymaster too
-        );
-
-        // Setup roles
+        // Setup roles for test accounts
         vm.startPrank(admin);
-        cdpIntegration.grantRole(cdpIntegration.CDP_ADMIN_ROLE(), admin);
         cdpIntegration.grantRole(cdpIntegration.PAYMENT_HANDLER_ROLE(), paymentHandler);
         // Setup roles for mock contracts
         mockCoinbaseSDK.grantRole(mockCoinbaseSDK.PAYMENT_HANDLER_ROLE(), paymentHandler);
@@ -204,7 +226,7 @@ contract WAGACDPIntegrationTest is Test {
         cdpIntegration.emergencyUnpause();
     }
 
-    function testGetUserSmartAccount() public {
+    function testGetUserSmartAccount() public view {
         address storedAccount = cdpIntegration.getUserSmartAccount(user);
         assertEq(storedAccount, smartAccount);
     }

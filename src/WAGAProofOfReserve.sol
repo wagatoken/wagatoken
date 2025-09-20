@@ -205,12 +205,10 @@ contract WAGAProofOfReserve is
         (
             , // uint256 productionDate - unused
             , // uint256 expiryDate - unused
-            , // bool isVerified - unused
             , // uint256 quantity - already have batchQuantity
             uint256 pricePerUnit,
             string memory packagingInfo,
             string memory metadataHash,
-            , // bool isMetadataVerified - unused
             // uint256 lastVerifiedTimestamp - unused
         ) = coffeeToken.getBatchInfo(batchId);
 
@@ -294,12 +292,10 @@ contract WAGAProofOfReserve is
         (
             , // uint256 productionDate - unused  
             , // uint256 expiryDate - unused
-            , // bool isVerified - unused
             , // uint256 quantity - already have quantity
             uint256 pricePerUnit,
             string memory packagingInfo,
             string memory metadataHash,
-            , // bool isMetadataVerified - unused
             // uint256 lastVerifiedTimestamp - unused
         ) = coffeeToken.getBatchInfo(batchId);
 
@@ -434,8 +430,9 @@ contract WAGAProofOfReserve is
         request.verified = true;
         request.lastVerifiedTimestamp = block.timestamp;
         // Update coffeeToken state regardless of the check.
-    batchManager.updateInventory(request.batchId, verifiedQuantity);
-    batchManager.updateBatchStatus(request.batchId, true);
+        batchManager.updateInventory(request.batchId, verifiedQuantity);
+        batchManager.markBatchAsVerified(request.batchId); // Mark batch as verified for redemption
+        batchManager.updateBatchStatus(request.batchId, true); // Mark as active
         emit ReserveVerificationCompleted(
             requestId,
             request.batchId,

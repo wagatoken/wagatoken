@@ -2,19 +2,42 @@
 pragma solidity ^0.8.18;
 
 import {Test, console} from "forge-std/Test.sol";
+import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
+import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
 
 contract SimpleRoleTest is Test {
+    // Deployment
+    DeployRealZKMVP public deployRealZKMVP;
+    HelperConfig public helperConfig;
+    
     WAGACoffeeTokenCore public coffeeToken;
     address public deployer;
     address public verifier = makeAddr("verifier");
 
     function setUp() public {
-        deployer = makeAddr("deployer");
-        vm.startPrank(deployer);
+        // Deploy using the deployment script
+        deployRealZKMVP = new DeployRealZKMVP();
+        
+        (
+            coffeeToken,
+            , // batchManager
+            , // zkManager
+            , // privacyLayer
+            , // treasury
+            , // redemption
+            , // cdpIntegration
+            , // proofOfReserve
+            , // inventoryManager
+            , // ethiopianCompliance
+            , // ecxOracle
+            , // circomVerifier
+            helperConfig
+        ) = deployRealZKMVP.run();
 
-        // Deploy the coffee token core with metadata URI
-        coffeeToken = new WAGACoffeeTokenCore("https://ipfs.io/ipfs/");
+        // Get deployer address from helper config
+        HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
+        deployer = vm.addr(config.deployerKey);
 
         console.log("Deployer:", deployer);
         console.log("Coffee token deployed at:", address(coffeeToken));
@@ -25,8 +48,6 @@ contract SimpleRoleTest is Test {
 
         console.log("Deployer has ADMIN_ROLE:", hasAdmin);
         console.log("Deployer has DEFAULT_ADMIN_ROLE:", hasDefaultAdmin);
-
-        vm.stopPrank();
     }
 
     function testBasicRoleCheck() public {
@@ -50,7 +71,7 @@ contract SimpleRoleTest is Test {
         assertTrue(true, "Basic role test completed");
     }
 
-    function testRoleConstants() public view {
+    function testRoleConstants() public pure {
         // Test that role constants are properly defined
         bytes32 adminRole = keccak256("ADMIN_ROLE");
         bytes32 defaultAdminRole = keccak256("DEFAULT_ADMIN_ROLE");

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import {Script} from "forge-std/Script.sol";
+import {Script, console} from "forge-std/Script.sol";
+import {MockUSDC} from "../test/mocks/MockUSDC.sol";
+import {MockFunctionsRouter} from "../test/mocks/MockFunctionsRouter.sol";
 
 contract HelperConfig is Script {
     struct NetworkConfig {
-        // USDC token address for payments
-        address usdcAddress;
         // Chainlink Functions parameters
         uint64 subscriptionId;
         bytes32 donId;
@@ -14,68 +14,53 @@ contract HelperConfig is Script {
         // Coinbase Developer Platform parameters
         address cdpSmartAccountFactory;
         address cdpPaymaster;
+        // USDC token address
+        address usdcAddress;
         // Deployment parameters
         uint256 deployerKey;
     }
 
+    mapping(uint256 => NetworkConfig) private networkConfigs;
     NetworkConfig public activeNetworkConfig;
 
-    // Constants
-    uint256 public constant SEPOLIA_CHAIN_ID = 11155111;
-    uint256 public constant BASE_MAINNET_CHAIN_ID = 8453;
-    uint256 public constant BASE_SEPOLIA_CHAIN_ID = 84532;
-    uint256 public constant ZKSYNC_MAINNET_CHAIN_ID = 324;
-    uint256 public constant ZKSYNC_SEPOLIA_CHAIN_ID = 300;
-    uint256 public constant LOCAL_CHAIN_ID = 31337;
-    uint256 private constant DEFAULT_ANVIL_KEY =
+    // Default values for local testing
+    uint256 public DEFAULT_ANVIL_KEY =
         0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
+    uint64 public constant DEFAULT_SUBSCRIPTION_ID = 0;
+    bytes32 public constant DEFAULT_DON_ID = bytes32(0);
 
     constructor() {
-        activeNetworkConfig = getNetworkConfigByChainId(block.chainid);
-    }
+        console.log("HelperConfig: Constructor called, chainid:", block.chainid);
+        
+        // Initialize network configurations
+        networkConfigs[11155111] = getSepoliaConfig(); // Ethereum Sepolia
+        networkConfigs[8453] = getBaseMainnetConfig(); // Base Mainnet
+        networkConfigs[84532] = getBaseSepoliaConfig(); // Base Sepolia
+        networkConfigs[324] = getZksyncMainnetConfig(); // ZkSync Era Mainnet
+        networkConfigs[300] = getZksyncSepoliaConfig(); // ZkSync Era Sepolia
 
-    function getNetworkConfigByChainId(uint256 chainId) public view returns (NetworkConfig memory) {
-        if (chainId == SEPOLIA_CHAIN_ID) {
-            return getSepoliaConfig();
-        } else if (chainId == BASE_MAINNET_CHAIN_ID) {
-            return getBaseMainnetConfig();
-        } else if (chainId == BASE_SEPOLIA_CHAIN_ID) {
-            return getBaseSepoliaConfig();
-        } else if (chainId == ZKSYNC_MAINNET_CHAIN_ID) {
-            return getZksyncMainnetConfig();
-        } else if (chainId == ZKSYNC_SEPOLIA_CHAIN_ID) {
-            return getZksyncSepoliaConfig();
+        // Set the active network configuration
+        activeNetworkConfig = networkConfigs[block.chainid];
+        console.log("HelperConfig: Initial config router:", activeNetworkConfig.router);
+
+        // If no configuration exists for the current chain, create a default one
+        if (activeNetworkConfig.router == address(0)) {
+            console.log("HelperConfig: No config found, calling getOrCreateAnvilConfig()");
+            activeNetworkConfig = getOrCreateAnvilConfig();
         } else {
-            return getOrCreateAnvilConfig();
+            console.log("HelperConfig: Using existing config for chainid:", block.chainid);
         }
     }
 
-    function getUsdcAddress() public view returns (address) {
-        return activeNetworkConfig.usdcAddress;
-    }
-
-    function getRouterAddress() public view returns (address) {
-        return activeNetworkConfig.router;
-    }
-
-    function getDeployerKey() public view returns (uint256) {
-        return activeNetworkConfig.deployerKey;
-    }
-
-    /**
-     * @dev Returns the active network configuration for deployment
-     */
-    function getActiveNetworkConfig() external view returns (NetworkConfig memory) {
-        return activeNetworkConfig;
-    }    function getSepoliaConfig() public view returns (NetworkConfig memory) {
+    function getSepoliaConfig() public view returns (NetworkConfig memory) {
         return
             NetworkConfig({
-                usdcAddress: 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238, // Mock USDC for testing
                 subscriptionId: 5455,
                 donId: 0x66756e2d657468657265756d2d7365706f6c69612d3100000000000000000000, // fun-ethereum-sepolia-1
                 router: 0xb83E47C2bC239B3bf370bc41e1459A34b41238D0, // Sepolia Functions Router
                 cdpSmartAccountFactory: address(0), // CDP not available on Sepolia yet
                 cdpPaymaster: address(0), // CDP not available on Sepolia yet
+                usdcAddress: 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238, // Mock USDC for testing
                 deployerKey: vm.envOr("PRIVATE_KEY_SEP", uint256(0))
             });
     }
@@ -83,12 +68,12 @@ contract HelperConfig is Script {
     function getBaseMainnetConfig() public view returns (NetworkConfig memory) {
         return
             NetworkConfig({
-                usdcAddress: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913, // Base Mainnet USDC
                 subscriptionId: 0, // TODO: Replace with actual Base subscription ID
                 donId: 0x66756e2d626173652d6d61696e6e65742d310000000000000000000000000000, // fun-base-mainnet-1
                 router: 0xf9B8fc078197181C841c296C876945aaa425B278, // Base Functions Router
                 cdpSmartAccountFactory: address(0), // TODO: Add CDP smart account factory for Base
                 cdpPaymaster: address(0), // TODO: Add CDP paymaster for Base
+                usdcAddress: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913, // Base Mainnet USDC
                 deployerKey: vm.envOr("PRIVATE_KEY_SEP", uint256(0))
             });
     }
@@ -96,12 +81,12 @@ contract HelperConfig is Script {
     function getBaseSepoliaConfig() public view returns (NetworkConfig memory) {
         return
             NetworkConfig({
-                usdcAddress: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913, // Using mainnet address for testing
                 subscriptionId: 429,
                 donId: 0x66756e2d626173652d7365706f6c69612d310000000000000000000000000000,
                 router: 0xf9B8fc078197181C841c296C876945aaa425B278,
                 cdpSmartAccountFactory: address(0), // CDP not available on Base Sepolia yet
                 cdpPaymaster: address(0), // CDP not available on Base Sepolia yet
+                usdcAddress: 0x036CbD53842c5426634e7929541eC2318f3dCF7e, // Base Sepolia USDC
                 deployerKey: vm.envOr("PRIVATE_KEY_SEP", uint256(0))
             });
     }
@@ -109,12 +94,12 @@ contract HelperConfig is Script {
     function getZksyncMainnetConfig() public view returns (NetworkConfig memory) {
         return
             NetworkConfig({
-                usdcAddress: address(0), // TODO: Add USDC address for ZkSync mainnet
                 subscriptionId: 0, // TODO: ZkSync doesn't support Chainlink Functions yet
                 donId: bytes32(0), // TODO: ZkSync doesn't support Chainlink Functions yet
                 router: address(0), // TODO: ZkSync doesn't support Chainlink Functions yet
                 cdpSmartAccountFactory: address(0), // CDP not available on ZkSync yet
                 cdpPaymaster: address(0), // CDP not available on ZkSync yet
+                usdcAddress: 0x1d17CBcF0D6D143135aE902365D2E5e2A16538D4, // ZkSync Era USDC
                 deployerKey: vm.envOr("PRIVATE_KEY_SEP", uint256(0))
             });
     }
@@ -122,29 +107,58 @@ contract HelperConfig is Script {
     function getZksyncSepoliaConfig() public view returns (NetworkConfig memory) {
         return
             NetworkConfig({
-                usdcAddress: address(0), // TODO: Add USDC address for ZkSync sepolia
                 subscriptionId: 0, // TODO: ZkSync doesn't support Chainlink Functions yet
                 donId: bytes32(0), // TODO: ZkSync doesn't support Chainlink Functions yet
                 router: address(0), // TODO: ZkSync doesn't support Chainlink Functions yet
                 cdpSmartAccountFactory: address(0), // CDP not available on ZkSync yet
                 cdpPaymaster: address(0), // CDP not available on ZkSync yet
+                usdcAddress: 0xAe045DE5638162fa134807Cb558E15A3F5A7F853, // ZkSync Sepolia USDC
                 deployerKey: vm.envOr("PRIVATE_KEY_SEP", uint256(0))
             });
     }
 
-    function getOrCreateAnvilConfig() public pure returns (NetworkConfig memory) {
-        // For MVP testing, use mock addresses
-        address mockRouter = address(0x1234567890123456789012345678901234567890);
+    function getOrCreateAnvilConfig() public returns (NetworkConfig memory) {
+        // Check if we already deployed mocks
+        if (activeNetworkConfig.usdcAddress != address(0)) {
+            console.log("HelperConfig: Using cached config");
+            console.log("HelperConfig: Cached usdcAddress:", activeNetworkConfig.usdcAddress);
+            console.log("HelperConfig: Cached router:", activeNetworkConfig.router);
+            return activeNetworkConfig;
+        }
 
-        return
-            NetworkConfig({
-                usdcAddress: address(0x1234567890123456789012345678901234567890), // Mock USDC for local testing
-                subscriptionId: 1, // Use default test subscription ID
-                donId: 0x66756e2d6c6f63616c2d74657374000000000000000000000000000000000000, // "fun-local-test"
-                router: mockRouter,
-                cdpSmartAccountFactory: address(0), // No CDP in local testing
-                cdpPaymaster: address(0), // No CDP in local testing
-                deployerKey: DEFAULT_ANVIL_KEY
-            });
+        console.log("HelperConfig: Creating new Anvil config...");
+        vm.startBroadcast();
+
+        // Deploy mock USDC token
+        console.log("HelperConfig: About to deploy MockUSDC...");
+        MockUSDC usdcMock = new MockUSDC();
+        console.log("HelperConfig: MockUSDC deployed at:", address(usdcMock));
+
+        // Deploy mock Functions Router
+        console.log("HelperConfig: About to deploy MockFunctionsRouter...");
+        MockFunctionsRouter functionsRouter = new MockFunctionsRouter();
+        console.log("HelperConfig: MockFunctionsRouter deployed at:", address(functionsRouter));
+
+        vm.stopBroadcast();
+
+        // Create and store the config in state variable
+        activeNetworkConfig = NetworkConfig({
+            subscriptionId: 1, // Use default test subscription ID
+            donId: 0x66756e2d6c6f63616c2d74657374000000000000000000000000000000000000, // "fun-local-test"
+            router: address(functionsRouter),
+            cdpSmartAccountFactory: address(0), // No CDP in local testing
+            cdpPaymaster: address(0), // No CDP in local testing
+            usdcAddress: address(usdcMock),
+            deployerKey: DEFAULT_ANVIL_KEY
+        });
+
+        console.log("HelperConfig: Final config usdcAddress:", activeNetworkConfig.usdcAddress);
+        console.log("HelperConfig: Final config router:", activeNetworkConfig.router);
+
+        return activeNetworkConfig;
+    }
+
+    function getActiveNetworkConfig() external view returns (NetworkConfig memory) {
+        return activeNetworkConfig;
     }
 }

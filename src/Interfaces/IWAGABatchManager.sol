@@ -24,10 +24,12 @@ interface IWAGABatchManager {
      */
     function resetBatchVerificationFlags(uint256 batchId) external;
     function markBatchExpired(uint256 batchId) external;
+    function markBatchAsVerified(uint256 batchId) external;
     function updateBatchStatus(uint256 batchId, bool isActive) external;
     function updateInventory(uint256 batchId, uint256 verifiedQuantity) external;
     function verifyBatchMetadata(uint256 batchId, string calldata verifiedPackaging, string calldata verifiedMetadataHash) external;
     function isBatchMetadataVerified(uint256 batchId) external view returns (bool);
+    function isBatchVerified(uint256 batchId) external view returns (bool);
 
     /**
      * @dev Get additional metadata managed by BatchManager

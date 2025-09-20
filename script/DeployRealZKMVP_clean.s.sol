@@ -128,7 +128,10 @@ contract DeployRealZKMVP is Script {
         console.log("Deploying Core Coffee Token...");
         coffeeToken = new WAGACoffeeTokenCore("");
 
-        // 2b. [CoffeeViews deployment moved after BatchManager]
+        // 2b. Deploy WAGACoffeeViews for view functions
+        console.log("Deploying Coffee Views...");
+        WAGACoffeeViews coffeeViews = new WAGACoffeeViews(address(coffeeToken));
+        console.log("Coffee Views:", address(coffeeViews));
 
         // 3. Deploy Privacy Layer
         console.log("Deploying Privacy Layer...");
@@ -159,11 +162,6 @@ contract DeployRealZKMVP is Script {
             address(coffeeToken),
             address(circomVerifier)
         );
-
-        // 6b. Deploy WAGACoffeeViews for view functions (after BatchManager)
-        console.log("Deploying Coffee Views...");
-        WAGACoffeeViews coffeeViews = new WAGACoffeeViews(address(coffeeToken), address(batchManager));
-        console.log("Coffee Views:", address(coffeeViews));
 
         // 7. Connect managers to token
         console.log("Connecting managers to token...");
