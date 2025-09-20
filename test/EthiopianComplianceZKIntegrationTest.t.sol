@@ -1,30 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "forge-std/Test.sol";
-import "forge-std/console.sol";
+import {Test} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
 
 // Import the main deployment script
-import "../script/DeployRealZKMVP.s.sol";
+import {DeployRealZKMVP} from "../script/DeployRealZKMVP.s.sol";
 
-// Core contracts - imported from the deployment script
-import "../src/WAGACoffeeTokenCore.sol";
-import "../src/WAGABatchManager.sol";
-import "../src/WAGAZKManager.sol";
-import "../src/PrivacyLayer.sol";
-import "../src/WAGACoffeeRedemption.sol";
-import "../src/WAGAEthiopianCompliance.sol";
-import "../src/WAGAECXPriceOracle.sol";
-import "../src/CircomVerifier.sol";
-import "../src/MockCircomVerifier.sol";
-
-// Interfaces
-import "../src/Interfaces/IEthiopianCompliance.sol";
-import "../src/Interfaces/IPrivacyLayer.sol";
+// Core contracts
+import {WAGACoffeeTokenCore} from "../src/WAGACoffeeTokenCore.sol";
+import {WAGABatchManager} from "../src/WAGABatchManager.sol";
+import {WAGAZKManager} from "../src/WAGAZKManager.sol";
+import {PrivacyLayer} from "../src/PrivacyLayer.sol";
+import {WAGACoffeeRedemption} from "../src/WAGACoffeeRedemption.sol";
+import {WAGAEthiopianCompliance} from "../src/WAGAEthiopianCompliance.sol";
+import {WAGAECXPriceOracle} from "../src/WAGAECXPriceOracle.sol";
+import {CircomVerifier} from "../src/CircomVerifier.sol";
+import {MockCircomVerifier} from "../src/MockCircomVerifier.sol";
 
 // Interfaces
-import "../src/Interfaces/IEthiopianCompliance.sol";
-import "../src/Interfaces/IPrivacyLayer.sol";
+import {IEthiopianCompliance} from "../src/Interfaces/IEthiopianCompliance.sol";
+import {IPrivacyLayer} from "../src/Interfaces/IPrivacyLayer.sol";
 
 /**
  * @title EthiopianComplianceZKIntegrationTest

@@ -7,6 +7,7 @@ import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
 import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
+import {WAGACoffeeViews} from "../../src/WAGACoffeeViews.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
@@ -23,6 +24,7 @@ contract StandardizedWorkflowTest is Test {
     WAGAZKManager public zkManager;
     WAGACoffeeRedemption public redemption;
     WAGATreasury public treasury;
+    WAGACoffeeViews public coffeeViews;
     PrivacyLayer public privacyLayer;
     CircomVerifier public circomVerifier;
     MockUSDC public mockUSDC;
@@ -50,11 +52,8 @@ contract StandardizedWorkflowTest is Test {
             ,  // WAGAEthiopianCompliance - not needed for this test
             ,  // WAGAECXPriceOracle - not needed for this test
             CircomVerifier deployedCircomVerifier,
-            HelperConfig helperConfig
+            // HelperConfig not needed for this test
         ) = deployer.runForTesting();
-
-        // Get the network config to access admin and deployer info
-        HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
 
         // Assign deployed contracts to test variables
         coffeeToken = deployedCoffeeToken;
@@ -64,6 +63,10 @@ contract StandardizedWorkflowTest is Test {
         treasury = deployedTreasury;
         privacyLayer = deployedPrivacyLayer;
         circomVerifier = deployedCircomVerifier;
+        
+        // Instantiate WAGACoffeeViews using the deployed contracts
+        // No need to modify deployment script - just create our own instance
+        coffeeViews = new WAGACoffeeViews(address(coffeeToken), address(batchManager));
         
         // Business Logic Understanding:
         // - In production: vm.startBroadcast(deployerKey) makes deployer address the admin
@@ -124,23 +127,19 @@ contract StandardizedWorkflowTest is Test {
         assertTrue(coffeeToken.isBatchActive(batchId), "Batch should be active");
 
         // Verify batch data consistency
-        (bool isConsistent, string memory reason) = coffeeToken.verifyBatchConsistency(batchId);
+        (bool isConsistent, string memory reason) = coffeeViews.verifyBatchConsistency(batchId);
         assertTrue(isConsistent, reason);
 
-        // Verify quantities
-        assertEq(coffeeToken.getAvailableQuantity(batchId), 1000, "Available quantity should be 1000");
-        assertEq(coffeeToken.getMintedQuantity(batchId), 0, "Minted quantity should be 0");
+        // Verify quantities using coffeeViews
+        assertEq(coffeeViews.getAvailableQuantity(batchId), 1000, "Available quantity should be 1000");
+        assertEq(coffeeViews.getMintedQuantity(batchId), 0, "Minted quantity should be 0");
 
-        // Verify batch info
-        (
-            uint256 productionDate,
-            uint256 expiryDate,
-            uint256 quantity,
-            uint256 pricePerUnit,
-            string memory packagingInfo,
-            ,
-            
-        ) = coffeeToken.getBatchInfo(batchId);
+        // Verify batch info using individual coffeeViews functions
+        uint256 productionDate = coffeeViews.getBatchCreationDate(batchId);
+        uint256 expiryDate = coffeeViews.getBatchExpiryDate(batchId);
+        uint256 quantity = coffeeViews.getBatchQuantity(batchId);
+        uint256 pricePerUnit = coffeeViews.getBatchPricePerUnit(batchId);
+        string memory packagingInfo = coffeeViews.getBatchPackagingInfo(batchId);
 
         // Verify timestamps are reasonable (should be current block.timestamp)
         assertEq(productionDate, block.timestamp, "Production date should match");
@@ -173,9 +172,9 @@ contract StandardizedWorkflowTest is Test {
         vm.prank(admin);
         coffeeToken.mintBatch(consumer, batchId, 300);
 
-        // Verify tracking
-        assertEq(coffeeToken.getMintedQuantity(batchId), 300, "Minted quantity should be 300");
-        assertEq(coffeeToken.getAvailableQuantity(batchId), 700, "Available quantity should be 700");
+        // Verify tracking using coffeeViews
+        assertEq(coffeeViews.getMintedQuantity(batchId), 300, "Minted quantity should be 300");
+        assertEq(coffeeViews.getAvailableQuantity(batchId), 700, "Available quantity should be 700");
         assertEq(coffeeToken.balanceOf(consumer, batchId), 300, "Consumer balance should be 300");
 
         // Try to mint more than available
@@ -187,8 +186,8 @@ contract StandardizedWorkflowTest is Test {
         vm.prank(admin);
         coffeeToken.mintBatch(consumer, batchId, 700);
 
-        assertEq(coffeeToken.getMintedQuantity(batchId), 1000, "All should be minted");
-        assertEq(coffeeToken.getAvailableQuantity(batchId), 0, "No more available");
+        assertEq(coffeeViews.getMintedQuantity(batchId), 1000, "All should be minted");
+        assertEq(coffeeViews.getAvailableQuantity(batchId), 0, "No more available");
     }
 
     /**
@@ -217,15 +216,15 @@ contract StandardizedWorkflowTest is Test {
         );
         vm.stopPrank();
 
-        // Verify system consistency
-        (bool isConsistent, string memory reason) = coffeeToken.verifySystemConsistency();
+        // Verify system consistency using coffeeViews
+        (bool isConsistent, string memory reason) = coffeeViews.verifySystemConsistency();
         assertTrue(isConsistent, reason);
 
-        // Verify individual batch consistency
-        (bool batch1Consistent, string memory batch1Reason) = coffeeToken.verifyBatchConsistency(batch1);
+        // Verify individual batch consistency using coffeeViews
+        (bool batch1Consistent, string memory batch1Reason) = coffeeViews.verifyBatchConsistency(batch1);
         assertTrue(batch1Consistent, batch1Reason);
 
-        (bool batch2Consistent, string memory batch2Reason) = coffeeToken.verifyBatchConsistency(batch2);
+        (bool batch2Consistent, string memory batch2Reason) = coffeeViews.verifyBatchConsistency(batch2);
         assertTrue(batch2Consistent, batch2Reason);
     }
 

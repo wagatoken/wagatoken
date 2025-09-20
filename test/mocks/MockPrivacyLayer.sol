@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import "../../src/Interfaces/IPrivacyLayer.sol";
+import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
 
 /**
  * @title MockPrivacyLayer

@@ -95,6 +95,8 @@ contract WAGAPaymentIntegrationTest is Test {
         coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), processor);
         // Also grant PROCESSOR_ROLE to admin for testing batch creation
         coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), admin);
+        // Grant MINTER_ROLE to admin for testing token minting
+        coffeeToken.grantRole(coffeeToken.MINTER_ROLE(), admin);
 
         // Grant treasury roles
         treasury.grantRole(treasury.ADMIN_ROLE(), admin);

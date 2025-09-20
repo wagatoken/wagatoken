@@ -16,6 +16,7 @@ import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
+import {WAGACoffeeViews} from "../../src/WAGACoffeeViews.sol";
 import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
 import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
@@ -38,6 +39,7 @@ contract WAGABaseForkTest is Test {
     WAGATreasury public treasury;
     WAGAEthiopianCompliance public ethiopianCompliance;
     WAGAECXPriceOracle public ecxOracle;
+    WAGACoffeeViews public coffeeViews;
     WAGACDPIntegration public cdpIntegration;
     HelperConfig public helperConfig;
 
@@ -81,6 +83,9 @@ contract WAGABaseForkTest is Test {
             circomVerifier,
             helperConfig
         ) = deployer.run();
+
+        // Get coffeeViews using getter function
+        coffeeViews = deployer.getCoffeeViews();
 
         // Get additional contracts from deployment script
         // ethiopianCompliance = deployer.ethiopianCompliance();

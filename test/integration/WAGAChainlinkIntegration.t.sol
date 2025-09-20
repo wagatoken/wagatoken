@@ -10,9 +10,9 @@ import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
 import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
+import {WAGACoffeeViews} from "../../src/WAGACoffeeViews.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
-import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
 import {MockFunctionsRouter} from "../mocks/MockFunctionsRouter.sol";
 import {MockFunctionsHelper} from "../mocks/MockFunctionsHelper.sol";
 import {MockFunctionsClient} from "../mocks/MockFunctionsClient.sol";
@@ -34,6 +34,7 @@ contract WAGAChainlinkIntegration is Test {
     WAGAInventoryManagerMVP public inventoryManager;
     WAGACoffeeRedemption public redemptionContract;
     CircomVerifier public circomVerifier;
+    WAGACoffeeViews public coffeeViews;
     PrivacyLayer public privacyLayer;
 
     // Mock contracts
@@ -41,12 +42,12 @@ contract WAGAChainlinkIntegration is Test {
     MockFunctionsHelper public mockHelper;
     MockFunctionsClient public mockClient;
 
-    // Test addresses - using makeAddr pattern
-    address public ADMIN_USER = makeAddr("admin");
-    address public PROCESSOR_USER = makeAddr("processor");
-    address public DISTRIBUTOR_USER = makeAddr("distributor");
-    address public VERIFIER_USER = makeAddr("verifier");
-    address public USER1 = makeAddr("user1");
+    // Test addresses - following proper naming conventions
+    address public adminUser = makeAddr("admin");
+    address public processorUser = makeAddr("processor");
+    address public distributorUser = makeAddr("distributor");
+    address public verifierUser = makeAddr("verifier");
+    address public user1 = makeAddr("user1");
 
     // Test data
     uint256 public testBatchId;
@@ -71,6 +72,9 @@ contract WAGAChainlinkIntegration is Test {
             helperConfig
         ) = deployer.run();
 
+        // Get coffeeViews using getter function
+        coffeeViews = deployer.getCoffeeViews();
+
         // Deploy mock contracts for testing
         mockRouter = new MockFunctionsRouter();
         mockHelper = new MockFunctionsHelper(address(mockRouter));
@@ -78,16 +82,16 @@ contract WAGAChainlinkIntegration is Test {
 
         // Set up roles correctly using deployer who already has admin rights
         HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
-        address deployer_address = vm.addr(config.deployerKey);
+        address deployerAddress = vm.addr(config.deployerKey);
 
         // Grant roles using the deployer address which has DEFAULT_ADMIN_ROLE
-        vm.startPrank(deployer_address);
+        vm.startPrank(deployerAddress);
 
         // Grant roles to test addresses
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), PROCESSOR_USER);
-        coffeeToken.grantRole(keccak256("DISTRIBUTOR_ROLE"), DISTRIBUTOR_USER);
-        coffeeToken.grantRole(keccak256("VERIFIER_ROLE"), VERIFIER_USER);
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), ADMIN_USER); // Admin also gets processor role for testing
+        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), processorUser);
+        coffeeToken.grantRole(keccak256("DISTRIBUTOR_ROLE"), distributorUser);
+        coffeeToken.grantRole(keccak256("VERIFIER_ROLE"), verifierUser);
+        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), adminUser); // Admin also gets processor role for testing
 
         vm.stopPrank();
 
@@ -102,7 +106,7 @@ contract WAGAChainlinkIntegration is Test {
         console.log("Creating batch for Chainlink testing...");
 
         // Create a batch as processor
-        vm.startPrank(PROCESSOR_USER);
+        vm.startPrank(processorUser);
 
         testBatchId = coffeeToken.createBatch(
             block.timestamp,         // productionDate
@@ -118,7 +122,7 @@ contract WAGAChainlinkIntegration is Test {
         batchManager.registerBatchCreation(
             testBatchId,
             "Origin",
-            PROCESSOR_USER
+            processorUser
         );
 
         console.log("Created test batch ID:", testBatchId);

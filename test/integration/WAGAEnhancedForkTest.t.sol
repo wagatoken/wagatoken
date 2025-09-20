@@ -16,6 +16,7 @@ import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
+import {WAGACoffeeViews} from "../../src/WAGACoffeeViews.sol";
 import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
@@ -39,6 +40,7 @@ contract WAGAEnhancedForkTest is Test {
     WAGACDPIntegration public cdpIntegration;
     WAGAEthiopianCompliance public ethiopianCompliance;
     WAGAECXPriceOracle public ecxOracle;
+    WAGACoffeeViews public coffeeViews;
     HelperConfig public helperConfig;
     HelperConfig.NetworkConfig public config;
     address public deployerAddress;
@@ -84,6 +86,9 @@ contract WAGAEnhancedForkTest is Test {
             circomVerifier,
             helperConfig
         ) = deployer.run();
+
+        // Get coffeeViews using getter function
+        coffeeViews = deployer.getCoffeeViews();
 
         // Get additional contracts from deployment script
         // ethiopianCompliance = deployer.ethiopianCompliance();
@@ -171,14 +176,14 @@ contract WAGAEnhancedForkTest is Test {
         assertTrue(coffeeToken.isBatchActive(testBatchId), "Batch should be active");
         
         // Verify batch data consistency
-        (bool isConsistent, string memory reason) = coffeeToken.verifyBatchConsistency(testBatchId);
+        (bool isConsistent, string memory reason) = coffeeViews.verifyBatchConsistency(testBatchId);
         assertTrue(isConsistent, reason);
         
         // Verify available quantity
-        uint256 availableQty = coffeeToken.getAvailableQuantity(testBatchId);
+        uint256 availableQty = coffeeViews.getAvailableQuantity(testBatchId);
         assertEq(availableQty, 1000, "Available quantity should be 1000");
         
-        uint256 mintedQty = coffeeToken.getMintedQuantity(testBatchId);
+        uint256 mintedQty = coffeeViews.getMintedQuantity(testBatchId);
         assertEq(mintedQty, 0, "Minted quantity should be 0 initially");
         
         vm.stopPrank();
@@ -200,7 +205,7 @@ contract WAGAEnhancedForkTest is Test {
         vm.stopPrank();
         
         // Step 3: Test system consistency
-        (bool systemConsistent, string memory systemReason) = coffeeToken.verifySystemConsistency();
+        (bool systemConsistent, string memory systemReason) = coffeeViews.verifySystemConsistency();
         assertTrue(systemConsistent, systemReason);
         
         console.log("Comprehensive batch workflow test completed successfully on Base Sepolia fork");
@@ -227,7 +232,7 @@ contract WAGAEnhancedForkTest is Test {
         console.log("Created batch for verification test:", batchId);
         
         // Verify batch state and consistency
-        (bool isConsistent, string memory reason) = coffeeToken.verifyBatchConsistency(batchId);
+        (bool isConsistent, string memory reason) = coffeeViews.verifyBatchConsistency(batchId);
         assertTrue(isConsistent, reason);
         
         // Test verification request setup (without actually calling Chainlink)
@@ -245,7 +250,7 @@ contract WAGAEnhancedForkTest is Test {
         assertTrue(coffeeToken.hasRole(keccak256("VERIFIER_ROLE"), VERIFIER_USER), "User should have verifier role");
         
         // Verify available quantities
-        uint256 available = coffeeToken.getAvailableQuantity(batchId);
+        uint256 available = coffeeViews.getAvailableQuantity(batchId);
         assertEq(available, 1000, "Available quantity should match batch quantity");
         
         vm.stopPrank();

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
@@ -67,7 +67,7 @@ contract WAGACDPIntegrationTest is Test {
         // Note: Smart account creation will be tested in individual test functions
     }
 
-    function testDeployment() public {
+    function testDeployment() public view {
         assertEq(address(cdpIntegration.usdcToken()), address(usdc));
         assertTrue(cdpIntegration.hasRole(cdpIntegration.CDP_ADMIN_ROLE(), admin));
         assertTrue(cdpIntegration.hasRole(cdpIntegration.PAYMENT_HANDLER_ROLE(), paymentHandler));
@@ -231,7 +231,7 @@ contract WAGACDPIntegrationTest is Test {
         assertEq(storedAccount, smartAccount);
     }
 
-    function testGetNonexistentSmartAccount() public {
+    function testGetNonexistentSmartAccount() public view {
         address newUser = address(0x123);
         address storedAccount = cdpIntegration.getUserSmartAccount(newUser);
         assertEq(storedAccount, address(0));
