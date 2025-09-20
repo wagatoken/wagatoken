@@ -175,7 +175,7 @@ contract WAGAProofOfReserve is
             revert WAGAProofOfReserve__InvalidSourceCode_requestReserveVerification();
         }
         
-        // Get batch request information
+        // Get batch request information from coffee token using request index
         (
             uint256 requestBatchId,
             address requester, // Used later for recipient
@@ -185,7 +185,7 @@ contract WAGAProofOfReserve is
             bool isFulfilled,
             , // uint256 fulfilledQuantity - unused
             // uint256 fulfilledTimestamp
-        ) = coffeeToken.getBatchRequest(batchId, requestId);
+        ) = coffeeToken.getBatchRequest(batchId, requestId); // requestId is uint256 requestIndex
         
         // Check if request exists and is not fulfilled
         if (requestBatchId != batchId) {

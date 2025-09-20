@@ -43,6 +43,7 @@ contract DeployRealZKMVP is Script {
     WAGAEthiopianCompliance public ethiopianCompliance;
     WAGAECXPriceOracle public ecxOracle;
     CircomVerifier public circomVerifier;
+    WAGACoffeeViews public coffeeViews;
     PriceVerifier public priceVerifier;
     QualityVerifier public qualityVerifier;
     SupplyChainVerifier public supplyChainVerifier;
@@ -162,8 +163,9 @@ contract DeployRealZKMVP is Script {
 
         // 6b. Deploy WAGACoffeeViews for view functions (after BatchManager)
         console.log("Deploying Coffee Views...");
-        WAGACoffeeViews coffeeViews = new WAGACoffeeViews(address(coffeeToken), address(batchManager));
-        console.log("Coffee Views:", address(coffeeViews));
+        WAGACoffeeViews deployedCoffeeViews = new WAGACoffeeViews(address(coffeeToken), address(batchManager));
+        console.log("Coffee Views:", address(deployedCoffeeViews));
+        coffeeViews = deployedCoffeeViews;
 
         // 7. Connect managers to token
         console.log("Connecting managers to token...");
@@ -297,5 +299,9 @@ contract DeployRealZKMVP is Script {
 
     function getSupplyChainVerifier() external view returns (SupplyChainVerifier) {
         return supplyChainVerifier;
+    }
+
+    function getCoffeeViews() external view returns (WAGACoffeeViews) {
+        return coffeeViews;
     }
 }

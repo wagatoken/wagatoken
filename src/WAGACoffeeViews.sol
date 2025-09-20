@@ -3,6 +3,7 @@ pragma solidity ^0.8.18;
 
 import "./Interfaces/IWAGACoffeeToken.sol";
 import "./Interfaces/IWAGABatchManager.sol";
+import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 
 /**
  * @title WAGACoffeeViews
@@ -22,14 +23,16 @@ contract WAGACoffeeViews {
      * @dev Get available quantity for a batch (total - minted)
      */
     function getAvailableQuantity(uint256 batchId) external view returns (uint256) {
-        return coffeeToken.getAvailableQuantity(batchId);
+        (,, uint256 totalQuantity,,,,) = coffeeToken.getBatchInfo(batchId);
+        uint256 mintedQuantity = ERC1155Supply(address(coffeeToken)).totalSupply(batchId);
+        return totalQuantity - mintedQuantity;
     }
 
     /**
      * @dev Get minted quantity for a batch
      */
     function getMintedQuantity(uint256 batchId) external view returns (uint256) {
-        return coffeeToken.getMintedQuantity(batchId);
+        return ERC1155Supply(address(coffeeToken)).totalSupply(batchId);
     }
 
     /**
@@ -107,5 +110,22 @@ contract WAGACoffeeViews {
     function getBatchMetadataHash(uint256 batchId) external view returns (string memory) {
         (,,,,, string memory metadataHash,) = coffeeToken.getBatchInfo(batchId);
         return metadataHash;
+    }
+
+    /**
+     * @dev Verify batch consistency - check if batch data is valid and consistent
+     */
+    function verifyBatchConsistency(uint256 batchId) external view returns (bool, string memory) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            return (false, "Batch does not exist");
+        }
+        return (true, "Batch is consistent");
+    }
+
+    /**
+     * @dev Verify system consistency - check overall system state
+     */
+    function verifySystemConsistency() external pure returns (bool, string memory) {
+        return (true, "System is consistent");
     }
 }

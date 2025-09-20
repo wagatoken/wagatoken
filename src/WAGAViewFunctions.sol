@@ -89,7 +89,7 @@ contract WAGAViewFunctions {
      * @notice Returns all currently active batch IDs
      * @return Array of active batch IDs
      */
-    function getActiveBatchIds() external view returns (uint256[] memory) {
+    function getActiveBatchIds() external view virtual returns (uint256[] memory) {
         return s_activeBatchIds;
     }
 
@@ -151,7 +151,7 @@ contract WAGAViewFunctions {
      * @param batchId ID of the batch to check
      * @return True if batch is active
      */
-    function isBatchActive(uint256 batchId) external view returns (bool) {
+    function isBatchActive(uint256 batchId) external view virtual returns (bool) {
         return s_isActiveBatch[batchId];
     }
 
@@ -160,7 +160,7 @@ contract WAGAViewFunctions {
      * @param batchId ID of the batch to query
      * @return Quantity of coffee bags in batch
      */
-    function getBatchQuantity(uint256 batchId) external view returns (uint256) {
+    function getBatchQuantity(uint256 batchId) external view virtual returns (uint256) {
         if (!isBatchCreated(batchId)) {
             revert WAGAViewFunctions__BatchDoesNotExist_getBatchQuantity();
         }
@@ -253,7 +253,7 @@ contract WAGAViewFunctions {
     function getBatchRequest(
         uint256 batchId,
         uint256 requestIndex
-    ) external view returns (
+    ) external view virtual returns (
         uint256 requestBatchId,
         address requester,
         uint256 requestedQuantity,
