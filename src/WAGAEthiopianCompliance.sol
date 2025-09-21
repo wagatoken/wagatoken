@@ -5,12 +5,61 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IEthiopianCompliance} from "./Interfaces/IEthiopianCompliance.sol";
 
+// Forward declaration for integration
+interface IWAGAAccessControl {
+    function getSellerId(address sellerAddress) external view returns (uint64);
+    function isRegisteredSeller(address account) external view returns (bool);
+}
+
 /**
  * @title WAGAEthiopianCompliance
  * @dev Manages Ethiopian coffee export compliance and Bank of Ethiopia integration
  * @author WAGA Team
  */
 contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, ReentrancyGuard {
+    /* -------------------------------------------------------------------------- */
+    /*                                   ERRORS                                   */
+    /* -------------------------------------------------------------------------- */
+
+    error WAGAEthiopianCompliance__EUDRCertificateExpired_addEUDRCertificate();
+    error WAGAEthiopianCompliance__InvalidGeolocationData_addGeolocationData();
+    error WAGAEthiopianCompliance__EUDRComplianceNotMet_validateEUDRCompliance();
+    error WAGAEthiopianCompliance__InvalidSWIFTCode_registerBankingPartner();
+    error WAGAEthiopianCompliance__BankAlreadyRegistered_registerBankingPartner();
+    error WAGAEthiopianCompliance__SWIFTCodeAlreadyUsed_registerBankingPartner();
+    error WAGAEthiopianCompliance__BankNotFound_getBankingCapabilities();
+    error WAGAEthiopianCompliance__OfframpPartnerNotAssigned_assignOfframpPartner();
+    error WAGAEthiopianCompliance__UnauthorizedOfframpConfirmation_confirmFiatTransferStage();
+    error WAGAEthiopianCompliance__UnauthorizedBankConfirmation_confirmFiatTransferStage();
+    error WAGAEthiopianCompliance__InvalidTransferStage_confirmFiatTransferStage();
+    error WAGAEthiopianCompliance__UnauthorizedSellerConfirmation_confirmSellerPayment();
+    error WAGAEthiopianCompliance__SellerNotRegistered_confirmSellerPayment();
+    error WAGAEthiopianCompliance__PaymentAlreadyConfirmed_confirmSellerPayment();
+    error WAGAEthiopianCompliance__TransferNotFound_recordOfframpTransferInitiated();
+    error WAGAEthiopianCompliance__TransferAlreadyExists_recordOfframpTransferInitiated();
+    error WAGAEthiopianCompliance__InvalidSellerId_getFiatTransfer();
+    error WAGAEthiopianCompliance__TransferNotFound_getTransferStageStatus();
+    error WAGAEthiopianCompliance__NotComplianceManager_addEUDRCertificate();
+    error WAGAEthiopianCompliance__NotAuthorizedBankingPartner_addECTAPermit();
+    error WAGAEthiopianCompliance__NotOriginVerifier_addOriginVerification();
+    error WAGAEthiopianCompliance__NotQualityInspector_addQualityCertificate();
+    error WAGAEthiopianCompliance__InvalidAccessControlAddress_constructor();
+    error WAGAEthiopianCompliance__InvalidPermitNumber_addECTAPermit();
+    error WAGAEthiopianCompliance__PermitExpired_addECTAPermit();
+    error WAGAEthiopianCompliance__InvalidCertificateNumber_addQualityCertificate();
+    error WAGAEthiopianCompliance__MoistureContentTooHigh_addQualityCertificate();
+    error WAGAEthiopianCompliance__ScreenSizeTooSmall_addQualityCertificate();
+    error WAGAEthiopianCompliance__InvalidRegion_addOriginVerification();
+    error WAGAEthiopianCompliance__InvalidCooperativeName_addOriginVerification();
+    error WAGAEthiopianCompliance__InvalidCooperativeLicense_addOriginVerification();
+    error WAGAEthiopianCompliance__InvalidBankAddress_addBankingPartner();
+    error WAGAEthiopianCompliance__InvalidBankName_addBankingPartner();
+    error WAGAEthiopianCompliance__TradeRegistrationNotFound_registerTradeWithBoE();
+    error WAGAEthiopianCompliance__FiatTransferAlreadyInitiated_registerTradeWithBoE();
+    error WAGAEthiopianCompliance__FiatTransferAlreadyCompleted_registerTradeWithBoE();
+    error WAGAEthiopianCompliance__UpstreamComplianceNotMet_registerTradeWithBoE();
+    error WAGAEthiopianCompliance__InvalidRate_setExchangeRate();
+
     /* -------------------------------------------------------------------------- */
     /*                                  ROLES                                     */
     /* -------------------------------------------------------------------------- */
@@ -38,27 +87,51 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
     uint256 private usdToEtbRate = 5650000000; // 56.50 ETB per USD (example rate)
     uint256 private constant RATE_PRECISION = 10**8;
 
+    // EUDR compliance data
+    mapping(uint256 => EUDRCertificate) private eudrCertificates;
+    mapping(uint256 => GeolocationData) private geolocationData;
+
+    // SWIFT-based banking system
+    mapping(bytes11 => BankingCapabilities) private bankCapabilitiesBySwift;
+    mapping(bytes11 => address) private swiftToAddress;
+    mapping(address => bytes11) private addressToSwift;
+
+    // Multi-stage fiat transfer tracking
+    mapping(uint256 => mapping(uint64 => FiatTransfer)) private fiatTransfers;
+    mapping(uint256 => mapping(uint64 => OfframpTransfer)) private offrampTransfers;
+
+    // Contract dependencies
+    IWAGAAccessControl public accessControl;
+
     /* -------------------------------------------------------------------------- */
     /*                                 MODIFIERS                                  */
     /* -------------------------------------------------------------------------- */
 
     modifier onlyComplianceManager() {
-        require(hasRole(COMPLIANCE_MANAGER_ROLE, msg.sender), "Not compliance manager");
+        if (!hasRole(COMPLIANCE_MANAGER_ROLE, msg.sender)) {
+            revert WAGAEthiopianCompliance__NotComplianceManager_addEUDRCertificate();
+        }
         _;
     }
 
     modifier onlyAuthorizedBank() {
-        require(authorizedBanks[msg.sender], "Not authorized banking partner");
+        if (!authorizedBanks[msg.sender]) {
+            revert WAGAEthiopianCompliance__NotAuthorizedBankingPartner_addECTAPermit();
+        }
         _;
     }
 
     modifier onlyOriginVerifier() {
-        require(hasRole(ORIGIN_VERIFIER_ROLE, msg.sender), "Not origin verifier");
+        if (!hasRole(ORIGIN_VERIFIER_ROLE, msg.sender)) {
+            revert WAGAEthiopianCompliance__NotOriginVerifier_addOriginVerification();
+        }
         _;
     }
 
     modifier onlyQualityInspector() {
-        require(hasRole(QUALITY_INSPECTOR_ROLE, msg.sender), "Not quality inspector");
+        if (!hasRole(QUALITY_INSPECTOR_ROLE, msg.sender)) {
+            revert WAGAEthiopianCompliance__NotQualityInspector_addQualityCertificate();
+        }
         _;
     }
 
@@ -69,6 +142,17 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
     constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(COMPLIANCE_MANAGER_ROLE, msg.sender);
+    }
+
+    /**
+     * @dev Set the access control contract for seller ID resolution
+     * @param _accessControl Address of the WAGAAccessControl contract
+     */
+    function setAccessControl(address _accessControl) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_accessControl == address(0)) {
+            revert WAGAEthiopianCompliance__InvalidAccessControlAddress_constructor();
+        }
+        accessControl = IWAGAAccessControl(_accessControl);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -82,9 +166,13 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
         uint256 batchId,
         ECTAPermit memory permit
     ) external override onlyComplianceManager {
-        require(bytes(permit.permitNumber).length > 0, "Invalid permit number");
-        require(permit.expiryDate > block.timestamp, "Permit expired");
-        
+        if (bytes(permit.permitNumber).length == 0) {
+            revert WAGAEthiopianCompliance__InvalidPermitNumber_addECTAPermit();
+        }
+        if (permit.expiryDate <= block.timestamp) {
+            revert WAGAEthiopianCompliance__PermitExpired_addECTAPermit();
+        }
+
         ectaPermits[batchId] = permit;
         emit ECTAPermitAdded(batchId, permit.permitNumber);
     }
@@ -96,10 +184,16 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
         uint256 batchId,
         QualityCertificate memory certificate
     ) external override onlyQualityInspector {
-        require(bytes(certificate.certificateNumber).length > 0, "Invalid certificate number");
-        require(certificate.moistureContent <= 12, "Moisture content too high"); // Max 12% for export
-        require(certificate.screenSize >= 14, "Screen size too small"); // Min screen 14 for export
-        
+        if (bytes(certificate.certificateNumber).length == 0) {
+            revert WAGAEthiopianCompliance__InvalidCertificateNumber_addQualityCertificate();
+        }
+        if (certificate.moistureContent > 12) {
+            revert WAGAEthiopianCompliance__MoistureContentTooHigh_addQualityCertificate();
+        }
+        if (certificate.screenSize < 14) {
+            revert WAGAEthiopianCompliance__ScreenSizeTooSmall_addQualityCertificate();
+        }
+
         qualityCertificates[batchId] = certificate;
         emit QualityCertificateAdded(batchId, certificate.certificateNumber);
     }
@@ -111,10 +205,16 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
         uint256 batchId,
         OriginVerification memory origin
     ) external override onlyOriginVerifier {
-        require(bytes(origin.region).length > 0, "Invalid region");
-        require(bytes(origin.cooperativeName).length > 0, "Invalid cooperative name");
-        require(bytes(origin.cooperativeLicense).length > 0, "Invalid cooperative license");
-        
+        if (bytes(origin.region).length == 0) {
+            revert WAGAEthiopianCompliance__InvalidRegion_addOriginVerification();
+        }
+        if (bytes(origin.cooperativeName).length == 0) {
+            revert WAGAEthiopianCompliance__InvalidCooperativeName_addOriginVerification();
+        }
+        if (bytes(origin.cooperativeLicense).length == 0) {
+            revert WAGAEthiopianCompliance__InvalidCooperativeLicense_addOriginVerification();
+        }
+
         originVerifications[batchId] = origin;
         emit OriginVerified(batchId, origin.region, origin.cooperativeName);
     }
@@ -126,13 +226,311 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
         ECTAPermit memory permit = ectaPermits[batchId];
         QualityCertificate memory certificate = qualityCertificates[batchId];
         OriginVerification memory origin = originVerifications[batchId];
-        
+
         return (
             permit.isValid &&
             permit.expiryDate > block.timestamp &&
             certificate.scaeCompliant &&
             origin.verified
         );
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              EUDR COMPLIANCE FUNCTIONS                     */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @inheritdoc IEthiopianCompliance
+     */
+    function addEUDRCertificate(uint256 batchId, EUDRCertificate calldata certificate) external override onlyQualityInspector {
+        if (certificate.expiryDate <= block.timestamp) {
+            revert WAGAEthiopianCompliance__EUDRCertificateExpired_addEUDRCertificate();
+        }
+        eudrCertificates[batchId] = certificate;
+        emit EUDRCertificateAdded(batchId, certificate.certificateId, certificate.issuer);
+    }
+
+    /**
+     * @inheritdoc IEthiopianCompliance
+     */
+    function addGeolocationData(uint256 batchId, GeolocationData calldata geoData) external override onlyOriginVerifier {
+        if (bytes(geoData.coordinates).length == 0) {
+            revert WAGAEthiopianCompliance__InvalidGeolocationData_addGeolocationData();
+        }
+        geolocationData[batchId] = geoData;
+        emit GeolocationDataAdded(batchId, geoData.plotType, geoData.plotSize);
+    }
+
+    /**
+     * @inheritdoc IEthiopianCompliance
+     */
+    function validateEUDRCompliance(uint256 batchId) external view override returns (bool isCompliant) {
+        EUDRCertificate memory cert = eudrCertificates[batchId];
+        GeolocationData memory geo = geolocationData[batchId];
+
+        if (!cert.isValid || cert.expiryDate <= block.timestamp) {
+            revert WAGAEthiopianCompliance__EUDRComplianceNotMet_validateEUDRCompliance();
+        }
+
+        return bytes(geo.coordinates).length > 0 && geo.plotSize > 0;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              SWIFT BANKING FUNCTIONS                       */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @inheritdoc IEthiopianCompliance
+     */
+    function registerBankingPartner(
+        bytes11 swiftCode,
+        address bankAddress,
+        string memory bankName,
+        BankingCapabilities memory capabilities
+    ) external override onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (swiftCode == bytes11(0)) {
+            revert WAGAEthiopianCompliance__InvalidSWIFTCode_registerBankingPartner();
+        }
+        if (bankAddress == address(0)) {
+            revert WAGAEthiopianCompliance__BankAlreadyRegistered_registerBankingPartner();
+        }
+        if (swiftToAddress[swiftCode] != address(0)) {
+            revert WAGAEthiopianCompliance__SWIFTCodeAlreadyUsed_registerBankingPartner();
+        }
+        if (addressToSwift[bankAddress] != bytes11(0)) {
+            revert WAGAEthiopianCompliance__BankAlreadyRegistered_registerBankingPartner();
+        }
+
+        capabilities.swiftCode = swiftCode;
+        bankCapabilitiesBySwift[swiftCode] = capabilities;
+        swiftToAddress[swiftCode] = bankAddress;
+        addressToSwift[bankAddress] = swiftCode;
+
+        // Grant banking partner role
+        authorizedBanks[bankAddress] = true;
+        bankNames[bankAddress] = bankName;
+        _grantRole(BANKING_PARTNER_ROLE, bankAddress);
+
+        emit BankingPartnerRegistered(swiftCode, bankAddress, bankName);
+    }
+
+    /**
+     * @inheritdoc IEthiopianCompliance
+     */
+    function getBankingCapabilities(bytes11 swiftCode) external view override returns (BankingCapabilities memory capabilities) {
+        capabilities = bankCapabilitiesBySwift[swiftCode];
+        if (capabilities.swiftCode != swiftCode) {
+            revert WAGAEthiopianCompliance__BankNotFound_getBankingCapabilities();
+        }
+        return capabilities;
+    }
+
+    /**
+     * @inheritdoc IEthiopianCompliance
+     */
+    function assignOfframpPartner(uint256 batchId) external override returns (bytes11 offrampSwift, OfframpPartnerType partnerType) {
+        // For MVP, assign first available offramp-capable bank
+        // In production, this would use more sophisticated logic based on
+        // seller preferences, geographic location, etc.
+
+        // This is a placeholder implementation - would need proper selection logic
+        revert WAGAEthiopianCompliance__OfframpPartnerNotAssigned_assignOfframpPartner();
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                           MULTI-STAGE TRANSFER FUNCTIONS                   */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @inheritdoc IEthiopianCompliance
+     */
+    function confirmFiatTransferStage(
+        uint256 batchId,
+        address buyer,
+        TransferStage stage,
+        string memory transactionId
+    ) external override {
+        if (address(accessControl) == address(0)) {
+            revert WAGAEthiopianCompliance__InvalidTransferStage_confirmFiatTransferStage();
+        }
+
+        uint64 sellerId = accessControl.getSellerId(buyer);
+        if (sellerId == 0) {
+            revert WAGAEthiopianCompliance__InvalidTransferStage_confirmFiatTransferStage();
+        }
+
+        FiatTransfer storage transfer = fiatTransfers[batchId][sellerId];
+
+        // Verify caller authorization based on stage
+        if (stage == TransferStage.USDC_CONFIRMED_BY_OFFRAMP) {
+            if (swiftToAddress[transfer.offrampBankSwift] != msg.sender) {
+                revert WAGAEthiopianCompliance__UnauthorizedOfframpConfirmation_confirmFiatTransferStage();
+            }
+        } else if (stage >= TransferStage.FIAT_CONFIRMED_BY_BANK) {
+            if (!authorizedBanks[msg.sender]) {
+                revert WAGAEthiopianCompliance__UnauthorizedBankConfirmation_confirmFiatTransferStage();
+            }
+        } else {
+            revert WAGAEthiopianCompliance__InvalidTransferStage_confirmFiatTransferStage();
+        }
+
+        // Update transfer stage
+        transfer.currentStage = stage;
+        transfer.stageCompleted[stage] = true;
+        transfer.stageTransactionIds[stage] = transactionId;
+        transfer.stageTimestamps[stage] = block.timestamp;
+
+        emit FiatTransferStageConfirmed(batchId, buyer, stage, transactionId);
+    }
+
+    /**
+     * @inheritdoc IEthiopianCompliance
+     */
+    function confirmSellerPayment(
+        uint256 batchId,
+        address buyer,
+        uint256 usdAmountReceived,
+        string memory sellerTransactionId
+    ) external override {
+        if (address(accessControl) == address(0)) {
+            revert WAGAEthiopianCompliance__UnauthorizedSellerConfirmation_confirmSellerPayment();
+        }
+
+        uint64 sellerId = accessControl.getSellerId(buyer);
+        if (sellerId == 0) {
+            revert WAGAEthiopianCompliance__SellerNotRegistered_confirmSellerPayment();
+        }
+
+        // Only the seller can confirm their payment
+        if (msg.sender != buyer) {
+            revert WAGAEthiopianCompliance__UnauthorizedSellerConfirmation_confirmSellerPayment();
+        }
+
+        FiatTransfer storage transfer = fiatTransfers[batchId][sellerId];
+        if (transfer.sellerPaymentConfirmed) {
+            revert WAGAEthiopianCompliance__PaymentAlreadyConfirmed_confirmSellerPayment();
+        }
+
+        // Update transfer with seller payment confirmation
+        transfer.currentStage = TransferStage.SELLER_PAYMENT_CONFIRMED;
+        transfer.stageCompleted[TransferStage.SELLER_PAYMENT_CONFIRMED] = true;
+        transfer.stageTransactionIds[TransferStage.SELLER_PAYMENT_CONFIRMED] = sellerTransactionId;
+        transfer.stageTimestamps[TransferStage.SELLER_PAYMENT_CONFIRMED] = block.timestamp;
+        transfer.usdAmountReceivedBySeller = usdAmountReceived;
+        transfer.sellerPaymentConfirmed = true;
+
+        emit SellerPaymentConfirmed(batchId, buyer, sellerId, usdAmountReceived, sellerTransactionId);
+    }
+
+    /**
+     * @inheritdoc IEthiopianCompliance
+     */
+    function recordOfframpTransferInitiated(
+        uint256 batchId,
+        address buyer,
+        bytes11 offrampSwift,
+        uint256 usdAmount
+    ) external override {
+        if (address(accessControl) == address(0)) {
+            revert WAGAEthiopianCompliance__TransferNotFound_recordOfframpTransferInitiated();
+        }
+
+        uint64 sellerId = accessControl.getSellerId(buyer);
+        if (sellerId == 0) {
+            revert WAGAEthiopianCompliance__TransferNotFound_recordOfframpTransferInitiated();
+        }
+
+        if (offrampTransfers[batchId][sellerId].offrampPartner != bytes11(0)) {
+            revert WAGAEthiopianCompliance__TransferAlreadyExists_recordOfframpTransferInitiated();
+        }
+
+        offrampTransfers[batchId][sellerId] = OfframpTransfer({
+            offrampPartner: offrampSwift,
+            usdAmount: usdAmount,
+            transferTimestamp: block.timestamp,
+            transferCompleted: false,
+            transferTxHash: ""
+        });
+
+        emit OfframpTransferExecuted(batchId, buyer, offrampSwift, usdAmount, block.timestamp);
+    }
+
+    /**
+     * @inheritdoc IEthiopianCompliance
+     */
+    function getFiatTransfer(uint256 batchId, address buyer) external view override returns (
+        uint64 sellerId,
+        bytes11 offrampBankSwift,
+        bytes11 receivingBankSwift,
+        uint256 usdAmountPaid,
+        uint256 usdAmountReceivedBySeller,
+        TransferStage currentStage,
+        bool sellerPaymentConfirmed
+    ) {
+        if (address(accessControl) == address(0)) {
+            revert WAGAEthiopianCompliance__InvalidSellerId_getFiatTransfer();
+        }
+
+        sellerId = accessControl.getSellerId(buyer);
+        if (sellerId == 0) {
+            revert WAGAEthiopianCompliance__InvalidSellerId_getFiatTransfer();
+        }
+
+        FiatTransfer storage transfer = fiatTransfers[batchId][sellerId];
+
+        return (
+            sellerId,
+            transfer.offrampBankSwift,
+            transfer.receivingBankSwift,
+            transfer.usdAmountPaid,
+            transfer.usdAmountReceivedBySeller,
+            transfer.currentStage,
+            transfer.sellerPaymentConfirmed
+        );
+    }
+
+    /**
+     * @inheritdoc IEthiopianCompliance
+     */
+    function getTransferStageStatus(
+        uint256 batchId,
+        address buyer,
+        TransferStage stage
+    ) external view override returns (bool completed, string memory transactionId, uint256 timestamp) {
+        if (address(accessControl) == address(0)) {
+            revert WAGAEthiopianCompliance__TransferNotFound_getTransferStageStatus();
+        }
+
+        uint64 sellerId = accessControl.getSellerId(buyer);
+        if (sellerId == 0) {
+            revert WAGAEthiopianCompliance__TransferNotFound_getTransferStageStatus();
+        }
+
+        FiatTransfer storage transfer = fiatTransfers[batchId][sellerId];
+
+        return (
+            transfer.stageCompleted[stage],
+            transfer.stageTransactionIds[stage],
+            transfer.stageTimestamps[stage]
+        );
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              UTILITY FUNCTIONS                             */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @inheritdoc IEthiopianCompliance
+     */
+    function resolveBankAddress(bytes11 swiftCode) external view override returns (address bankAddress) {
+        return swiftToAddress[swiftCode];
+    }
+
+    /**
+     * @inheritdoc IEthiopianCompliance
+     */
+    function resolveSwiftCode(address bankAddress) external view override returns (bytes11 swiftCode) {
+        return addressToSwift[bankAddress];
     }
 
     /* -------------------------------------------------------------------------- */
@@ -146,13 +544,17 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
         address bankAddress,
         string memory bankName
     ) external override onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(bankAddress != address(0), "Invalid bank address");
-        require(bytes(bankName).length > 0, "Invalid bank name");
-        
+        if (bankAddress == address(0)) {
+            revert WAGAEthiopianCompliance__InvalidBankAddress_addBankingPartner();
+        }
+        if (bytes(bankName).length == 0) {
+            revert WAGAEthiopianCompliance__InvalidBankName_addBankingPartner();
+        }
+
         authorizedBanks[bankAddress] = true;
         bankNames[bankAddress] = bankName;
         _grantRole(BANKING_PARTNER_ROLE, bankAddress);
-        
+
         emit BankingPartnerAdded(bankAddress, bankName);
     }
 
@@ -183,13 +585,17 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
         string memory bankTransactionId
     ) external override onlyAuthorizedBank nonReentrant {
         BoETradeRegistration storage registration = tradeRegistrations[batchId][buyer];
-        require(registration.batchId == batchId, "Trade registration not found");
-        require(registration.fiatTransferInitiated, "Fiat transfer not initiated");
-        require(!registration.fiatTransferCompleted, "Fiat transfer already completed");
+        if (registration.batchId != batchId) {
+            revert WAGAEthiopianCompliance__TradeRegistrationNotFound_registerTradeWithBoE();
+        }
+        if (!registration.fiatTransferInitiated) {
+            revert WAGAEthiopianCompliance__FiatTransferAlreadyInitiated_registerTradeWithBoE();
+        }
+        if (registration.fiatTransferCompleted) {
+            revert WAGAEthiopianCompliance__FiatTransferAlreadyCompleted_registerTradeWithBoE();
+        }
         
-        registration.fiatTransferCompleted = true;
         registration.bankTransactionId = bankTransactionId;
-        registration.bankingPartner = msg.sender;
         
         emit FiatTransferCompleted(batchId, buyer, bankTransactionId);
         emit PhysicalShipmentAuthorized(batchId, buyer);
@@ -216,29 +622,35 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
         uint256 valueUSD,
         string memory buyerBankDetails
     ) external onlyRole(COMPLIANCE_MANAGER_ROLE) {
-        require(this.validateUpstreamCompliance(batchId), "Upstream compliance not met");
+        if (!this.validateUpstreamCompliance(batchId)) {
+            revert WAGAEthiopianCompliance__UpstreamComplianceNotMet_registerTradeWithBoE();
+        }
         
         ECTAPermit memory permit = ectaPermits[batchId];
         QualityCertificate memory certificate = qualityCertificates[batchId];
         
         uint256 valueETB = (valueUSD * usdToEtbRate) / RATE_PRECISION;
         
+        uint64 sellerId = accessControl.getSellerId(seller);
+
         BoETradeRegistration memory registration = BoETradeRegistration({
             batchId: batchId,
+            sellerId: sellerId,
             buyer: buyer,
-            seller: seller,
             quantity: quantity,
             valueUSD: valueUSD,
-            valueETB: valueETB,
             ectaPermitNumber: permit.permitNumber,
             qualityCertificate: certificate.certificateNumber,
             exportDocuments: permit.permitDocumentHash,
             registrationTimestamp: block.timestamp,
             boERegistered: true,
+            assignedOfframpPartner: "DBSSGB2LXXX", // Default DBS Singapore
+            assignedBankingPartner: "CBETETAAXXX", // Default CBE Ethiopia
+            offrampType: OfframpPartnerType.DIRECT_BANK,
             fiatTransferInitiated: true,
             fiatTransferCompleted: false,
             bankTransactionId: "",
-            bankingPartner: address(0)
+            sellerPaymentConfirmed: 0
         });
         
         tradeRegistrations[batchId][buyer] = registration;
@@ -262,7 +674,9 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
      * @param newRate New conversion rate (multiplied by 10^8 for precision)
      */
     function updateUSDToETBRate(uint256 newRate) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(newRate > 0, "Invalid rate");
+        if (newRate == 0) {
+            revert WAGAEthiopianCompliance__InvalidRate_setExchangeRate();
+        }
         usdToEtbRate = newRate;
     }
 

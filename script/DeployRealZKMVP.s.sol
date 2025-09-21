@@ -11,6 +11,7 @@ import {WAGACoffeeViews} from "../src/WAGACoffeeViews.sol";
 import {WAGABatchManager} from "../src/WAGABatchManager.sol";
 import {WAGAZKManager} from "../src/WAGAZKManager.sol";
 import {PrivacyLayer} from "../src/PrivacyLayer.sol";
+import {WAGAAccessControl} from "../src/WAGAAccessControl.sol";
 
 // Payment & Treasury Contracts
 import {WAGATreasury} from "../src/WAGATreasury.sol";
@@ -28,6 +29,9 @@ import {CircomVerifier} from "../src/CircomVerifier.sol";
 import {Groth16Verifier as PriceVerifier} from "../src/verifiers/PricePrivacyCircuitVerifier.sol";
 import {Groth16Verifier as QualityVerifier} from "../src/verifiers/QualityTierCircuitVerifier.sol";
 import {Groth16Verifier as SupplyChainVerifier} from "../src/verifiers/SupplyChainPrivacyCircuitVerifier.sol";
+import {EUDRDeforestationCircuitVerifier} from "../src/verifiers/EUDRDeforestationCircuitVerifier.sol";
+import {EUDRGeolocationCircuitVerifier} from "../src/verifiers/EUDRGeolocationCircuitVerifier.sol";
+import {EthiopianComplianceCircuitVerifier} from "../src/verifiers/EthiopianComplianceCircuitVerifier.sol";
 
 contract DeployRealZKMVP is Script {
     // Public state variables for testing access
@@ -43,10 +47,14 @@ contract DeployRealZKMVP is Script {
     WAGAEthiopianCompliance public ethiopianCompliance;
     WAGAECXPriceOracle public ecxOracle;
     CircomVerifier public circomVerifier;
+    WAGAAccessControl public accessControlContract;
     WAGACoffeeViews public coffeeViews;
     PriceVerifier public priceVerifier;
     QualityVerifier public qualityVerifier;
     SupplyChainVerifier public supplyChainVerifier;
+    EUDRDeforestationCircuitVerifier public eudrDeforestationVerifier;
+    EUDRGeolocationCircuitVerifier public eudrGeolocationVerifier;
+    EthiopianComplianceCircuitVerifier public ethiopianComplianceVerifier;
     HelperConfig public helperConfig;
 
     function run()
@@ -64,6 +72,7 @@ contract DeployRealZKMVP is Script {
             WAGAEthiopianCompliance,
             WAGAECXPriceOracle,
             CircomVerifier,
+            WAGAAccessControl,
             HelperConfig
         )
     {
@@ -85,6 +94,7 @@ contract DeployRealZKMVP is Script {
             WAGAEthiopianCompliance,
             WAGAECXPriceOracle,
             CircomVerifier,
+            WAGAAccessControl,
             HelperConfig
         )
     {
@@ -106,6 +116,7 @@ contract DeployRealZKMVP is Script {
             WAGAEthiopianCompliance,
             WAGAECXPriceOracle,
             CircomVerifier,
+            WAGAAccessControl,
             HelperConfig
         )
     {
@@ -123,6 +134,9 @@ contract DeployRealZKMVP is Script {
         priceVerifier = new PriceVerifier();
         qualityVerifier = new QualityVerifier();
         supplyChainVerifier = new SupplyChainVerifier();
+        eudrDeforestationVerifier = new EUDRDeforestationCircuitVerifier();
+        eudrGeolocationVerifier = new EUDRGeolocationCircuitVerifier();
+        ethiopianComplianceVerifier = new EthiopianComplianceCircuitVerifier();
         circomVerifier = new CircomVerifier();
 
         // 2. Deploy WAGACoffeeTokenCore (baseURI will be updated later)
@@ -133,7 +147,7 @@ contract DeployRealZKMVP is Script {
 
         // 3. Deploy Privacy Layer
         console.log("Deploying Privacy Layer...");
-        privacyLayer = new PrivacyLayer(address(coffeeToken));
+        privacyLayer = new PrivacyLayer(address(coffeeToken), address(circomVerifier));
 
         // 4. Deploy Treasury with network-specific USDC
         console.log("Deploying Treasury for USDC payments...");
@@ -142,6 +156,10 @@ contract DeployRealZKMVP is Script {
         // 4b. Deploy Ethiopian Compliance System
         console.log("Deploying Ethiopian Compliance System...");
         ethiopianCompliance = new WAGAEthiopianCompliance();
+
+        // 4b. Deploy Access Control
+        console.log("Deploying Access Control...");
+        accessControlContract = new WAGAAccessControl();
 
         // 4c. Deploy ECX Price Oracle
         console.log("Deploying ECX Price Oracle...");
@@ -182,7 +200,9 @@ contract DeployRealZKMVP is Script {
             address(coffeeToken),
             address(treasury),
             address(ethiopianCompliance),
-            address(batchManager)
+            address(batchManager),
+            address(circomVerifier),
+            address(privacyLayer)
         );
 
         // 9. Deploy CDP Integration
@@ -230,7 +250,11 @@ contract DeployRealZKMVP is Script {
         
         // Grant deployer ability to manage cooperative and roaster roles
         console.log("Granting role management permissions to deployer...");
-        
+
+        // Grant offramp executor role to treasury and deployer
+        console.log("Setting up offramp transfer roles...");
+        treasury.grantRole(treasury.OFFRAMP_EXECUTOR_ROLE(), msg.sender);
+
         console.log("Deployment completed successfully!");
         console.log("Note: For tests, roles should be granted using the actual DEFAULT_ADMIN_ROLE holders from each contract");
         
@@ -270,6 +294,14 @@ contract DeployRealZKMVP is Script {
         console.log("1. Update ECX prices using updateECXPrice()");
         console.log("2. Configure exchange rates with updateExchangeRate()");
         console.log("3. Add ZK price proofs using addZKPriceProof()");
+        console.log("");
+        console.log("EUDR & Enhanced Compliance Setup:");
+        console.log("1. Register sellers using WAGAAccessControl.registerSeller()");
+        console.log("2. Add EUDR certificates using ethiopianCompliance.addEUDRCertificate()");
+        console.log("3. Add geolocation data using ethiopianCompliance.addGeolocationData()");
+        console.log("4. Submit ZK proofs for EUDR compliance using zkManager.addEUDRComplianceZKProof()");
+        console.log("5. Configure selective disclosure using privacyLayer.configureEUDRDisclosureRules()");
+        console.log("6. Grant OFFRAMP_EXECUTOR_ROLE for fiat transfers using treasury.grantRole()");
 
         return (
             coffeeToken,
@@ -284,6 +316,7 @@ contract DeployRealZKMVP is Script {
             ethiopianCompliance,
             ecxOracle,
             circomVerifier,
+            accessControlContract,
             helperConfig
         );
     }
@@ -301,7 +334,23 @@ contract DeployRealZKMVP is Script {
         return supplyChainVerifier;
     }
 
+    function getEUDRDeforestationVerifier() external view returns (EUDRDeforestationCircuitVerifier) {
+        return eudrDeforestationVerifier;
+    }
+
+    function getEUDRGeolocationVerifier() external view returns (EUDRGeolocationCircuitVerifier) {
+        return eudrGeolocationVerifier;
+    }
+
+    function getEthiopianComplianceVerifier() external view returns (EthiopianComplianceCircuitVerifier) {
+        return ethiopianComplianceVerifier;
+    }
+
     function getCoffeeViews() external view returns (WAGACoffeeViews) {
         return coffeeViews;
+    }
+
+    function getAccessControl() external view returns (WAGAAccessControl) {
+        return accessControlContract;
     }
 }

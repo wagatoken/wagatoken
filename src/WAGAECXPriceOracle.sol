@@ -20,6 +20,16 @@ contract WAGAECXPriceOracle is AccessControl, ReentrancyGuard {
     bytes32 public constant PRICING_VIEWER_ROLE = keccak256("PRICING_VIEWER_ROLE");
 
     /* -------------------------------------------------------------------------- */
+    /*                                  Errors                                    */
+    /* -------------------------------------------------------------------------- */
+
+    error WAGAECXPriceOracle__InvalidPrice_updateECXPrice();
+    error WAGAECXPriceOracle__InvalidConfidenceScore_updateECXPrice();
+    error WAGAECXPriceOracle__NoBenchmarkPriceAvailable_getCompetitivePricingProof();
+    error WAGAECXPriceOracle__InvalidExchangeRate_updateUSDToETBRate();
+    error WAGAECXPriceOracle__InvalidRate_updateUSDToETBRate();
+
+    /* -------------------------------------------------------------------------- */
     /*                              TYPE DECLARATIONS                             */
     /* -------------------------------------------------------------------------- */
 
@@ -146,8 +156,12 @@ contract WAGAECXPriceOracle is AccessControl, ReentrancyGuard {
         string memory source,
         uint256 confidence
     ) external onlyRole(PRICE_UPDATER_ROLE) {
-        require(pricePerFeresulla > 0, "Invalid price");
-        require(confidence > 0 && confidence <= 100, "Invalid confidence score");
+        if (pricePerFeresulla == 0) {
+            revert WAGAECXPriceOracle__InvalidPrice_updateECXPrice();
+        }
+        if (confidence == 0 || confidence > 100) {
+            revert WAGAECXPriceOracle__InvalidConfidenceScore_updateECXPrice();
+        }
 
         // Calculate per-kg prices
         uint256 pricePerKg = (pricePerFeresulla * 1000) / 17; // Convert 17kg to per kg
@@ -201,12 +215,13 @@ contract WAGAECXPriceOracle is AccessControl, ReentrancyGuard {
     ) external onlyRole(ZK_VERIFIER_ROLE) {
         bytes32 gradeOriginHash = _getGradeOriginHash(grade, origin);
         ECXPrice memory benchmarkPrice = latestPrices[gradeOriginHash];
-        
-        require(benchmarkPrice.timestamp > 0, "No benchmark price available");
-        require(
-            block.timestamp - benchmarkPrice.timestamp <= priceValidityPeriod,
-            "Benchmark price too old"
-        );
+
+        if (benchmarkPrice.timestamp == 0) {
+            revert WAGAECXPriceOracle__NoBenchmarkPriceAvailable_getCompetitivePricingProof();
+        }
+        if (block.timestamp - benchmarkPrice.timestamp > priceValidityPeriod) {
+            revert WAGAECXPriceOracle__InvalidExchangeRate_updateUSDToETBRate();
+        }
 
         // For now, we assume ZK proof is valid (in real implementation, this would call ZK verifier)
         // TODO: Integrate with actual ZK proof verification
@@ -323,7 +338,9 @@ contract WAGAECXPriceOracle is AccessControl, ReentrancyGuard {
      * @param newRate New exchange rate (multiplied by 10^8 for precision)
      */
     function updateExchangeRate(uint256 newRate) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(newRate > 0, "Invalid exchange rate");
+        if (newRate == 0) {
+            revert WAGAECXPriceOracle__InvalidRate_updateUSDToETBRate();
+        }
         etbToUsdRate = newRate;
         emit ExchangeRateUpdated(newRate, block.timestamp);
     }

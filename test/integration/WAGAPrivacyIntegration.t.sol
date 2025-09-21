@@ -121,13 +121,287 @@ contract WAGAPrivacyIntegration is Test {
             admin, // original caller
             batchId,
             pricingProof,
-            IZKVerifier.ProofType(0), // PRICE_COMPETITIVENESS
+            IZKVerifier.ProofType.PRICE_COMPETITIVENESS,
             "premium"
         );
 
         console.log("Pricing proof verification test passed");
 
         vm.stopPrank();
+    }
+
+    function testEUDRSelectiveDisclosure() public {
+        console.log("Testing EUDR selective disclosure...");
+
+        // Create a batch
+        vm.startPrank(processor);
+        uint256 batchId = coffeeToken.createBatch(
+            block.timestamp,
+            block.timestamp + 365 days,
+            1000,
+            1 ether,
+            "Origin",
+            "Standard",
+            "ipfs://test-metadata"
+        );
+        vm.stopPrank();
+
+        // Configure EUDR selective disclosure rules
+        vm.startPrank(admin);
+
+        // Configure disclosure rules for different roles
+        privacyLayer.configureEUDRDisclosureRules(
+            batchId,
+            IPrivacyLayer.PrivacyLevel.PROCESSOR_ONLY,
+            "EUDR compliance data - processor access only"
+        );
+
+        // Update EUDR compliance claims
+        PrivacyLayer.ZKComplianceClaims memory claims = PrivacyLayer.ZKComplianceClaims({
+            deforestationStatus: "Deforestation-Free",
+            geolocationData: "8.5476N, 39.2695E",
+            complianceLevel: "High",
+            verificationMethod: "Satellite + GPS",
+            certificateHash: keccak256("EUDR_CERT_2024")
+        });
+
+        privacyLayer.updateEUDRComplianceClaims(batchId, claims);
+
+        vm.stopPrank();
+
+        // Test access control - processor should have access
+        vm.startPrank(processor);
+        bool processorAccess = privacyLayer.canAccessEUDRData(processor, batchId);
+        assertTrue(processorAccess, "Processor should have access to EUDR data");
+        vm.stopPrank();
+
+        // Test access control - distributor should NOT have access
+        vm.startPrank(distributor);
+        bool distributorAccess = privacyLayer.canAccessEUDRData(distributor, batchId);
+        assertFalse(distributorAccess, "Distributor should not have access to EUDR data");
+        vm.stopPrank();
+
+        console.log("EUDR selective disclosure test passed");
+    }
+
+    function testEnhancedPrivacyLevels() public {
+        console.log("Testing enhanced privacy levels with EUDR integration...");
+
+        // Create batches with different privacy levels
+        vm.startPrank(processor);
+
+        uint256 publicBatchId = coffeeToken.createBatch(
+            block.timestamp,
+            block.timestamp + 365 days,
+            1000,
+            1 ether,
+            "Origin",
+            "Standard",
+            "ipfs://public-metadata"
+        );
+
+        uint256 privateBatchId = coffeeToken.createBatch(
+            block.timestamp,
+            block.timestamp + 365 days,
+            500,
+            2 ether,
+            "Origin",
+            "Premium",
+            "ipfs://private-metadata"
+        );
+
+        vm.stopPrank();
+
+        // Configure different privacy levels for EUDR data
+        vm.startPrank(admin);
+
+        // Public batch - public EUDR disclosure
+        privacyLayer.configureEUDRDisclosureRules(
+            publicBatchId,
+            IPrivacyLayer.PrivacyLevel.PUBLIC,
+            "EUDR data publicly available"
+        );
+
+        // Private batch - restricted disclosure
+        privacyLayer.configureEUDRDisclosureRules(
+            privateBatchId,
+            IPrivacyLayer.PrivacyLevel.PROCESSOR_ONLY,
+            "EUDR data for processors only"
+        );
+
+        // Add EUDR claims to both batches
+        PrivacyLayer.ZKComplianceClaims memory claims = PrivacyLayer.ZKComplianceClaims({
+            deforestationStatus: "Deforestation-Free",
+            geolocationData: "8.5476N, 39.2695E",
+            complianceLevel: "High",
+            verificationMethod: "Satellite + GPS",
+            certificateHash: keccak256("EUDR_CERT")
+        });
+
+        privacyLayer.updateEUDRComplianceClaims(publicBatchId, claims);
+        privacyLayer.updateEUDRComplianceClaims(privateBatchId, claims);
+
+        vm.stopPrank();
+
+        // Test public access to public batch
+        vm.startPrank(distributor);
+        bool publicAccess = privacyLayer.canAccessEUDRData(distributor, publicBatchId);
+        assertTrue(publicAccess, "Public should have access to public batch EUDR data");
+
+        bool privateAccess = privacyLayer.canAccessEUDRData(distributor, privateBatchId);
+        assertFalse(privateAccess, "Public should not have access to private batch EUDR data");
+        vm.stopPrank();
+
+        console.log("Enhanced privacy levels test passed");
+    }
+
+    function testEUDRComplianceValidationWithPrivacy() public {
+        console.log("Testing EUDR compliance validation with privacy controls...");
+
+        // Create a batch
+        vm.startPrank(processor);
+        uint256 batchId = coffeeToken.createBatch(
+            block.timestamp,
+            block.timestamp + 365 days,
+            1000,
+            1 ether,
+            "Origin",
+            "Standard",
+            "ipfs://test-metadata"
+        );
+        vm.stopPrank();
+
+        // Add EUDR compliance proofs
+        vm.startPrank(admin);
+
+        zkManager.addEUDRComplianceZKProof(
+            batchId,
+            _createValidMockGroth16Proof(),
+            IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
+            "Deforestation-Free - Verified"
+        );
+
+        zkManager.addEUDRComplianceZKProof(
+            batchId,
+            _createValidMockGroth16Proof(),
+            IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION,
+            "Geolocation Verified - GPS Confirmed"
+        );
+
+        // Configure privacy for EUDR data
+        privacyLayer.configureEUDRDisclosureRules(
+            batchId,
+            IPrivacyLayer.PrivacyLevel.PROCESSOR_ONLY,
+            "EUDR compliance data - processor access only"
+        );
+
+        // Add compliance claims
+        PrivacyLayer.ZKComplianceClaims memory claims = PrivacyLayer.ZKComplianceClaims({
+            deforestationStatus: "Deforestation-Free",
+            geolocationData: "8.5476N, 39.2695E",
+            complianceLevel: "High",
+            verificationMethod: "Satellite + GPS",
+            certificateHash: keccak256("EUDR_CERT_2024")
+        });
+
+        privacyLayer.updateEUDRComplianceClaims(batchId, claims);
+
+        vm.stopPrank();
+
+        // Validate EUDR compliance
+        bool eudrCompliant = zkManager.validateEUDRZKCompliance(batchId);
+        assertTrue(eudrCompliant, "Batch should be EUDR compliant");
+
+        // Test privacy controls
+        vm.startPrank(processor);
+        bool processorCanAccess = privacyLayer.canAccessEUDRData(processor, batchId);
+        assertTrue(processorCanAccess, "Processor should have access");
+
+        PrivacyLayer.ZKComplianceClaims memory retrievedClaims = privacyLayer.getEUDRComplianceClaims(processor, batchId);
+        assertEq(retrievedClaims.deforestationStatus, "Deforestation-Free");
+        vm.stopPrank();
+
+        console.log("EUDR compliance validation with privacy test passed");
+    }
+
+    function testPrivacyLayerIntegration() public {
+        console.log("Testing complete privacy layer integration...");
+
+        // Create multiple batches
+        vm.startPrank(processor);
+
+        uint256[] memory batchIds = new uint256[](3);
+        for (uint256 i = 0; i < 3; i++) {
+            batchIds[i] = coffeeToken.createBatch(
+                block.timestamp,
+                block.timestamp + 365 days,
+                1000 + (i * 100),
+                (1 + i) * 1 ether,
+                "Origin",
+                "Standard",
+                string(abi.encodePacked("ipfs://metadata-", vm.toString(i)))
+            );
+        }
+
+        vm.stopPrank();
+
+        // Configure different privacy levels for each batch
+        vm.startPrank(admin);
+
+        IPrivacyLayer.PrivacyLevel[3] memory levels = [
+            IPrivacyLayer.PrivacyLevel.PUBLIC,
+            IPrivacyLayer.PrivacyLevel.SELECTIVE,
+            IPrivacyLayer.PrivacyLevel.PRIVATE
+        ];
+
+        for (uint256 i = 0; i < 3; i++) {
+            privacyLayer.configureEUDRDisclosureRules(
+                batchIds[i],
+                levels[i],
+                string(abi.encodePacked("Privacy level ", vm.toString(i)))
+            );
+
+            // Add EUDR compliance claims
+            PrivacyLayer.ZKComplianceClaims memory claims = PrivacyLayer.ZKComplianceClaims({
+                deforestationStatus: "Compliant",
+                geolocationData: string(abi.encodePacked("Location ", vm.toString(i))),
+                complianceLevel: "High",
+                verificationMethod: "Satellite",
+                certificateHash: keccak256(abi.encodePacked("CERT_", i))
+            });
+
+            privacyLayer.updateEUDRComplianceClaims(batchIds[i], claims);
+        }
+
+        vm.stopPrank();
+
+        // Test access control for different user types
+        address[3] memory testUsers = [distributor, processor, admin];
+
+        for (uint256 batchIndex = 0; batchIndex < 3; batchIndex++) {
+            for (uint256 userIndex = 0; userIndex < 3; userIndex++) {
+                vm.startPrank(testUsers[userIndex]);
+
+                bool canAccess = privacyLayer.canAccessEUDRData(testUsers[userIndex], batchIds[batchIndex]);
+
+                // Public batch (index 0) - all can access
+                // Processor-only batch (index 1) - only processor can access
+                // Private batch (index 2) - only admin/owner can access
+                if (batchIndex == 0) {
+                    assertTrue(canAccess, "Public batch should allow all access");
+                } else if (batchIndex == 1) {
+                    bool shouldHaveAccess = (testUsers[userIndex] == processor);
+                    assertEq(canAccess, shouldHaveAccess, "Processor-only batch should restrict access correctly");
+                } else if (batchIndex == 2) {
+                    bool shouldHaveAccess = (testUsers[userIndex] == admin);
+                    assertEq(canAccess, shouldHaveAccess, "Private batch should restrict access correctly");
+                }
+
+                vm.stopPrank();
+            }
+        }
+
+        console.log("Complete privacy layer integration test passed");
     }
 
     function testQualityZKProofVerification() public {

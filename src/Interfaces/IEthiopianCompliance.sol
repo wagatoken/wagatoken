@@ -44,20 +44,101 @@ interface IEthiopianCompliance {
 
     struct BoETradeRegistration {
         uint256 batchId;
+        uint64 sellerId;              // Digital seller ID (8 bytes vs 20 bytes)
         address buyer;
-        address seller;
         uint256 quantity;
         uint256 valueUSD;
-        uint256 valueETB;
         string ectaPermitNumber;
         string qualityCertificate;
         string exportDocuments;
         uint256 registrationTimestamp;
         bool boERegistered;
+        bytes11 assignedOfframpPartner; // SWIFT code for offramp partner
+        bytes11 assignedBankingPartner; // SWIFT code for banking partner
+        OfframpPartnerType offrampType;
         bool fiatTransferInitiated;
         bool fiatTransferCompleted;
         string bankTransactionId;
-        address bankingPartner;
+        uint256 sellerPaymentConfirmed; // USD equivalent received by seller
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              EUDR COMPLIANCE STRUCTS                      */
+    /* -------------------------------------------------------------------------- */
+
+    struct EUDRCertificate {
+        string certificateId;
+        string issuer;               // "Rainforest Alliance", "Fair Trade", etc.
+        uint256 issueDate;
+        uint256 expiryDate;
+        bool isValid;
+        string geoDataHash;          // Hash of geolocation data for privacy
+        string complianceLevel;      // "Gold", "Silver", "Bronze"
+        string deforestationRisk;    // "Low", "Medium", "High"
+    }
+
+    struct GeolocationData {
+        string plotType;             // "point" or "polygon"
+        string coordinates;          // GeoJSON format hash for privacy
+        uint256 plotSize;            // in hectares
+        string verificationMethod;   // "GPS", "Satellite", "Survey"
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              SWIFT BANKING STRUCTS                        */
+    /* -------------------------------------------------------------------------- */
+
+    enum OfframpPartnerType {
+        DIRECT_BANK,      // Bank that handles both offramp and BoE
+        NON_BANK_FINTECH, // Fintech/payment processor needing bank connection
+        CRYPTO_EXCHANGE   // Crypto exchange needing bank connection
+    }
+
+    struct BankingCapabilities {
+        bytes11 swiftCode;           // Primary identifier (11 bytes vs 20 bytes)
+        string bankName;
+        bool canActAsOfframp;        // Can receive USD funds directly
+        bool canHandleForexSurrender; // Can surrender forex to BoE
+        OfframpPartnerType partnerType;
+        bytes11 connectedBankSwift;  // For non-bank partners
+        uint256 maxTransactionAmount;
+        bool isActive;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                           MULTI-STAGE TRANSFER STRUCTS                    */
+    /* -------------------------------------------------------------------------- */
+
+    enum TransferStage {
+        USDC_SENT_TO_OFFRAMP,          // Treasury -> Offramp Partner (USDC)
+        USDC_CONFIRMED_BY_OFFRAMP,     // Offramp confirms USDC receipt
+        FIAT_CONVERTED_AND_SENT,       // Offramp -> Bank (USD converted)
+        FIAT_CONFIRMED_BY_BANK,        // Bank confirms fiat receipt from offramp
+        BOE_FOREX_SURRENDERED,         // Bank -> BoE forex surrender completed
+        SELLER_PAYMENT_INITIATED,      // Bank -> Seller payment initiated
+        SELLER_PAYMENT_CONFIRMED       // Seller confirms USD equivalent receipt
+    }
+
+    struct FiatTransfer {
+        uint256 batchId;
+        uint64 sellerId;             // Digital seller ID
+        bytes11 offrampBankSwift;    // SWIFT code for offramp partner
+        bytes11 receivingBankSwift;  // SWIFT code for banking partner
+        uint256 usdAmountPaid;
+        uint256 usdAmountReceivedBySeller;
+        TransferStage currentStage;
+        mapping(TransferStage => bool) stageCompleted;
+        mapping(TransferStage => string) stageTransactionIds;
+        mapping(TransferStage => uint256) stageTimestamps;
+        bool sellerPaymentConfirmed;
+    }
+
+    struct OfframpTransfer {
+        bytes11 offrampPartner;      // SWIFT code of offramp partner
+        uint256 usdAmount;           // USD amount transferred
+        uint256 transferTimestamp;   // When transfer was initiated
+        bool transferCompleted;      // Whether offramp confirmed receipt
+        string transferTxHash;       // Transaction hash from offramp
     }
 
     /* -------------------------------------------------------------------------- */
@@ -81,6 +162,30 @@ interface IEthiopianCompliance {
     event BankingPartnerAdded(address indexed bankAddress, string bankName);
     event BankingPartnerRemoved(address indexed bankAddress);
     event PhysicalShipmentAuthorized(uint256 indexed batchId, address indexed buyer);
+
+    /* -------------------------------------------------------------------------- */
+    /*                              EUDR COMPLIANCE EVENTS                        */
+    /* -------------------------------------------------------------------------- */
+
+    event EUDRCertificateAdded(uint256 indexed batchId, string certificateId, string issuer);
+    event GeolocationDataAdded(uint256 indexed batchId, string plotType, uint256 plotSize);
+    event EUDRComplianceValidated(uint256 indexed batchId, bool isCompliant);
+
+    /* -------------------------------------------------------------------------- */
+    /*                              SWIFT BANKING EVENTS                          */
+    /* -------------------------------------------------------------------------- */
+
+    event BankingPartnerRegistered(bytes11 indexed swiftCode, address indexed bankAddress, string bankName);
+    event OfframpPartnerAssigned(uint256 indexed batchId, bytes11 indexed offrampSwift, OfframpPartnerType partnerType);
+
+    /* -------------------------------------------------------------------------- */
+    /*                           MULTI-STAGE TRANSFER EVENTS                      */
+    /* -------------------------------------------------------------------------- */
+
+    event FiatTransferStageConfirmed(uint256 indexed batchId, address indexed buyer, TransferStage stage, string transactionId);
+    event SellerPaymentInitiated(uint256 indexed batchId, address indexed buyer, uint64 indexed sellerId, uint256 usdAmount, string transactionId);
+    event SellerPaymentConfirmed(uint256 indexed batchId, address indexed buyer, uint64 indexed sellerId, uint256 usdAmountReceived, string transactionId);
+    event OfframpTransferExecuted(uint256 indexed batchId, address indexed buyer, bytes11 indexed offrampSwift, uint256 usdAmount, uint256 timestamp);
 
     /* -------------------------------------------------------------------------- */
     /*                              COMPLIANCE FUNCTIONS                          */
@@ -225,4 +330,163 @@ interface IEthiopianCompliance {
      * @return etbAmount Amount in ETB
      */
     function convertUSDToETB(uint256 usdAmount) external view returns (uint256 etbAmount);
+
+    /* -------------------------------------------------------------------------- */
+    /*                              EUDR COMPLIANCE FUNCTIONS                     */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Add EUDR certificate for a batch
+     * @param batchId Batch identifier
+     * @param certificate EUDR certificate details
+     */
+    function addEUDRCertificate(uint256 batchId, EUDRCertificate calldata certificate) external;
+
+    /**
+     * @dev Add geolocation data for a batch
+     * @param batchId Batch identifier
+     * @param geoData Geolocation data for EUDR compliance
+     */
+    function addGeolocationData(uint256 batchId, GeolocationData calldata geoData) external;
+
+    /**
+     * @dev Validate EUDR compliance for a batch
+     * @param batchId Batch identifier
+     * @return isCompliant Whether batch meets EUDR requirements
+     */
+    function validateEUDRCompliance(uint256 batchId) external view returns (bool isCompliant);
+
+    /* -------------------------------------------------------------------------- */
+    /*                              SWIFT BANKING FUNCTIONS                       */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Register banking partner with SWIFT code
+     * @param swiftCode Bank's SWIFT code (11 characters)
+     * @param bankAddress Bank's Ethereum address
+     * @param bankName Bank's name
+     * @param capabilities Bank's capabilities struct
+     */
+    function registerBankingPartner(
+        bytes11 swiftCode,
+        address bankAddress,
+        string memory bankName,
+        BankingCapabilities memory capabilities
+    ) external;
+
+    /**
+     * @dev Get banking partner capabilities by SWIFT code
+     * @param swiftCode Bank's SWIFT code
+     * @return capabilities Banking capabilities struct
+     */
+    function getBankingCapabilities(bytes11 swiftCode) external view returns (BankingCapabilities memory capabilities);
+
+    /**
+     * @dev Assign offramp partner for a batch
+     * @param batchId Batch identifier
+     * @return offrampSwift Assigned offramp partner SWIFT code
+     * @return partnerType Type of offramp partner
+     */
+    function assignOfframpPartner(uint256 batchId) external returns (bytes11 offrampSwift, OfframpPartnerType partnerType);
+
+    /* -------------------------------------------------------------------------- */
+    /*                           MULTI-STAGE TRANSFER FUNCTIONS                   */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Confirm fiat transfer stage completion
+     * @param batchId Batch identifier
+     * @param buyer Buyer address
+     * @param stage Transfer stage being confirmed
+     * @param transactionId Transaction identifier for this stage
+     */
+    function confirmFiatTransferStage(
+        uint256 batchId,
+        address buyer,
+        TransferStage stage,
+        string memory transactionId
+    ) external;
+
+    /**
+     * @dev Confirm seller payment receipt
+     * @param batchId Batch identifier
+     * @param buyer Buyer address
+     * @param usdAmountReceived USD equivalent received by seller
+     * @param sellerTransactionId Seller's transaction identifier
+     */
+    function confirmSellerPayment(
+        uint256 batchId,
+        address buyer,
+        uint256 usdAmountReceived,
+        string memory sellerTransactionId
+    ) external;
+
+    /**
+     * @dev Record offramp transfer initiation
+     * @param batchId Batch identifier
+     * @param buyer Buyer address
+     * @param offrampSwift Offramp partner SWIFT code
+     * @param usdAmount USD amount transferred
+     */
+    function recordOfframpTransferInitiated(
+        uint256 batchId,
+        address buyer,
+        bytes11 offrampSwift,
+        uint256 usdAmount
+    ) external;
+
+    /**
+     * @dev Get fiat transfer details
+     * @param batchId Batch identifier
+     * @param buyer Buyer address
+     * @return sellerId Seller ID
+     * @return offrampBankSwift Offramp bank SWIFT code
+     * @return receivingBankSwift Receiving bank SWIFT code
+     * @return usdAmountPaid USD amount paid
+     * @return usdAmountReceivedBySeller USD amount received by seller
+     * @return currentStage Current transfer stage
+     * @return sellerPaymentConfirmed Whether seller payment is confirmed
+     */
+    function getFiatTransfer(uint256 batchId, address buyer) external view returns (
+        uint64 sellerId,
+        bytes11 offrampBankSwift,
+        bytes11 receivingBankSwift,
+        uint256 usdAmountPaid,
+        uint256 usdAmountReceivedBySeller,
+        TransferStage currentStage,
+        bool sellerPaymentConfirmed
+    );
+
+    /**
+     * @dev Get transfer stage status
+     * @param batchId Batch identifier
+     * @param buyer Buyer address
+     * @param stage Stage to check
+     * @return completed Whether stage is completed
+     * @return transactionId Transaction ID for the stage
+     * @return timestamp Timestamp when stage was completed
+     */
+    function getTransferStageStatus(
+        uint256 batchId,
+        address buyer,
+        TransferStage stage
+    ) external view returns (bool completed, string memory transactionId, uint256 timestamp);
+
+    /* -------------------------------------------------------------------------- */
+    /*                              UTILITY FUNCTIONS                             */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Resolve SWIFT code to Ethereum address
+     * @param swiftCode Bank's SWIFT code
+     * @return bankAddress Bank's Ethereum address
+     */
+    function resolveBankAddress(bytes11 swiftCode) external view returns (address bankAddress);
+
+    /**
+     * @dev Resolve Ethereum address to SWIFT code
+     * @param bankAddress Bank's Ethereum address
+     * @return swiftCode Bank's SWIFT code
+     */
+    function resolveSwiftCode(address bankAddress) external view returns (bytes11 swiftCode);
 }

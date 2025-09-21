@@ -5,6 +5,9 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Groth16Verifier as PricePrivacyCircuitVerifier} from "./verifiers/PricePrivacyCircuitVerifier.sol";
 import {Groth16Verifier as QualityTierCircuitVerifier} from "./verifiers/QualityTierCircuitVerifier.sol";
 import {Groth16Verifier as SupplyChainPrivacyCircuitVerifier} from "./verifiers/SupplyChainPrivacyCircuitVerifier.sol";
+import {EUDRDeforestationCircuitVerifier} from "./verifiers/EUDRDeforestationCircuitVerifier.sol";
+import {EUDRGeolocationCircuitVerifier} from "./verifiers/EUDRGeolocationCircuitVerifier.sol";
+import {EthiopianComplianceCircuitVerifier} from "./verifiers/EthiopianComplianceCircuitVerifier.sol";
 
 /**
  * @title CircomVerifier
@@ -20,9 +23,12 @@ contract CircomVerifier is AccessControl {
     /* -------------------------------------------------------------------------- */
 
     enum ProofType {
-        PRICE_COMPETITIVENESS,    // Prove price is competitive without revealing actual price
-        QUALITY_STANDARDS,        // Prove quality meets standards without revealing scores  
-        SUPPLY_CHAIN_PROVENANCE   // Prove origin/traceability without revealing sensitive details
+        PRICE_COMPETITIVENESS,         // Prove price is competitive without revealing actual price
+        QUALITY_STANDARDS,             // Prove quality meets standards without revealing scores
+        SUPPLY_CHAIN_PROVENANCE,       // Prove origin/traceability without revealing sensitive details
+        EUDR_DEFORESTATION_COMPLIANCE, // Prove deforestation-free status without revealing geolocation
+        EUDR_GEOLOCATION_VERIFICATION, // Prove valid geolocation data without revealing coordinates
+        ETHIOPIAN_COMPLIANCE           // Prove Ethiopian export compliance (ECTA, quality, origin)
     }
 
     struct ZKProof {
@@ -39,9 +45,15 @@ contract CircomVerifier is AccessControl {
         bool hasPriceProof;
         bool hasQualityProof;
         bool hasSupplyChainProof;
-        string priceClaimText;     
-        string qualityClaimText;   
+        bool hasEUDRDeforestationProof;
+        bool hasEUDRGeolocationProof;
+        bool hasEthiopianComplianceProof;
+        string priceClaimText;
+        string qualityClaimText;
         string supplyChainClaimText;
+        string eudrDeforestationClaimText;
+        string eudrGeolocationClaimText;
+        string ethiopianComplianceClaimText;
     }
 
     /* -------------------------------------------------------------------------- */
@@ -52,6 +64,9 @@ contract CircomVerifier is AccessControl {
     PricePrivacyCircuitVerifier public immutable priceVerifier;
     QualityTierCircuitVerifier public immutable qualityVerifier;
     SupplyChainPrivacyCircuitVerifier public immutable supplyChainVerifier;
+    EUDRDeforestationCircuitVerifier public immutable eudrDeforestationVerifier;
+    EUDRGeolocationCircuitVerifier public immutable eudrGeolocationVerifier;
+    EthiopianComplianceCircuitVerifier public immutable ethiopianComplianceVerifier;
 
     // Proof storage
     mapping(uint256 => mapping(ProofType => ZKProof)) public batchProofs;
@@ -75,6 +90,18 @@ contract CircomVerifier is AccessControl {
     );
 
     /* -------------------------------------------------------------------------- */
+    /*                                  Errors                                    */
+    /* -------------------------------------------------------------------------- */
+
+    error CircomVerifier__TooManyPublicSignals_verifyPriceCompetitiveness();
+    error CircomVerifier__TooManyPublicSignals_verifyQualityStandards();
+    error CircomVerifier__TooManyPublicSignals_verifySupplyChainProvenance();
+    error CircomVerifier__TooManyPublicSignals_verifyEUDRDeforestationCompliance();
+    error CircomVerifier__TooManyPublicSignals_verifyEUDRGeolocationVerification();
+    error CircomVerifier__TooManyPublicSignals_verifyEthiopianCompliance();
+    error CircomVerifier__InvalidProofLength__decodeGroth16Proof();
+
+    /* -------------------------------------------------------------------------- */
     /*                                Constructor                                 */
     /* -------------------------------------------------------------------------- */
 
@@ -83,6 +110,9 @@ contract CircomVerifier is AccessControl {
         priceVerifier = new PricePrivacyCircuitVerifier();
         qualityVerifier = new QualityTierCircuitVerifier();
         supplyChainVerifier = new SupplyChainPrivacyCircuitVerifier();
+        eudrDeforestationVerifier = new EUDRDeforestationCircuitVerifier();
+        eudrGeolocationVerifier = new EUDRGeolocationCircuitVerifier();
+        ethiopianComplianceVerifier = new EthiopianComplianceCircuitVerifier();
 
         // Setup roles
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -107,7 +137,9 @@ contract CircomVerifier is AccessControl {
         uint256[] calldata publicSignals,
         string calldata publicClaim
     ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
-        require(publicSignals.length <= 5, "Too many public signals for price circuit");
+        if (publicSignals.length > 5) {
+            revert CircomVerifier__TooManyPublicSignals_verifyPriceCompetitiveness();
+        }
 
         // Decode Groth16 proof from bytes
         (uint[2] memory _pA, uint[2][2] memory _pB, uint[2] memory _pC) = _decodeGroth16Proof(zkProofData);
@@ -157,7 +189,9 @@ contract CircomVerifier is AccessControl {
         uint256[] calldata publicSignals,
         string calldata publicClaim
     ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
-        require(publicSignals.length <= 5, "Too many public signals for quality circuit");
+        if (publicSignals.length > 5) {
+            revert CircomVerifier__TooManyPublicSignals_verifyQualityStandards();
+        }
 
         // Decode Groth16 proof from bytes
         (uint[2] memory _pA, uint[2][2] memory _pB, uint[2] memory _pC) = _decodeGroth16Proof(zkProofData);
@@ -206,7 +240,9 @@ contract CircomVerifier is AccessControl {
         uint256[] calldata publicSignals,
         string calldata publicClaim
     ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
-        require(publicSignals.length <= 7, "Too many public signals for supply chain circuit");
+        if (publicSignals.length > 7) {
+            revert CircomVerifier__TooManyPublicSignals_verifySupplyChainProvenance();
+        }
 
         // Decode Groth16 proof from bytes
         (uint[2] memory _pA, uint[2][2] memory _pB, uint[2] memory _pC) = _decodeGroth16Proof(zkProofData);
@@ -242,6 +278,162 @@ contract CircomVerifier is AccessControl {
         return verified;
     }
 
+    /**
+     * @dev Verify EUDR deforestation compliance using real ZK circuit
+     * @param batchId Batch identifier
+     * @param zkProofData ZK proof from EUDRDeforestationCircuit (encoded Groth16 proof)
+     * @param publicSignals Public inputs: [deforestationRisk, complianceLevel, plotSize, verificationTimestamp]
+     * @param publicClaim Public claim text (e.g., "Deforestation-Free - EUDR Compliant")
+     */
+    function verifyEUDRDeforestationCompliance(
+        uint256 batchId,
+        bytes calldata zkProofData,
+        uint256[] calldata publicSignals,
+        string calldata publicClaim
+    ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
+        if (publicSignals.length > 5) {
+            revert CircomVerifier__TooManyPublicSignals_verifyEUDRDeforestationCompliance();
+        }
+
+        // Decode Groth16 proof from bytes
+        (uint[2] memory _pA, uint[2][2] memory _pB, uint[2] memory _pC) = _decodeGroth16Proof(zkProofData);
+
+        // Convert public signals to fixed-size array for verifier
+        uint[5] memory _pubSignals;
+        for (uint i = 0; i < publicSignals.length; i++) {
+            _pubSignals[i] = publicSignals[i];
+        }
+
+        // Verify ZK proof using circuit verifier
+        verified = eudrDeforestationVerifier.verifyProof(_pA, _pB, _pC, _pubSignals);
+
+        if (verified) {
+            bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, block.timestamp));
+
+            batchProofs[batchId][ProofType.EUDR_DEFORESTATION_COMPLIANCE] = ZKProof({
+                proofHash: proofHash,
+                proofType: ProofType.EUDR_DEFORESTATION_COMPLIANCE,
+                isVerified: true,
+                timestamp: block.timestamp,
+                publicClaim: publicClaim,
+                proofData: zkProofData,
+                publicSignals: publicSignals
+            });
+
+            batchProofStatus[batchId].hasEUDRDeforestationProof = true;
+            batchProofStatus[batchId].eudrDeforestationClaimText = publicClaim;
+
+            emit ProofVerified(batchId, ProofType.EUDR_DEFORESTATION_COMPLIANCE, publicClaim, proofHash);
+            emit CircuitProofGenerated(batchId, ProofType.EUDR_DEFORESTATION_COMPLIANCE, publicSignals);
+        }
+
+        return verified;
+    }
+
+    /**
+     * @dev Verify EUDR geolocation verification using real ZK circuit
+     * @param batchId Batch identifier
+     * @param zkProofData ZK proof from EUDRGeolocationCircuit (encoded Groth16 proof)
+     * @param publicSignals Public inputs: [plotType, plotSize, verificationMethod, complianceLevel, timestamp]
+     * @param publicClaim Public claim text (e.g., "Geolocation Verified - Plot Size: 50ha")
+     */
+    function verifyEUDRGeolocationVerification(
+        uint256 batchId,
+        bytes calldata zkProofData,
+        uint256[] calldata publicSignals,
+        string calldata publicClaim
+    ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
+        if (publicSignals.length > 7) {
+            revert CircomVerifier__TooManyPublicSignals_verifyEUDRGeolocationVerification();
+        }
+
+        // Decode Groth16 proof from bytes
+        (uint[2] memory _pA, uint[2][2] memory _pB, uint[2] memory _pC) = _decodeGroth16Proof(zkProofData);
+
+        // Convert public signals to fixed-size array for verifier
+        uint[7] memory _pubSignals;
+        for (uint i = 0; i < publicSignals.length; i++) {
+            _pubSignals[i] = publicSignals[i];
+        }
+
+        // Verify ZK proof using circuit verifier
+        verified = eudrGeolocationVerifier.verifyProof(_pA, _pB, _pC, _pubSignals);
+
+        if (verified) {
+            bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, block.timestamp));
+
+            batchProofs[batchId][ProofType.EUDR_GEOLOCATION_VERIFICATION] = ZKProof({
+                proofHash: proofHash,
+                proofType: ProofType.EUDR_GEOLOCATION_VERIFICATION,
+                isVerified: true,
+                timestamp: block.timestamp,
+                publicClaim: publicClaim,
+                proofData: zkProofData,
+                publicSignals: publicSignals
+            });
+
+            batchProofStatus[batchId].hasEUDRGeolocationProof = true;
+            batchProofStatus[batchId].eudrGeolocationClaimText = publicClaim;
+
+            emit ProofVerified(batchId, ProofType.EUDR_GEOLOCATION_VERIFICATION, publicClaim, proofHash);
+            emit CircuitProofGenerated(batchId, ProofType.EUDR_GEOLOCATION_VERIFICATION, publicSignals);
+        }
+
+        return verified;
+    }
+
+    /**
+     * @dev Verify Ethiopian compliance using real ZK circuit
+     * @param batchId Batch identifier
+     * @param zkProofData ZK proof from EthiopianComplianceCircuit (encoded Groth16 proof)
+     * @param publicSignals Public inputs: [hasECTA, hasQuality, hasOrigin, regionCode, complianceLevel]
+     * @param publicClaim Public claim text (e.g., "Ethiopian Export Compliant - ECTA Approved")
+     */
+    function verifyEthiopianCompliance(
+        uint256 batchId,
+        bytes calldata zkProofData,
+        uint256[] calldata publicSignals,
+        string calldata publicClaim
+    ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
+        if (publicSignals.length > 6) {
+            revert CircomVerifier__TooManyPublicSignals_verifyEthiopianCompliance();
+        }
+
+        // Decode Groth16 proof from bytes
+        (uint[2] memory _pA, uint[2][2] memory _pB, uint[2] memory _pC) = _decodeGroth16Proof(zkProofData);
+
+        // Convert public signals to fixed-size array for verifier
+        uint[6] memory _pubSignals;
+        for (uint i = 0; i < publicSignals.length; i++) {
+            _pubSignals[i] = publicSignals[i];
+        }
+
+        // Verify ZK proof using circuit verifier
+        verified = ethiopianComplianceVerifier.verifyProof(_pA, _pB, _pC, _pubSignals);
+
+        if (verified) {
+            bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, block.timestamp));
+
+            batchProofs[batchId][ProofType.SUPPLY_CHAIN_PROVENANCE] = ZKProof({
+                proofHash: proofHash,
+                proofType: ProofType.SUPPLY_CHAIN_PROVENANCE,
+                isVerified: true,
+                timestamp: block.timestamp,
+                publicClaim: publicClaim,
+                proofData: zkProofData,
+                publicSignals: publicSignals
+            });
+
+            batchProofStatus[batchId].hasEthiopianComplianceProof = true;
+            batchProofStatus[batchId].ethiopianComplianceClaimText = publicClaim;
+
+            emit ProofVerified(batchId, ProofType.SUPPLY_CHAIN_PROVENANCE, publicClaim, proofHash);
+            emit CircuitProofGenerated(batchId, ProofType.SUPPLY_CHAIN_PROVENANCE, publicSignals);
+        }
+
+        return verified;
+    }
+
     /* -------------------------------------------------------------------------- */
     /*                            Internal Functions                              */
     /* -------------------------------------------------------------------------- */
@@ -260,7 +452,9 @@ contract CircomVerifier is AccessControl {
         uint[2][2] memory _pB,
         uint[2] memory _pC
     ) {
-        require(proofBytes.length == 256, "Invalid proof length");
+        if (proofBytes.length != 256) {
+            revert CircomVerifier__InvalidProofLength__decodeGroth16Proof();
+        }
 
         // Decode point A (G1: x, y) - first 64 bytes
         assembly {
@@ -307,6 +501,26 @@ contract CircomVerifier is AccessControl {
     }
 
     /**
+     * @dev Check if batch has EUDR compliance proofs
+     */
+    function hasEUDRComplianceProofs(
+        uint256 batchId
+    ) external view returns (bool hasEUDRProofs) {
+        BatchProofStatus memory status = batchProofStatus[batchId];
+        return status.hasEUDRDeforestationProof && status.hasEUDRGeolocationProof;
+    }
+
+    /**
+     * @dev Check if batch has Ethiopian compliance proofs
+     */
+    function hasEthiopianComplianceProofs(
+        uint256 batchId
+    ) external view returns (bool hasEthiopianProofs) {
+        BatchProofStatus memory status = batchProofStatus[batchId];
+        return status.hasEthiopianComplianceProof;
+    }
+
+    /**
      * @dev Get individual proof for a batch and type
      */
     function getProof(
@@ -331,17 +545,46 @@ contract CircomVerifier is AccessControl {
     }
 
     /**
+     * @dev Get EUDR compliance claims for a batch
+     */
+    function getEUDRComplianceClaims(
+        uint256 batchId
+    ) external view returns (
+        string memory deforestationClaim,
+        string memory geolocationClaim
+    ) {
+        BatchProofStatus memory status = batchProofStatus[batchId];
+        return (status.eudrDeforestationClaimText, status.eudrGeolocationClaimText);
+    }
+
+    /**
+     * @dev Get Ethiopian compliance claims for a batch
+     */
+    function getEthiopianComplianceClaims(
+        uint256 batchId
+    ) external view returns (string memory ethiopianComplianceClaim) {
+        BatchProofStatus memory status = batchProofStatus[batchId];
+        return status.ethiopianComplianceClaimText;
+    }
+
+    /**
      * @dev Get verifier contract addresses
      */
     function getVerifierAddresses() external view returns (
         address priceVerifierAddr,
         address qualityVerifierAddr,
-        address supplyChainVerifierAddr
+        address supplyChainVerifierAddr,
+        address eudrDeforestationVerifierAddr,
+        address eudrGeolocationVerifierAddr,
+        address ethiopianComplianceVerifierAddr
     ) {
         return (
             address(priceVerifier),
             address(qualityVerifier),
-            address(supplyChainVerifier)
+            address(supplyChainVerifier),
+            address(eudrDeforestationVerifier),
+            address(eudrGeolocationVerifier),
+            address(ethiopianComplianceVerifier)
         );
     }
 

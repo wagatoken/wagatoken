@@ -114,50 +114,305 @@ contract WAGAZKIntegration is Test {
 
         vm.stopPrank();
 
-        // 2. Test ZK proof verification (basic functionality)
+        // 2. Test Enhanced ZK proof verification (original + new compliance proofs)
         vm.startPrank(admin);
 
-        // Test adding pricing proof
+        // Test adding pricing proof (original)
         bytes memory mockPricingProof = _createValidMockGroth16Proof();
         zkManager.addZKProof(
             batchId,
             mockPricingProof,
-            IZKVerifier.ProofType(0), // PRICE_COMPETITIVENESS
+            IZKVerifier.ProofType.PRICE_COMPETITIVENESS,
             "premium"
         );
 
         console.log("Pricing proof added successfully");
 
-        // Test adding quality proof
+        // Test adding quality proof (original)
         bytes memory mockQualityProof = _createValidMockGroth16Proof();
         zkManager.addZKProof(
             batchId,
             mockQualityProof,
-            IZKVerifier.ProofType(1), // QUALITY_STANDARDS
+            IZKVerifier.ProofType.QUALITY_STANDARDS,
             "premium"
         );
 
         console.log("Quality proof added successfully");
 
-        // Test adding supply chain proof
+        // Test adding supply chain proof (original)
         bytes memory mockSupplyChainProof = _createValidMockGroth16Proof();
         zkManager.addZKProof(
             batchId,
             mockSupplyChainProof,
-            IZKVerifier.ProofType(2), // SUPPLY_CHAIN_PROVENANCE
+            IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE,
             "compliance"
         );
 
         console.log("Supply chain proof added successfully");
 
-        // Verify that all proofs were added
-        bool hasProofs = zkManager.hasAllRequiredProofs(batchId);
-        assertTrue(hasProofs, "Batch should have all required proofs");
-        console.log("All required proofs verified successfully");
+        // Test adding EUDR deforestation proof (NEW)
+        bytes memory mockEUDRDeforestationProof = _createValidMockGroth16Proof();
+        zkManager.addEUDRComplianceZKProof(
+            batchId,
+            mockEUDRDeforestationProof,
+            IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
+            "Deforestation-Free - EUDR Compliant"
+        );
+
+        console.log("EUDR deforestation proof added successfully");
+
+        // Test adding EUDR geolocation proof (NEW)
+        bytes memory mockEUDRGeolocationProof = _createValidMockGroth16Proof();
+        zkManager.addEUDRComplianceZKProof(
+            batchId,
+            mockEUDRGeolocationProof,
+            IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION,
+            "Geolocation Verified - Plot Size: 50ha"
+        );
+
+        console.log("EUDR geolocation proof added successfully");
+
+        // Test adding ECTA permit proof (NEW)
+        bytes memory mockECTAProof = _createValidMockGroth16Proof();
+        zkManager.addEthiopianComplianceZKProof(
+            batchId,
+            mockECTAProof,
+            IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY,
+            "ECTA Permit Valid - Export Approved"
+        );
+
+        console.log("ECTA permit proof added successfully");
+
+        // Test adding quality certificate proof (NEW)
+        bytes memory mockCertificateProof = _createValidMockGroth16Proof();
+        zkManager.addEthiopianComplianceZKProof(
+            batchId,
+            mockCertificateProof,
+            IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY,
+            "Quality Certificate Authentic - SCA Certified"
+        );
+
+        console.log("Quality certificate proof added successfully");
+
+        // Test adding origin verification proof (NEW)
+        bytes memory mockOriginProof = _createValidMockGroth16Proof();
+        zkManager.addEthiopianComplianceZKProof(
+            batchId,
+            mockOriginProof,
+            IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF,
+            "Origin Verified - Single-Origin Ethiopian"
+        );
+
+        console.log("Origin verification proof added successfully");
+
+        // Test adding BoE compliance proof (NEW)
+        bytes memory mockBoEProof = _createValidMockGroth16Proof();
+        zkManager.addEthiopianComplianceZKProof(
+            batchId,
+            mockBoEProof,
+            IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE,
+            "BoE Forex Compliance - Export Approved"
+        );
+
+        console.log("BoE compliance proof added successfully");
+
+        // Verify that all original proofs were added
+        bool hasOriginalProofs = zkManager.hasAllRequiredProofs(batchId);
+        assertTrue(hasOriginalProofs, "Batch should have all required original proofs");
+        console.log("All required original proofs verified successfully");
+
+        // Verify that EUDR proofs were added
+        bool hasEUDRProofs = zkManager.hasEUDRComplianceProofs(batchId);
+        assertTrue(hasEUDRProofs, "Batch should have EUDR compliance proofs");
+        console.log("EUDR compliance proofs verified successfully");
+
+        // Verify that Ethiopian proofs were added
+        bool hasEthiopianProofs = zkManager.hasEthiopianComplianceProofs(batchId);
+        assertTrue(hasEthiopianProofs, "Batch should have Ethiopian compliance proofs");
+        console.log("Ethiopian compliance proofs verified successfully");
+
+        // Test compliance validation
+        bool eudrCompliant = zkManager.validateEUDRZKCompliance(batchId);
+        assertTrue(eudrCompliant, "Batch should be EUDR compliant");
+
+        bool ethiopianCompliant = zkManager.validateEthiopianZKCompliance(batchId);
+        assertTrue(ethiopianCompliant, "Batch should be Ethiopian compliant");
+
+        console.log("All enhanced ZK compliance proofs verified successfully");
 
         vm.stopPrank();
     }
     
+    function testEUDRComplianceZKIntegration() public {
+        console.log("Testing EUDR compliance ZK integration...");
+
+        // Create a batch
+        vm.startPrank(processor);
+        uint256 batchId = coffeeToken.createBatch(
+            block.timestamp,
+            block.timestamp + 365 days,
+            1000,
+            1 ether,
+            "Origin",
+            "Standard",
+            "ipfs://test-metadata"
+        );
+        vm.stopPrank();
+
+        // Test EUDR deforestation proof addition
+        vm.startPrank(admin);
+        bytes memory deforestationProof = _createValidMockGroth16Proof();
+        zkManager.addEUDRComplianceZKProof(
+            batchId,
+            deforestationProof,
+            IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
+            "Deforestation-Free - Verified by Satellite Imagery"
+        );
+
+        // Test EUDR geolocation proof addition
+        bytes memory geolocationProof = _createValidMockGroth16Proof();
+        zkManager.addEUDRComplianceZKProof(
+            batchId,
+            geolocationProof,
+            IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION,
+            "Geolocation Verified - GPS Coordinates: 8.5476N, 39.2695E"
+        );
+
+        // Verify EUDR compliance
+        bool eudrCompliant = zkManager.validateEUDRZKCompliance(batchId);
+        assertTrue(eudrCompliant, "Batch should be EUDR compliant");
+
+        // Get compliance claims
+        (
+            string memory deforestationClaim,
+            string memory geolocationClaim
+        ) = zkManager.getEUDRComplianceClaims(batchId);
+
+        assertEq(deforestationClaim, "Deforestation-Free - Verified by Satellite Imagery");
+        assertEq(geolocationClaim, "Geolocation Verified - GPS Coordinates: 8.5476N, 39.2695E");
+
+        console.log("EUDR compliance ZK integration test passed");
+        vm.stopPrank();
+    }
+
+    function testEthiopianComplianceZKIntegration() public {
+        console.log("Testing Ethiopian compliance ZK integration...");
+
+        // Create a batch
+        vm.startPrank(processor);
+        uint256 batchId = coffeeToken.createBatch(
+            block.timestamp,
+            block.timestamp + 365 days,
+            1000,
+            1 ether,
+            "Origin",
+            "Standard",
+            "ipfs://test-metadata"
+        );
+        vm.stopPrank();
+
+        // Test Ethiopian compliance proofs
+        vm.startPrank(admin);
+
+        // ECTA permit validity
+        bytes memory ectaProof = _createValidMockGroth16Proof();
+        zkManager.addEthiopianComplianceZKProof(
+            batchId,
+            ectaProof,
+            IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY,
+            "ECTA Export Permit Valid - NBE Approved"
+        );
+
+        // Quality certificate authenticity
+        bytes memory qualityProof = _createValidMockGroth16Proof();
+        zkManager.addEthiopianComplianceZKProof(
+            batchId,
+            qualityProof,
+            IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY,
+            "Quality Certificate Authentic - SCA Certified"
+        );
+
+        // Origin verification
+        bytes memory originProof = _createValidMockGroth16Proof();
+        zkManager.addEthiopianComplianceZKProof(
+            batchId,
+            originProof,
+            IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF,
+            "Origin Verified - Single Estate Yirgacheffe"
+        );
+
+        // BoE forex compliance
+        bytes memory boeProof = _createValidMockGroth16Proof();
+        zkManager.addEthiopianComplianceZKProof(
+            batchId,
+            boeProof,
+            IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE,
+            "BoE Forex Compliance - Export Declaration Filed"
+        );
+
+        // Verify Ethiopian compliance
+        bool ethiopianCompliant = zkManager.validateEthiopianZKCompliance(batchId);
+        assertTrue(ethiopianCompliant, "Batch should be Ethiopian compliant");
+
+        // Get compliance claims
+        string memory ethiopianClaim = zkManager.getEthiopianComplianceClaims(batchId);
+        assertEq(ethiopianClaim, "BoE Forex Compliance - Export Declaration Filed"); // Last added proof
+
+        console.log("Ethiopian compliance ZK integration test passed");
+        vm.stopPrank();
+    }
+
+    function testCompleteComplianceZKWorkflow() public {
+        console.log("Testing complete compliance ZK workflow...");
+
+        // Create a batch
+        vm.startPrank(processor);
+        uint256 batchId = coffeeToken.createBatch(
+            block.timestamp,
+            block.timestamp + 365 days,
+            1000,
+            1 ether,
+            "Origin",
+            "Standard",
+            "ipfs://test-metadata"
+        );
+        vm.stopPrank();
+
+        // Add all compliance proofs
+        vm.startPrank(admin);
+
+        // Original proofs
+        zkManager.addZKProof(batchId, _createValidMockGroth16Proof(), IZKVerifier.ProofType.PRICE_COMPETITIVENESS, "Premium pricing verified");
+        zkManager.addZKProof(batchId, _createValidMockGroth16Proof(), IZKVerifier.ProofType.QUALITY_STANDARDS, "SCA certified quality");
+        zkManager.addZKProof(batchId, _createValidMockGroth16Proof(), IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE, "Full traceability verified");
+
+        // EUDR compliance proofs
+        zkManager.addEUDRComplianceZKProof(batchId, _createValidMockGroth16Proof(), IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE, "Deforestation-free verified");
+        zkManager.addEUDRComplianceZKProof(batchId, _createValidMockGroth16Proof(), IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION, "Geolocation verified");
+
+        // Ethiopian compliance proofs
+        zkManager.addEthiopianComplianceZKProof(batchId, _createValidMockGroth16Proof(), IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY, "ECTA permit valid");
+        zkManager.addEthiopianComplianceZKProof(batchId, _createValidMockGroth16Proof(), IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY, "Quality certificate authentic");
+        zkManager.addEthiopianComplianceZKProof(batchId, _createValidMockGroth16Proof(), IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF, "Origin verified");
+        zkManager.addEthiopianComplianceZKProof(batchId, _createValidMockGroth16Proof(), IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE, "BoE forex compliant");
+
+        // Verify complete compliance
+        bool hasOriginalProofs = zkManager.hasAllRequiredProofs(batchId);
+        bool hasEUDRProofs = zkManager.hasEUDRComplianceProofs(batchId);
+        bool hasEthiopianProofs = zkManager.hasEthiopianComplianceProofs(batchId);
+        bool eudrCompliant = zkManager.validateEUDRZKCompliance(batchId);
+        bool ethiopianCompliant = zkManager.validateEthiopianZKCompliance(batchId);
+
+        assertTrue(hasOriginalProofs, "Should have original proofs");
+        assertTrue(hasEUDRProofs, "Should have EUDR proofs");
+        assertTrue(hasEthiopianProofs, "Should have Ethiopian proofs");
+        assertTrue(eudrCompliant, "Should be EUDR compliant");
+        assertTrue(ethiopianCompliant, "Should be Ethiopian compliant");
+
+        console.log("Complete compliance ZK workflow test passed");
+        vm.stopPrank();
+    }
+
     function testPrivacyLevels() public {
         vm.startPrank(admin);
 

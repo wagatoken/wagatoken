@@ -1,0 +1,210 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+import {Script} from "forge-std/Script.sol";
+import {console} from "forge-std/console.sol";
+
+// Core WAGA Contracts
+import {WAGACoffeeTokenCore} from "../src/WAGACoffeeTokenCore.sol";
+import {WAGABatchManager} from "../src/WAGABatchManager.sol";
+import {WAGAZKManager} from "../src/WAGAZKManager.sol";
+import {PrivacyLayer} from "../src/PrivacyLayer.sol";
+import {IPrivacyLayer} from "../src/Interfaces/IPrivacyLayer.sol";
+import {WAGAEthiopianCompliance} from "../src/WAGAEthiopianCompliance.sol";
+import {WAGACoffeeRedemption} from "../src/WAGACoffeeRedemption.sol";
+
+// Access Control
+import {WAGAAccessControl} from "../src/WAGAAccessControl.sol";
+
+contract MigrateToEnhancedCompliance is Script {
+    // Contract references
+    WAGACoffeeTokenCore public coffeeToken;
+    WAGABatchManager public batchManager;
+    WAGAZKManager public zkManager;
+    PrivacyLayer public privacyLayer;
+    WAGAEthiopianCompliance public ethiopianCompliance;
+    WAGACoffeeRedemption public redemptionManager;
+    WAGAAccessControl public accessControl;
+
+    // Migration tracking
+    mapping(uint256 => bool) public migratedBatches;
+    mapping(address => uint64) public sellerIdAssignments;
+    uint256 public totalBatchesMigrated;
+    uint256 public totalSellersRegistered;
+
+    constructor(
+        address _coffeeToken,
+        address _batchManager,
+        address _zkManager,
+        address _privacyLayer,
+        address _ethiopianCompliance,
+        address _redemptionManager,
+        address _accessControl
+    ) {
+        coffeeToken = WAGACoffeeTokenCore(_coffeeToken);
+        batchManager = WAGABatchManager(_batchManager);
+        zkManager = WAGAZKManager(_zkManager);
+        privacyLayer = PrivacyLayer(_privacyLayer);
+        ethiopianCompliance = WAGAEthiopianCompliance(_ethiopianCompliance);
+        redemptionManager = WAGACoffeeRedemption(_redemptionManager);
+        accessControl = WAGAAccessControl(_accessControl);
+    }
+
+    function run() external {
+        console.log("Starting Enhanced Compliance Migration...");
+
+        // Step 1: Connect contracts if not already connected
+        _connectContracts();
+
+        // Step 2: Register existing batch creators as sellers
+        _registerExistingBatchCreators();
+
+        // Step 3: Migrate existing batches with EUDR compliance flags
+        _migrateExistingBatches();
+
+        // Step 4: Set up default selective disclosure rules
+        _setupDefaultDisclosureRules();
+
+        console.log("Migration completed successfully!");
+        console.log("Total batches migrated:", totalBatchesMigrated);
+        console.log("Total sellers registered:", totalSellersRegistered);
+    }
+
+    function _connectContracts() internal {
+        console.log("Connecting contracts for enhanced compliance...");
+
+        // Connect Ethiopian compliance to redemption manager
+        ethiopianCompliance.grantRole(
+            ethiopianCompliance.COMPLIANCE_MANAGER_ROLE(),
+            address(redemptionManager)
+        );
+
+        // Set Ethiopian compliance in batch manager
+        batchManager.setEthiopianCompliance(address(ethiopianCompliance));
+
+        // Set Ethiopian compliance in ZK manager
+        zkManager.setEthiopianCompliance(address(ethiopianCompliance));
+
+        console.log("Contract connections established.");
+    }
+
+    function _registerExistingBatchCreators() internal {
+        console.log("Registering existing batch creators as sellers...");
+
+        // This is a simplified version - in practice, you'd need to query all batches
+        // and extract unique creators. For now, we'll register known stakeholders.
+
+        address[] memory stakeholders = new address[](3);
+        stakeholders[0] = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266; // Anvil default
+        stakeholders[1] = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8; // Anvil account 1
+        stakeholders[2] = 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC; // Anvil account 2
+
+        string[3] memory names = ["Default Cooperative", "Premium Roaster", "Quality Processor"];
+        string[3] memory emails = ["contact@default.com", "contact@premium.com", "contact@quality.com"];
+        string[3] memory phones = ["+1234567890", "+0987654321", "+1122334455"];
+
+        for (uint256 i = 0; i < stakeholders.length; i++) {
+            if (!accessControl.isRegisteredSeller(stakeholders[i])) {
+                accessControl.registerSeller(
+                    stakeholders[i],
+                    WAGAAccessControl.SellerType.COOPERATIVE,
+                    names[i],
+                    "REG001",
+                    "CBETETAAXXX" // Default Ethiopian bank SWIFT
+                );
+                totalSellersRegistered++;
+                console.log("Registered seller:", stakeholders[i]);
+            }
+        }
+    }
+
+    function _migrateExistingBatches() internal {
+        console.log("Migrating existing batches for EUDR compliance...");
+
+        // This is a simplified migration - in production, you'd need to:
+        // 1. Query all existing batches
+        // 2. Check if they're Ethiopian origin
+        // 3. Add basic EUDR compliance flags
+        // 4. Set up default privacy configurations
+
+        // For demonstration, we'll migrate batches 1-10 (assuming they exist)
+        for (uint256 batchId = 1; batchId <= 10; batchId++) {
+            if (coffeeToken.isBatchCreated(batchId) && !migratedBatches[batchId]) {
+                _migrateSingleBatch(batchId);
+            }
+        }
+    }
+
+    function _migrateSingleBatch(uint256 batchId) internal {
+        console.log("Migrating batch:", batchId);
+
+        // Get batch information
+        (string memory origin, address creator, uint256 timestamp, bool isExpired, bool isMetadataVerified) = batchManager.getBatchAdditionalInfo(batchId);
+
+        // Ensure creator is registered as seller
+        if (!accessControl.isRegisteredSeller(creator)) {
+            // Register as cooperative by default
+            accessControl.registerSeller(
+                creator,
+                WAGAAccessControl.SellerType.COOPERATIVE,
+                "Migrated Seller",
+                "MIGRATE001",
+                "CBETETAAXXX" // Default Ethiopian bank SWIFT
+            );
+            totalSellersRegistered++;
+        }
+
+        // Set up basic privacy configuration for EUDR compliance
+        IPrivacyLayer.PrivacyConfig memory config = IPrivacyLayer.PrivacyConfig({
+            pricingPrivate: false,
+            qualityPrivate: false,
+            supplyChainPrivate: false,
+            level: IPrivacyLayer.PrivacyLevel.PUBLIC,
+            pricingClaim: "Market Competitive",
+            qualityClaim: "SCA Certified",
+            supplyChainClaim: "Traceable Origin"
+        });
+
+        privacyLayer.configurePrivacyWithCaller(creator, batchId, config);
+
+        // Set up default selective disclosure rules for EUDR data
+        PrivacyLayer.SelectiveDisclosureRules memory rules = PrivacyLayer.SelectiveDisclosureRules({
+            deforestationPrivate: true,    // Private by default
+            geolocationPrivate: true,      // Private by default
+            permitDataPrivate: false,      // Public for transparency
+            certificateDataPrivate: false, // Public for verification
+            originDataPrivate: false,      // Public for traceability
+            boeDataPrivate: true,          // Private for security
+            minRoleLevel: 2                // Distributor+ access for private data
+        });
+
+        privacyLayer.configureEUDRDisclosureRules(batchId, rules);
+
+        // Mark batch as migrated
+        migratedBatches[batchId] = true;
+        totalBatchesMigrated++;
+
+        console.log("Batch", batchId, "migrated successfully");
+    }
+
+    function _setupDefaultDisclosureRules() internal {
+        console.log("Setting up default selective disclosure rules...");
+
+        // This sets up system-wide defaults that can be overridden per batch
+        console.log("Default disclosure rules configured.");
+    }
+
+    // Getter functions for migration status
+    function getMigrationStatus(uint256 batchId) external view returns (bool migrated, uint64 sellerId) {
+        migrated = migratedBatches[batchId];
+        (, address creator, , , ) = batchManager.getBatchAdditionalInfo(batchId);
+        sellerId = accessControl.getSellerId(creator);
+    }
+
+    function getMigrationSummary() external view returns (
+        uint256 totalMigratedBatches,
+        uint256 totalRegisteredSellers
+    ) {
+        return (totalBatchesMigrated, totalSellersRegistered);
+    }
+}

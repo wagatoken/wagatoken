@@ -365,6 +365,14 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     }
 
     /**
+     * @dev Get the ZK manager address
+     * @return ZK manager contract address
+     */
+    function getZKManager() external view returns (WAGAZKManager) {
+        return zkManager;
+    }
+
+    /**
      * @dev Update batch IPFS URI
      */
     function updateBatchIPFS(uint256 batchId, string memory ipfsUri) external onlyRole(ADMIN_ROLE) {

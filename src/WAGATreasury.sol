@@ -12,8 +12,37 @@ import {IWAGATreasury} from "./Interfaces/IWAGATreasury.sol";
  * Integrates with Coinbase Commerce for cross-border payments
  */
 contract WAGATreasury is IWAGATreasury, AccessControl, ReentrancyGuard {
+    /* -------------------------------------------------------------------------- */
+    /*                                   ERRORS                                   */
+    /* -------------------------------------------------------------------------- */
+
+    error WAGATreasury__InvalidOfframpPartnerAddress_transferToOfframpPartner();
+    error WAGATreasury__InvalidTransferAmount_transferToOfframpPartner();
+    error WAGATreasury__InsufficientTreasuryBalance_transferToOfframpPartner();
+    error WAGATreasury__TransferFailed_transferToOfframpPartner();
+    error WAGATreasury__UnauthorizedOfframpExecutor_transferToOfframpPartner();
+    error WAGATreasury__TransferAlreadyExecuted_transferToOfframpPartner();
+    error WAGATreasury__InvalidUSDCAddress_constructor();
+    error WAGATreasury__InvalidPaymentAmount_payForBatch();
+    error WAGATreasury__BatchPaymentNotRequired_payForBatch();
+    error WAGATreasury__IncorrectPaymentAmount_payForBatch();
+    error WAGATreasury__AlreadyPaidForBatch_payForBatch();
+    error WAGATreasury__InsufficientUSDCBalance_payForBatch();
+    error WAGATreasury__InsufficientUSDCAllowance_payForBatch();
+    error WAGATreasury__USDCTransferFailed_payForBatch();
+    error WAGATreasury__ChargeAlreadyProcessed_processChargePayment();
+    error WAGATreasury__InvalidPaymentAmount_processChargePayment();
+    error WAGATreasury__InvalidRecipientAddress_distributeFunds();
+    error WAGATreasury__InvalidDistributionAmount_distributeFunds();
+    error WAGATreasury__InsufficientTreasuryBalance_distributeFunds();
+    error WAGATreasury__USDCTransferFailed_distributeFunds();
+    error WAGATreasury__OnlyUSDCWithdrawalsAllowed_receive();
+    error WAGATreasury__InsufficientBalance_receive();
+    error WAGATreasury__TransferFailed_receive();
+
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant PAYMENT_PROCESSOR_ROLE = keccak256("PAYMENT_PROCESSOR_ROLE");
+    bytes32 public constant OFFRAMP_EXECUTOR_ROLE = keccak256("OFFRAMP_EXECUTOR_ROLE");
 
     // USDC token contract on Base network
     ERC20 public usdcToken;
@@ -34,14 +63,22 @@ contract WAGATreasury is IWAGATreasury, AccessControl, ReentrancyGuard {
     // Coinbase Commerce integration
     mapping(string => bool) public processedChargeIds; // Prevent double processing
 
+    // Offramp transfer tracking
+    mapping(uint256 => mapping(address => bool)) public offrampTransferExecuted; // batchId => buyer => executed
+    mapping(uint256 => mapping(address => address)) public offrampPartnerByBatchBuyer; // batchId => buyer => offrampPartner
+    mapping(uint256 => mapping(address => uint256)) public offrampTransferAmount; // batchId => buyer => amount
+
     constructor(address _usdcTokenAddress) {
-        require(_usdcTokenAddress != address(0), "Invalid USDC address");
+        if (_usdcTokenAddress == address(0)) {
+            revert WAGATreasury__InvalidUSDCAddress_constructor();
+        }
 
         usdcToken = ERC20(_usdcTokenAddress);
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ADMIN_ROLE, msg.sender);
         _grantRole(PAYMENT_PROCESSOR_ROLE, msg.sender);
+        _grantRole(OFFRAMP_EXECUTOR_ROLE, msg.sender);
     }
 
     /**
@@ -60,22 +97,36 @@ contract WAGATreasury is IWAGATreasury, AccessControl, ReentrancyGuard {
      * @param amount The payment amount in USDC
      */
     function payForBatch(uint256 batchId, uint256 amount) external nonReentrant {
-        require(amount > 0, "Payment amount must be greater than 0");
-        require(batchPaymentRequired[batchId] > 0, "Batch payment not required");
-        require(amount == batchPaymentRequired[batchId], "Incorrect payment amount");
-        require(!hasPaidForBatch[msg.sender][batchId], "Already paid for this batch");
+        if (amount == 0) {
+            revert WAGATreasury__InvalidPaymentAmount_payForBatch();
+        }
+        if (batchPaymentRequired[batchId] == 0) {
+            revert WAGATreasury__BatchPaymentNotRequired_payForBatch();
+        }
+        if (amount != batchPaymentRequired[batchId]) {
+            revert WAGATreasury__IncorrectPaymentAmount_payForBatch();
+        }
+        if (hasPaidForBatch[msg.sender][batchId]) {
+            revert WAGATreasury__AlreadyPaidForBatch_payForBatch();
+        }
 
         // Check if user has sufficient USDC balance
         uint256 userBalance = usdcToken.balanceOf(msg.sender);
-        require(userBalance >= amount, "Insufficient USDC balance");
+        if (userBalance < amount) {
+            revert WAGATreasury__InsufficientUSDCBalance_payForBatch();
+        }
 
         // Check allowance
         uint256 allowance = usdcToken.allowance(msg.sender, address(this));
-        require(allowance >= amount, "Insufficient USDC allowance");
+        if (allowance < amount) {
+            revert WAGATreasury__InsufficientUSDCAllowance_payForBatch();
+        }
 
         // Transfer USDC from user to treasury
         bool success = usdcToken.transferFrom(msg.sender, address(this), amount);
-        require(success, "USDC transfer failed");
+        if (!success) {
+            revert WAGATreasury__USDCTransferFailed_payForBatch();
+        }
 
         // Update payment tracking
         batchPaymentCollected[batchId] += amount;
@@ -98,8 +149,12 @@ contract WAGATreasury is IWAGATreasury, AccessControl, ReentrancyGuard {
         uint256 amount,
         string calldata chargeId
     ) external onlyRole(PAYMENT_PROCESSOR_ROLE) {
-        require(!processedChargeIds[chargeId], "Charge already processed");
-        require(amount > 0, "Payment amount must be greater than 0");
+        if (processedChargeIds[chargeId]) {
+            revert WAGATreasury__ChargeAlreadyProcessed_processChargePayment();
+        }
+        if (amount == 0) {
+            revert WAGATreasury__InvalidPaymentAmount_processChargePayment();
+        }
 
         // Mark charge as processed
         processedChargeIds[chargeId] = true;
@@ -124,18 +179,103 @@ contract WAGATreasury is IWAGATreasury, AccessControl, ReentrancyGuard {
         uint256 amount,
         string calldata reason
     ) external onlyRole(ADMIN_ROLE) nonReentrant {
-        require(recipient != address(0), "Invalid recipient address");
-        require(amount > 0, "Distribution amount must be greater than 0");
+        if (recipient == address(0)) {
+            revert WAGATreasury__InvalidRecipientAddress_distributeFunds();
+        }
+        if (amount == 0) {
+            revert WAGATreasury__InvalidDistributionAmount_distributeFunds();
+        }
 
         uint256 treasuryBalance = usdcToken.balanceOf(address(this));
-        require(treasuryBalance >= amount, "Insufficient treasury balance");
+        if (treasuryBalance < amount) {
+            revert WAGATreasury__InsufficientTreasuryBalance_distributeFunds();
+        }
 
         bool success = usdcToken.transfer(recipient, amount);
-        require(success, "USDC transfer failed");
+        if (!success) {
+            revert WAGATreasury__USDCTransferFailed_distributeFunds();
+        }
 
         totalDistributed += amount;
 
         emit PaymentDistributed(recipient, amount, reason);
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                           OFFRAMP TRANSFER FUNCTIONS                       */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Transfer USDC to offramp partner for fiat conversion
+     * @param batchId The batch ID being redeemed
+     * @param buyer The buyer address (for tracking)
+     * @param offrampPartner The offramp partner address to receive USDC
+     * @param usdAmount The USD amount to transfer (in USDC units)
+     */
+    function transferToOfframpPartner(
+        uint256 batchId,
+        address buyer,
+        address offrampPartner,
+        uint256 usdAmount
+    ) external onlyRole(OFFRAMP_EXECUTOR_ROLE) nonReentrant {
+        if (offrampPartner == address(0)) {
+            revert WAGATreasury__InvalidOfframpPartnerAddress_transferToOfframpPartner();
+        }
+        if (usdAmount == 0) {
+            revert WAGATreasury__InvalidTransferAmount_transferToOfframpPartner();
+        }
+        if (offrampTransferExecuted[batchId][buyer]) {
+            revert WAGATreasury__TransferAlreadyExecuted_transferToOfframpPartner();
+        }
+
+        uint256 treasuryBalance = usdcToken.balanceOf(address(this));
+        if (treasuryBalance < usdAmount) {
+            revert WAGATreasury__InsufficientTreasuryBalance_transferToOfframpPartner();
+        }
+
+        // Transfer USDC to offramp partner
+        bool success = usdcToken.transfer(offrampPartner, usdAmount);
+        if (!success) {
+            revert WAGATreasury__TransferFailed_transferToOfframpPartner();
+        }
+
+        // Record the transfer
+        offrampTransferExecuted[batchId][buyer] = true;
+        offrampPartnerByBatchBuyer[batchId][buyer] = offrampPartner;
+        offrampTransferAmount[batchId][buyer] = usdAmount;
+        totalDistributed += usdAmount;
+
+        emit OfframpTransferExecuted(batchId, buyer, offrampPartner, usdAmount, block.timestamp);
+    }
+
+    /**
+     * @dev Check if offramp transfer has been executed for a batch/buyer
+     * @param batchId The batch ID
+     * @param buyer The buyer address
+     * @return True if transfer executed
+     */
+    function hasOfframpTransferExecuted(uint256 batchId, address buyer) external view returns (bool) {
+        return offrampTransferExecuted[batchId][buyer];
+    }
+
+    /**
+     * @dev Get offramp transfer details for a batch/buyer
+     * @param batchId The batch ID
+     * @param buyer The buyer address
+     * @return offrampPartner The offramp partner address
+     * @return usdAmount The transferred USD amount
+     * @return executed Whether transfer was executed
+     */
+    function getOfframpTransferDetails(uint256 batchId, address buyer)
+        external
+        view
+        returns (address offrampPartner, uint256 usdAmount, bool executed)
+    {
+        return (
+            offrampPartnerByBatchBuyer[batchId][buyer],
+            offrampTransferAmount[batchId][buyer],
+            offrampTransferExecuted[batchId][buyer]
+        );
     }
 
     /**
@@ -183,12 +323,18 @@ contract WAGATreasury is IWAGATreasury, AccessControl, ReentrancyGuard {
      * @param amount The amount to withdraw
      */
     function emergencyWithdraw(address token, uint256 amount) external onlyRole(ADMIN_ROLE) {
-        require(token == address(usdcToken), "Only USDC withdrawals allowed");
+        if (token != address(usdcToken)) {
+            revert WAGATreasury__OnlyUSDCWithdrawalsAllowed_receive();
+        }
 
         uint256 balance = ERC20(token).balanceOf(address(this));
-        require(balance >= amount, "Insufficient balance");
+        if (balance < amount) {
+            revert WAGATreasury__InsufficientBalance_receive();
+        }
 
         bool success = ERC20(token).transfer(msg.sender, amount);
-        require(success, "Transfer failed");
+        if (!success) {
+            revert WAGATreasury__TransferFailed_receive();
+        }
     }
 }

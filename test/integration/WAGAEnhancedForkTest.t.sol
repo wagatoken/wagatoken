@@ -15,10 +15,12 @@ import {MockCircomVerifier} from "../../src/MockCircomVerifier.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
+import {WAGAAccessControl} from "../../src/WAGAAccessControl.sol";
 import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {WAGACoffeeViews} from "../../src/WAGACoffeeViews.sol";
 import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
+import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 
 /**
@@ -39,6 +41,7 @@ contract WAGAEnhancedForkTest is Test {
     WAGATreasury public treasury;
     WAGACDPIntegration public cdpIntegration;
     WAGAEthiopianCompliance public ethiopianCompliance;
+    WAGAAccessControl public accessControl;
     WAGAECXPriceOracle public ecxOracle;
     WAGACoffeeViews public coffeeViews;
     HelperConfig public helperConfig;
@@ -86,6 +89,9 @@ contract WAGAEnhancedForkTest is Test {
             circomVerifier,
             helperConfig
         ) = deployer.run();
+
+        // Get access control from deployment
+        accessControl = deployer.getAccessControl();
 
         // Get coffeeViews using getter function
         coffeeViews = deployer.getCoffeeViews();
@@ -150,6 +156,196 @@ contract WAGAEnhancedForkTest is Test {
         zkManager = testZkManager;
         
         vm.stopPrank();
+    }
+
+    /**
+     * @dev Test SWIFT banking integration on Base Sepolia fork
+     */
+    function testSWIFTBankingIntegrationOnFork() public {
+        console.log("=== Testing SWIFT Banking Integration on Base Sepolia Fork ===");
+
+        // Step 1: Setup banking partners with SWIFT codes
+        vm.startPrank(deployerAddress);
+
+        bytes11 bankSwift = "CBETETAAXXX"; // Commercial Bank of Ethiopia
+        bytes11 offrampSwift = "DBSSGB2LXXX"; // DBS Bank Singapore
+        address bankingPartner = address(0x100); // Mock banking partner address
+        address offrampPartner = address(0x101); // Mock offramp partner address
+
+        // Register banking partners with SWIFT codes and capabilities
+        IEthiopianCompliance.BankingCapabilities memory bankCapabilities = IEthiopianCompliance.BankingCapabilities({
+            swiftCode: bankSwift,
+            bankName: "Commercial Bank of Ethiopia",
+            canActAsOfframp: true,
+            canHandleForexSurrender: true,
+            partnerType: IEthiopianCompliance.OfframpPartnerType.BANK,
+            connectedBankSwift: bytes11(0),
+            maxTransactionAmount: 1000000 * 10**6, // 1M USD
+            isActive: true
+        });
+
+        IEthiopianCompliance.BankingCapabilities memory offrampCapabilities = IEthiopianCompliance.BankingCapabilities({
+            swiftCode: offrampSwift,
+            bankName: "Global Offramp Partner",
+            canActAsOfframp: true,
+            canHandleForexSurrender: false,
+            partnerType: IEthiopianCompliance.OfframpPartnerType.OFFRAMP_PROVIDER,
+            connectedBankSwift: bankSwift,
+            maxTransactionAmount: 500000 * 10**6, // 500K USD
+            isActive: true
+        });
+
+        ethiopianCompliance.registerBankingPartner(bankSwift, bankingPartner, "Commercial Bank of Ethiopia", bankCapabilities);
+        ethiopianCompliance.registerBankingPartner(offrampSwift, offrampPartner, "Global Offramp Partner", offrampCapabilities);
+
+        vm.stopPrank();
+
+        // Step 2: Verify banking partner setup
+        IEthiopianCompliance.BankingCapabilities memory retrievedCapabilities = ethiopianCompliance.getBankingCapabilities(bankSwift);
+        assertEq(retrievedCapabilities.swiftCode, bankSwift);
+        assertEq(retrievedCapabilities.bankName, "Commercial Bank of Ethiopia");
+        assertTrue(retrievedCapabilities.canActAsOfframp);
+
+        console.log("Banking partners configured with SWIFT codes");
+
+        // Step 3: Create batch and test SWIFT-based transfers
+        vm.startPrank(PROCESSOR_USER);
+        uint256 batchId = coffeeToken.createBatch(
+            block.timestamp,
+            block.timestamp + 365 days,
+            1000,
+            75 * 1e18,
+            "Ethiopian Yirgacheffe",
+            "Export Compliant",
+            "ipfs://swift-test-batch"
+        );
+        vm.stopPrank();
+
+        // Step 4: Mint tokens and request redemption
+        vm.startPrank(ADMIN_USER);
+        coffeeToken.mintBatch(CONSUMER_USER, batchId, 100);
+        vm.stopPrank();
+
+        vm.startPrank(CONSUMER_USER);
+        uint256 redemptionId = redemptionContract.requestRedemption(batchId, 100, false);
+        vm.stopPrank();
+
+        // Step 5: Record SWIFT-based offramp transfer
+        vm.startPrank(offrampPartner);
+        ethiopianCompliance.recordOfframpTransferInitiated(batchId, CONSUMER_USER, offrampSwift, 7500 * 1e18);
+        vm.stopPrank();
+
+        // Step 6: Verify SWIFT codes in transfer data
+        (
+            uint64 sellerId,
+            bytes11 storedOfframpSwift,
+            bytes11 storedReceivingSwift,
+            ,
+            ,
+            ,
+        ) = ethiopianCompliance.getFiatTransfer(batchId, CONSUMER_USER);
+
+        assertEq(storedOfframpSwift, offrampSwift);
+        assertEq(storedReceivingSwift, bankSwift);
+
+        console.log("SWIFT-based transfer recorded successfully");
+
+        console.log("=== SWIFT Banking Integration Test Complete ===");
+    }
+
+    /**
+     * @dev Test seller ID integration on Base Sepolia fork
+     */
+    function testSellerIDIntegrationOnFork() public {
+        console.log("=== Testing Seller ID Integration on Base Sepolia Fork ===");
+
+        // Step 1: Register sellers with digital IDs
+        vm.startPrank(deployerAddress);
+
+        accessControl.registerSeller(
+            makeAddr("seller1"),
+            WAGAAccessControl.SellerType.COOPERATIVE,
+            "Yirgacheffe Cooperative",
+            "REG001",
+            "contact@yirgacheffe.com",
+            "+251911123456"
+        );
+
+        accessControl.registerSeller(
+            makeAddr("seller2"),
+            WAGAAccessControl.SellerType.PROCESSOR,
+            "Sidamo Premium Processor",
+            "REG002",
+            "contact@sidamo.com",
+            "+251922654321"
+        );
+
+        vm.stopPrank();
+
+        // Step 2: Verify seller registration and ID assignment
+        address seller1 = makeAddr("seller1");
+        address seller2 = makeAddr("seller2");
+
+        uint64 sellerId1 = accessControl.getSellerId(seller1);
+        uint64 sellerId2 = accessControl.getSellerId(seller2);
+
+        assertEq(sellerId1, 1);
+        assertEq(sellerId2, 2);
+        assertTrue(accessControl.isRegisteredSeller(seller1));
+        assertTrue(accessControl.isRegisteredSeller(seller2));
+
+        // Step 3: Verify bidirectional mappings
+        assertEq(accessControl.getSellerAddress(sellerId1), seller1);
+        assertEq(accessControl.getSellerAddress(sellerId2), seller2);
+
+        console.log("Seller digital IDs assigned and bidirectional mappings verified");
+
+        // Step 4: Create batches and verify seller ID integration
+        vm.startPrank(PROCESSOR_USER);
+
+        uint256 batchId1 = coffeeToken.createBatch(
+            block.timestamp,
+            block.timestamp + 365 days,
+            1000,
+            75 * 1e18,
+            "Yirgacheffe",
+            "Premium",
+            "ipfs://batch1"
+        );
+
+        uint256 batchId2 = coffeeToken.createBatch(
+            block.timestamp,
+            block.timestamp + 365 days,
+            500,
+            100 * 1e18,
+            "Sidamo",
+            "Specialty",
+            "ipfs://batch2"
+        );
+
+        vm.stopPrank();
+
+        // Step 5: Mint tokens and test redemption with seller ID tracking
+        vm.startPrank(ADMIN_USER);
+        coffeeToken.mintBatch(CONSUMER_USER, batchId1, 100);
+        coffeeToken.mintBatch(CONSUMER_USER, batchId2, 50);
+        vm.stopPrank();
+
+        vm.startPrank(CONSUMER_USER);
+        uint256 redemptionId1 = redemptionContract.requestRedemption(batchId1, 100, false);
+        uint256 redemptionId2 = redemptionContract.requestRedemption(batchId2, 50, false);
+        vm.stopPrank();
+
+        // Step 6: Verify seller ID tracking in redemptions
+        uint64 redemptionSellerId1 = redemptionContract.getRedemptionSellerId(redemptionId1);
+        uint64 redemptionSellerId2 = redemptionContract.getRedemptionSellerId(redemptionId2);
+
+        assertEq(redemptionSellerId1, sellerId1);
+        assertEq(redemptionSellerId2, sellerId2);
+
+        console.log("Seller ID integration in redemption workflow verified");
+
+        console.log("=== Seller ID Integration Test Complete ===");
     }
 
     /**

@@ -29,6 +29,17 @@ contract WAGAZKManager {
     error WAGAZKManager__ZKProofVerificationFailed_addZKProof();
     error WAGAZKManager__BatchDoesNotExist_getZKProof();
     error WAGAZKManager__ZKProofNotFound_getZKProof();
+    error WAGAZKManager__BatchDoesNotExist_addEUDRComplianceZKProof();
+    error WAGAZKManager__ZKProofVerificationFailed_addEUDRComplianceZKProof();
+    error WAGAZKManager__BatchDoesNotExist_addEthiopianComplianceZKProof();
+    error WAGAZKManager__ZKProofVerificationFailed_addEthiopianComplianceZKProof();
+    error WAGAZKManager__InvalidComplianceType_addEthiopianComplianceZKProof();
+    error WAGAZKManager__EthiopianComplianceNotConfigured_validateEthiopianZKCompliance();
+    error WAGAZKManager__ComplianceTypeNotFound_getEthiopianComplianceZKProof();
+    error WAGAZKManager__OnlyCoffeeTokenCanConfigurePrivacy_setPrivacyManager();
+    error WAGAZKManager__EthiopianComplianceNotConfigured_setEthiopianCompliance();
+    error WAGAZKManager__InvalidEthiopianComplianceAddress_setEthiopianCompliance();
+    error WAGAZKManager__EthiopianComplianceNotConfigured_addEthiopianComplianceZKProof();
 
     /* -------------------------------------------------------------------------- */
     /*                              Type Declarations                             */
@@ -62,6 +73,11 @@ contract WAGAZKManager {
     mapping(uint256 => mapping(string => ZKProof)) public ethiopianComplianceProofs; // batchId => complianceType => proof
     mapping(uint256 => bool) public hasEthiopianZKCompliance;
 
+    // EUDR compliance ZK proof storage
+    mapping(uint256 => ZKProof) public eudrDeforestationProofs; // batchId => deforestation proof
+    mapping(uint256 => ZKProof) public eudrGeolocationProofs;   // batchId => geolocation proof
+    mapping(uint256 => bool) public hasEUDRZKCompliance;
+
     /* -------------------------------------------------------------------------- */
     /*                                   Events                                   */
     /* -------------------------------------------------------------------------- */
@@ -88,6 +104,18 @@ contract WAGAZKManager {
     );
 
     event EthiopianZKComplianceValidated(
+        uint256 indexed batchId,
+        bool isCompliant
+    );
+
+    event EUDRComplianceZKProofAdded(
+        uint256 indexed batchId,
+        IZKVerifier.ProofType proofType,
+        bytes32 indexed proofHash,
+        string publicClaim
+    );
+
+    event EUDRZKComplianceValidated(
         uint256 indexed batchId,
         bool isCompliant
     );
@@ -127,7 +155,9 @@ contract WAGAZKManager {
      */
     function configureDefaultPrivacy(uint256 batchId) external {
         // Only allow coffee token contract to call this
-        require(msg.sender == address(COFFEE_TOKEN), "Only coffee token can configure privacy");
+        if (msg.sender != address(COFFEE_TOKEN)) {
+            revert WAGAZKManager__OnlyCoffeeTokenCanConfigurePrivacy_setPrivacyManager();
+        }
         
         // Set default public privacy configuration
         // This is a placeholder - actual privacy configuration should be done through PrivacyLayer
@@ -152,14 +182,7 @@ contract WAGAZKManager {
         }
 
         // Verify ZK proof based on type
-        bool verified = false;
-        if (proofType == IZKVerifier.ProofType.PRICE_COMPETITIVENESS) {
-            verified = ZK_VERIFIER.verifyPriceCompetitiveness(batchId, zkProofData, new uint256[](0), publicClaim);
-        } else if (proofType == IZKVerifier.ProofType.QUALITY_STANDARDS) {
-            verified = ZK_VERIFIER.verifyQualityStandards(batchId, zkProofData, new uint256[](0), publicClaim);
-        } else if (proofType == IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE) {
-            verified = ZK_VERIFIER.verifySupplyChainProvenance(batchId, zkProofData, new uint256[](0), publicClaim);
-        }
+        bool verified = _verifyZKProofByType(batchId, proofType, zkProofData, new uint256[](0), publicClaim);
 
         if (!verified) {
             revert WAGAZKManager__ZKProofVerificationFailed_addZKProof();
@@ -202,14 +225,7 @@ contract WAGAZKManager {
         }
 
         // Verify ZK proof based on type
-        bool verified = false;
-        if (proofType == IZKVerifier.ProofType.PRICE_COMPETITIVENESS) {
-            verified = ZK_VERIFIER.verifyPriceCompetitiveness(batchId, zkProofData, new uint256[](0), publicClaim);
-        } else if (proofType == IZKVerifier.ProofType.QUALITY_STANDARDS) {
-            verified = ZK_VERIFIER.verifyQualityStandards(batchId, zkProofData, new uint256[](0), publicClaim);
-        } else if (proofType == IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE) {
-            verified = ZK_VERIFIER.verifySupplyChainProvenance(batchId, zkProofData, new uint256[](0), publicClaim);
-        }
+        bool verified = _verifyZKProofByType(batchId, proofType, zkProofData, new uint256[](0), publicClaim);
 
         if (!verified) {
             revert WAGAZKManager__ZKProofVerificationFailed_addZKProof();
@@ -287,24 +303,137 @@ contract WAGAZKManager {
     }
 
     /* -------------------------------------------------------------------------- */
-    /*                         ETHIOPIAN COMPLIANCE ZK FUNCTIONS                 */
+    /*                              EUDR COMPLIANCE ZK FUNCTIONS                  */
     /* -------------------------------------------------------------------------- */
 
     /**
-     * @dev Set Ethiopian compliance contract (admin only)
+     * @dev Add and verify EUDR compliance ZK proof
+     * @param batchId Batch identifier
+     * @param zkProofData ZK proof data
+     * @param proofType Type of EUDR proof (DEFORESTATION_COMPLIANCE or GEOLOCATION_VERIFICATION)
+     * @param publicClaim Public claim about EUDR compliance
      */
-    function setEthiopianCompliance(address _ethiopianCompliance) external {
-        _checkCallerHasRoleFromCoffeeToken(DEFAULT_ADMIN_ROLE, msg.sender);
-        require(_ethiopianCompliance != address(0), "Invalid Ethiopian compliance address");
-        ethiopianCompliance = IEthiopianCompliance(_ethiopianCompliance);
+    function addEUDRComplianceZKProof(
+        uint256 batchId,
+        bytes calldata zkProofData,
+        IZKVerifier.ProofType proofType,
+        string calldata publicClaim
+    ) external callerHasRoleFromCoffeeToken(PROCESSOR_ROLE) {
+        if (!COFFEE_TOKEN.isBatchCreated(batchId)) {
+            revert WAGAZKManager__BatchDoesNotExist_addEUDRComplianceZKProof();
+        }
+
+        // Verify ZK proof based on type
+        bool verified = _verifyZKProofByType(batchId, proofType, zkProofData, new uint256[](0), publicClaim);
+
+        if (!verified) {
+            revert WAGAZKManager__ZKProofVerificationFailed_addEUDRComplianceZKProof();
+        }
+
+        // Store EUDR compliance ZK proof
+        bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, uint256(proofType), block.timestamp));
+
+        if (proofType == IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE) {
+            eudrDeforestationProofs[batchId] = ZKProof({
+                proofHash: proofHash,
+                proofData: zkProofData,
+                proofTimestamp: block.timestamp,
+                proofGenerator: msg.sender,
+                isValid: true,
+                proofType: proofType,
+                publicClaim: publicClaim,
+                isEthiopianCompliance: false
+            });
+        } else if (proofType == IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION) {
+            eudrGeolocationProofs[batchId] = ZKProof({
+                proofHash: proofHash,
+                proofData: zkProofData,
+                proofTimestamp: block.timestamp,
+                proofGenerator: msg.sender,
+                isValid: true,
+                proofType: proofType,
+                publicClaim: publicClaim,
+                isEthiopianCompliance: false
+            });
+        }
+
+        zkProofExists[proofHash] = true;
+
+        // Update EUDR compliance status
+        _updateEUDRZKComplianceStatus(batchId);
+
+        emit EUDRComplianceZKProofAdded(batchId, proofType, proofHash, publicClaim);
     }
 
     /**
-     * @dev Add ZK proof for Ethiopian compliance (ECTA permit, quality cert, or origin)
+     * @dev Validate EUDR compliance with ZK privacy protection
+     * @param batchId Batch identifier
+     * @return isCompliant Whether batch meets EUDR compliance with ZK protection
+     */
+    function validateEUDRZKCompliance(uint256 batchId) external view returns (bool isCompliant) {
+        // Check if batch has both required EUDR ZK proofs
+        bool hasDeforestationProof = eudrDeforestationProofs[batchId].isValid;
+        bool hasGeolocationProof = eudrGeolocationProofs[batchId].isValid;
+
+        return hasDeforestationProof && hasGeolocationProof;
+    }
+
+    /**
+     * @dev Get EUDR compliance ZK proof
+     * @param batchId Batch identifier
+     * @param proofType Type of EUDR proof
+     * @return proof ZK proof data
+     */
+    function getEUDRComplianceZKProof(
+        uint256 batchId,
+        IZKVerifier.ProofType proofType
+    ) external view returns (ZKProof memory proof) {
+        if (proofType == IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE) {
+            return eudrDeforestationProofs[batchId];
+        } else if (proofType == IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION) {
+            return eudrGeolocationProofs[batchId];
+        }
+
+        // Return empty proof if invalid type
+        return ZKProof({
+            proofHash: bytes32(0),
+            proofData: "",
+            proofTimestamp: 0,
+            proofGenerator: address(0),
+            isValid: false,
+            proofType: proofType,
+            publicClaim: "",
+            isEthiopianCompliance: false
+        });
+    }
+
+    /**
+     * @dev Get EUDR ZK compliance status summary
+     * @param batchId Batch identifier
+     * @return hasDeforestation Has deforestation compliance proof
+     * @return hasGeolocation Has geolocation verification proof
+     * @return hasFullCompliance Has complete EUDR ZK compliance
+     */
+    function getEUDRZKComplianceStatus(uint256 batchId) external view returns (
+        bool hasDeforestation,
+        bool hasGeolocation,
+        bool hasFullCompliance
+    ) {
+        hasDeforestation = eudrDeforestationProofs[batchId].isValid;
+        hasGeolocation = eudrGeolocationProofs[batchId].isValid;
+        hasFullCompliance = hasEUDRZKCompliance[batchId];
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                          ENHANCED ETHIOPIAN COMPLIANCE ZK FUNCTIONS       */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Add enhanced ZK proof for Ethiopian compliance with specific proof types
      * @param batchId Batch identifier
      * @param complianceType Type of compliance ("ECTA_PERMIT", "QUALITY_CERT", "ORIGIN_VERIFICATION")
      * @param zkProofData ZK proof data proving compliance without revealing sensitive details
-     * @param publicClaim Public claim about compliance (e.g., "ECTA Compliant", "Premium Ethiopian Quality")
+     * @param publicClaim Public claim about compliance
      */
     function addEthiopianComplianceZKProof(
         uint256 batchId,
@@ -313,22 +442,31 @@ contract WAGAZKManager {
         string calldata publicClaim
     ) external callerHasRoleFromCoffeeToken(PROCESSOR_ROLE) {
         if (!COFFEE_TOKEN.isBatchCreated(batchId)) {
-            revert WAGAZKManager__BatchDoesNotExist_addZKProof();
+            revert WAGAZKManager__BatchDoesNotExist_addEthiopianComplianceZKProof();
         }
 
         // Verify that underlying compliance exists
-        require(address(ethiopianCompliance) != address(0), "Ethiopian compliance not configured");
-        
-        // Verify ZK proof (using supply chain verification as it's most appropriate for compliance)
-        bool verified = ZK_VERIFIER.verifySupplyChainProvenance(
-            batchId, 
-            zkProofData, 
-            new uint256[](0), 
-            publicClaim
-        );
+        if (address(ethiopianCompliance) == address(0)) {
+            revert WAGAZKManager__EthiopianComplianceNotConfigured_setEthiopianCompliance();
+        }
+
+        // Determine the appropriate ZK proof type based on compliance type
+        IZKVerifier.ProofType proofType;
+        if (keccak256(abi.encodePacked(complianceType)) == keccak256(abi.encodePacked("ECTA_PERMIT"))) {
+            proofType = IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY;
+        } else if (keccak256(abi.encodePacked(complianceType)) == keccak256(abi.encodePacked("QUALITY_CERT"))) {
+            proofType = IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY;
+        } else if (keccak256(abi.encodePacked(complianceType)) == keccak256(abi.encodePacked("ORIGIN_VERIFICATION"))) {
+            proofType = IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF;
+        } else {
+            revert WAGAZKManager__InvalidComplianceType_addEthiopianComplianceZKProof();
+        }
+
+        // Verify ZK proof
+        bool verified = _verifyZKProofByType(batchId, proofType, zkProofData, new uint256[](0), publicClaim);
 
         if (!verified) {
-            revert WAGAZKManager__ZKProofVerificationFailed_addZKProof();
+            revert WAGAZKManager__ZKProofVerificationFailed_addEthiopianComplianceZKProof();
         }
 
         // Store Ethiopian compliance ZK proof
@@ -339,7 +477,7 @@ contract WAGAZKManager {
             proofTimestamp: block.timestamp,
             proofGenerator: msg.sender,
             isValid: true,
-            proofType: IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE,
+            proofType: proofType,
             publicClaim: publicClaim,
             isEthiopianCompliance: true
         });
@@ -351,62 +489,6 @@ contract WAGAZKManager {
 
         emit EthiopianComplianceProofAdded(batchId, complianceType, proofHash, publicClaim);
     }
-
-    /**
-     * @dev Validate Ethiopian compliance with ZK privacy protection
-     * @param batchId Batch identifier
-     * @return isCompliant Whether batch meets Ethiopian compliance with ZK protection
-     */
-    function validateEthiopianZKCompliance(uint256 batchId) external view returns (bool isCompliant) {
-        if (address(ethiopianCompliance) == address(0)) {
-            return false;
-        }
-
-        // Check if batch has upstream compliance
-        bool hasUpstreamCompliance = ethiopianCompliance.validateUpstreamCompliance(batchId);
-        
-        // Check if batch has ZK privacy protection for compliance data
-        bool hasZKProtection = hasEthiopianZKCompliance[batchId];
-
-        return hasUpstreamCompliance && hasZKProtection;
-    }
-
-    /**
-     * @dev Get Ethiopian compliance ZK proof
-     * @param batchId Batch identifier
-     * @param complianceType Type of compliance proof
-     * @return proof ZK proof data
-     */
-    function getEthiopianComplianceZKProof(
-        uint256 batchId,
-        string calldata complianceType
-    ) external view returns (ZKProof memory proof) {
-        return ethiopianComplianceProofs[batchId][complianceType];
-    }
-
-    /**
-     * @dev Get all Ethiopian compliance ZK status
-     * @param batchId Batch identifier
-     * @return hasECTA Has ECTA permit ZK proof
-     * @return hasQuality Has quality certificate ZK proof
-     * @return hasOrigin Has origin verification ZK proof
-     * @return hasFullCompliance Has complete Ethiopian ZK compliance
-     */
-    function getEthiopianZKComplianceStatus(uint256 batchId) external view returns (
-        bool hasECTA,
-        bool hasQuality,
-        bool hasOrigin,
-        bool hasFullCompliance
-    ) {
-        hasECTA = ethiopianComplianceProofs[batchId]["ECTA_PERMIT"].isValid;
-        hasQuality = ethiopianComplianceProofs[batchId]["QUALITY_CERT"].isValid;
-        hasOrigin = ethiopianComplianceProofs[batchId]["ORIGIN_VERIFICATION"].isValid;
-        hasFullCompliance = hasEthiopianZKCompliance[batchId];
-    }
-
-    /* -------------------------------------------------------------------------- */
-    /*                         INTERNAL ETHIOPIAN FUNCTIONS                       */
-    /* -------------------------------------------------------------------------- */
 
     /**
      * @dev Update Ethiopian ZK compliance status after adding proofs
@@ -423,6 +505,25 @@ contract WAGAZKManager {
             hasEthiopianZKCompliance[batchId] = true;
             emit EthiopianZKComplianceValidated(batchId, true);
         }
+    }
+
+    /**
+     * @dev Validate Ethiopian compliance with ZK privacy protection
+     * @param batchId Batch identifier
+     * @return isCompliant Whether batch meets Ethiopian compliance with ZK protection
+     */
+    function validateEthiopianZKCompliance(uint256 batchId) external view returns (bool isCompliant) {
+        if (address(ethiopianCompliance) == address(0)) {
+            revert WAGAZKManager__EthiopianComplianceNotConfigured_validateEthiopianZKCompliance();
+        }
+
+        // Check if batch has upstream compliance
+        bool hasUpstreamCompliance = ethiopianCompliance.validateUpstreamCompliance(batchId);
+
+        // Check if batch has ZK privacy protection for compliance data
+        bool hasZKProtection = hasEthiopianZKCompliance[batchId];
+
+        return hasUpstreamCompliance && hasZKProtection;
     }
 
     /**
@@ -447,4 +548,152 @@ contract WAGAZKManager {
             "Origin: ", originProof.publicClaim
         ));
     }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              PRIVACY-PRESERVING VALIDATION                */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Validate compliance with ZK privacy protection (supports both EUDR and Ethiopian)
+     * @param batchId Batch identifier
+     * @param complianceType Type of compliance to validate
+     * @return isValid Whether compliance is valid
+     * @return publicClaim Privacy-preserving public claim
+     */
+    function validateComplianceWithZK(
+        uint256 batchId,
+        string memory complianceType
+    ) external view returns (bool isValid, string memory publicClaim) {
+        bytes32 typeHash = keccak256(abi.encodePacked(complianceType));
+
+        // EUDR compliance types
+        if (typeHash == keccak256(abi.encodePacked("EUDR_DEFORESTATION"))) {
+            ZKProof memory proof = eudrDeforestationProofs[batchId];
+            return (proof.isValid, proof.publicClaim);
+        } else if (typeHash == keccak256(abi.encodePacked("EUDR_GEOLOCATION"))) {
+            ZKProof memory proof = eudrGeolocationProofs[batchId];
+            return (proof.isValid, proof.publicClaim);
+        }
+
+        // Ethiopian compliance types
+        ZKProof memory ethProof = ethiopianComplianceProofs[batchId][complianceType];
+        return (ethProof.isValid, ethProof.publicClaim);
+    }
+
+    /**
+     * @dev Generate comprehensive compliance claim with ZK privacy
+     * @param batchId Batch identifier
+     * @return complianceClaim Privacy-preserving compliance summary
+     */
+    function generateComplianceClaim(uint256 batchId) external view returns (string memory complianceClaim) {
+        bool hasEUDR = hasEUDRZKCompliance[batchId];
+        bool hasEthiopian = hasEthiopianZKCompliance[batchId];
+
+        if (!hasEUDR && !hasEthiopian) {
+            return "Compliance Status: Pending";
+        }
+
+        string memory eudrClaim = "";
+        string memory ethClaim = "";
+
+        if (hasEUDR) {
+            ZKProof memory deforestationProof = eudrDeforestationProofs[batchId];
+            ZKProof memory geolocationProof = eudrGeolocationProofs[batchId];
+            eudrClaim = string(abi.encodePacked(
+                "EUDR Compliant - ",
+                deforestationProof.publicClaim, " | ",
+                geolocationProof.publicClaim
+            ));
+        }
+
+        if (hasEthiopian) {
+            ZKProof memory ectaProof = ethiopianComplianceProofs[batchId]["ECTA_PERMIT"];
+            ZKProof memory qualityProof = ethiopianComplianceProofs[batchId]["QUALITY_CERT"];
+            ZKProof memory originProof = ethiopianComplianceProofs[batchId]["ORIGIN_VERIFICATION"];
+
+            ethClaim = string(abi.encodePacked(
+                "Ethiopian Export Compliant - ",
+                "ECTA: ", ectaProof.publicClaim, " | ",
+                "Quality: ", qualityProof.publicClaim, " | ",
+                "Origin: ", originProof.publicClaim
+            ));
+        }
+
+        if (hasEUDR && hasEthiopian) {
+            return string(abi.encodePacked(eudrClaim, " | ", ethClaim));
+        } else if (hasEUDR) {
+            return eudrClaim;
+        } else {
+            return ethClaim;
+        }
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              INTERNAL FUNCTIONS                           */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Internal function to verify ZK proof based on type
+     */
+    function _verifyZKProofByType(
+        uint256 batchId,
+        IZKVerifier.ProofType proofType,
+        bytes calldata zkProofData,
+        uint256[] memory publicSignals,
+        string memory publicClaim
+    ) internal returns (bool verified) {
+        if (proofType == IZKVerifier.ProofType.PRICE_COMPETITIVENESS) {
+            return ZK_VERIFIER.verifyPriceCompetitiveness(batchId, zkProofData, publicSignals, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.QUALITY_STANDARDS) {
+            return ZK_VERIFIER.verifyQualityStandards(batchId, zkProofData, publicSignals, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE) {
+            return ZK_VERIFIER.verifySupplyChainProvenance(batchId, zkProofData, publicSignals, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE) {
+            return ZK_VERIFIER.verifyEUDRDeforestationCompliance(batchId, zkProofData, publicSignals, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION) {
+            return ZK_VERIFIER.verifyEUDRGeolocation(batchId, zkProofData, publicSignals, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY) {
+            return ZK_VERIFIER.verifyECTAPermitValidity(batchId, zkProofData, publicSignals, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY) {
+            return ZK_VERIFIER.verifyQualityCertificateAuthenticity(batchId, zkProofData, publicSignals, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF) {
+            return ZK_VERIFIER.verifyOrigin(batchId, zkProofData, publicSignals, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE) {
+            return ZK_VERIFIER.verifyBoEForexCompliance(batchId, zkProofData, publicSignals, publicClaim);
+        }
+
+        return false;
+    }
+
+    /**
+     * @dev Update EUDR ZK compliance status after adding proofs
+     */
+    function _updateEUDRZKComplianceStatus(uint256 batchId) internal {
+        bool hasDeforestation = eudrDeforestationProofs[batchId].isValid;
+        bool hasGeolocation = eudrGeolocationProofs[batchId].isValid;
+
+        bool wasCompliant = hasEUDRZKCompliance[batchId];
+        bool isNowCompliant = hasDeforestation && hasGeolocation;
+
+        if (!wasCompliant && isNowCompliant) {
+            hasEUDRZKCompliance[batchId] = true;
+            emit EUDRZKComplianceValidated(batchId, true);
+        }
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                         ETHIOPIAN COMPLIANCE ZK FUNCTIONS                 */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Set Ethiopian compliance contract (admin only)
+     */
+    function setEthiopianCompliance(address _ethiopianCompliance) external {
+        _checkCallerHasRoleFromCoffeeToken(DEFAULT_ADMIN_ROLE, msg.sender);
+        if (_ethiopianCompliance == address(0)) {
+            revert WAGAZKManager__InvalidEthiopianComplianceAddress_setEthiopianCompliance();
+        }
+        ethiopianCompliance = IEthiopianCompliance(_ethiopianCompliance);
+    }
+
 }

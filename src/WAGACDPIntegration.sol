@@ -14,6 +14,23 @@ contract WAGACDPIntegration is IWAGACDPIntegration, AccessControl, ReentrancyGua
     bytes32 public constant CDP_ADMIN_ROLE = keccak256("CDP_ADMIN_ROLE");
     bytes32 public constant PAYMENT_HANDLER_ROLE = keccak256("PAYMENT_HANDLER_ROLE");
 
+    /* -------------------------------------------------------------------------- */
+    /*                                  Errors                                    */
+    /* -------------------------------------------------------------------------- */
+
+    error WAGACDPIntegration__InvalidUSDCAddress_constructor();
+    error WAGACDPIntegration__SmartAccountAlreadyExists_createSmartAccount();
+    error WAGACDPIntegration__InvalidPaymentAmount_initiateCDPPayment();
+    error WAGACDPIntegration__InvalidChargeId_initiateCDPPayment();
+    error WAGACDPIntegration__ChargeIdAlreadyExists_initiateCDPPayment();
+    error WAGACDPIntegration__PaymentNotFound_processPaymentWebhook();
+    error WAGACDPIntegration__PaymentNotPending_processPaymentWebhook();
+    error WAGACDPIntegration__WebhookAlreadyProcessed_processPaymentWebhook();
+
+    /* -------------------------------------------------------------------------- */
+    /*                            CDP Configuration                               */
+    /* -------------------------------------------------------------------------- */
+
     // CDP Configuration
     address public immutable usdcToken;
     address public cdpSmartAccountFactory;
@@ -33,7 +50,9 @@ contract WAGACDPIntegration is IWAGACDPIntegration, AccessControl, ReentrancyGua
         address _cdpSmartAccountFactory,
         address _cdpPaymaster
     ) {
-        require(_usdcToken != address(0), "Invalid USDC address");
+        if (_usdcToken == address(0)) {
+            revert WAGACDPIntegration__InvalidUSDCAddress_constructor();
+        }
 
         usdcToken = _usdcToken;
         cdpSmartAccountFactory = _cdpSmartAccountFactory;
@@ -50,7 +69,9 @@ contract WAGACDPIntegration is IWAGACDPIntegration, AccessControl, ReentrancyGua
      * @return smartAccount The created smart account address
      */
     function createSmartAccount(address user) external returns (address smartAccount) {
-        require(userSmartAccounts[user] == address(0), "Smart account already exists");
+        if (userSmartAccounts[user] != address(0)) {
+            revert WAGACDPIntegration__SmartAccountAlreadyExists_createSmartAccount();
+        }
 
         // Call CDP factory to create smart account
         // This would integrate with Coinbase's smart account factory
@@ -77,9 +98,15 @@ contract WAGACDPIntegration is IWAGACDPIntegration, AccessControl, ReentrancyGua
         uint256 amount,
         string calldata chargeId
     ) external onlyRole(PAYMENT_HANDLER_ROLE) {
-        require(amount > 0, "Payment amount must be greater than 0");
-        require(bytes(chargeId).length > 0, "Charge ID cannot be empty");
-        require(cdpPayments[chargeId].user == address(0), "Charge ID already exists");
+        if (amount == 0) {
+            revert WAGACDPIntegration__InvalidPaymentAmount_initiateCDPPayment();
+        }
+        if (bytes(chargeId).length == 0) {
+            revert WAGACDPIntegration__InvalidChargeId_initiateCDPPayment();
+        }
+        if (cdpPayments[chargeId].user != address(0)) {
+            revert WAGACDPIntegration__ChargeIdAlreadyExists_initiateCDPPayment();
+        }
 
         cdpPayments[chargeId] = IWAGACDPIntegration.CDPPayment({
             user: user,
@@ -103,8 +130,12 @@ contract WAGACDPIntegration is IWAGACDPIntegration, AccessControl, ReentrancyGua
         bool success
     ) external onlyRole(PAYMENT_HANDLER_ROLE) {
         IWAGACDPIntegration.CDPPayment storage payment = cdpPayments[chargeId];
-        require(payment.user != address(0), "Payment not found");
-        require(payment.status == IWAGACDPIntegration.PaymentStatus.Pending, "Payment not pending");
+        if (payment.user == address(0)) {
+            revert WAGACDPIntegration__PaymentNotFound_processPaymentWebhook();
+        }
+        if (payment.status != IWAGACDPIntegration.PaymentStatus.Pending) {
+            revert WAGACDPIntegration__PaymentNotPending_processPaymentWebhook();
+        }
 
         if (success) {
             payment.status = IWAGACDPIntegration.PaymentStatus.Confirmed;
@@ -126,7 +157,9 @@ contract WAGACDPIntegration is IWAGACDPIntegration, AccessControl, ReentrancyGua
         // Calculate webhook ID for deduplication
         bytes32 webhookId = keccak256(abi.encodePacked(webhookData, signature));
 
-        require(!processedWebhooks[webhookId], "Webhook already processed");
+        if (processedWebhooks[webhookId]) {
+            revert WAGACDPIntegration__WebhookAlreadyProcessed_processPaymentWebhook();
+        }
 
         // Mark webhook as processed
         processedWebhooks[webhookId] = true;

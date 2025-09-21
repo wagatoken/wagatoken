@@ -6,6 +6,8 @@ import "./WAGACoffeeTokenCore.sol";
 import "./Interfaces/IPrivacyLayer.sol";
 import "./Interfaces/IWAGABatchManager.sol";
 import "./Interfaces/IEthiopianCompliance.sol";
+import "./Interfaces/IWAGAZKManager.sol";
+import "./Interfaces/IZKVerifier.sol";
 
 /**
  * @title WAGABatchManager
@@ -36,6 +38,10 @@ contract WAGABatchManager is IWAGABatchManager {
     error WAGABatchManager__BatchDoesNotExist_createBatchInfo();
     error WAGABatchManager__BatchDoesNotExist_updateBatchMetadata();
     error WAGABatchManager__BatchDoesNotExist_getBatchInfo();
+    error WAGABatchManager__BatchDoesNotExist_registerEUDRComplianceWithZK();
+    error WAGABatchManager__EUDRCertificateExpired_registerEUDRComplianceWithZK();
+    error WAGABatchManager__BatchDoesNotExist_addEUDRGeolocationDataWithZK();
+    error WAGABatchManager__ZKProofVerificationFailed_addEUDRComplianceWithZK();
 
     /* -------------------------------------------------------------------------- */
     /*                              State Variables                              */
@@ -57,6 +63,12 @@ contract WAGABatchManager is IWAGABatchManager {
     mapping(uint256 => bool) public isEthiopianBatch;
     mapping(uint256 => string) public ethiopianRegion; // Sidamo, Yirgacheffe, Harrar
     mapping(uint256 => bool) public hasEthiopianCompliance;
+
+    // EUDR compliance integration
+    mapping(uint256 => bool) public hasEUDRCompliance;
+    mapping(uint256 => string) public eudrComplianceLevel; // High, Standard, Low
+    mapping(uint256 => uint256) public eudrComplianceTimestamp;
+    mapping(uint256 => bool) public hasDeforestationRiskAssessment;
 
     /* -------------------------------------------------------------------------- */
     /*                                   Events                                   */
@@ -81,6 +93,37 @@ contract WAGABatchManager is IWAGABatchManager {
         string complianceType,
         string documentHash
     );
+
+    // EUDR Events
+    event EUDRComplianceRegistered(
+        uint256 indexed batchId,
+        string complianceLevel,
+        string certificateId,
+        uint256 certificateExpiry
+    );
+    event EUDRGeolocationDataAdded(
+        uint256 indexed batchId,
+        string plotType,
+        uint256 plotSize,
+        string verificationMethod
+    );
+    event EUDRZKComplianceValidated(
+        uint256 indexed batchId,
+        bool deforestationCompliant,
+        bool geolocationVerified
+    );
+
+    /* -------------------------------------------------------------------------- */
+    /*                                  Errors                                    */
+    /* -------------------------------------------------------------------------- */
+
+    error WAGABatchManager__InvalidEthiopianComplianceAddress_setEthiopianCompliance();
+    error WAGABatchManager__NotEthiopianBatch_addECTAPermitDuringCreation();
+    error WAGABatchManager__EthiopianComplianceNotConfigured_addECTAPermitDuringCreation();
+    error WAGABatchManager__NotEthiopianBatch_addQualityCertificateDuringCreation();
+    error WAGABatchManager__EthiopianComplianceNotConfigured_addQualityCertificateDuringCreation();
+    error WAGABatchManager__NotEthiopianBatch_addOriginVerificationDuringCreation();
+    error WAGABatchManager__EthiopianComplianceNotConfigured_addOriginVerificationDuringCreation();
 
     /* -------------------------------------------------------------------------- */
     /*                                Modifiers                                   */
@@ -153,7 +196,9 @@ contract WAGABatchManager is IWAGABatchManager {
      * @dev Set Ethiopian compliance contract address (admin only)
      */
     function setEthiopianCompliance(address _ethiopianCompliance) external callerHasRoleFromCoffeeToken(DEFAULT_ADMIN_ROLE) {
-        require(_ethiopianCompliance != address(0), "Invalid Ethiopian compliance address");
+        if (_ethiopianCompliance == address(0)) {
+            revert WAGABatchManager__InvalidEthiopianComplianceAddress_setEthiopianCompliance();
+        }
         ethiopianCompliance = IEthiopianCompliance(_ethiopianCompliance);
     }
 
@@ -164,8 +209,12 @@ contract WAGABatchManager is IWAGABatchManager {
         uint256 batchId,
         IEthiopianCompliance.ECTAPermit calldata permit
     ) external callerHasRoleFromCoffeeToken(PROCESSOR_ROLE) {
-        require(isEthiopianBatch[batchId], "Not an Ethiopian batch");
-        require(address(ethiopianCompliance) != address(0), "Ethiopian compliance not configured");
+        if (!isEthiopianBatch[batchId]) {
+            revert WAGABatchManager__NotEthiopianBatch_addECTAPermitDuringCreation();
+        }
+        if (address(ethiopianCompliance) == address(0)) {
+            revert WAGABatchManager__EthiopianComplianceNotConfigured_addECTAPermitDuringCreation();
+        }
         
         // Add the permit through the compliance contract
         ethiopianCompliance.addECTAPermit(batchId, permit);
@@ -183,8 +232,12 @@ contract WAGABatchManager is IWAGABatchManager {
         uint256 batchId,
         IEthiopianCompliance.QualityCertificate calldata certificate
     ) external callerHasRoleFromCoffeeToken(PROCESSOR_ROLE) {
-        require(isEthiopianBatch[batchId], "Not an Ethiopian batch");
-        require(address(ethiopianCompliance) != address(0), "Ethiopian compliance not configured");
+        if (!isEthiopianBatch[batchId]) {
+            revert WAGABatchManager__NotEthiopianBatch_addQualityCertificateDuringCreation();
+        }
+        if (address(ethiopianCompliance) == address(0)) {
+            revert WAGABatchManager__EthiopianComplianceNotConfigured_addQualityCertificateDuringCreation();
+        }
         
         // Add the certificate through the compliance contract
         ethiopianCompliance.addQualityCertificate(batchId, certificate);
@@ -202,8 +255,12 @@ contract WAGABatchManager is IWAGABatchManager {
         uint256 batchId,
         IEthiopianCompliance.OriginVerification calldata origin
     ) external callerHasRoleFromCoffeeToken(PROCESSOR_ROLE) {
-        require(isEthiopianBatch[batchId], "Not an Ethiopian batch");
-        require(address(ethiopianCompliance) != address(0), "Ethiopian compliance not configured");
+        if (!isEthiopianBatch[batchId]) {
+            revert WAGABatchManager__NotEthiopianBatch_addOriginVerificationDuringCreation();
+        }
+        if (address(ethiopianCompliance) == address(0)) {
+            revert WAGABatchManager__EthiopianComplianceNotConfigured_addOriginVerificationDuringCreation();
+        }
         
         // Add the origin verification through the compliance contract
         ethiopianCompliance.addOriginVerification(batchId, origin);
@@ -219,6 +276,133 @@ contract WAGABatchManager is IWAGABatchManager {
         }
         
         emit EthiopianComplianceAdded(batchId, "ORIGIN_VERIFICATION", origin.verificationDocumentHash);
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              EUDR COMPLIANCE FUNCTIONS                     */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Register EUDR compliance for a batch with ZK proof validation
+     * @param batchId The batch identifier
+     * @param certificate EUDR certificate details
+     * @param zkProofData ZK proof for deforestation compliance
+     */
+    function registerEUDRComplianceWithZK(
+        uint256 batchId,
+        IEthiopianCompliance.EUDRCertificate calldata certificate,
+        bytes calldata zkProofData
+    ) external callerHasRoleFromCoffeeToken(PROCESSOR_ROLE) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGABatchManager__BatchDoesNotExist_registerEUDRComplianceWithZK();
+        }
+        if (certificate.expiryDate <= block.timestamp) {
+            revert WAGABatchManager__EUDRCertificateExpired_registerEUDRComplianceWithZK();
+        }
+
+        // Add EUDR certificate through Ethiopian compliance contract
+        if (address(ethiopianCompliance) != address(0)) {
+            ethiopianCompliance.addEUDRCertificate(batchId, certificate);
+        }
+
+        // Verify ZK proof for deforestation compliance (if ZK manager available)
+        if (address(coffeeTokenContract.getZKManager()) != address(0)) {
+            IWAGAZKManager zkManager = IWAGAZKManager(address(coffeeTokenContract.getZKManager()));
+            bool deforestationVerified = zkManager.addEUDRComplianceZKProof(
+                batchId,
+                zkProofData,
+                IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
+                certificate.deforestationRisk
+            );
+
+            if (!deforestationVerified) {
+                revert WAGABatchManager__ZKProofVerificationFailed_addEUDRComplianceWithZK();
+            }
+        }
+
+        // Update batch EUDR compliance status
+        hasEUDRCompliance[batchId] = true;
+        eudrComplianceLevel[batchId] = certificate.complianceLevel;
+        eudrComplianceTimestamp[batchId] = block.timestamp;
+
+        // Set batch flag for EUDR compliance (using flag position 5)
+        _setBatchFlag(batchId, 5, true);
+
+        emit EUDRComplianceRegistered(
+            batchId,
+            certificate.complianceLevel,
+            certificate.certificateId,
+            certificate.expiryDate
+        );
+    }
+
+    /**
+     * @dev Add EUDR geolocation data for a batch with ZK proof validation
+     * @param batchId The batch identifier
+     * @param geolocation Geolocation data for the batch
+     * @param zkProofData ZK proof for geolocation verification
+     */
+    function addEUDRGeolocationDataWithZK(
+        uint256 batchId,
+        IEthiopianCompliance.GeolocationData calldata geolocation,
+        bytes calldata zkProofData
+    ) external callerHasRoleFromCoffeeToken(PROCESSOR_ROLE) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGABatchManager__BatchDoesNotExist_addEUDRGeolocationDataWithZK();
+        }
+
+        // Add geolocation data through Ethiopian compliance contract
+        if (address(ethiopianCompliance) != address(0)) {
+            ethiopianCompliance.addGeolocationData(batchId, geolocation);
+        }
+
+        // Verify ZK proof for geolocation (if ZK manager available)
+        if (address(coffeeTokenContract.getZKManager()) != address(0)) {
+            IWAGAZKManager zkManager = IWAGAZKManager(address(coffeeTokenContract.getZKManager()));
+            bool geolocationVerified = zkManager.addEUDRComplianceZKProof(
+                batchId,
+                zkProofData,
+                IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION,
+                geolocation.coordinates
+            );
+
+            if (!geolocationVerified) {
+                revert WAGABatchManager__ZKProofVerificationFailed_addEUDRComplianceWithZK();
+            }
+        }
+
+        // Mark deforestation risk assessment as completed
+        hasDeforestationRiskAssessment[batchId] = true;
+
+        // Set batch flag for geolocation verification (using flag position 6)
+        _setBatchFlag(batchId, 6, true);
+
+        emit EUDRGeolocationDataAdded(
+            batchId,
+            geolocation.plotType,
+            geolocation.plotSize,
+            geolocation.verificationMethod
+        );
+    }
+
+    /**
+     * @dev Validate complete EUDR compliance for a batch using ZK proofs
+     * @param batchId The batch identifier
+     */
+    function validateEUDRZKCompliance(uint256 batchId) external view returns (
+        bool deforestationCompliant,
+        bool geolocationVerified,
+        bool fullyCompliant
+    ) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
+            revert WAGABatchManager__BatchDoesNotExist_getBatchInfo();
+        }
+
+        deforestationCompliant = hasEUDRCompliance[batchId] && getBatchFlag(batchId, 5);
+        geolocationVerified = hasDeforestationRiskAssessment[batchId] && getBatchFlag(batchId, 6);
+
+        // Full compliance requires both deforestation and geolocation verification
+        fullyCompliant = deforestationCompliant && geolocationVerified;
     }
 
     /* -------------------------------------------------------------------------- */

@@ -9,7 +9,51 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
  * @dev Only essential roles for processors, WAGA admins, and ZK verification
  */
 contract WAGAAccessControl is AccessControl {
-    
+
+    /* -------------------------------------------------------------------------- */
+    /*                                   ERRORS                                   */
+    /* -------------------------------------------------------------------------- */
+
+    error WAGAAccessControl__InvalidSellerAddress_registerSeller();
+    error WAGAAccessControl__InvalidSellerName_registerSeller();
+    error WAGAAccessControl__SellerAlreadyRegistered_registerSeller();
+    error WAGAAccessControl__SellerNotFound_updateSellerContact();
+    error WAGAAccessControl__UnauthorizedAccess_updateSellerContact();
+    error WAGAAccessControl__SellerNotFound_deactivateSeller();
+    error WAGAAccessControl__SellerNotFound_getSellerProfile();
+    error WAGAAccessControl__SellerNotFound_getSellerAddress();
+    error WAGAAccessControl__MustBeAdminOrProcessor_onlyBatchCreator();
+    error WAGAAccessControl__MustHaveZKVerifierRole_onlyZKVerifier();
+    error WAGAAccessControl__MustBeAdmin_onlyAdmin();
+
+    /* -------------------------------------------------------------------------- */
+    /*                              SELLER REGISTRATION SYSTEM                    */
+    /* -------------------------------------------------------------------------- */
+
+    struct SellerProfile {
+        uint64 sellerId;                    // Digital ID (8 bytes vs 20 bytes)
+        SellerType sellerType;              // COOPERATIVE, PROCESSOR, ROASTER
+        string sellerName;
+        string businessRegistration;        // Ethiopian business registration
+        string contactEmail;
+        bytes11 preferredBankSwift;         // Preferred banking partner
+        bool isActive;
+        uint256 registrationTimestamp;
+    }
+
+    enum SellerType {
+        COOPERATIVE,
+        PROCESSOR,
+        ROASTER
+    }
+
+    uint64 private nextSellerId = 1000; // Start at 1000 for seller IDs
+
+    // Seller data storage
+    mapping(uint64 => SellerProfile) private sellersById;
+    mapping(address => uint64) private addressToSellerId;
+    mapping(uint64 => address) private sellerIdToAddress;
+
     /* -------------------------------------------------------------------------- */
     /*                              MVP Role System                               */
     /* -------------------------------------------------------------------------- */
@@ -17,6 +61,8 @@ contract WAGAAccessControl is AccessControl {
     // Core Business Roles (3 roles only for MVP)
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");        // WAGA admins
     bytes32 public constant PROCESSOR_ROLE = keccak256("PROCESSOR_ROLE"); // Coffee processors
+    bytes32 public constant COOPERATIVE_ROLE = keccak256("COOPERATIVE_ROLE"); // Cooperatives
+    bytes32 public constant ROASTER_ROLE = keccak256("ROASTER_ROLE");     // Coffee roasters
     bytes32 public constant ZK_VERIFIER_ROLE = keccak256("ZK_VERIFIER_ROLE"); // ZK proof verification
     
     // Optional roles for ecosystem (can be added later)
@@ -30,10 +76,9 @@ contract WAGAAccessControl is AccessControl {
      * @dev Only WAGA admins or processors can create/modify batches
      */
     modifier onlyBatchCreator() {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender) || hasRole(PROCESSOR_ROLE, msg.sender),
-            "WAGAAccessControl: Must be admin or processor"
-        );
+        if (!(hasRole(ADMIN_ROLE, msg.sender) || hasRole(PROCESSOR_ROLE, msg.sender))) {
+            revert WAGAAccessControl__MustBeAdminOrProcessor_onlyBatchCreator();
+        }
         _;
     }
     
@@ -41,10 +86,9 @@ contract WAGAAccessControl is AccessControl {
      * @dev Only ZK verifiers can submit proofs
      */
     modifier onlyZKVerifier() {
-        require(
-            hasRole(ZK_VERIFIER_ROLE, msg.sender),
-            "WAGAAccessControl: Must have ZK verifier role"
-        );
+        if (!hasRole(ZK_VERIFIER_ROLE, msg.sender)) {
+            revert WAGAAccessControl__MustHaveZKVerifierRole_onlyZKVerifier();
+        }
         _;
     }
     
@@ -52,10 +96,9 @@ contract WAGAAccessControl is AccessControl {
      * @dev Admin-only functions
      */
     modifier onlyAdmin() {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            "WAGAAccessControl: Must be admin"
-        );
+        if (!hasRole(ADMIN_ROLE, msg.sender)) {
+            revert WAGAAccessControl__MustBeAdmin_onlyAdmin();
+        }
         _;
     }
 
@@ -98,6 +141,102 @@ contract WAGAAccessControl is AccessControl {
     function grantDistributorRole(address distributor) external onlyAdmin {
         _grantRole(DISTRIBUTOR_ROLE, distributor);
     }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              SELLER REGISTRATION                           */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Register a new seller with digital ID assignment
+     * @param sellerAddress The Ethereum address of the seller
+     * @param sellerType Type of seller (COOPERATIVE, PROCESSOR, ROASTER)
+     * @param sellerName Business name of the seller
+     * @param businessRegistration Ethiopian business registration number
+     * @param preferredBankSwift Preferred banking partner SWIFT code
+     * @return sellerId The assigned digital ID for the seller
+     */
+    function registerSeller(
+        address sellerAddress,
+        SellerType sellerType,
+        string memory sellerName,
+        string memory businessRegistration,
+        bytes11 preferredBankSwift
+    ) external onlyAdmin returns (uint64 sellerId) {
+        if (sellerAddress == address(0)) {
+            revert WAGAAccessControl__InvalidSellerAddress_registerSeller();
+        }
+        if (bytes(sellerName).length == 0) {
+            revert WAGAAccessControl__InvalidSellerName_registerSeller();
+        }
+        if (addressToSellerId[sellerAddress] != 0) {
+            revert WAGAAccessControl__SellerAlreadyRegistered_registerSeller();
+        }
+
+        sellerId = ++nextSellerId;
+
+        sellersById[sellerId] = SellerProfile({
+            sellerId: sellerId,
+            sellerType: sellerType,
+            sellerName: sellerName,
+            businessRegistration: businessRegistration,
+            contactEmail: "",
+            preferredBankSwift: preferredBankSwift,
+            isActive: true,
+            registrationTimestamp: block.timestamp
+        });
+
+        addressToSellerId[sellerAddress] = sellerId;
+        sellerIdToAddress[sellerId] = sellerAddress;
+
+        // Grant appropriate role based on seller type
+        if (sellerType == SellerType.COOPERATIVE) {
+            _grantRole(COOPERATIVE_ROLE, sellerAddress);
+        } else if (sellerType == SellerType.PROCESSOR) {
+            _grantRole(PROCESSOR_ROLE, sellerAddress);
+        } else if (sellerType == SellerType.ROASTER) {
+            _grantRole(ROASTER_ROLE, sellerAddress);
+        }
+
+        emit SellerRegistered(sellerId, sellerAddress, sellerName, sellerType);
+    }
+
+    /**
+     * @dev Update seller contact email
+     * @param sellerId The seller's digital ID
+     * @param contactEmail New contact email
+     */
+    function updateSellerContact(uint64 sellerId, string memory contactEmail) external {
+        if (sellersById[sellerId].sellerId != sellerId) {
+            revert WAGAAccessControl__SellerNotFound_updateSellerContact();
+        }
+        if (msg.sender != sellerIdToAddress[sellerId] && !hasRole(ADMIN_ROLE, msg.sender)) {
+            revert WAGAAccessControl__UnauthorizedAccess_updateSellerContact();
+        }
+
+        sellersById[sellerId].contactEmail = contactEmail;
+
+        emit SellerContactUpdated(sellerId, contactEmail);
+    }
+
+    /**
+     * @dev Deactivate a seller account
+     * @param sellerId The seller's digital ID
+     */
+    function deactivateSeller(uint64 sellerId) external onlyAdmin {
+        if (sellersById[sellerId].sellerId != sellerId) {
+            revert WAGAAccessControl__SellerNotFound_deactivateSeller();
+        }
+
+        sellersById[sellerId].isActive = false;
+        address sellerAddress = sellerIdToAddress[sellerId];
+
+        // Revoke all seller roles
+        _revokeRole(COOPERATIVE_ROLE, sellerAddress);
+        _revokeRole(PROCESSOR_ROLE, sellerAddress);
+        _revokeRole(ROASTER_ROLE, sellerAddress);
+
+        emit SellerDeactivated(sellerId, sellerAddress);
+    }
     
     /* -------------------------------------------------------------------------- */
     /*                              View Functions                                */
@@ -127,4 +266,91 @@ contract WAGAAccessControl is AccessControl {
         if (hasRole(DISTRIBUTOR_ROLE, account)) return "Distributor";
         return "Public";
     }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              SELLER VIEW FUNCTIONS                        */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Get seller profile by digital ID
+     * @param sellerId The seller's digital ID
+     * @return sellerName Business name
+     * @return businessRegistration Ethiopian business registration number
+     * @return sellerType Type of seller
+     * @return preferredBankSwift Preferred banking partner SWIFT code
+     * @return isActive Whether seller account is active
+     */
+    function getSellerProfile(uint64 sellerId) external view returns (
+        string memory sellerName,
+        string memory businessRegistration,
+        SellerType sellerType,
+        bytes11 preferredBankSwift,
+        bool isActive
+    ) {
+        SellerProfile memory seller = sellersById[sellerId];
+        if (seller.sellerId != sellerId) {
+            revert WAGAAccessControl__SellerNotFound_getSellerProfile();
+        }
+
+        return (
+            seller.sellerName,
+            seller.businessRegistration,
+            seller.sellerType,
+            seller.preferredBankSwift,
+            seller.isActive
+        );
+    }
+
+    /**
+     * @dev Get seller ID by address
+     * @param sellerAddress The seller's Ethereum address
+     * @return sellerId The seller's digital ID (0 if not registered)
+     */
+    function getSellerId(address sellerAddress) external view returns (uint64 sellerId) {
+        return addressToSellerId[sellerAddress];
+    }
+
+    /**
+     * @dev Get seller address by digital ID
+     * @param sellerId The seller's digital ID
+     * @return sellerAddress The seller's Ethereum address
+     */
+    function getSellerAddress(uint64 sellerId) external view returns (address sellerAddress) {
+        sellerAddress = sellerIdToAddress[sellerId];
+        if (sellerAddress == address(0)) {
+            revert WAGAAccessControl__SellerNotFound_getSellerAddress();
+        }
+        return sellerAddress;
+    }
+
+    /**
+     * @dev Check if address is a registered seller
+     * @param account The address to check
+     * @return isRegistered Whether the address is registered as a seller
+     */
+    function isRegisteredSeller(address account) external view returns (bool isRegistered) {
+        return addressToSellerId[account] != 0 && sellersById[addressToSellerId[account]].isActive;
+    }
+
+    /**
+     * @dev Get next available seller ID
+     * @return nextId The next seller ID that will be assigned
+     */
+    function getNextSellerId() external view returns (uint64 nextId) {
+        return nextSellerId + 1;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                   EVENTS                                   */
+    /* -------------------------------------------------------------------------- */
+
+    event SellerRegistered(
+        uint64 indexed sellerId,
+        address indexed sellerAddress,
+        string sellerName,
+        SellerType sellerType
+    );
+
+    event SellerContactUpdated(uint64 indexed sellerId, string contactEmail);
+    event SellerDeactivated(uint64 indexed sellerId, address indexed sellerAddress);
 }
