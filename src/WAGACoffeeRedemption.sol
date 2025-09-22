@@ -301,12 +301,13 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
      * @param batchId Batch identifier
      * @param quantity Number of coffee bags to redeem
      * @param buyerBankDetails Bank details for fiat transfer (required for Ethiopian batches)
+     * @return redemptionId Unique identifier for tracking this redemption request
      */
     function requestRedemption(
         uint256 batchId,
         uint256 quantity,
         string memory buyerBankDetails
-    ) external nonReentrant {
+    ) external nonReentrant returns (uint256 redemptionId) {
         // Ensure the batch exists
         if (!coffeeToken.isBatchCreated(batchId)) {
             revert WAGACoffeeRedemption__BatchDoesNotExist_requestRedemption();
@@ -406,7 +407,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         uint64 sellerId = _getBatchSellerId(batchId);
 
         // Create redemption request
-        uint256 redemptionId = nextRedemptionId;
+        redemptionId = nextRedemptionId;
         nextRedemptionId++; // redemptionId = nextRedemptionId + 1;
 
         // Update the redemption mapping
@@ -454,6 +455,8 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
             quantity,
             packagingInfo
         );
+        
+        return redemptionId;
     }
 
     /**
@@ -827,11 +830,12 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         uint256 valueUSD,
         string memory buyerBankDetails
     ) internal {
-        // Get the batch creator as seller (this could be enhanced to track actual current holder)
+        // Get the batch creator as seller (wallet address who owns the batch)
         address seller = _getBatchSeller(batchId);
         
         // Register trade with Bank of Ethiopia through the compliance contract
         // Note: This requires the redemption contract to have COMPLIANCE_MANAGER_ROLE
+        // The compliance contract will internally convert seller address to sellerId for storage
         ethiopianCompliance.registerTradeWithBoE(
             batchId,
             buyer,

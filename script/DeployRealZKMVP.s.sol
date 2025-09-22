@@ -193,6 +193,9 @@ contract DeployRealZKMVP is Script {
         console.log("Integrating Ethiopian compliance with ZK framework...");
         batchManager.setEthiopianCompliance(address(ethiopianCompliance));
         zkManager.setEthiopianCompliance(address(ethiopianCompliance));
+        
+        // 7c. Connect access control to Ethiopian compliance
+        ethiopianCompliance.setAccessControl(address(accessControlContract));
 
         // 8. Deploy Redemption with treasury and Ethiopian compliance integration
         console.log("Deploying Redemption with treasury and Ethiopian compliance integration...");
@@ -201,8 +204,8 @@ contract DeployRealZKMVP is Script {
             address(treasury),
             address(ethiopianCompliance),
             address(batchManager),
-            address(circomVerifier),
-            address(privacyLayer)
+            address(zkManager),
+            address(accessControlContract)
         );
 
         // 9. Deploy CDP Integration

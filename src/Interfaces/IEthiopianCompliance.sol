@@ -259,7 +259,7 @@ interface IEthiopianCompliance {
      * @dev Register trade with Bank of Ethiopia
      * @param batchId Batch identifier
      * @param buyer Buyer address
-     * @param seller Seller address
+     * @param seller Seller wallet address
      * @param quantity Quantity being traded
      * @param valueUSD Value in USD
      * @param buyerBankDetails Buyer's banking information

@@ -12,7 +12,7 @@ import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 import {WAGAAccessControl} from "../../src/WAGAAccessControl.sol";
-import {MockCircomVerifier} from "../../src/MockCircomVerifier.sol";
+import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockOfframpPartner} from "../../src/MockOfframpPartner.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {TestHelperUtilities} from "../TestHelperUtilities.sol";
@@ -43,7 +43,7 @@ contract EndToEndWorkflowTest is Test {
     WAGATreasury public treasury;
     PrivacyLayer public privacyLayer;
     WAGAAccessControl public accessControl;
-    MockCircomVerifier public circomVerifier;
+    CircomVerifier public circomVerifier;
     MockUSDC public usdcToken;
 
     /* -------------------------------------------------------------------------- */
@@ -89,6 +89,7 @@ contract EndToEndWorkflowTest is Test {
             ethiopianCompliance,
             , // ecxOracle
             circomVerifier,
+            , // accessControl (use getter instead)
             helperConfig
         ) = deployer.run();
 
@@ -99,7 +100,7 @@ contract EndToEndWorkflowTest is Test {
         // Setup roles and permissions
         vm.startPrank(admin);
         coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), processor);
-        coffeeToken.grantRole(coffeeToken.COMPLIANCE_MANAGER_ROLE(), complianceManager);
+        ethiopianCompliance.grantRole(ethiopianCompliance.COMPLIANCE_MANAGER_ROLE(), complianceManager);
         coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), admin);
 
         // Register seller
@@ -108,27 +109,26 @@ contract EndToEndWorkflowTest is Test {
             WAGAAccessControl.SellerType.PROCESSOR,
             "Test Ethiopian Processor",
             "TEST001",
-            "test@processor.et",
-            "+251911123456"
+            bytes11("TESTSWIFTXX")
         );
 
         // Setup offramp partner
         MockOfframpPartner(offrampPartner).grantOfframpExecutorRole(offrampPartner);
 
         // Setup banking partners
-        ethiopianCompliance.addBankingPartner(offrampPartner, "Global Offramp Partner");
-        ethiopianCompliance.updateBankingCapabilities(
+        ethiopianCompliance.registerBankingPartner(
+            OFFRAMP_BANK_SWIFT,
             offrampPartner,
+            "Global Offramp Partner",
             IEthiopianCompliance.BankingCapabilities({
                 swiftCode: OFFRAMP_BANK_SWIFT,
                 bankName: "Global Offramp Partner",
-                country: "Singapore",
-                canOfframp: true,
-                canReceiveFiat: false,
-                supportedCurrencies: "USD",
-                dailyLimit: 1000000 * 1e6,
-                isActive: true,
-                regulatoryApproval: "SG-FIN-001"
+                canActAsOfframp: true,
+                canHandleForexSurrender: false,
+                partnerType: IEthiopianCompliance.OfframpPartnerType.DIRECT_BANK,
+                connectedBankSwift: bytes11("CBETETAAXXX"),
+                maxTransactionAmount: 1000000 * 1e6,
+                isActive: true
             })
         );
 
@@ -193,18 +193,26 @@ contract EndToEndWorkflowTest is Test {
         TestHelperUtilities.EUDRTestData memory eudrData = TestHelperUtilities.generateSampleEUDRData();
         ethiopianCompliance.addEUDRCertificate(
             batchId,
-            eudrData.certificateId,
-            eudrData.certificateExpiry,
-            eudrData.complianceLevel,
-            eudrData.deforestationStatus
+            IEthiopianCompliance.EUDRCertificate({
+                certificateId: eudrData.certificateId,
+                issuer: "European Commission",
+                issueDate: block.timestamp - 30 days,
+                expiryDate: eudrData.certificateExpiry,
+                isValid: true,
+                geoDataHash: "geo-hash-end-to-end-test",
+                complianceLevel: eudrData.complianceLevel,
+                deforestationRisk: eudrData.deforestationStatus
+            })
         );
 
         ethiopianCompliance.addGeolocationData(
             batchId,
-            "Farm Plot A",
-            "Polygon",
-            eudrData.plotSize,
-            eudrData.verificationMethod
+            IEthiopianCompliance.GeolocationData({
+                plotType: "Farm Plot A",
+                coordinates: "Polygon",
+                plotSize: eudrData.plotSize,
+                verificationMethod: eudrData.verificationMethod
+            })
         );
 
         // Submit EUDR ZK proofs
@@ -249,9 +257,12 @@ contract EndToEndWorkflowTest is Test {
             batchId,
             IEthiopianCompliance.ECTAPermit({
                 permitNumber: ethData.ectaPermitNumber,
+                exporterName: "Test Ethiopian Processor",
+                exporterLicense: "TEST001",
+                issueDate: block.timestamp - 7 days,
                 expiryDate: block.timestamp + 180 days,
-                exportValue: ethData.exportValue,
-                issuingAuthority: "ECTA"
+                isValid: true,
+                permitDocumentHash: "ipfs://ecta-permit-hash"
             })
         );
 
@@ -259,12 +270,13 @@ contract EndToEndWorkflowTest is Test {
             batchId,
             IEthiopianCompliance.QualityCertificate({
                 certificateNumber: ethData.qualityCertificateNumber,
-                issueDate: block.timestamp,
-                expiryDate: block.timestamp + 365 days,
+                gradingResult: "Grade 1",
                 moistureContent: ethData.moistureContent,
                 screenSize: ethData.screenSize,
-                grade: "Grade 1",
-                issuingAuthority: "ECX"
+                scaeCompliant: true,
+                issueDate: block.timestamp,
+                certificateHash: "ipfs://quality-certificate-hash",
+                inspectorId: "ECX-INSPECTOR-001"
             })
         );
 
@@ -272,12 +284,13 @@ contract EndToEndWorkflowTest is Test {
             batchId,
             IEthiopianCompliance.OriginVerification({
                 region: "Yirgacheffe",
+                woreda: "Yirgacheffe Woreda",
+                kebele: "Test Kebele",
                 cooperativeName: "Test Cooperative",
-                cooperativeLicense: ethData.originDocumentHash,
-                verificationDocumentHash: ethData.originDocumentHash,
-                plotCoordinates: "8.5476N, 39.2695E",
-                altitude: 2000,
-                processingMethod: "Washed"
+                cooperativeLicense: "COOP-LIC-001",
+                verified: true,
+                verificationDate: block.timestamp,
+                verificationDocumentHash: ethData.originDocumentHash
             })
         );
 
@@ -285,32 +298,32 @@ contract EndToEndWorkflowTest is Test {
         bytes memory ectaProof = TestHelperUtilities.generateMockZKProof();
         zkManager.addEthiopianComplianceZKProof(
             batchId,
+            "ECTA",
             ectaProof,
-            IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY,
             ethData.ectaPermitNumber
         );
 
         bytes memory qualityProof = TestHelperUtilities.generateMockZKProof();
         zkManager.addEthiopianComplianceZKProof(
             batchId,
+            "QUALITY",
             qualityProof,
-            IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY,
             ethData.qualityCertificateNumber
         );
 
         bytes memory originProof = TestHelperUtilities.generateMockZKProof();
         zkManager.addEthiopianComplianceZKProof(
             batchId,
+            "ORIGIN",
             originProof,
-            IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF,
             "Yirgacheffe Origin Verified"
         );
 
         bytes memory boeProof = TestHelperUtilities.generateMockZKProof();
         zkManager.addEthiopianComplianceZKProof(
             batchId,
+            "BOE",
             boeProof,
-            IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE,
             ethData.boeRegistrationNumber
         );
 
@@ -331,7 +344,6 @@ contract EndToEndWorkflowTest is Test {
         vm.startPrank(complianceManager);
         ethiopianCompliance.registerTradeWithBoE(
             batchId,
-            sellerId,
             consumer,
             processor,
             BATCH_SIZE,
@@ -373,7 +385,7 @@ contract EndToEndWorkflowTest is Test {
 
         // Request redemption with EUDR compliance requirement
         vm.startPrank(consumer);
-        uint256 redemptionId = redemptionContract.requestRedemption(batchId, BATCH_SIZE, true);
+        uint256 redemptionId = redemptionContract.requestRedemption(batchId, BATCH_SIZE, "End-to-End Test Bank Details");
         vm.stopPrank();
 
         // Verify redemption request
@@ -438,23 +450,14 @@ contract EndToEndWorkflowTest is Test {
         vm.stopPrank();
 
         // Verify offramp record
-        (
-            uint256 recordBatchId,
-            address recordBuyer,
-            uint256 recordSellerId,
-            uint256 recordAmount,
-            bytes11 recordSwift,
-            string memory txId,
-            bool fiatInitiated,
-            uint256 recordTimestamp
-        ) = mockPartner.getOfframpRecord(sellerId);
+        MockOfframpPartner.OfframpRecord memory record = mockPartner.getOfframpRecord(sellerId);
 
-        assertEq(recordBatchId, batchId, "Offramp record batch ID should match");
-        assertEq(recordBuyer, consumer, "Offramp record buyer should match");
-        assertEq(recordSellerId, sellerId, "Offramp record seller ID should match");
-        assertEq(recordAmount, USDC_AMOUNT, "Offramp record amount should match");
-        assertEq(recordSwift, ETHIOPIAN_BANK_SWIFT, "Offramp record SWIFT should match");
-        assertTrue(fiatInitiated, "Fiat transfer should be initiated");
+        assertEq(record.batchId, batchId, "Offramp record batch ID should match");
+        assertEq(record.buyer, consumer, "Offramp record buyer should match");
+        assertEq(record.sellerId, sellerId, "Offramp record seller ID should match");
+        assertEq(record.usdAmount, USDC_AMOUNT, "Offramp record amount should match");
+        assertEq(record.receivingBankSwift, ETHIOPIAN_BANK_SWIFT, "Offramp record SWIFT should match");
+        assertTrue(record.fiatTransferInitiated, "Fiat transfer should be initiated");
 
         console.log("Fiat transfer initiated to Ethiopian bank");
 
@@ -468,7 +471,8 @@ contract EndToEndWorkflowTest is Test {
 
         vm.startPrank(processor); // Seller confirms payment
         ethiopianCompliance.confirmSellerPayment(
-            redemptionId,
+            batchId,
+            consumer,
             sellerReceivedAmount,
             "SELLER_PAYMENT_001"
         );
@@ -499,8 +503,8 @@ contract EndToEndWorkflowTest is Test {
 
         // Verify complete workflow
         assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be created");
-        assertTrue(zkManager.hasEUDRComplianceProofs(batchId), "Batch should have EUDR proofs");
-        assertTrue(zkManager.hasEthiopianComplianceProofs(batchId), "Batch should have Ethiopian proofs");
+        assertTrue(zkManager.validateEUDRZKCompliance(batchId), "Batch should have EUDR proofs");
+        assertTrue(zkManager.validateEthiopianZKCompliance(batchId), "Batch should have Ethiopian ZK compliance");
         assertTrue(treasury.hasPaidForBatch(consumer, batchId), "Consumer payment should be recorded");
         assertTrue(treasury.hasOfframpTransferExecuted(batchId, consumer), "Offramp transfer should be executed");
         assertTrue(isFulfilled, "Redemption should be completed");
@@ -597,16 +601,22 @@ contract EndToEndWorkflowTest is Test {
         vm.startPrank(complianceManager);
         ethiopianCompliance.addEUDRCertificate(
             batchId,
-            "EUDR-TEST-001",
-            block.timestamp + 365 days,
-            "High",
-            "Deforestation-Free"
+            IEthiopianCompliance.EUDRCertificate({
+                certificateId: "EUDR-TEST-001",
+                issuer: "European Commission",
+                issueDate: block.timestamp - 10 days,
+                expiryDate: block.timestamp + 365 days,
+                isValid: true,
+                geoDataHash: "geo-hash-comprehensive-workflow-test",
+                complianceLevel: "High",
+                deforestationRisk: "Deforestation-Free"
+            })
         );
         vm.stopPrank();
 
         // Verify data flows between contracts
         assertTrue(coffeeToken.isBatchCreated(batchId), "CoffeeToken should have batch");
-        assertTrue(ethiopianCompliance.hasEUDRCertificate(batchId), "EthiopianCompliance should have certificate");
+        assertTrue(ethiopianCompliance.validateEUDRCompliance(batchId), "EthiopianCompliance should have certificate");
 
         // Test ZK manager integration
         vm.startPrank(complianceManager);
@@ -619,7 +629,7 @@ contract EndToEndWorkflowTest is Test {
         );
         vm.stopPrank();
 
-        assertTrue(zkManager.hasEUDRComplianceProofs(batchId), "ZKManager should have EUDR proofs");
+        assertTrue(zkManager.validateEUDRZKCompliance(batchId), "ZKManager should have EUDR proofs");
 
         console.log("Cross-contract data flow test passed");
     }
@@ -662,7 +672,7 @@ contract EndToEndWorkflowTest is Test {
         vm.stopPrank();
 
         vm.startPrank(consumer);
-        uint256 redemptionId = redemptionContract.requestRedemption(batchId, 50, false); // No EUDR requirement
+        uint256 redemptionId = redemptionContract.requestRedemption(batchId, 50, "Cross-Contract Test Bank Details"); // No EUDR requirement
         vm.stopPrank();
 
         (

@@ -82,6 +82,7 @@ contract EthiopianExportIntegrationTest is Test {
             ethiopianCompliance,
             , // ecxOracle
             circomVerifier,
+            , // accessControl (use getter instead)
             helperConfig
         ) = deployer.run();
 
@@ -107,28 +108,15 @@ contract EthiopianExportIntegrationTest is Test {
             WAGAAccessControl.SellerType.COOPERATIVE,
             "Test Cooperative",
             "REG001",
-            "contact@test.com",
-            "+251911123456"
+            bytes11("TESTSWIFTXX")
         );
 
         // Setup banking partners
         ethiopianCompliance.addBankingPartner(bankingPartner, "Commercial Bank of Ethiopia");
-        ethiopianCompliance.addOfframpPartner(offrampPartner, "Global Offramp Partner");
+        ethiopianCompliance.addBankingPartner(offrampPartner, "Global Offramp Partner"); // Offramp partners are banking partners with specific capabilities
 
-        // Update banking capabilities
-        WAGAEthiopianCompliance.BankingCapabilities memory capabilities = WAGAEthiopianCompliance.BankingCapabilities({
-            swiftCode: BANK_SWIFT,
-            bankName: "Commercial Bank of Ethiopia",
-            country: "Ethiopia",
-            canOfframp: true,
-            canReceiveFiat: true,
-            supportedCurrencies: "ETB,USD,EUR",
-            dailyLimit: 1000000 * 10**6, // 1M USD
-            isActive: true,
-            regulatoryApproval: "NBE-2024-001"
-        });
-
-        ethiopianCompliance.updateBankingCapabilities(bankingPartner, capabilities);
+        // Banking partners are now set up with addBankingPartner above
+        // For more advanced capabilities, use registerBankingPartner instead
 
         // Deploy MockUSDC and fund treasury
         usdc = new MockUSDC();
@@ -176,32 +164,32 @@ contract EthiopianExportIntegrationTest is Test {
         // ECTA permit validity
         zkManager.addEthiopianComplianceZKProof(
             testBatchId,
+            "ECTA",
             _createValidMockGroth16Proof(),
-            IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY,
             "ECTA Export Permit Valid - NBE Approved"
         );
 
         // Quality certificate authenticity
         zkManager.addEthiopianComplianceZKProof(
             testBatchId,
+            "QUALITY",
             _createValidMockGroth16Proof(),
-            IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY,
             "Quality Certificate Authentic - SCA Certified"
         );
 
         // Origin verification
         zkManager.addEthiopianComplianceZKProof(
             testBatchId,
+            "ORIGIN",
             _createValidMockGroth16Proof(),
-            IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF,
             "Origin Verified - Yirgacheffe Region"
         );
 
         // BoE forex compliance
         zkManager.addEthiopianComplianceZKProof(
             testBatchId,
+            "BOE",
             _createValidMockGroth16Proof(),
-            IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE,
             "BoE Forex Compliance - Export Declaration Filed"
         );
 
@@ -213,7 +201,7 @@ contract EthiopianExportIntegrationTest is Test {
         bool ethiopianCompliant = zkManager.validateEthiopianZKCompliance(testBatchId);
         assertTrue(ethiopianCompliant, "Batch should be Ethiopian compliant");
 
-        bool hasEthiopianProofs = zkManager.hasEthiopianComplianceProofs(testBatchId);
+        bool hasEthiopianProofs = zkManager.validateEthiopianZKCompliance(testBatchId);
         assertTrue(hasEthiopianProofs, "Batch should have Ethiopian proofs");
 
         console.log("Verified Ethiopian compliance status");

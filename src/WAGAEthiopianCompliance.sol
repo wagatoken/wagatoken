@@ -609,7 +609,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
      * @dev Register trade with Bank of Ethiopia (internal function called by redemption contract)
      * @param batchId Batch identifier
      * @param buyer Buyer address
-     * @param seller Seller address
+     * @param seller Seller wallet address
      * @param quantity Quantity in bags
      * @param valueUSD Value in USD
      * @param buyerBankDetails Buyer's banking information
@@ -631,6 +631,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
         
         uint256 valueETB = (valueUSD * usdToEtbRate) / RATE_PRECISION;
         
+        // Convert seller address to sellerId for gas-efficient storage
         uint64 sellerId = accessControl.getSellerId(seller);
 
         BoETradeRegistration memory registration = BoETradeRegistration({

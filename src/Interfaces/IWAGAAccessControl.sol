@@ -16,7 +16,7 @@ interface IWAGAAccessControl {
         string sellerName;
         string businessRegistration;
         string contactEmail;
-        string contactPhone;
+        bytes11 preferredBankSwift;
         uint256 registrationTimestamp;
         bool isActive;
     }
@@ -44,17 +44,15 @@ interface IWAGAAccessControl {
      * @param sellerType Type of seller (COOPERATIVE, PROCESSOR, ROASTER)
      * @param sellerName Business name of the seller
      * @param businessRegistration Business registration details
-     * @param contactEmail Contact email
-     * @param contactPhone Contact phone
+     * @param preferredBankSwift Preferred banking partner SWIFT code
      */
     function registerSeller(
         address sellerAddress,
         SellerType sellerType,
         string memory sellerName,
         string memory businessRegistration,
-        string memory contactEmail,
-        string memory contactPhone
-    ) external;
+        bytes11 preferredBankSwift
+    ) external returns (uint64 sellerId);
 
     /**
      * @dev Get seller ID from address
@@ -95,9 +93,8 @@ interface IWAGAAccessControl {
      * @dev Update seller contact information
      * @param sellerId Digital seller ID
      * @param contactEmail New contact email
-     * @param contactPhone New contact phone
      */
-    function updateSellerContact(uint64 sellerId, string memory contactEmail, string memory contactPhone) external;
+    function updateSellerContact(uint64 sellerId, string memory contactEmail) external;
 
     /**
      * @dev Get total number of registered sellers

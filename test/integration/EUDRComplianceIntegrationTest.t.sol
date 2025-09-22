@@ -87,10 +87,11 @@ contract EUDRComplianceIntegrationTest is Test {
             ethiopianCompliance,
             , // ecxOracle
             circomVerifier,
+            , // accessControl (use getter instead)
             helperConfig
         ) = deployer.run();
 
-        // Get access control from deployment
+        // Get access control using getter function to avoid stack too deep
         accessControl = deployer.getAccessControl();
 
         // Get the actual admin address from the deployment
@@ -112,12 +113,11 @@ contract EUDRComplianceIntegrationTest is Test {
             WAGAAccessControl.SellerType.COOPERATIVE,
             "Test Cooperative",
             "REG001",
-            "contact@test.com",
-            "+251911123456"
+            bytes11("TESTSWIFTXX")
         );
 
         // Setup banking
-        ethiopianCompliance.addOfframpPartner(offrampPartner, "Global Offramp");
+        ethiopianCompliance.addBankingPartner(offrampPartner, "Global Offramp");
 
         // Deploy MockUSDC and fund treasury
         usdc = new MockUSDC();
@@ -168,7 +168,7 @@ contract EUDRComplianceIntegrationTest is Test {
             issueDate: block.timestamp - 30 days,
             expiryDate: block.timestamp + 365 days,
             isValid: true,
-            geoDataHash: keccak256("8.5476N, 39.2695E"),
+            geoDataHash: "geo-hash-eudr-test",
             complianceLevel: "High",
             deforestationRisk: "Low"
         });
@@ -184,16 +184,14 @@ contract EUDRComplianceIntegrationTest is Test {
         batchManager.registerEUDRComplianceWithZK(
             testBatchId,
             eudrCert,
-            _createValidMockGroth16Proof(),
-            "Deforestation-Free - Verified by Satellite Imagery"
+            _createValidMockGroth16Proof()
         );
 
         // Add geolocation data
         batchManager.addEUDRGeolocationDataWithZK(
             testBatchId,
             geoData,
-            _createValidMockGroth16Proof(),
-            "Geolocation Verified - GPS Coordinates Confirmed"
+            _createValidMockGroth16Proof()
         );
 
         vm.stopPrank();
@@ -228,17 +226,26 @@ contract EUDRComplianceIntegrationTest is Test {
 
         privacyLayer.configureEUDRDisclosureRules(
             testBatchId,
-            IPrivacyLayer.PrivacyLevel.SELECTIVE,
-            "EUDR compliance data - processor access only"
+            PrivacyLayer.SelectiveDisclosureRules({
+                deforestationPrivate: true,
+                geolocationPrivate: true,
+                permitDataPrivate: false,
+                certificateDataPrivate: false,
+                originDataPrivate: true,
+                boeDataPrivate: true,
+                minRoleLevel: 2 // PROCESSOR level
+            })
         );
 
         // Add EUDR compliance claims
         PrivacyLayer.ZKComplianceClaims memory claims = PrivacyLayer.ZKComplianceClaims({
-            deforestationStatus: "Deforestation-Free",
-            geolocationData: "8.5476N, 39.2695E",
-            complianceLevel: "High",
-            verificationMethod: "Satellite + GPS",
-            certificateHash: keccak256("EUDR_CERT_2024")
+            deforestationClaim: "Deforestation-Free",
+            geolocationClaim: "8.5476N, 39.2695E",
+            permitValidityClaim: "Valid ECTA Permit",
+            certificateAuthenticityClaim: "Authentic Quality Certificate",
+            originVerificationClaim: "Ethiopian Origin Verified",
+            boeComplianceClaim: "BoE Registration Complete",
+            lastUpdated: block.timestamp
         });
 
         privacyLayer.updateEUDRComplianceClaims(testBatchId, claims);
@@ -258,7 +265,7 @@ contract EUDRComplianceIntegrationTest is Test {
         bool eudrCompliant = zkManager.validateEUDRZKCompliance(testBatchId);
         assertTrue(eudrCompliant, "Batch should be EUDR compliant");
 
-        bool hasEUDRProofs = zkManager.hasEUDRComplianceProofs(testBatchId);
+        bool hasEUDRProofs = zkManager.validateEUDRZKCompliance(testBatchId);
         assertTrue(hasEUDRProofs, "Batch should have EUDR proofs");
 
         console.log("Verified EUDR compliance status");
@@ -269,7 +276,7 @@ contract EUDRComplianceIntegrationTest is Test {
         uint256 redemptionId = redemption.requestRedemption(
             testBatchId,
             QUANTITY,
-            true // Require EUDR compliance
+            "EUDR Compliance Test Bank Details"
         );
 
         console.log("Requested redemption with EUDR compliance:", redemptionId);
@@ -286,6 +293,8 @@ contract EUDRComplianceIntegrationTest is Test {
             ,
             bool requiresEUDRCompliance,
             ,
+            ,
+            
         ) = redemption.getEnhancedRedemptionDetails(redemptionId);
 
         assertTrue(requiresEUDRCompliance, "Redemption should require EUDR compliance");
@@ -294,11 +303,11 @@ contract EUDRComplianceIntegrationTest is Test {
 
         // Step 9: Test privacy access controls
         vm.startPrank(processor);
-        bool processorAccess = privacyLayer.canAccessEUDRData(processor, testBatchId);
+        bool processorAccess = privacyLayer.canAccessEUDRData(testBatchId, processor, "deforestation");
         assertTrue(processorAccess, "Processor should have access to EUDR data");
 
-        PrivacyLayer.ZKComplianceClaims memory retrievedClaims = privacyLayer.getEUDRComplianceClaims(processor, testBatchId);
-        assertEq(retrievedClaims.deforestationStatus, "Deforestation-Free");
+        PrivacyLayer.ZKComplianceClaims memory retrievedClaims = privacyLayer.getEUDRComplianceClaims(testBatchId, processor);
+        assertEq(retrievedClaims.deforestationClaim, "Deforestation-Free");
         vm.stopPrank();
 
         console.log("Verified privacy access controls");
@@ -331,7 +340,7 @@ contract EUDRComplianceIntegrationTest is Test {
             issueDate: block.timestamp - 15 days,
             expiryDate: block.timestamp + 395 days,
             isValid: true,
-            geoDataHash: keccak256("7.1234N, 38.7654E"),
+            geoDataHash: "geo-hash-batch-2-test",
             complianceLevel: "High",
             deforestationRisk: "Very Low"
         });
@@ -339,8 +348,7 @@ contract EUDRComplianceIntegrationTest is Test {
         batchManager.registerEUDRComplianceWithZK(
             batchId,
             eudrCert,
-            _createValidMockGroth16Proof(),
-            "Deforestation-Free - EU Verified"
+            _createValidMockGroth16Proof()
         );
 
         batchManager.addEUDRGeolocationDataWithZK(
@@ -351,8 +359,7 @@ contract EUDRComplianceIntegrationTest is Test {
                 plotSize: 150,
                 verificationMethod: "GPS + Drone Survey"
             }),
-            _createValidMockGroth16Proof(),
-            "Geolocation Verified - Ethiopian Highlands"
+            _createValidMockGroth16Proof()
         );
 
         vm.stopPrank();
@@ -362,29 +369,29 @@ contract EUDRComplianceIntegrationTest is Test {
 
         zkManager.addEthiopianComplianceZKProof(
             batchId,
+            "ECTA",
             _createValidMockGroth16Proof(),
-            IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY,
             "ECTA Export Permit Valid - NBE Approved"
         );
 
         zkManager.addEthiopianComplianceZKProof(
             batchId,
+            "QUALITY",
             _createValidMockGroth16Proof(),
-            IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY,
             "Quality Certificate Authentic - SCA Certified"
         );
 
         zkManager.addEthiopianComplianceZKProof(
             batchId,
+            "ORIGIN",
             _createValidMockGroth16Proof(),
-            IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF,
             "Origin Verified - Sidamo Region"
         );
 
         zkManager.addEthiopianComplianceZKProof(
             batchId,
+            "BOE",
             _createValidMockGroth16Proof(),
-            IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE,
             "BoE Forex Compliance - Export Declaration Filed"
         );
 
@@ -407,7 +414,7 @@ contract EUDRComplianceIntegrationTest is Test {
         vm.stopPrank();
 
         vm.startPrank(consumer);
-        uint256 redemptionId = redemption.requestRedemption(batchId, QUANTITY, true);
+        uint256 redemptionId = redemption.requestRedemption(batchId, QUANTITY, "Cross-Contract Test Bank Details");
         vm.stopPrank();
 
         // Step 6: Record offramp transfer
@@ -473,19 +480,51 @@ contract EUDRComplianceIntegrationTest is Test {
         ];
 
         for (uint256 i = 0; i < 3; i++) {
-            privacyLayer.configureEUDRDisclosureRules(
-                batchIds[i],
-                levels[i],
-                descriptions[i]
-            );
+            // Create SelectiveDisclosureRules based on privacy level
+            PrivacyLayer.SelectiveDisclosureRules memory rules;
+            if (levels[i] == IPrivacyLayer.PrivacyLevel.PUBLIC) {
+                rules = PrivacyLayer.SelectiveDisclosureRules({
+                    deforestationPrivate: false,
+                    geolocationPrivate: false,
+                    permitDataPrivate: false,
+                    certificateDataPrivate: false,
+                    originDataPrivate: false,
+                    boeDataPrivate: false,
+                    minRoleLevel: 0
+                });
+            } else if (levels[i] == IPrivacyLayer.PrivacyLevel.SELECTIVE) {
+                rules = PrivacyLayer.SelectiveDisclosureRules({
+                    deforestationPrivate: true,
+                    geolocationPrivate: true,
+                    permitDataPrivate: false,
+                    certificateDataPrivate: false,
+                    originDataPrivate: true,
+                    boeDataPrivate: true,
+                    minRoleLevel: 2
+                });
+            } else { // PRIVATE
+                rules = PrivacyLayer.SelectiveDisclosureRules({
+                    deforestationPrivate: true,
+                    geolocationPrivate: true,
+                    permitDataPrivate: true,
+                    certificateDataPrivate: true,
+                    originDataPrivate: true,
+                    boeDataPrivate: true,
+                    minRoleLevel: 3
+                });
+            }
+            
+            privacyLayer.configureEUDRDisclosureRules(batchIds[i], rules);
 
             // Add EUDR claims to all batches
             PrivacyLayer.ZKComplianceClaims memory claims = PrivacyLayer.ZKComplianceClaims({
-                deforestationStatus: "Compliant",
-                geolocationData: string(abi.encodePacked("Location ", vm.toString(i))),
-                complianceLevel: "High",
-                verificationMethod: "Satellite",
-                certificateHash: keccak256(abi.encodePacked("CERT_", i))
+                deforestationClaim: "Compliant",
+                geolocationClaim: string(abi.encodePacked("Location ", vm.toString(i))),
+                permitValidityClaim: "Valid ECTA Permit",
+                certificateAuthenticityClaim: "Authentic Certificate",
+                originVerificationClaim: "Ethiopian Origin Verified",
+                boeComplianceClaim: "BoE Registration Complete",
+                lastUpdated: block.timestamp
             });
 
             privacyLayer.updateEUDRComplianceClaims(batchIds[i], claims);
@@ -507,7 +546,7 @@ contract EUDRComplianceIntegrationTest is Test {
             for (uint256 userIndex = 0; userIndex < 3; userIndex++) {
                 vm.startPrank(testUsers[userIndex]);
 
-                bool canAccess = privacyLayer.canAccessEUDRData(testUsers[userIndex], batchIds[batchIndex]);
+                bool canAccess = privacyLayer.canAccessEUDRData(batchIds[batchIndex], testUsers[userIndex], "deforestation");
 
                 string memory accessResult = canAccess ? "YES" : "NO";
 
@@ -558,7 +597,7 @@ contract EUDRComplianceIntegrationTest is Test {
         vm.startPrank(consumer);
 
         vm.expectRevert("EUDR compliance not met");
-        redemption.requestRedemption(batchId, QUANTITY, true);
+        redemption.requestRedemption(batchId, QUANTITY, "Comprehensive Test Bank Details");
 
         vm.stopPrank();
 
@@ -575,12 +614,11 @@ contract EUDRComplianceIntegrationTest is Test {
                 issueDate: block.timestamp - 10 days,
                 expiryDate: block.timestamp + 355 days,
                 isValid: true,
-                geoDataHash: keccak256("test"),
+                geoDataHash: "geo-hash-comprehensive-test",
                 complianceLevel: "Medium",
                 deforestationRisk: "Low"
             }),
-            _createValidMockGroth16Proof(),
-            "Deforestation compliant"
+            _createValidMockGroth16Proof()
         );
 
         vm.stopPrank();
@@ -604,7 +642,7 @@ contract EUDRComplianceIntegrationTest is Test {
         // Redemption should still fail
         vm.startPrank(consumer);
         vm.expectRevert("EUDR compliance not met");
-        redemption.requestRedemption(batchId, QUANTITY, true);
+        redemption.requestRedemption(batchId, QUANTITY, "Comprehensive Test Bank Details");
         vm.stopPrank();
 
         console.log("Verified redemption fails with partial EUDR compliance");
@@ -621,12 +659,11 @@ contract EUDRComplianceIntegrationTest is Test {
                 issueDate: block.timestamp - 400 days,
                 expiryDate: block.timestamp - 30 days, // Expired
                 isValid: true,
-                geoDataHash: keccak256("expired"),
+                geoDataHash: "geo-hash-expired-test",
                 complianceLevel: "High",
                 deforestationRisk: "Low"
             }),
-            _createValidMockGroth16Proof(),
-            "Expired certificate"
+            _createValidMockGroth16Proof()
         );
 
         vm.stopPrank();
