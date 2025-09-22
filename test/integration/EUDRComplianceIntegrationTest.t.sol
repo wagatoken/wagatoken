@@ -5,6 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
+import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
 import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
 import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
@@ -16,6 +17,8 @@ import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockCircomVerifier} from "../../src/MockCircomVerifier.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
+import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
+import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.sol";
@@ -47,6 +50,10 @@ contract EUDRComplianceIntegrationTest is Test {
     CircomVerifier public circomVerifier;
     MockCircomVerifier public mockVerifier;
     PrivacyLayer public privacyLayer;
+    
+    // Additional contracts now included in deployment
+    WAGACDPIntegration public cdpIntegration;
+    WAGAECXPriceOracle public ecxOracle;
     MockUSDC public usdc;
 
     // Test accounts
@@ -81,13 +88,12 @@ contract EUDRComplianceIntegrationTest is Test {
             privacyLayer,
             treasury,
             redemption,
-            , // cdpIntegration
+            cdpIntegration, // Now included in deployment
             proofOfReserve,
             inventoryManager,
             ethiopianCompliance,
-            , // ecxOracle
+            ecxOracle, // Now included in deployment
             circomVerifier,
-            , // accessControl (use getter instead)
             helperConfig
         ) = deployer.run();
 
@@ -108,7 +114,7 @@ contract EUDRComplianceIntegrationTest is Test {
         // Register seller using ConfigManager
         coffeeToken.registerSeller(
             seller,
-            WAGACoffeeTokenCore.SellerType.COOPERATIVE,
+            WAGAConfigManager.SellerType.COOPERATIVE,
             "Test Cooperative",
             "REG001",
             "TESTSWIFTXX"
@@ -123,8 +129,7 @@ contract EUDRComplianceIntegrationTest is Test {
 
         // Configure mock verifier for testing
         mockVerifier = new MockCircomVerifier();
-        mockVerifier.grantRole(mockVerifier.VERIFIER_ROLE(), address(zkManager));
-        mockVerifier.grantRole(mockVerifier.VERIFIER_ROLE(), admin);
+        // Note: MockCircomVerifier doesn't require role setup - it's a mock for testing
 
         // Replace zkManager with test version using mock verifier
         WAGAZKManager testZKManager = new WAGAZKManager(address(coffeeToken), address(mockVerifier));

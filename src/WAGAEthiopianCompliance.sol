@@ -371,7 +371,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, ReentrancyGuard {
         TransferStage stage,
         string memory transactionId
     ) external override {
-        if (address(accessControl) == address(0)) {
+        if (address(coffeeToken) == address(0)) {
             revert WAGAEthiopianCompliance__InvalidTransferStage_confirmFiatTransferStage();
         }
 
@@ -414,7 +414,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, ReentrancyGuard {
         uint256 usdAmountReceived,
         string memory sellerTransactionId
     ) external override {
-        if (address(accessControl) == address(0)) {
+        if (address(coffeeToken) == address(0)) {
             revert WAGAEthiopianCompliance__UnauthorizedSellerConfirmation_confirmSellerPayment();
         }
 
@@ -453,7 +453,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, ReentrancyGuard {
         bytes11 offrampSwift,
         uint256 usdAmount
     ) external override {
-        if (address(accessControl) == address(0)) {
+        if (address(coffeeToken) == address(0)) {
             revert WAGAEthiopianCompliance__TransferNotFound_recordOfframpTransferInitiated();
         }
 
@@ -489,7 +489,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, ReentrancyGuard {
         TransferStage currentStage,
         bool sellerPaymentConfirmed
     ) {
-        if (address(accessControl) == address(0)) {
+        if (address(coffeeToken) == address(0)) {
             revert WAGAEthiopianCompliance__InvalidSellerId_getFiatTransfer();
         }
 
@@ -519,7 +519,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, ReentrancyGuard {
         address buyer,
         TransferStage stage
     ) external view override returns (bool completed, string memory transactionId, uint256 timestamp) {
-        if (address(accessControl) == address(0)) {
+        if (address(coffeeToken) == address(0)) {
             revert WAGAEthiopianCompliance__TransferNotFound_getTransferStageStatus();
         }
 

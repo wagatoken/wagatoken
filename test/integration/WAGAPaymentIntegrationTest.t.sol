@@ -16,6 +16,11 @@ import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {MockFunctionsRouter} from "../mocks/MockFunctionsRouter.sol";
 import {MockFunctionsHelper} from "../mocks/MockFunctionsHelper.sol";
 import {MockFunctionsClient} from "../mocks/MockFunctionsClient.sol";
+import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
+import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
+import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
+import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
+import {CircomVerifier} from "../../src/CircomVerifier.sol";
 
 contract WAGAPaymentIntegrationTest is Test {
     // Deployment
@@ -30,6 +35,13 @@ contract WAGAPaymentIntegrationTest is Test {
     WAGACoffeeRedemption public redemption;
     WAGAEthiopianCompliance public ethiopianCompliance;
     WAGAInventoryManagerMVP public inventoryManager;
+    
+    // Additional contracts from deployment
+    WAGACDPIntegration public cdpIntegration;
+    WAGAProofOfReserve public proofOfReserve;
+    WAGAECXPriceOracle public ecxOracle;
+    PrivacyLayer public privacyLayer;
+    CircomVerifier public circomVerifier;
 
     // Mock contracts
     MockUSDC public mockUSDC;
@@ -57,16 +69,15 @@ contract WAGAPaymentIntegrationTest is Test {
             coffeeToken,
             batchManager,
             zkManager,
-            , // privacyLayer
+            privacyLayer,
             treasury,
             redemption,
-            , // cdpIntegration
-            , // proofOfReserve
+            cdpIntegration, // Now included in deployment
+            proofOfReserve, // Now included in deployment
             inventoryManager,
             ethiopianCompliance,
-            , // ecxOracle
-            , // circomVerifier
-            , // accessControl
+            ecxOracle, // Now included in deployment
+            circomVerifier,
             helperConfig
         ) = deployer.run();
 
@@ -91,17 +102,21 @@ contract WAGAPaymentIntegrationTest is Test {
         vm.startPrank(admin);
 
         // Grant roles to test accounts
-        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), admin);
-        coffeeToken.grantRole(coffeeToken.DISTRIBUTOR_ROLE(), distributor);
-        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), processor);
+        // Grant roles through ConfigManager
+        coffeeToken.grantRole(keccak256("ADMIN_ROLE"), admin);
+        coffeeToken.grantDistributorRole(distributor);
+        coffeeToken.grantProcessorRole(processor);
         // Also grant PROCESSOR_ROLE to admin for testing batch creation
-        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), admin);
+        // Grant roles through ConfigManager
+        coffeeToken.grantProcessorRole(admin);
         // Grant MINTER_ROLE to admin for testing token minting
-        coffeeToken.grantRole(coffeeToken.MINTER_ROLE(), admin);
+        coffeeToken.grantRole(keccak256("MINTER_ROLE"), admin);
 
         // Grant treasury roles
-        treasury.grantRole(treasury.ADMIN_ROLE(), admin);
-        treasury.grantRole(treasury.PAYMENT_PROCESSOR_ROLE(), admin);
+        // Treasury roles are managed through coffeeToken (unified access control)
+        coffeeToken.grantRole(keccak256("ADMIN_ROLE"), admin);
+        // Treasury payment processor role also managed through coffeeToken
+        coffeeToken.grantPaymentProcessorRole(admin);
 
         // Set batch payment in treasury
         treasury.setBatchPayment(BATCH_ID, TOTAL_PAYMENT);
@@ -204,7 +219,8 @@ contract WAGAPaymentIntegrationTest is Test {
         console.log("Set batch payment for batch:", batchId);
 
         // Check admin has PAYMENT_PROCESSOR_ROLE
-        bool hasRole = treasury.hasRole(treasury.PAYMENT_PROCESSOR_ROLE(), admin);
+        // Check role through coffeeToken (unified access control)
+        bool hasRole = coffeeToken.hasRole(keccak256("PAYMENT_PROCESSOR_ROLE"), admin);
         console.log("Admin has PAYMENT_PROCESSOR_ROLE:", hasRole);
 
         // Check charge ID hasn't been processed

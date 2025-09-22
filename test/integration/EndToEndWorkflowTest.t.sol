@@ -5,6 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
+import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
 import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
 import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
@@ -13,6 +14,10 @@ import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 // WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
+import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
+import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
+import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
+import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {MockOfframpPartner} from "../../src/MockOfframpPartner.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {TestHelperUtilities} from "../TestHelperUtilities.sol";
@@ -26,7 +31,7 @@ import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
  * @notice Tests: Seller Registration -> EUDR Batch Creation -> Redemption -> Offramp Transfer -> Seller Payment
  */
 contract EndToEndWorkflowTest is Test {
-    using TestHelperUtilities for *;
+    // TestHelperUtilities is now a contract, not a library
 
     /* -------------------------------------------------------------------------- */
     /*                              CONTRACT INSTANCES                            */
@@ -45,6 +50,15 @@ contract EndToEndWorkflowTest is Test {
     // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
     CircomVerifier public circomVerifier;
     MockUSDC public usdcToken;
+    
+    // Additional contracts now included in deployment
+    WAGACDPIntegration public cdpIntegration;
+    WAGAProofOfReserve public proofOfReserve;
+    WAGAInventoryManagerMVP public inventoryManager;
+    WAGAECXPriceOracle public ecxOracle;
+    
+    // Test utilities
+    TestHelperUtilities public testUtils;
 
     /* -------------------------------------------------------------------------- */
     /*                              TEST ACCOUNTS                                 */
@@ -83,30 +97,34 @@ contract EndToEndWorkflowTest is Test {
             privacyLayer,
             treasury,
             redemptionContract,
-            , // cdpIntegration
-            , // proofOfReserve
-            , // inventoryManager
+            cdpIntegration, // Now included in deployment
+            proofOfReserve, // Now included in deployment
+            inventoryManager, // Now included in deployment
             ethiopianCompliance,
-            , // ecxOracle
+            ecxOracle, // Now included in deployment
             circomVerifier,
-            , // accessControl (use getter instead)
             helperConfig
         ) = deployer.run();
 
         admin = vm.addr(helperConfig.getActiveNetworkConfig().deployerKey);
         // Note: AccessControl functionality now in ConfigManager (inherited by CoffeeToken)
         usdcToken = MockUSDC(address(treasury.usdcToken()));
+        
+        // Initialize test utilities
+        testUtils = new TestHelperUtilities();
 
         // Setup roles and permissions
         vm.startPrank(admin);
-        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), processor);
-        ethiopianCompliance.grantRole(ethiopianCompliance.COMPLIANCE_MANAGER_ROLE(), complianceManager);
-        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), admin);
+        // Use ConfigManager role granting functions
+        coffeeToken.grantProcessorRole(processor);
+        // Ethiopian compliance now uses coffeeToken for access control
+        coffeeToken.grantComplianceManagerRole(complianceManager);
+        coffeeToken.grantRole(keccak256("ADMIN_ROLE"), admin);
 
         // Register seller
         sellerId = coffeeToken.registerSeller(
             processor,
-            WAGACoffeeTokenCore.SellerType.PROCESSOR,
+            WAGAConfigManager.SellerType.PROCESSOR,
             "Test Ethiopian Processor",
             "TEST001",
             bytes11("TESTSWIFTXX")
@@ -133,11 +151,12 @@ contract EndToEndWorkflowTest is Test {
         );
 
         // Grant treasury permissions
-        treasury.grantRole(treasury.OFFRAMP_EXECUTOR_ROLE(), offrampPartner);
+        // Treasury roles are managed through coffeeToken (unified access control)
+        coffeeToken.grantPaymentProcessorRole(offrampPartner);
 
-        // Setup ZK verifier roles
-        circomVerifier.grantVerifierRole(processor);
-        circomVerifier.grantVerifierRole(complianceManager);
+        // Setup ZK verifier roles - managed through coffeeToken (unified access control)
+        coffeeToken.grantVerifierRole(processor);
+        coffeeToken.grantVerifierRole(complianceManager);
 
         vm.stopPrank();
 
@@ -190,7 +209,7 @@ contract EndToEndWorkflowTest is Test {
         );
 
         // Register EUDR compliance
-        TestHelperUtilities.EUDRTestData memory eudrData = TestHelperUtilities.generateSampleEUDRData();
+        TestHelperUtilities.EUDRTestData memory eudrData = testUtils.generateSampleEUDRData();
         ethiopianCompliance.addEUDRCertificate(
             batchId,
             IEthiopianCompliance.EUDRCertificate({
@@ -216,7 +235,7 @@ contract EndToEndWorkflowTest is Test {
         );
 
         // Submit EUDR ZK proofs
-        bytes memory eudrDeforestationProof = TestHelperUtilities.generateMockZKProof();
+        bytes memory eudrDeforestationProof = testUtils.generateMockZKProof();
         zkManager.addEUDRComplianceZKProof(
             batchId,
             eudrDeforestationProof,
@@ -224,7 +243,7 @@ contract EndToEndWorkflowTest is Test {
             eudrData.deforestationStatus
         );
 
-        bytes memory eudrGeolocationProof = TestHelperUtilities.generateMockZKProof();
+        bytes memory eudrGeolocationProof = testUtils.generateMockZKProof();
         zkManager.addEUDRComplianceZKProof(
             batchId,
             eudrGeolocationProof,
@@ -251,7 +270,7 @@ contract EndToEndWorkflowTest is Test {
 
         // Register Ethiopian compliance
         TestHelperUtilities.EthiopianComplianceTestData memory ethData =
-            TestHelperUtilities.generateSampleEthiopianComplianceData();
+            testUtils.generateSampleEthiopianComplianceData();
 
         ethiopianCompliance.addECTAPermit(
             batchId,
@@ -295,7 +314,7 @@ contract EndToEndWorkflowTest is Test {
         );
 
         // Submit Ethiopian compliance ZK proofs
-        bytes memory ectaProof = TestHelperUtilities.generateMockZKProof();
+        bytes memory ectaProof = testUtils.generateMockZKProof();
         zkManager.addEthiopianComplianceZKProof(
             batchId,
             "ECTA",
@@ -303,7 +322,7 @@ contract EndToEndWorkflowTest is Test {
             ethData.ectaPermitNumber
         );
 
-        bytes memory qualityProof = TestHelperUtilities.generateMockZKProof();
+        bytes memory qualityProof = testUtils.generateMockZKProof();
         zkManager.addEthiopianComplianceZKProof(
             batchId,
             "QUALITY",
@@ -311,7 +330,7 @@ contract EndToEndWorkflowTest is Test {
             ethData.qualityCertificateNumber
         );
 
-        bytes memory originProof = TestHelperUtilities.generateMockZKProof();
+        bytes memory originProof = testUtils.generateMockZKProof();
         zkManager.addEthiopianComplianceZKProof(
             batchId,
             "ORIGIN",
@@ -319,7 +338,7 @@ contract EndToEndWorkflowTest is Test {
             "Yirgacheffe Origin Verified"
         );
 
-        bytes memory boeProof = TestHelperUtilities.generateMockZKProof();
+        bytes memory boeProof = testUtils.generateMockZKProof();
         zkManager.addEthiopianComplianceZKProof(
             batchId,
             "BOE",
@@ -533,7 +552,7 @@ contract EndToEndWorkflowTest is Test {
         uint256 numTransactions = 1000;
 
         // Calculate expected savings
-        uint256 expectedSavings = TestHelperUtilities.calculateSwiftGasSavings(numTransactions);
+        uint256 expectedSavings = testUtils.calculateSwiftGasSavings(numTransactions);
 
         console.log("Number of transactions:", numTransactions);
         console.log("Expected gas savings:", expectedSavings);
@@ -543,7 +562,7 @@ contract EndToEndWorkflowTest is Test {
         assertTrue(expectedSavings > 0, "Should have gas savings");
 
         // Test SWIFT code validation
-        bytes11[] memory validCodes = TestHelperUtilities.getValidSwiftCodes();
+        bytes11[] memory validCodes = testUtils.getValidSwiftCodes();
         for (uint256 i = 0; i < validCodes.length; i++) {
             assertTrue(validCodes[i].length == 11 || validCodes[i].length == 8, "SWIFT code should be valid length");
         }
@@ -560,13 +579,13 @@ contract EndToEndWorkflowTest is Test {
         uint256 numTransactions = 500;
 
         // Calculate expected savings
-        uint256 expectedSavings = TestHelperUtilities.calculateSellerIdGasSavings(numTransactions);
+        uint256 expectedSavings = testUtils.calculateSellerIdGasSavings(numTransactions);
 
         console.log("Number of transactions:", numTransactions);
         console.log("Expected gas savings:", expectedSavings);
 
         // Verify seller ID generation
-        uint64[] memory sellerIds = TestHelperUtilities.generateSellerIds(5, 100);
+        uint64[] memory sellerIds = testUtils.generateSellerIds(5, 100);
         assertEq(sellerIds.length, 5, "Should generate correct number of IDs");
         assertEq(sellerIds[0], 100, "First ID should match start value");
         assertEq(sellerIds[4], 104, "Last ID should be sequential");
@@ -620,7 +639,7 @@ contract EndToEndWorkflowTest is Test {
 
         // Test ZK manager integration
         vm.startPrank(complianceManager);
-        bytes memory proof = TestHelperUtilities.generateMockZKProof();
+        bytes memory proof = testUtils.generateMockZKProof();
         zkManager.addEUDRComplianceZKProof(
             batchId,
             proof,

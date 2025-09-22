@@ -5,22 +5,22 @@ import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 
 // Import the main deployment script
-import {DeployRealZKMVP} from "../script/DeployRealZKMVP.s.sol";
+import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 
 // Core contracts
-import {WAGACoffeeTokenCore} from "../src/WAGACoffeeTokenCore.sol";
-import {WAGABatchManager} from "../src/WAGABatchManager.sol";
-import {WAGAZKManager} from "../src/WAGAZKManager.sol";
-import {PrivacyLayer} from "../src/PrivacyLayer.sol";
-import {WAGACoffeeRedemption} from "../src/WAGACoffeeRedemption.sol";
-import {WAGAEthiopianCompliance} from "../src/WAGAEthiopianCompliance.sol";
-import {WAGAECXPriceOracle} from "../src/WAGAECXPriceOracle.sol";
-import {CircomVerifier} from "../src/CircomVerifier.sol";
-import {MockCircomVerifier} from "../src/MockCircomVerifier.sol";
+import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
+import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
+import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
+import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
+import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
+import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
+import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
+import {CircomVerifier} from "../../src/CircomVerifier.sol";
+import {MockCircomVerifier} from "../../src/MockCircomVerifier.sol";
 
 // Interfaces
-import {IEthiopianCompliance} from "../src/Interfaces/IEthiopianCompliance.sol";
-import {IPrivacyLayer} from "../src/Interfaces/IPrivacyLayer.sol";
+import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.sol";
+import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
 
 /**
  * @title EthiopianComplianceZKIntegrationTest
@@ -87,8 +87,7 @@ contract EthiopianComplianceZKIntegrationTest is Test {
             address(mockVerifier)
         );
         
-        // Grant VERIFIER_ROLE to ZK Manager on mock verifier using test contract (since it deployed the mock)
-        mockVerifier.grantRole(mockVerifier.VERIFIER_ROLE(), address(zkManager));
+        // Note: MockCircomVerifier doesn't require role setup - it's a mock for testing
         
         // Configure Ethiopian compliance on the new ZK Manager
         vm.prank(address(deployer));
@@ -119,34 +118,34 @@ contract EthiopianComplianceZKIntegrationTest is Test {
 
     function _setupRoles() internal {
         // Setup verifier roles following established pattern (MockCircomVerifier role already granted in setUp)
-        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(mockVerifier));
+        // Grant verifier role through ConfigManager
+        coffeeToken.grantVerifierRole(address(mockVerifier));
+        // Grant user roles through ConfigManager functions
+        coffeeToken.grantProcessorRole(processor);
+        // Cooperative role granted automatically when registering seller as COOPERATIVE type
+        coffeeToken.grantProcessorRole(qualityInspector); // Quality inspector needs processor role for adding certificates
+        coffeeToken.grantProcessorRole(complianceOfficer); // Compliance officer needs processor role for adding origin verification
+        coffeeToken.grantRole(keccak256("ADMIN_ROLE"), address(batchManager)); // BatchManager needs admin role
+        // Grant system roles through ConfigManager functions
+        coffeeToken.grantRole(keccak256("ADMIN_ROLE"), address(zkManager)); // ZK Manager needs admin role
+        coffeeToken.setRedemptionManager(address(redemption));
+        coffeeToken.grantRole(keccak256("MINTER_ROLE"), admin); // Admin needs to mint tokens for testing
+        coffeeToken.setProofOfReserveManager(admin); // Admin needs to simulate verification for testing
         
-        // Coffee token roles - grant PROCESSOR_ROLE to all test participants for simplicity
-        coffeeToken.grantRole(coffeeToken.COOPERATIVE_ROLE(), cooperative);
-        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), processor);
-        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), cooperative); // Cooperative also needs processor role for privacy configuration
-        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), qualityInspector); // Quality inspector needs processor role for adding certificates
-        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), complianceOfficer); // Compliance officer needs processor role for adding origin verification
-        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(batchManager));
-        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(zkManager));
-        coffeeToken.grantRole(coffeeToken.REDEMPTION_ROLE(), address(redemption));
-        coffeeToken.grantRole(coffeeToken.MINTER_ROLE(), admin); // Admin needs to mint tokens for testing
-        coffeeToken.grantRole(coffeeToken.PROOF_OF_RESERVE_ROLE(), admin); // Admin needs to simulate verification for testing
+        // Ethiopian compliance roles - all granted through coffeeToken (unified access control)
+        coffeeToken.grantComplianceManagerRole(complianceOfficer);
+        coffeeToken.grantComplianceManagerRole(processor); // Processor needs to add compliance docs
+        coffeeToken.grantComplianceManagerRole(qualityInspector); // Quality inspector needs to add certificates
+        coffeeToken.grantComplianceManagerRole(address(batchManager)); // BatchManager needs to add compliance docs on behalf of users
+        coffeeToken.grantComplianceVerifierRole(complianceOfficer); // For origin verification
+        coffeeToken.grantComplianceVerifierRole(address(batchManager)); // BatchManager needs to add origin verification on behalf of users
+        coffeeToken.grantQualityAssessorRole(qualityInspector); // Quality inspector role
+        coffeeToken.grantQualityAssessorRole(address(batchManager)); // BatchManager needs to add quality certificates on behalf of users
+        coffeeToken.grantComplianceManagerRole(address(redemption)); // Redemption needs compliance manager role
         
-        // Ethiopian compliance roles - grant broad permissions for testing
-        ethiopianCompliance.grantRole(ethiopianCompliance.COMPLIANCE_MANAGER_ROLE(), complianceOfficer);
-        ethiopianCompliance.grantRole(ethiopianCompliance.COMPLIANCE_MANAGER_ROLE(), processor); // Processor needs to add compliance docs
-        ethiopianCompliance.grantRole(ethiopianCompliance.COMPLIANCE_MANAGER_ROLE(), qualityInspector); // Quality inspector needs to add certificates
-        ethiopianCompliance.grantRole(ethiopianCompliance.COMPLIANCE_MANAGER_ROLE(), address(batchManager)); // BatchManager needs to add compliance docs on behalf of users
-        ethiopianCompliance.grantRole(ethiopianCompliance.ORIGIN_VERIFIER_ROLE(), complianceOfficer);
-        ethiopianCompliance.grantRole(ethiopianCompliance.ORIGIN_VERIFIER_ROLE(), address(batchManager)); // BatchManager needs to add origin verification on behalf of users
-        ethiopianCompliance.grantRole(ethiopianCompliance.QUALITY_INSPECTOR_ROLE(), qualityInspector);
-        ethiopianCompliance.grantRole(ethiopianCompliance.QUALITY_INSPECTOR_ROLE(), address(batchManager)); // BatchManager needs to add quality certificates on behalf of users
-        ethiopianCompliance.grantRole(ethiopianCompliance.COMPLIANCE_MANAGER_ROLE(), address(redemption));
-        
-        // ECX Oracle roles
-        ecxOracle.grantRole(ecxOracle.PRICE_UPDATER_ROLE(), admin);
-        ecxOracle.grantRole(ecxOracle.ZK_VERIFIER_ROLE(), address(zkManager));
+        // ECX Oracle roles - granted through coffeeToken (unified access control)
+        coffeeToken.grantPriceUpdaterRole(admin);
+        coffeeToken.grantVerifierRole(address(zkManager)); // ZK Manager needs verifier role
     }
     
     function _setupTestPrices() internal {

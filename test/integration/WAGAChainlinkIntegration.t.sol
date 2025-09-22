@@ -16,6 +16,10 @@ import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {MockFunctionsRouter} from "../mocks/MockFunctionsRouter.sol";
 import {MockFunctionsHelper} from "../mocks/MockFunctionsHelper.sol";
 import {MockFunctionsClient} from "../mocks/MockFunctionsClient.sol";
+import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
+import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
+import {WAGATreasury} from "../../src/WAGATreasury.sol";
+import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 
 /**
  * @title WAGAChainlinkIntegration
@@ -36,6 +40,12 @@ contract WAGAChainlinkIntegration is Test {
     CircomVerifier public circomVerifier;
     WAGACoffeeViews public coffeeViews;
     PrivacyLayer public privacyLayer;
+    
+    // Additional contracts from deployment
+    WAGACDPIntegration public cdpIntegration;
+    WAGAECXPriceOracle public ecxOracle;
+    WAGATreasury public treasury;
+    WAGAEthiopianCompliance public ethiopianCompliance;
 
     // Mock contracts
     MockFunctionsRouter public mockRouter;
@@ -61,15 +71,14 @@ contract WAGAChainlinkIntegration is Test {
             batchManager,
             zkManager,
             privacyLayer,
-            , // treasury
+            treasury,
             redemptionContract,
-            , // cdpIntegration
+            cdpIntegration, // Now included in deployment
             proofOfReserve,
             inventoryManager,
-            , // ethiopianCompliance
-            , // ecxOracle
+            ethiopianCompliance,
+            ecxOracle, // Now included in deployment
             circomVerifier,
-            , // accessControl
             helperConfig
         ) = deployer.run();
 

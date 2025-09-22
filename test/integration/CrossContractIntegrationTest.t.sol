@@ -5,6 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
+import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
 import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
 import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
@@ -14,6 +15,10 @@ import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 // WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockOfframpPartner} from "../../src/MockOfframpPartner.sol";
+import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
+import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
+import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
+import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {TestHelperUtilities} from "../TestHelperUtilities.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -27,7 +32,7 @@ import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
  * @notice Validates data flow and interactions between all WAGA system contracts
  */
 contract CrossContractIntegrationTest is Test {
-    using TestHelperUtilities for *;
+    // TestHelperUtilities is now a contract, not a library
 
     /* -------------------------------------------------------------------------- */
     /*                              CONTRACT INSTANCES                            */
@@ -46,6 +51,15 @@ contract CrossContractIntegrationTest is Test {
     // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
     CircomVerifier public circomVerifier;
     MockUSDC public usdcToken;
+    
+    // Additional contracts now included in deployment
+    WAGACDPIntegration public cdpIntegration;
+    WAGAProofOfReserve public proofOfReserve;
+    WAGAInventoryManagerMVP public inventoryManager;
+    WAGAECXPriceOracle public ecxOracle;
+    
+    // Test utilities
+    TestHelperUtilities public testUtils;
 
     /* -------------------------------------------------------------------------- */
     /*                              TEST ACCOUNTS                                 */
@@ -73,13 +87,12 @@ contract CrossContractIntegrationTest is Test {
             privacyLayer,
             treasury,
             redemptionContract,
-            , // cdpIntegration
-            , // proofOfReserve
-            , // inventoryManager
+            cdpIntegration, // Now included in deployment
+            proofOfReserve, // Now included in deployment
+            inventoryManager, // Now included in deployment
             ethiopianCompliance,
-            , // ecxOracle
+            ecxOracle, // Now included in deployment
             circomVerifier,
-            , // accessControl (use getter instead)
             helperConfig
         ) = deployer.run();
 
@@ -87,17 +100,21 @@ contract CrossContractIntegrationTest is Test {
         // Note: AccessControl functionality now in ConfigManager (inherited by CoffeeToken)
         admin = vm.addr(helperConfig.getActiveNetworkConfig().deployerKey);
         usdcToken = MockUSDC(address(treasury.usdcToken()));
+        
+        // Initialize test utilities
+        testUtils = new TestHelperUtilities();
 
         // Setup roles and permissions
         vm.startPrank(admin);
-        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), processor);
-        ethiopianCompliance.grantRole(ethiopianCompliance.COMPLIANCE_MANAGER_ROLE(), complianceManager);
-        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), admin);
+        // Use ConfigManager role granting functions
+        coffeeToken.grantProcessorRole(processor);
+        coffeeToken.grantComplianceManagerRole(complianceManager);
+        coffeeToken.grantRole(keccak256("ADMIN_ROLE"), admin);
 
         // Register seller
         sellerId = coffeeToken.registerSeller(
             processor,
-            WAGACoffeeTokenCore.SellerType.PROCESSOR,
+            WAGAConfigManager.SellerType.PROCESSOR,
             "Integration Test Processor",
             "INT001",
             bytes11("TESTSWIFTXX")
@@ -122,9 +139,11 @@ contract CrossContractIntegrationTest is Test {
         );
 
         // Grant permissions
-        treasury.grantRole(treasury.OFFRAMP_EXECUTOR_ROLE(), offrampPartner);
-        circomVerifier.grantRole(circomVerifier.VERIFIER_ROLE(), processor);
-        circomVerifier.grantRole(circomVerifier.VERIFIER_ROLE(), complianceManager);
+        // Treasury roles are managed through coffeeToken (unified access control)
+        coffeeToken.grantPaymentProcessorRole(offrampPartner);
+        // Verifier roles are managed through coffeeToken (unified access control)
+        coffeeToken.grantVerifierRole(processor);
+        coffeeToken.grantVerifierRole(complianceManager);
 
         vm.stopPrank();
 
@@ -179,7 +198,7 @@ contract CrossContractIntegrationTest is Test {
                 complianceLevel: "Gold",
                 deforestationRisk: "Low"
             }),
-            TestHelperUtilities.generateMockZKProof()
+            testUtils.generateMockZKProof()
         );
         vm.stopPrank();
 
@@ -219,7 +238,7 @@ contract CrossContractIntegrationTest is Test {
         vm.startPrank(complianceManager);
         zkManager.addZKProof(
             batchId,
-            TestHelperUtilities.generateMockZKProof(),
+            testUtils.generateMockZKProof(),
             IZKVerifier.ProofType.PRICE_COMPETITIVENESS,
             "Competitively priced"
         );
@@ -486,7 +505,7 @@ contract CrossContractIntegrationTest is Test {
 
         zkManager.addEUDRComplianceZKProof(
             batchId,
-            TestHelperUtilities.generateMockZKProof(),
+            testUtils.generateMockZKProof(),
             IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
             "Deforestation-Free Verified"
         );
@@ -494,7 +513,7 @@ contract CrossContractIntegrationTest is Test {
         zkManager.addEthiopianComplianceZKProof(
             batchId,
             "ECTA",
-            TestHelperUtilities.generateMockZKProof(),
+            testUtils.generateMockZKProof(),
             "ECTA Permit Valid"
         );
         vm.stopPrank();

@@ -3,6 +3,7 @@ pragma solidity ^0.8.18;
 
 import {WAGAChainlinkFunctionsBase} from "./WAGAChainlinkFunctionsBase.sol";
 import {WAGACoffeeTokenCore} from "./WAGACoffeeTokenCore.sol";
+import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IWAGABatchManager} from "./Interfaces/IWAGABatchManager.sol";
 
@@ -65,7 +66,7 @@ contract WAGAProofOfReserve is
 
     // bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
     // bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    WAGACoffeeTokenCore public coffeeToken;
+    // Note: coffeeToken inherited from WAGAChainlinkFunctionsBase
     IWAGABatchManager public batchManager;
 
     // Mapping from request ID to verification request
@@ -111,7 +112,7 @@ contract WAGAProofOfReserve is
     )
         WAGAChainlinkFunctionsBase(router, _subscriptionId, _donId)
     {
-        coffeeToken = WAGACoffeeTokenCore(coffeeTokenAddress);
+        coffeeToken = IWAGACoffeeToken(coffeeTokenAddress);
     batchManager = IWAGABatchManager(batchManagerAddress);
     }
 
@@ -147,7 +148,7 @@ contract WAGAProofOfReserve is
         string calldata source // Get quantity, price, packaging, metadata hash (API call to offchain database)
     )
         external
-        callerHasRoleFromCoffeeToken(coffeeToken.VERIFIER_ROLE())
+        callerHasRoleFromCoffeeToken(keccak256("VERIFIER_ROLE"))
        // onlyRole(coffeeToken.VERIFIER_ROLE())
         returns (bytes32 verificationRequestId)
     {
@@ -167,7 +168,7 @@ contract WAGAProofOfReserve is
             revert WAGAProofOfReserve__BatchDoesNotExist_requestReserveVerification();
         }
         // Check if the batch is active
-        if (!coffeeToken.isBatchActive(batchId)) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
             revert WAGAProofOfReserve__BatchInactive_requestReserveVerification();
         }
         // Check that the source code is not empty
@@ -268,7 +269,7 @@ contract WAGAProofOfReserve is
         string calldata source
     )
         external
-        callerHasRoleFromCoffeeToken(coffeeToken.INVENTORY_MANAGER_ROLE())
+        callerHasRoleFromCoffeeToken(keccak256("INVENTORY_MANAGER_ROLE"))
        // onlyRole(coffeeToken.INVENTORY_MANAGER_ROLE())
         returns (bytes32 requestId)
     {
@@ -277,7 +278,7 @@ contract WAGAProofOfReserve is
             revert WAGAProofOfReserve__BatchDoesNotExist_requestReserveVerification();
         }
         // Check if the batch is active
-        if (!coffeeToken.isBatchActive(batchId)) {
+        if (!coffeeToken.isBatchCreated(batchId)) {
             revert WAGAProofOfReserve__BatchInactive_requestReserveVerification();
         }
         // Check that the source code is not empty

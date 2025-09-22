@@ -5,6 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
+import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
 import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
 import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
@@ -13,6 +14,10 @@ import {WAGATreasury} from "../../src/WAGATreasury.sol";
 // WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockCircomVerifier} from "../../src/MockCircomVerifier.sol";
+import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
+import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
+import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
+import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.sol";
@@ -41,6 +46,12 @@ contract EthiopianExportIntegrationTest is Test {
     CircomVerifier public circomVerifier;
     MockCircomVerifier public mockVerifier;
     MockUSDC public usdc;
+    
+    // Additional contracts now included in deployment
+    WAGACDPIntegration public cdpIntegration;
+    WAGAProofOfReserve public proofOfReserve;
+    WAGAInventoryManagerMVP public inventoryManager;
+    WAGAECXPriceOracle public ecxOracle;
 
     // Test accounts
     address public admin = makeAddr("admin");
@@ -76,13 +87,13 @@ contract EthiopianExportIntegrationTest is Test {
             , // privacyLayer
             treasury,
             redemption,
-            , // cdpIntegration
-            , // proofOfReserve
-            , // inventoryManager
+            cdpIntegration, // Now included in deployment
+            proofOfReserve, // Now included in deployment
+            inventoryManager, // Now included in deployment
             ethiopianCompliance,
-            , // ecxOracle
+            ecxOracle, // Now included in deployment
             circomVerifier,
-            , // accessControl (use getter instead)
+            // accessControl removed
             helperConfig
         ) = deployer.run();
 
@@ -104,7 +115,7 @@ contract EthiopianExportIntegrationTest is Test {
         // Register seller using ConfigManager
         coffeeToken.registerSeller(
             seller,
-            WAGACoffeeTokenCore.SellerType.COOPERATIVE,
+            WAGAConfigManager.SellerType.COOPERATIVE,
             "Test Cooperative",
             "REG001",
             "TESTSWIFTXX"
@@ -123,8 +134,7 @@ contract EthiopianExportIntegrationTest is Test {
 
         // Configure mock verifier for testing
         mockVerifier = new MockCircomVerifier();
-        mockVerifier.grantRole(mockVerifier.VERIFIER_ROLE(), address(zkManager));
-        mockVerifier.grantRole(mockVerifier.VERIFIER_ROLE(), admin);
+        // Note: MockCircomVerifier doesn't require role setup - it's a mock for testing
 
         // Replace zkManager with test version using mock verifier
         WAGAZKManager testZKManager = new WAGAZKManager(address(coffeeToken), address(mockVerifier));

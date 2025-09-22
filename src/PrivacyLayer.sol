@@ -6,6 +6,7 @@ import {IPrivacyLayer} from "./Interfaces/IPrivacyLayer.sol";
 import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
 import {IZKVerifier} from "./Interfaces/IZKVerifier.sol";
 import {IWAGAZKManager} from "./Interfaces/IWAGAZKManager.sol";
+import {IWAGABatchManager} from "./Interfaces/IWAGABatchManager.sol";
 
 /**
  * @title PrivacyLayer
@@ -13,10 +14,38 @@ import {IWAGAZKManager} from "./Interfaces/IWAGAZKManager.sol";
  */
 contract PrivacyLayer is IPrivacyLayer {
     IWAGACoffeeToken public coffeeToken;
+    IWAGABatchManager public batchManager;
 
     constructor(address _coffeeToken, address _zkManager) {
         coffeeToken = IWAGACoffeeToken(_coffeeToken);
         zkManager = IWAGAZKManager(_zkManager);
+    }
+
+    /**
+     * @dev Set the batch manager address (called after deployment)
+     */
+    function setBatchManager(address _batchManager) external {
+        require(address(batchManager) == address(0), "BatchManager already set");
+        require(coffeeToken.hasRole(keccak256("ADMIN_ROLE"), msg.sender), "Only admin can set batch manager");
+        batchManager = IWAGABatchManager(_batchManager);
+    }
+
+    /**
+     * @dev Set the ZK manager address (called after deployment)
+     */
+    function setZKManager(address _zkManager) external {
+        require(coffeeToken.hasRole(keccak256("ADMIN_ROLE"), msg.sender), "Only admin can set ZK manager");
+        zkManager = IWAGAZKManager(_zkManager);
+    }
+
+    /**
+     * @dev Modifier to check if caller is the creator of the batch
+     */
+    modifier onlyBatchCreator(uint256 batchId) {
+        require(address(batchManager) != address(0), "BatchManager not set");
+        (, address creator, , , ) = batchManager.getBatchAdditionalInfo(batchId);
+        require(msg.sender == creator, "Only batch creator can perform this action");
+        _;
     }
     
     /* -------------------------------------------------------------------------- */
@@ -128,7 +157,7 @@ contract PrivacyLayer is IPrivacyLayer {
     function configurePrivacy(
         uint256 batchId,
         IPrivacyLayer.PrivacyConfig calldata config
-    ) external onlyBatchCreator {
+    ) external onlyBatchCreator(batchId) {
         batchPrivacyConfig[batchId] = config;
         emit PrivacyConfigured(batchId, config.level, msg.sender);
     }
@@ -168,7 +197,7 @@ contract PrivacyLayer is IPrivacyLayer {
         uint256 batchId,
         string calldata dataType,
         bytes calldata sensitiveData
-    ) external onlyBatchCreator returns (bytes32 dataHash) {
+    ) external onlyBatchCreator(batchId) returns (bytes32 dataHash) {
         // Generate salt for this data
         bytes32 salt = keccak256(abi.encodePacked(batchId, dataType, block.timestamp, msg.sender));
         
@@ -194,7 +223,7 @@ contract PrivacyLayer is IPrivacyLayer {
         string calldata pricingClaim,
         string calldata qualityClaim,
         string calldata supplyChainClaim
-    ) external onlyBatchCreator {
+    ) external onlyBatchCreator(batchId) {
         // Get current config and update claims
         IPrivacyLayer.PrivacyConfig storage config = batchPrivacyConfig[batchId];
         config.pricingClaim = pricingClaim;
@@ -257,7 +286,7 @@ contract PrivacyLayer is IPrivacyLayer {
         ZKComplianceClaims calldata claims
     ) external {
         // Only batch creator or admin can update claims
-        if (!_isBatchCreator(batchId, msg.sender) && !hasRole(ADMIN_ROLE, msg.sender)) {
+        if (!_isBatchCreator(batchId, msg.sender) && !coffeeToken.hasRole(keccak256("ADMIN_ROLE"), msg.sender)) {
             revert PrivacyLayer__MustBeBatchCreatorOrAdmin_updateEUDRComplianceClaims();
         }
 
@@ -284,7 +313,7 @@ contract PrivacyLayer is IPrivacyLayer {
         SelectiveDisclosureRules calldata rules
     ) external {
         // Only batch creator or admin can configure rules
-        if (!_isBatchCreator(batchId, msg.sender) && !hasRole(ADMIN_ROLE, msg.sender)) {
+        if (!_isBatchCreator(batchId, msg.sender) && !coffeeToken.hasRole(keccak256("ADMIN_ROLE"), msg.sender)) {
             revert PrivacyLayer__MustBeBatchCreatorOrAdmin_configureEUDRDisclosureRules();
         }
 
@@ -420,9 +449,9 @@ contract PrivacyLayer is IPrivacyLayer {
      * @dev Get viewer's role level - separated for stack optimization
      */
     function _getViewerRole(address viewer) internal view returns (uint8) {
-        if (hasRole(ADMIN_ROLE, viewer) || hasRole(PROCESSOR_ROLE, viewer)) {
+        if (coffeeToken.hasRole(keccak256("ADMIN_ROLE"), viewer) || coffeeToken.hasRole(keccak256("PROCESSOR_ROLE"), viewer)) {
             return 1; // Full access
-        } else if (hasRole(DISTRIBUTOR_ROLE, viewer)) {
+        } else if (coffeeToken.hasRole(keccak256("DISTRIBUTOR_ROLE"), viewer)) {
             return 2; // Limited access
         }
         return 3; // Public access
@@ -480,7 +509,7 @@ contract PrivacyLayer is IPrivacyLayer {
         address viewer
     ) external view returns (bool) {
         // Only batch creators (admin/processor) can access full data
-        return hasRole(ADMIN_ROLE, viewer) || hasRole(PROCESSOR_ROLE, viewer);
+        return coffeeToken.hasRole(keccak256("ADMIN_ROLE"), viewer) || coffeeToken.hasRole(keccak256("PROCESSOR_ROLE"), viewer);
     }
 
     /**
@@ -520,9 +549,9 @@ contract PrivacyLayer is IPrivacyLayer {
      * @return roleLevel The role level (1=admin/processor, 2=distributor/verifier, 3=public)
      */
     function _getEnhancedRoleLevel(address account) internal view returns (uint8 roleLevel) {
-        if (hasRole(ADMIN_ROLE, account) || hasRole(PROCESSOR_ROLE, account)) {
+        if (coffeeToken.hasRole(keccak256("ADMIN_ROLE"), account) || coffeeToken.hasRole(keccak256("PROCESSOR_ROLE"), account)) {
             return 1; // Full access - can see all data
-        } else if (hasRole(DISTRIBUTOR_ROLE, account) || hasRole(ZK_VERIFIER_ROLE, account)) {
+        } else if (coffeeToken.hasRole(keccak256("DISTRIBUTOR_ROLE"), account) || coffeeToken.hasRole(keccak256("ZK_VERIFIER_ROLE"), account)) {
             return 2; // Limited access - can see some private data
         }
         return 3; // Public access - can only see public data

@@ -141,9 +141,9 @@ contract DeployRealZKMVP is Script {
 
         // 2b. [CoffeeViews deployment moved after BatchManager]
 
-        // 3. Deploy Privacy Layer
+        // 3. Deploy Privacy Layer (with placeholder ZK Manager)
         console.log("Deploying Privacy Layer...");
-        privacyLayer = new PrivacyLayer(address(coffeeToken), address(circomVerifier));
+        privacyLayer = new PrivacyLayer(address(coffeeToken), address(0));
 
         // 4. Deploy Treasury with network-specific USDC
         console.log("Deploying Treasury for USDC payments...");
@@ -173,6 +173,10 @@ contract DeployRealZKMVP is Script {
             address(circomVerifier)
         );
 
+        // 6a. Update Privacy Layer with actual ZK Manager
+        console.log("Updating Privacy Layer with ZK Manager...");
+        privacyLayer.setZKManager(address(zkManager));
+
         // 6b. Deploy WAGACoffeeViews for view functions (after BatchManager)
         console.log("Deploying Coffee Views...");
         WAGACoffeeViews deployedCoffeeViews = new WAGACoffeeViews(address(coffeeToken), address(batchManager));
@@ -197,8 +201,7 @@ contract DeployRealZKMVP is Script {
             address(treasury),
             address(ethiopianCompliance),
             address(batchManager),
-            address(zkManager),
-            address(coffeeToken) // Use coffeeToken for access control instead of separate contract
+            address(zkManager)
         );
 
         // 9. Deploy CDP Integration
@@ -234,6 +237,9 @@ contract DeployRealZKMVP is Script {
         ecxOracle.setCoffeeToken(address(coffeeToken));
         circomVerifier.setCoffeeToken(address(coffeeToken));
         treasury.setCoffeeToken(address(coffeeToken));
+        
+        // Link PrivacyLayer to BatchManager for batch creator verification
+        privacyLayer.setBatchManager(address(batchManager));
         
         // 13. Setup unified access control via ConfigManager (inherited by CoffeeToken)
         console.log("Setting up unified access control system...");
@@ -284,25 +290,25 @@ contract DeployRealZKMVP is Script {
         console.log("");
         console.log("=== UNIFIED ACCESS CONTROL SYSTEM DEPLOYED ===");
         console.log("");
-        console.log("🔐 ROLE MANAGEMENT:");
+        console.log("ROLE MANAGEMENT:");
         console.log("All roles managed via: coffeeToken.grantXXXRole(address)");
         console.log("- coffeeToken.grantCooperativeRole(address) - Coffee cooperatives");
         console.log("- coffeeToken.grantProcessorRole(address) - Coffee processors");
         console.log("- coffeeToken.grantRoasterRole(address) - Coffee roasters");
         console.log("- coffeeToken.grantBankingPartnerRole(address) - Ethiopian banks");
         console.log("");
-        console.log("📊 BUSINESS OPERATIONS:");
+        console.log("BUSINESS OPERATIONS:");
         console.log("1. Register sellers: coffeeToken.registerSeller(address, type, name, registration, swift)");
         console.log("2. Grant banking roles: coffeeToken.grantBankingPartnerRole(bankAddress)");
         console.log("3. Update ECX prices: ecxOracle.updateECXPrice() [requires PRICE_UPDATER_ROLE]");
         console.log("4. Manage compliance: ethiopianCompliance functions [require COMPLIANCE_MANAGER_ROLE]");
         console.log("");
-        console.log("🔄 SYSTEM STATUS:");
-        console.log("✅ Unified access control active");
-        console.log("✅ All contracts linked to coffee token");
-        console.log("✅ Payment systems integrated");
-        console.log("✅ Ethiopian compliance ready");
-        console.log("✅ Price oracle configured");
+        console.log("SYSTEM STATUS:");
+        console.log("- Unified access control active");
+        console.log("- All contracts linked to coffee token");
+        console.log("- Payment systems integrated");
+        console.log("- Ethiopian compliance ready");
+        console.log("- Price oracle configured");
 
         return (
             coffeeToken,

@@ -58,7 +58,7 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     /*                                 Modifiers                                  */
     /* -------------------------------------------------------------------------- */
 
-    modifier onlyBatchCreator() {
+    modifier onlyBatchCreator() override {
         if (!(hasRole(ADMIN_ROLE, msg.sender) || 
               hasRole(PROCESSOR_ROLE, msg.sender) ||
               hasRole(COOPERATIVE_ROLE, msg.sender) ||

@@ -13,8 +13,7 @@ import {IPrivacyLayer} from "../src/Interfaces/IPrivacyLayer.sol";
 import {WAGAEthiopianCompliance} from "../src/WAGAEthiopianCompliance.sol";
 import {WAGACoffeeRedemption} from "../src/WAGACoffeeRedemption.sol";
 
-// Access Control
-import {WAGAAccessControl} from "../src/WAGAAccessControl.sol";
+// Note: Access Control functionality now integrated into WAGAConfigManager (inherited by CoffeeTokenCore)
 
 contract MigrateToEnhancedCompliance is Script {
     // Contract references
@@ -24,7 +23,7 @@ contract MigrateToEnhancedCompliance is Script {
     PrivacyLayer public privacyLayer;
     WAGAEthiopianCompliance public ethiopianCompliance;
     WAGACoffeeRedemption public redemptionManager;
-    WAGAAccessControl public accessControl;
+    // Note: accessControl functionality now in coffeeToken (ConfigManager)
 
     // Migration tracking
     mapping(uint256 => bool) public migratedBatches;
@@ -47,7 +46,7 @@ contract MigrateToEnhancedCompliance is Script {
         privacyLayer = PrivacyLayer(_privacyLayer);
         ethiopianCompliance = WAGAEthiopianCompliance(_ethiopianCompliance);
         redemptionManager = WAGACoffeeRedemption(_redemptionManager);
-        accessControl = WAGAAccessControl(_accessControl);
+        // Note: Using coffeeToken for access control (ConfigManager pattern)
     }
 
     function run() external {
@@ -75,7 +74,7 @@ contract MigrateToEnhancedCompliance is Script {
 
         // Connect Ethiopian compliance to redemption manager
         ethiopianCompliance.grantRole(
-            ethiopianCompliance.COMPLIANCE_MANAGER_ROLE(),
+            keccak256("COMPLIANCE_MANAGER_ROLE"),
             address(redemptionManager)
         );
 
@@ -104,10 +103,10 @@ contract MigrateToEnhancedCompliance is Script {
         string[3] memory phones = ["+1234567890", "+0987654321", "+1122334455"];
 
         for (uint256 i = 0; i < stakeholders.length; i++) {
-            if (!accessControl.isRegisteredSeller(stakeholders[i])) {
-                accessControl.registerSeller(
+            if (!coffeeToken.isRegisteredSeller(stakeholders[i])) {
+                coffeeToken.registerSeller(
                     stakeholders[i],
-                    WAGAAccessControl.SellerType.COOPERATIVE,
+                    WAGACoffeeTokenCore.SellerType.COOPERATIVE,
                     names[i],
                     "REG001",
                     "CBETETAAXXX" // Default Ethiopian bank SWIFT
@@ -142,11 +141,11 @@ contract MigrateToEnhancedCompliance is Script {
         (string memory origin, address creator, uint256 timestamp, bool isExpired, bool isMetadataVerified) = batchManager.getBatchAdditionalInfo(batchId);
 
         // Ensure creator is registered as seller
-        if (!accessControl.isRegisteredSeller(creator)) {
+        if (!coffeeToken.isRegisteredSeller(creator)) {
             // Register as cooperative by default
-            accessControl.registerSeller(
+            coffeeToken.registerSeller(
                 creator,
-                WAGAAccessControl.SellerType.COOPERATIVE,
+                WAGACoffeeTokenCore.SellerType.COOPERATIVE,
                 "Migrated Seller",
                 "MIGRATE001",
                 "CBETETAAXXX" // Default Ethiopian bank SWIFT
@@ -198,7 +197,7 @@ contract MigrateToEnhancedCompliance is Script {
     function getMigrationStatus(uint256 batchId) external view returns (bool migrated, uint64 sellerId) {
         migrated = migratedBatches[batchId];
         (, address creator, , , ) = batchManager.getBatchAdditionalInfo(batchId);
-        sellerId = accessControl.getSellerId(creator);
+        sellerId = coffeeToken.getSellerId(creator);
     }
 
     function getMigrationSummary() external view returns (

@@ -606,7 +606,7 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
         public
         view
         virtual
-        override(AccessControl, ERC1155Holder)
+        override(ERC1155Holder)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
@@ -854,11 +854,7 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
         (, address creator, , , ) = batchManager.getBatchAdditionalInfo(batchId);
 
         // Convert address to seller ID using coffee token (which has access control)
-        try coffeeToken.getSellerId(creator) returns (uint64 sellerId) {
-            return sellerId;
-        } catch {
-            return 0; // Return 0 if seller not found
-        }
+        return coffeeToken.getSellerId(creator);
     }
 
     /**
@@ -868,11 +864,7 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
      */
     function _getSellerAddress(uint64 sellerId) internal view returns (address sellerAddress) {
         // Convert seller ID to address using coffee token (which has access control)
-        try coffeeToken.getSellerAddress(sellerId) returns (address sellerAddress) {
-            return sellerAddress;
-        } catch {
-            return address(0); // Return zero address if seller not found
-        }
+        return coffeeToken.getSellerAddress(sellerId);
     }
 
     /**

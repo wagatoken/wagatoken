@@ -5,6 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
+import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
 import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
 import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
@@ -88,7 +89,6 @@ contract WAGAEnhancedForkTest is Test {
             ethiopianCompliance,
             ecxOracle,
             circomVerifier,
-            accessControl,
             helperConfig
         ) = deployer.run();
 
@@ -134,8 +134,9 @@ contract WAGAEnhancedForkTest is Test {
         MockCircomVerifier mockVerifier = new MockCircomVerifier();
         
         // Grant roles to mockVerifier
-        mockVerifier.grantRole(mockVerifier.VERIFIER_ROLE(), address(zkManager));
-        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(mockVerifier));
+        // Note: MockCircomVerifier doesn't require role setup - it's a mock for testing
+        // Grant verifier role through ConfigManager
+        coffeeToken.grantVerifierRole(address(mockVerifier));
         
         // Deploy new ZK Manager with MockCircomVerifier for testing
         WAGAZKManager testZkManager = new WAGAZKManager(
@@ -144,9 +145,10 @@ contract WAGAEnhancedForkTest is Test {
         );
         
         // Grant roles to the new ZK Manager
-        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(testZkManager));
-        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(testZkManager));
-        mockVerifier.grantRole(mockVerifier.VERIFIER_ROLE(), address(testZkManager));
+        // Grant roles through ConfigManager
+        coffeeToken.grantVerifierRole(address(testZkManager));
+        coffeeToken.grantRole(keccak256("ADMIN_ROLE"), address(testZkManager));
+        // Note: MockCircomVerifier doesn't require role setup - it's a mock for testing
         
         // Configure Ethiopian compliance on the new ZK Manager
         testZkManager.setEthiopianCompliance(address(ethiopianCompliance));
@@ -266,7 +268,7 @@ contract WAGAEnhancedForkTest is Test {
 
         coffeeToken.registerSeller(
             makeAddr("seller1"),
-            WAGACoffeeTokenCore.SellerType.COOPERATIVE,
+            WAGAConfigManager.SellerType.COOPERATIVE,
             "Yirgacheffe Cooperative",
             "REG001",
             "CBETETAA"
@@ -274,7 +276,7 @@ contract WAGAEnhancedForkTest is Test {
 
         coffeeToken.registerSeller(
             makeAddr("seller2"),
-            WAGACoffeeTokenCore.SellerType.PROCESSOR,
+            WAGAConfigManager.SellerType.PROCESSOR,
             "Sidamo Premium Processor",
             "REG002",
             "CBETETAA"

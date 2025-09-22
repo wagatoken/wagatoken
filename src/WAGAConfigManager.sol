@@ -155,7 +155,7 @@ contract WAGAConfigManager is AccessControl, Ownable {
     /**
      * @dev Only WAGA admins or processors can create/modify batches
      */
-    modifier onlyBatchCreator() {
+    modifier onlyBatchCreator() virtual {
         if (!(hasRole(ADMIN_ROLE, msg.sender) || hasRole(PROCESSOR_ROLE, msg.sender))) {
             revert WAGAConfigManager__MustBeAdminOrProcessor_onlyBatchCreator();
         }
@@ -455,7 +455,7 @@ contract WAGAConfigManager is AccessControl, Ownable {
      * @param role The role to revoke
      * @param account The account to revoke the role from
      */
-    function revokeRole(bytes32 role, address account) external onlyAdmin {
+    function revokeRole(bytes32 role, address account) public override onlyAdmin {
         _revokeRole(role, account);
     }
     

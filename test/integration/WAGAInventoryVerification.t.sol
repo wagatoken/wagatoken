@@ -95,7 +95,6 @@ contract WAGAInventoryVerification is Test {
             ethiopianCompliance,
             ecxOracle,
             circomVerifier,
-            ,  // accessControl - not needed for this test
             helperConfig
         ) = deployer.run();
 

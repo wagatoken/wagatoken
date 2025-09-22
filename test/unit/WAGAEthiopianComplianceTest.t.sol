@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
+import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
 // WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.sol";
@@ -83,7 +84,7 @@ contract WAGAEthiopianComplianceTest is Test {
         // Register seller using ConfigManager
         coffeeToken.registerSeller(
             seller,
-            WAGACoffeeTokenCore.SellerType.COOPERATIVE,
+            WAGAConfigManager.SellerType.COOPERATIVE,
             "Test Cooperative",
             "REG001",
             "CBETETAA"
@@ -338,7 +339,7 @@ contract WAGAEthiopianComplianceTest is Test {
 
         // Setup
         compliance.addOfframpPartner(offrampPartner, "Global Offramp");
-        compliance.setAccessControl(address(accessControl));
+        compliance.setCoffeeToken(address(coffeeToken));
 
         vm.stopPrank();
 
@@ -365,7 +366,7 @@ contract WAGAEthiopianComplianceTest is Test {
         // Setup all parties
         compliance.addOfframpPartner(offrampPartner, "Global Offramp");
         compliance.addBankingPartner(bankingPartner, "Ethiopian Bank");
-        compliance.setAccessControl(address(accessControl));
+        compliance.setCoffeeToken(address(coffeeToken));
 
         vm.stopPrank();
 
@@ -517,7 +518,7 @@ contract WAGAEthiopianComplianceTest is Test {
     function test_Error_UnauthorizedSellerPaymentConfirmation() public {
         vm.startPrank(admin);
         compliance.addOfframpPartner(offrampPartner, "Global Offramp");
-        compliance.setAccessControl(address(accessControl));
+        compliance.setCoffeeToken(address(coffeeToken));
         vm.stopPrank();
 
         vm.startPrank(offrampPartner);
@@ -543,7 +544,7 @@ contract WAGAEthiopianComplianceTest is Test {
         // Setup contracts
         compliance.addBankingPartner(bankingPartner, "Ethiopian Bank");
         compliance.addOfframpPartner(offrampPartner, "Global Offramp");
-        compliance.setAccessControl(address(accessControl));
+        compliance.setCoffeeToken(address(coffeeToken));
 
         vm.stopPrank();
 
@@ -625,7 +626,7 @@ contract WAGAEthiopianComplianceTest is Test {
     function test_ViewFunctions_GetEnhancedTransferDetails() public {
         vm.startPrank(admin);
         compliance.addOfframpPartner(offrampPartner, "Global Offramp");
-        compliance.setAccessControl(address(accessControl));
+        compliance.setCoffeeToken(address(coffeeToken));
         vm.stopPrank();
 
         vm.startPrank(offrampPartner);

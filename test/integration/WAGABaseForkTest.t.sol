@@ -84,7 +84,6 @@ contract WAGABaseForkTest is Test {
             ethiopianCompliance,
             ecxOracle,
             circomVerifier,
-            accessControl,
             helperConfig
         ) = deployer.run();
 
@@ -129,8 +128,9 @@ contract WAGABaseForkTest is Test {
         MockCircomVerifier mockVerifier = new MockCircomVerifier();
         
         // Grant roles to mockVerifier
-        mockVerifier.grantRole(mockVerifier.VERIFIER_ROLE(), address(zkManager));
-        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(mockVerifier));
+        // Note: MockCircomVerifier doesn't require role setup - it's a mock for testing
+        // Grant verifier role through ConfigManager
+        coffeeToken.grantVerifierRole(address(mockVerifier));
         
         // Update ZK Manager to use MockCircomVerifier and configure Ethiopian compliance
         WAGAZKManager testZkManager = new WAGAZKManager(
@@ -139,9 +139,10 @@ contract WAGABaseForkTest is Test {
         );
         
         // Grant roles to the new ZK Manager
-        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(testZkManager));
-        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(testZkManager));
-        mockVerifier.grantRole(mockVerifier.VERIFIER_ROLE(), address(testZkManager));
+        // Grant roles through ConfigManager
+        coffeeToken.grantVerifierRole(address(testZkManager));
+        coffeeToken.grantRole(keccak256("ADMIN_ROLE"), address(testZkManager));
+        // Note: MockCircomVerifier doesn't require role setup - it's a mock for testing
         
         // Configure Ethiopian compliance on the new ZK Manager
         testZkManager.setEthiopianCompliance(address(ethiopianCompliance));

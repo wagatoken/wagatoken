@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
+import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
@@ -102,7 +103,7 @@ contract WAGACoffeeRedemptionTest is Test {
         // Register seller using ConfigManager
         coffeeToken.registerSeller(
             seller,
-            WAGACoffeeTokenCore.SellerType.COOPERATIVE,
+            WAGAConfigManager.SellerType.COOPERATIVE,
             "Test Cooperative",
             "REG001",
             "CBETETAA"

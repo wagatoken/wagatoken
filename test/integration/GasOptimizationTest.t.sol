@@ -5,7 +5,19 @@ import {Test, console} from "forge-std/Test.sol";
 import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 // WAGAAccessControl removed - functionality moved to WAGAConfigManager
+import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
+import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
+import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
+import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
+import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
+import {WAGATreasury} from "../../src/WAGATreasury.sol";
+import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
+import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
+import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
+import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
+import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
+import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockOfframpPartner} from "../../src/MockOfframpPartner.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {TestHelperUtilities} from "../TestHelperUtilities.sol";
@@ -16,7 +28,7 @@ import {TestHelperUtilities} from "../TestHelperUtilities.sol";
  * @notice Tests gas savings from using uint64 seller IDs vs addresses and bytes11 SWIFT codes vs addresses
  */
 contract GasOptimizationTest is Test {
-    using TestHelperUtilities for *;
+    // TestHelperUtilities is now a contract, not a library
 
     /* -------------------------------------------------------------------------- */
     /*                              CONTRACT INSTANCES                            */
@@ -25,9 +37,25 @@ contract GasOptimizationTest is Test {
     DeployRealZKMVP public deployer;
     HelperConfig public helperConfig;
     // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
+    WAGACoffeeTokenCore public coffeeToken;
     WAGAEthiopianCompliance public ethiopianCompliance;
     MockUSDC public usdcToken;
     MockOfframpPartner public offrampPartner;
+    
+    // Additional contracts from deployment
+    WAGABatchManager public batchManager;
+    WAGAZKManager public zkManager;
+    PrivacyLayer public privacyLayer;
+    WAGATreasury public treasury;
+    WAGACoffeeRedemption public redemptionContract;
+    WAGACDPIntegration public cdpIntegration;
+    WAGAProofOfReserve public proofOfReserve;
+    WAGAInventoryManagerMVP public inventoryManager;
+    WAGAECXPriceOracle public ecxOracle;
+    CircomVerifier public circomVerifier;
+    
+    // Test utilities
+    TestHelperUtilities public testUtils;
 
     address public admin;
 
@@ -46,13 +74,28 @@ contract GasOptimizationTest is Test {
     function setUp() public {
         // Deploy system
         deployer = new DeployRealZKMVP();
-        deployer.run();
+        (
+            coffeeToken,
+            batchManager,
+            zkManager,
+            privacyLayer,
+            treasury,
+            redemptionContract,
+            cdpIntegration,
+            proofOfReserve,
+            inventoryManager,
+            ethiopianCompliance,
+            ecxOracle,
+            circomVerifier,
+            helperConfig
+        ) = deployer.run();
         // Note: AccessControl functionality now in ConfigManager (inherited by CoffeeToken)
-        coffeeToken = deployer.getCoffeeToken();
-        ethiopianCompliance = deployer.getEthiopianCompliance();
 
         admin = vm.addr(helperConfig.getActiveNetworkConfig().deployerKey);
         usdcToken = new MockUSDC();
+        
+        // Initialize test utilities
+        testUtils = new TestHelperUtilities();
 
         // Setup offramp partner
         offrampPartner = new MockOfframpPartner(address(usdcToken));
@@ -81,7 +124,7 @@ contract GasOptimizationTest is Test {
             address sellerAddr = makeAddr(string(abi.encodePacked("seller", i)));
             coffeeToken.registerSeller(
                 sellerAddr,
-                WAGACoffeeTokenCore.SellerType.PROCESSOR,
+                WAGAConfigManager.SellerType.PROCESSOR,
                 string(abi.encodePacked("Processor ", i)),
                 string(abi.encodePacked("REG", i)),
                 bytes11("CBETETAA")
@@ -95,7 +138,7 @@ contract GasOptimizationTest is Test {
         console.log("Average gas per registration:", gasUsedDigitalIds / NUM_ITERATIONS);
 
         // Calculate theoretical savings
-        uint256 theoreticalSavings = TestHelperUtilities.calculateSellerIdGasSavings(NUM_ITERATIONS);
+        uint256 theoreticalSavings = testUtils.calculateSellerIdGasSavings(NUM_ITERATIONS);
         console.log("Theoretical gas savings vs address storage:", theoreticalSavings);
 
         // Verify seller ID mappings work correctly
@@ -103,7 +146,7 @@ contract GasOptimizationTest is Test {
         vm.startPrank(admin);
         uint64 sellerId = coffeeToken.registerSeller(
             testSeller,
-            WAGACoffeeTokenCore.SellerType.COOPERATIVE,
+            WAGAConfigManager.SellerType.COOPERATIVE,
             "Test Cooperative",
             "TEST001",
             bytes11("CBETETAA")
@@ -131,7 +174,7 @@ contract GasOptimizationTest is Test {
             sellerAddresses[i] = makeAddr(string(abi.encodePacked("lookupSeller", i)));
             sellerIds[i] = coffeeToken.registerSeller(
                 sellerAddresses[i],
-                WAGACoffeeTokenCore.SellerType.PROCESSOR,
+                WAGAConfigManager.SellerType.PROCESSOR,
                 string(abi.encodePacked("Lookup Processor ", i)),
                 string(abi.encodePacked("LOOKUP", i)),
                 bytes11("CBETETAA")
@@ -189,7 +232,7 @@ contract GasOptimizationTest is Test {
         console.log("Average gas per SWIFT code registration:", gasUsedSwiftCodes / NUM_ITERATIONS);
 
         // Calculate theoretical savings
-        uint256 theoreticalSavings = TestHelperUtilities.calculateSwiftGasSavings(NUM_ITERATIONS);
+        uint256 theoreticalSavings = testUtils.calculateSwiftGasSavings(NUM_ITERATIONS);
         console.log("Theoretical gas savings vs address storage:", theoreticalSavings);
 
         // Verify SWIFT code operations work
@@ -205,8 +248,8 @@ contract GasOptimizationTest is Test {
     function testSwiftCodeValidationGasOptimization() public {
         console.log("=== SWIFT CODE VALIDATION GAS OPTIMIZATION TEST ===");
 
-        bytes11[] memory validCodes = TestHelperUtilities.getValidSwiftCodes();
-        bytes11[] memory invalidCodes = TestHelperUtilities.getInvalidSwiftCodes();
+        bytes11[] memory validCodes = testUtils.getValidSwiftCodes();
+        bytes11[] memory invalidCodes = testUtils.getInvalidSwiftCodes();
 
         // Measure gas for valid SWIFT code validations
         uint256 gasStartValid = gasleft();
@@ -266,7 +309,7 @@ contract GasOptimizationTest is Test {
             sellers[i] = makeAddr(string(abi.encodePacked("comprehensiveSeller", i)));
             sellerIds[i] = coffeeToken.registerSeller(
                 sellers[i],
-                WAGACoffeeTokenCore.SellerType.PROCESSOR,
+                WAGAConfigManager.SellerType.PROCESSOR,
                 string(abi.encodePacked("Comp Processor ", i)),
                 string(abi.encodePacked("COMP", i)),
                 bytes11("CBETETAA")
@@ -304,8 +347,8 @@ contract GasOptimizationTest is Test {
         console.log("Average gas per optimized operation:", gasUsedComprehensive / 20);
 
         // Calculate total theoretical savings
-        uint256 sellerSavings = TestHelperUtilities.calculateSellerIdGasSavings(20);
-        uint256 swiftSavings = TestHelperUtilities.calculateSwiftGasSavings(10);
+        uint256 sellerSavings = testUtils.calculateSellerIdGasSavings(20);
+        uint256 swiftSavings = testUtils.calculateSwiftGasSavings(10);
         uint256 totalSavings = sellerSavings + swiftSavings;
 
         console.log("Total theoretical gas savings:", totalSavings);
@@ -351,7 +394,7 @@ contract GasOptimizationTest is Test {
         // Register seller
         uint64 sellerId = coffeeToken.registerSeller(
             testAddr,
-            WAGACoffeeTokenCore.SellerType.COOPERATIVE,
+            WAGAConfigManager.SellerType.COOPERATIVE,
             "Test Cooperative",
             "TEST001",
             bytes11("CBETETAA")

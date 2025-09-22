@@ -4,6 +4,10 @@ pragma solidity ^0.8.18;
 import {Test} from "forge-std/Test.sol";
 import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
+import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
+import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
+import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
+import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 
@@ -11,6 +15,12 @@ contract WAGATreasuryTest is Test {
     // Deployment
     DeployRealZKMVP public deployer;
     HelperConfig public helperConfig;
+    
+    // Additional contracts from deployment (not used but needed for tuple)
+    WAGACDPIntegration public cdpIntegration;
+    WAGAProofOfReserve public proofOfReserve;
+    WAGAInventoryManagerMVP public inventoryManager;
+    WAGAECXPriceOracle public ecxOracle;
     
     WAGATreasury public treasury;
     MockUSDC public usdc;
@@ -34,11 +44,11 @@ contract WAGATreasuryTest is Test {
             , // privacyLayer
             treasury,
             , // redemption
-            , // cdpIntegration
-            , // proofOfReserve
-            , // inventoryManager
+            cdpIntegration, // Now included in deployment
+            proofOfReserve, // Now included in deployment
+            inventoryManager, // Now included in deployment
             , // ethiopianCompliance
-            , // ecxOracle
+            ecxOracle, // Now included in deployment
             , // circomVerifier
             helperConfig
         ) = deployer.run();

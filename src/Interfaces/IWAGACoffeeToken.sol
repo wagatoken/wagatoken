@@ -28,6 +28,27 @@ interface IWAGACoffeeToken {
     function isBatchCreated(uint256 batchId) external view returns (bool);
 
     /**
+     * @dev Get the quantity of a specific batch
+     * @param batchId ID of the batch
+     * @return uint256 Quantity of the batch
+     */
+    function getBatchQuantity(uint256 batchId) external view returns (uint256);
+
+    /**
+     * @dev Get batch request details by batch ID and request index
+     */
+    function getBatchRequest(uint256 batchId, uint256 requestIndex) external view returns (
+        uint256 requestBatchId,
+        address requester,
+        uint256 requestedQuantity,
+        string memory requestDetails,
+        uint256 requestTimestamp,
+        bool isFulfilled,
+        uint256 fulfilledQuantity,
+        uint256 fulfilledTimestamp
+    );
+
+    /**
      * @dev Creates a new batch for blockchain-first workflow
      * @param productionDate Timestamp when the batch was produced
      * @param expiryDate Timestamp when the batch expires

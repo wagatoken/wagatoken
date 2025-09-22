@@ -3,6 +3,7 @@ pragma solidity ^0.8.18;
 
 import {Test} from "forge-std/Test.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
+import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
 import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
 import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
@@ -12,6 +13,8 @@ import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
+import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
+import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 
 /**
  * @title RoleBasedBatchCreationTest
@@ -30,6 +33,10 @@ contract RoleBasedBatchCreationTest is Test {
     WAGACoffeeRedemption public redemption;
     CircomVerifier public circomVerifier;
     PrivacyLayer public privacyLayer;
+    
+    // Additional contracts from deployment
+    WAGACDPIntegration public cdpIntegration;
+    WAGAECXPriceOracle public ecxOracle;
 
     // Test addresses - using makeAddr pattern
     address admin;
@@ -55,11 +62,11 @@ contract RoleBasedBatchCreationTest is Test {
             privacyLayer,
             , // treasury
             redemption,
-            , // cdpIntegration
+            cdpIntegration, // Now included in deployment
             proofOfReserve,
             inventoryManager,
             , // ethiopianCompliance
-            , // ecxOracle
+            ecxOracle, // Now included in deployment
             circomVerifier,
             helperConfig
         ) = deployer.run();
@@ -74,7 +81,8 @@ contract RoleBasedBatchCreationTest is Test {
     function testCooperativeCanCreateBatch() public {
         // Grant cooperative role to testUser
         vm.prank(admin);
-        coffeeToken.grantCooperativeRole(testUser);
+        // COOPERATIVE_ROLE is granted automatically when registering a seller as COOPERATIVE type
+        coffeeToken.registerSeller(testUser, WAGAConfigManager.SellerType.COOPERATIVE, "Test Cooperative", "REG-001", bytes11("CBETETAAXXX"));
         
         // Cooperative creates batch
         vm.prank(testUser);
@@ -96,7 +104,8 @@ contract RoleBasedBatchCreationTest is Test {
     function testRoasterCanCreateBatch() public {
         // Grant roaster role to testUser
         vm.prank(admin);
-        coffeeToken.grantRoasterRole(testUser);
+        // ROASTER_ROLE is granted automatically when registering a seller as ROASTER type
+        coffeeToken.registerSeller(testUser, WAGAConfigManager.SellerType.ROASTER, "Test Roaster", "REG-002", bytes11("CBETETAAXXX"));
         
         // Roaster creates batch
         vm.prank(testUser);
@@ -173,7 +182,8 @@ contract RoleBasedBatchCreationTest is Test {
     function testRevokedRoleCannotCreateBatch() public {
         // Grant cooperative role to testUser
         vm.prank(admin);
-        coffeeToken.grantCooperativeRole(testUser);
+        // COOPERATIVE_ROLE is granted automatically when registering a seller as COOPERATIVE type
+        coffeeToken.registerSeller(testUser, WAGAConfigManager.SellerType.COOPERATIVE, "Test Cooperative", "REG-001", bytes11("CBETETAAXXX"));
         
         // Verify user can create batch
         vm.prank(testUser);
@@ -209,8 +219,10 @@ contract RoleBasedBatchCreationTest is Test {
     function testMultipleRolesCanCreateBatches() public {
         // Grant multiple roles to testUser
         vm.startPrank(admin);
-        coffeeToken.grantCooperativeRole(testUser);
-        coffeeToken.grantRoasterRole(testUser);
+        // COOPERATIVE_ROLE is granted automatically when registering a seller as COOPERATIVE type
+        coffeeToken.registerSeller(testUser, WAGAConfigManager.SellerType.COOPERATIVE, "Test Cooperative", "REG-001", bytes11("CBETETAAXXX"));
+        // ROASTER_ROLE is granted automatically when registering a seller as ROASTER type
+        coffeeToken.registerSeller(testUser, WAGAConfigManager.SellerType.ROASTER, "Test Roaster", "REG-002", bytes11("CBETETAAXXX"));
         vm.stopPrank();
         
         // User with multiple roles can create batch

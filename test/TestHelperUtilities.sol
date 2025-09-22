@@ -17,7 +17,7 @@ contract TestHelperUtilities is Test {
     /**
      * @dev Generate valid SWIFT codes for testing
      */
-    function getValidSwiftCodes() internal pure returns (bytes11[] memory) {
+    function getValidSwiftCodes() public pure returns (bytes11[] memory) {
         bytes11[] memory codes = new bytes11[](4);
         codes[0] = bytes11("CBETETAAXXX"); // Commercial Bank of Ethiopia
         codes[1] = bytes11("DASHETAAXXX"); // Dashen Bank
@@ -29,7 +29,7 @@ contract TestHelperUtilities is Test {
     /**
      * @dev Generate invalid SWIFT codes for negative testing
      */
-    function getInvalidSwiftCodes() internal pure returns (bytes11[] memory) {
+    function getInvalidSwiftCodes() public pure returns (bytes11[] memory) {
         bytes11[] memory codes = new bytes11[](3);
         codes[0] = bytes11("INVALIDXXXX"); // Too short
         codes[1] = bytes11("TOOLONGXXXX"); // Too long
@@ -58,7 +58,7 @@ contract TestHelperUtilities is Test {
     /**
      * @dev Generate sequential seller IDs for testing
      */
-    function generateSellerIds(uint256 count, uint256 startId) internal pure returns (uint64[] memory) {
+    function generateSellerIds(uint256 count, uint256 startId) public pure returns (uint64[] memory) {
         uint64[] memory ids = new uint64[](count);
         for (uint256 i = 0; i < count; i++) {
             ids[i] = uint64(startId + i);
@@ -201,7 +201,7 @@ contract TestHelperUtilities is Test {
     /**
      * @dev Generate sample EUDR compliance data for testing
      */
-    function generateSampleEUDRData() internal view returns (EUDRTestData memory) {
+    function generateSampleEUDRData() public view returns (EUDRTestData memory) {
         return EUDRTestData({
             certificateId: "EUDR-CERT-TEST-001",
             complianceLevel: "High",
@@ -233,7 +233,7 @@ contract TestHelperUtilities is Test {
     /**
      * @dev Generate sample Ethiopian compliance data
      */
-    function generateSampleEthiopianComplianceData() internal pure returns (EthiopianComplianceTestData memory) {
+    function generateSampleEthiopianComplianceData() public pure returns (EthiopianComplianceTestData memory) {
         return EthiopianComplianceTestData({
             ectaPermitNumber: "ECTA-TEST-001",
             qualityCertificateNumber: "QUAL-TEST-001",
@@ -252,7 +252,7 @@ contract TestHelperUtilities is Test {
     /**
      * @dev Generate mock ZK proof data for testing
      */
-    function generateMockZKProof() internal pure returns (bytes memory) {
+    function generateMockZKProof() public pure returns (bytes memory) {
         return abi.encodePacked(
             uint256(0x123456789abcdef),
             uint256(0xfedcba987654321),
@@ -290,7 +290,7 @@ contract TestHelperUtilities is Test {
      * @param numTransactions Number of transactions
      * @return savings Expected gas savings in wei
      */
-    function calculateSwiftGasSavings(uint256 numTransactions) internal pure returns (uint256 savings) {
+    function calculateSwiftGasSavings(uint256 numTransactions) public pure returns (uint256 savings) {
         // Address storage: 20 bytes
         // bytes11 storage: 11 bytes (rounded up to 32 bytes slot)
         // Approximate gas savings per transaction
@@ -304,7 +304,7 @@ contract TestHelperUtilities is Test {
      * @param numTransactions Number of transactions
      * @return savings Expected gas savings in wei
      */
-    function calculateSellerIdGasSavings(uint256 numTransactions) internal pure returns (uint256 savings) {
+    function calculateSellerIdGasSavings(uint256 numTransactions) public pure returns (uint256 savings) {
         // Address storage: 20 bytes
         // uint64 storage: 8 bytes (rounded up to 32 bytes slot)
         // Approximate gas savings per transaction

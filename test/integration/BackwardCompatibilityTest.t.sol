@@ -5,6 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
+import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
 import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
 import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
@@ -13,6 +14,10 @@ import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 // WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
+import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
+import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
+import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
+import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {TestHelperUtilities} from "../TestHelperUtilities.sol";
@@ -23,7 +28,7 @@ import {TestHelperUtilities} from "../TestHelperUtilities.sol";
  * @notice Ensures existing functionality works with enhanced features
  */
 contract BackwardCompatibilityTest is Test {
-    using TestHelperUtilities for *;
+    // TestHelperUtilities is now a contract, not a library
 
     /* -------------------------------------------------------------------------- */
     /*                              CONTRACT INSTANCES                            */
@@ -42,6 +47,15 @@ contract BackwardCompatibilityTest is Test {
     // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
     CircomVerifier public circomVerifier;
     MockUSDC public usdcToken;
+    
+    // Additional contracts now included in deployment
+    WAGACDPIntegration public cdpIntegration;
+    WAGAProofOfReserve public proofOfReserve;
+    WAGAInventoryManagerMVP public inventoryManager;
+    WAGAECXPriceOracle public ecxOracle;
+    
+    // Test utilities
+    TestHelperUtilities public testUtils;
 
     /* -------------------------------------------------------------------------- */
     /*                              TEST ACCOUNTS                                 */
@@ -65,13 +79,12 @@ contract BackwardCompatibilityTest is Test {
             privacyLayer,
             treasury,
             redemptionContract,
-            , // cdpIntegration
-            , // proofOfReserve
-            , // inventoryManager
+            cdpIntegration, // Now included in deployment
+            proofOfReserve, // Now included in deployment  
+            inventoryManager, // Now included in deployment
             ethiopianCompliance,
-            , // ecxOracle
+            ecxOracle, // Now included in deployment
             circomVerifier,
-            , // accessControl (use getter instead)
             helperConfig
         ) = deployer.run();
 
@@ -80,12 +93,17 @@ contract BackwardCompatibilityTest is Test {
 
         admin = vm.addr(helperConfig.getActiveNetworkConfig().deployerKey);
         usdcToken = MockUSDC(address(treasury.usdcToken()));
+        
+        // Initialize test utilities
+        testUtils = new TestHelperUtilities();
 
         // Setup legacy roles (minimal setup for backward compatibility)
         vm.startPrank(admin);
-        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), processor);
-        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), admin);
-        circomVerifier.grantRole(circomVerifier.VERIFIER_ROLE(), processor);
+        // Use ConfigManager role granting functions
+        coffeeToken.grantProcessorRole(processor);
+        coffeeToken.grantRole(keccak256("ADMIN_ROLE"), admin);
+        // Verifier role is managed through coffeeToken (unified access control)
+        coffeeToken.grantVerifierRole(processor);
         vm.stopPrank();
 
         // Fund accounts
@@ -167,21 +185,21 @@ contract BackwardCompatibilityTest is Test {
         vm.startPrank(processor);
         zkManager.addZKProof(
             batchId,
-            TestHelperUtilities.generateMockZKProof(),
+            testUtils.generateMockZKProof(),
             IZKVerifier.ProofType.PRICE_COMPETITIVENESS,
             "Legacy competitive pricing"
         );
 
         zkManager.addZKProof(
             batchId,
-            TestHelperUtilities.generateMockZKProof(),
+            testUtils.generateMockZKProof(),
             IZKVerifier.ProofType.QUALITY_STANDARDS,
             "Legacy quality standards"
         );
 
         zkManager.addZKProof(
             batchId,
-            TestHelperUtilities.generateMockZKProof(),
+            testUtils.generateMockZKProof(),
             IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE,
             "Legacy supply chain provenance"
         );
@@ -437,7 +455,7 @@ contract BackwardCompatibilityTest is Test {
         vm.startPrank(processor);
         zkManager.addZKProof(
             legacyBatchId,
-            TestHelperUtilities.generateMockZKProof(),
+            testUtils.generateMockZKProof(),
             IZKVerifier.ProofType.PRICE_COMPETITIVENESS,
             "Legacy pricing"
         );
@@ -447,7 +465,7 @@ contract BackwardCompatibilityTest is Test {
         vm.startPrank(admin);
         coffeeToken.registerSeller(
             processor,
-            WAGACoffeeTokenCore.SellerType.PROCESSOR,
+            WAGAConfigManager.SellerType.PROCESSOR,
             "Enhanced Processor",
             "ENH001",
             bytes11("TESTSWIFTXX")
@@ -457,14 +475,14 @@ contract BackwardCompatibilityTest is Test {
         vm.startPrank(processor);
         zkManager.addZKProof(
             enhancedBatchId,
-            TestHelperUtilities.generateMockZKProof(),
+            testUtils.generateMockZKProof(),
             IZKVerifier.ProofType.PRICE_COMPETITIVENESS,
             "Enhanced pricing"
         );
 
         zkManager.addEUDRComplianceZKProof(
             enhancedBatchId,
-            TestHelperUtilities.generateMockZKProof(),
+            testUtils.generateMockZKProof(),
             IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
             "Deforestation-Free"
         );

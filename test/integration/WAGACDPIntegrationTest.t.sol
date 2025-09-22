@@ -4,19 +4,29 @@ pragma solidity ^0.8.18;
 import {Test} from "forge-std/Test.sol";
 import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
+import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
 import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
 import {IWAGACDPIntegration} from "../../src/Interfaces/IWAGACDPIntegration.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {MockCoinbaseSDK} from "../mocks/MockCoinbaseSDK.sol";
+import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
+import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
+import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 
 contract WAGACDPIntegrationTest is Test {
     // Deployment
     DeployRealZKMVP public deployer;
     HelperConfig public helperConfig;
     
+    WAGACoffeeTokenCore public coffeeToken;
     WAGACDPIntegration public cdpIntegration;
     MockUSDC public usdc;
     MockCoinbaseSDK public mockCoinbaseSDK;
+    
+    // Additional contracts from deployment (not used in this test but needed for tuple)
+    WAGAProofOfReserve public proofOfReserve;
+    WAGAInventoryManagerMVP public inventoryManager;
+    WAGAECXPriceOracle public ecxOracle;
 
     address public admin = address(1);
     address public paymentHandler = address(2);
@@ -31,17 +41,17 @@ contract WAGACDPIntegrationTest is Test {
         deployer = new DeployRealZKMVP();
         
         (
-            , // coffeeToken
+            coffeeToken,
             , // batchManager
             , // zkManager
             , // privacyLayer
             , // treasury
             , // redemption
             cdpIntegration,
-            , // proofOfReserve
-            , // inventoryManager
+            proofOfReserve, // Now included in deployment
+            inventoryManager, // Now included in deployment
             , // ethiopianCompliance
-            , // ecxOracle
+            ecxOracle, // Now included in deployment
             , // circomVerifier
             helperConfig
         ) = deployer.run();
@@ -59,7 +69,8 @@ contract WAGACDPIntegrationTest is Test {
 
         // Setup roles for test accounts
         vm.startPrank(admin);
-        cdpIntegration.grantRole(cdpIntegration.PAYMENT_HANDLER_ROLE(), paymentHandler);
+        // CDP Integration roles are managed through coffeeToken (unified access control)
+        coffeeToken.grantPaymentHandlerRole(paymentHandler);
         // Setup roles for mock contracts
         mockCoinbaseSDK.grantRole(mockCoinbaseSDK.PAYMENT_HANDLER_ROLE(), paymentHandler);
         vm.stopPrank();
@@ -69,8 +80,10 @@ contract WAGACDPIntegrationTest is Test {
 
     function testDeployment() public view {
         assertEq(address(cdpIntegration.usdcToken()), address(usdc));
-        assertTrue(cdpIntegration.hasRole(cdpIntegration.CDP_ADMIN_ROLE(), admin));
-        assertTrue(cdpIntegration.hasRole(cdpIntegration.PAYMENT_HANDLER_ROLE(), paymentHandler));
+        // Check role through coffeeToken (unified access control)
+        assertTrue(coffeeToken.hasRole(keccak256("CDP_ADMIN_ROLE"), admin));
+        // Check payment handler role through coffeeToken (unified access control)
+        assertTrue(coffeeToken.hasRole(keccak256("PAYMENT_HANDLER_ROLE"), paymentHandler));
     }
 
     function testCreateSmartAccount() public {
