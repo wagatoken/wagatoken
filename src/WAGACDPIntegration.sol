@@ -1,18 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IWAGACDPIntegration} from "./Interfaces/IWAGACDPIntegration.sol";
+import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
 
 /**
  * @title WAGACDPIntegration
  * @dev Coinbase Developer Platform integration for WAGA payments
  * Handles on/off ramping, smart accounts, and cross-border payments
  */
-contract WAGACDPIntegration is IWAGACDPIntegration, AccessControl, ReentrancyGuard {
-    bytes32 public constant CDP_ADMIN_ROLE = keccak256("CDP_ADMIN_ROLE");
-    bytes32 public constant PAYMENT_HANDLER_ROLE = keccak256("PAYMENT_HANDLER_ROLE");
+contract WAGACDPIntegration is IWAGACDPIntegration, ReentrancyGuard {
+    // Role constants - use ConfigManager definitions instead of duplicating
+    bytes32 private constant CDP_ADMIN_ROLE = keccak256("CDP_ADMIN_ROLE");
+    bytes32 private constant PAYMENT_HANDLER_ROLE = keccak256("PAYMENT_HANDLER_ROLE");
+    
+    // Coffee token for role checks
+    IWAGACoffeeToken public coffeeToken;
 
     /* -------------------------------------------------------------------------- */
     /*                                  Errors                                    */
@@ -58,9 +62,21 @@ contract WAGACDPIntegration is IWAGACDPIntegration, AccessControl, ReentrancyGua
         cdpSmartAccountFactory = _cdpSmartAccountFactory;
         cdpPaymaster = _cdpPaymaster;
 
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(CDP_ADMIN_ROLE, msg.sender);
-        _grantRole(PAYMENT_HANDLER_ROLE, msg.sender);
+        // No role initialization needed - roles managed by coffee token
+    }
+    
+    /**
+     * @dev Set the coffee token contract for role checks
+     * @param _coffeeToken Address of the WAGACoffeeTokenCore contract
+     */
+    function setCoffeeToken(address _coffeeToken) external {
+        // Only allow setting if not already set or called by admin
+        if (address(coffeeToken) != address(0)) {
+            if (!coffeeToken.hasRole(keccak256("ADMIN_ROLE"), msg.sender)) {
+                revert();
+            }
+        }
+        coffeeToken = IWAGACoffeeToken(_coffeeToken);
     }
 
     /**
@@ -97,7 +113,10 @@ contract WAGACDPIntegration is IWAGACDPIntegration, AccessControl, ReentrancyGua
         uint256 batchId,
         uint256 amount,
         string calldata chargeId
-    ) external onlyRole(PAYMENT_HANDLER_ROLE) {
+    ) external {
+        if (!coffeeToken.hasRole(PAYMENT_HANDLER_ROLE, msg.sender)) {
+            return;
+        }
         if (amount == 0) {
             revert WAGACDPIntegration__InvalidPaymentAmount_initiateCDPPayment();
         }
@@ -128,7 +147,10 @@ contract WAGACDPIntegration is IWAGACDPIntegration, AccessControl, ReentrancyGua
     function confirmCDPPayment(
         string calldata chargeId,
         bool success
-    ) external onlyRole(PAYMENT_HANDLER_ROLE) {
+    ) external {
+        if (!coffeeToken.hasRole(PAYMENT_HANDLER_ROLE, msg.sender)) {
+            return;
+        }
         IWAGACDPIntegration.CDPPayment storage payment = cdpPayments[chargeId];
         if (payment.user == address(0)) {
             revert WAGACDPIntegration__PaymentNotFound_processPaymentWebhook();
@@ -153,7 +175,10 @@ contract WAGACDPIntegration is IWAGACDPIntegration, AccessControl, ReentrancyGua
     function processCDPWebhook(
         bytes calldata webhookData,
         bytes calldata signature
-    ) external onlyRole(PAYMENT_HANDLER_ROLE) returns (bool) {
+    ) external returns (bool) {
+        if (!coffeeToken.hasRole(PAYMENT_HANDLER_ROLE, msg.sender)) {
+            return false;
+        }
         // Calculate webhook ID for deduplication
         bytes32 webhookId = keccak256(abi.encodePacked(webhookData, signature));
 
@@ -185,7 +210,10 @@ contract WAGACDPIntegration is IWAGACDPIntegration, AccessControl, ReentrancyGua
         uint256 batchId,
         uint256 amount,
         string calldata /* destinationCurrency */
-    ) external onlyRole(PAYMENT_HANDLER_ROLE) returns (string memory chargeId) {
+    ) external returns (string memory chargeId) {
+        if (!coffeeToken.hasRole(PAYMENT_HANDLER_ROLE, msg.sender)) {
+            return "";
+        }
         // Generate unique charge ID
         chargeId = string(abi.encodePacked("cdp_", user, "_", batchId, "_", block.timestamp));
 
@@ -231,7 +259,10 @@ contract WAGACDPIntegration is IWAGACDPIntegration, AccessControl, ReentrancyGua
     function updateCDPConfig(
         address _cdpSmartAccountFactory,
         address _cdpPaymaster
-    ) external onlyRole(CDP_ADMIN_ROLE) {
+    ) external {
+        if (!coffeeToken.hasRole(CDP_ADMIN_ROLE, msg.sender)) {
+            return;
+        }
         cdpSmartAccountFactory = _cdpSmartAccountFactory;
         cdpPaymaster = _cdpPaymaster;
     }
@@ -239,7 +270,10 @@ contract WAGACDPIntegration is IWAGACDPIntegration, AccessControl, ReentrancyGua
     /**
      * @dev Emergency pause for CDP operations
      */
-    function emergencyPause() external onlyRole(CDP_ADMIN_ROLE) {
+    function emergencyPause() external {
+        if (!coffeeToken.hasRole(CDP_ADMIN_ROLE, msg.sender)) {
+            return;
+        }
         // Implementation would pause CDP operations
         // This is a simplified version
     }
@@ -247,7 +281,10 @@ contract WAGACDPIntegration is IWAGACDPIntegration, AccessControl, ReentrancyGua
     /**
      * @dev Emergency unpause for CDP operations
      */
-    function emergencyUnpause() external onlyRole(CDP_ADMIN_ROLE) {
+    function emergencyUnpause() external {
+        if (!coffeeToken.hasRole(CDP_ADMIN_ROLE, msg.sender)) {
+            return;
+        }
         // Implementation would unpause CDP operations
         // This is a simplified version
     }

@@ -382,6 +382,15 @@ interface IEthiopianCompliance {
     function getBankingCapabilities(bytes11 swiftCode) external view returns (BankingCapabilities memory capabilities);
 
     /**
+     * @dev Get banking partner details by address
+     * @param partner The address of the banking partner
+     * @return swiftCode The SWIFT code of the partner
+     * @return bankName The name of the bank
+     * @return canOfframp Whether the partner can act as offramp
+     */
+    function getBankingPartner(address partner) external view returns (bytes11 swiftCode, string memory bankName, bool canOfframp);
+
+    /**
      * @dev Assign offramp partner for a batch
      * @param batchId Batch identifier
      * @return offrampSwift Assigned offramp partner SWIFT code

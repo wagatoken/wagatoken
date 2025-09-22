@@ -66,6 +66,7 @@ contract WAGAPaymentIntegrationTest is Test {
             ethiopianCompliance,
             , // ecxOracle
             , // circomVerifier
+            , // accessControl
             helperConfig
         ) = deployer.run();
 

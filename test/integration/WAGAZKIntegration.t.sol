@@ -65,11 +65,11 @@ contract WAGAZKIntegration is Test {
         vm.startPrank(admin);
 
         // Grant roles to test addresses using the keccak256 hash directly
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), processor);
-        coffeeToken.grantRole(keccak256("DISTRIBUTOR_ROLE"), distributor);
+        coffeeToken.grantProcessorRole(processor);
+        coffeeToken.grantDistributorRole(distributor);
 
         // Grant PROCESSOR_ROLE to admin for testing ZK proofs
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), admin);
+        coffeeToken.grantProcessorRole(admin);
 
         // Deploy and configure MockCircomVerifier for testing
         mockVerifier = new MockCircomVerifier();

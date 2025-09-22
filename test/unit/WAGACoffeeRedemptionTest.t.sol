@@ -9,7 +9,7 @@ import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
 import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
-import {WAGAAccessControl} from "../../src/WAGAAccessControl.sol";
+// WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.sol";
@@ -26,7 +26,7 @@ contract WAGACoffeeRedemptionTest is Test {
     WAGAEthiopianCompliance public ethiopianCompliance;
     WAGABatchManager public batchManager;
     WAGAZKManager public zkManager;
-    WAGAAccessControl public accessControl;
+    // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
     CircomVerifier public circomVerifier;
     MockUSDC public usdc;
 
@@ -80,7 +80,7 @@ contract WAGACoffeeRedemptionTest is Test {
         // Deploy contracts
         usdc = new MockUSDC();
         coffeeToken = new WAGACoffeeTokenCore("");
-        accessControl = new WAGAAccessControl();
+        // Note: AccessControl functionality now in ConfigManager (inherited by CoffeeToken)
         circomVerifier = new CircomVerifier();
         treasury = new WAGATreasury(address(usdc));
         ethiopianCompliance = new WAGAEthiopianCompliance();
@@ -93,21 +93,19 @@ contract WAGACoffeeRedemptionTest is Test {
             address(ethiopianCompliance),
             address(batchManager),
             address(zkManager),
-            address(accessControl)
+            address(coffeeToken) // Use coffeeToken for access control instead of separate contract
         );
 
-        // Setup roles
-        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), processor);
-        accessControl.grantRole(accessControl.PROCESSOR_ROLE(), processor);
+        // Setup roles using ConfigManager functions
+        coffeeToken.grantProcessorRole(processor);
 
-        // Register seller
-        accessControl.registerSeller(
+        // Register seller using ConfigManager
+        coffeeToken.registerSeller(
             seller,
-            WAGAAccessControl.SellerType.COOPERATIVE,
+            WAGACoffeeTokenCore.SellerType.COOPERATIVE,
             "Test Cooperative",
             "REG001",
-            "contact@test.com",
-            "+251911123456"
+            "CBETETAA"
         );
 
         // Create batch
@@ -169,7 +167,7 @@ contract WAGACoffeeRedemptionTest is Test {
         ) = redemption.getEnhancedRedemptionDetails(redemptionId);
 
         assertEq(storedConsumer, consumer);
-        assertEq(sellerId, accessControl.getSellerId(seller));
+        assertEq(sellerId, coffeeToken.getSellerId(seller));
         assertEq(batchId_, BATCH_ID);
         assertEq(quantity, QUANTITY);
         assertTrue(requiresEthiopianCompliance);
@@ -204,11 +202,11 @@ contract WAGACoffeeRedemptionTest is Test {
 
     function test_Redemption_GetRedemptionSellerId() public {
         vm.startPrank(consumer);
-        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, false);
+        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, "Test Bank Details");
         vm.stopPrank();
 
         uint64 sellerId = redemption.getRedemptionSellerId(redemptionId);
-        assertEq(sellerId, accessControl.getSellerId(seller));
+        assertEq(sellerId, coffeeToken.getSellerId(seller));
     }
 
     /* -------------------------------------------------------------------------- */
@@ -245,7 +243,7 @@ contract WAGACoffeeRedemptionTest is Test {
         vm.expectEmit(true, true, false, true);
         emit EUDRComplianceValidated(BATCH_ID, 1, true, false); // Geolocation not verified yet
 
-        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, true);
+        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, "EUDR Bank Details");
 
         vm.stopPrank();
 
@@ -298,7 +296,7 @@ contract WAGACoffeeRedemptionTest is Test {
         vm.expectEmit(true, true, false, true);
         emit ZKComplianceValidated(BATCH_ID, 1, IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY, true);
 
-        redemption.requestRedemption(BATCH_ID, QUANTITY, false);
+        redemption.requestRedemption(BATCH_ID, QUANTITY, "Test Bank Details");
 
         vm.stopPrank();
     }
@@ -310,7 +308,7 @@ contract WAGACoffeeRedemptionTest is Test {
     function test_FiatTransfer_ConfirmFiatTransferStage() public {
         // Setup redemption
         vm.startPrank(consumer);
-        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, false);
+        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, "Test Bank Details");
         vm.stopPrank();
 
         // Confirm fiat transfer stage
@@ -336,7 +334,7 @@ contract WAGACoffeeRedemptionTest is Test {
     function test_FiatTransfer_ConfirmSellerPayment() public {
         // Setup redemption
         vm.startPrank(consumer);
-        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, false);
+        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, "Test Bank Details");
         vm.stopPrank();
 
         // Record offramp transfer
@@ -345,7 +343,7 @@ contract WAGACoffeeRedemptionTest is Test {
         vm.stopPrank();
 
         // Confirm seller payment
-        uint64 sellerId = accessControl.getSellerId(seller);
+        uint64 sellerId = coffeeToken.getSellerId(seller);
         vm.startPrank(offrampPartner); // Offramp partner confirms payment
 
         ethiopianCompliance.confirmSellerPayment(BATCH_ID, consumer, TOTAL_VALUE, "SELLER_TXN_001");
@@ -368,7 +366,7 @@ contract WAGACoffeeRedemptionTest is Test {
         vm.startPrank(consumer);
 
         vm.expectRevert("EUDR compliance not met");
-        redemption.requestRedemption(BATCH_ID, QUANTITY, true);
+        redemption.requestRedemption(BATCH_ID, QUANTITY, "EUDR Bank Details");
 
         vm.stopPrank();
     }
@@ -378,7 +376,7 @@ contract WAGACoffeeRedemptionTest is Test {
         // For now, test passes with current setup
         vm.startPrank(consumer);
 
-        redemption.requestRedemption(BATCH_ID, QUANTITY, false);
+        redemption.requestRedemption(BATCH_ID, QUANTITY, "Test Bank Details");
 
         vm.stopPrank();
     }
@@ -386,7 +384,7 @@ contract WAGACoffeeRedemptionTest is Test {
     function test_Error_UnauthorizedStageConfirmation() public {
         // Setup redemption
         vm.startPrank(consumer);
-        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, false);
+        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, "Test Bank Details");
         vm.stopPrank();
 
         // Try to confirm stage from unauthorized account
@@ -406,7 +404,7 @@ contract WAGACoffeeRedemptionTest is Test {
     function test_Error_UnauthorizedSellerPaymentConfirmation() public {
         // Setup redemption
         vm.startPrank(consumer);
-        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, false);
+        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, "Test Bank Details");
         vm.stopPrank();
 
         // Try to confirm seller payment from unauthorized account
@@ -424,7 +422,7 @@ contract WAGACoffeeRedemptionTest is Test {
 
     function test_EnhancedDetails_GetEnhancedRedemptionDetails() public {
         vm.startPrank(consumer);
-        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, true);
+        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, "EUDR Bank Details");
         vm.stopPrank();
 
         (
@@ -441,7 +439,7 @@ contract WAGACoffeeRedemptionTest is Test {
         ) = redemption.getEnhancedRedemptionDetails(redemptionId);
 
         assertEq(consumer_, consumer);
-        assertEq(sellerId, accessControl.getSellerId(seller));
+        assertEq(sellerId, coffeeToken.getSellerId(seller));
         assertEq(batchId_, BATCH_ID);
         assertEq(quantity, QUANTITY);
         assertEq(uint8(status), uint8(IEthiopianCompliance.TransferStage.PENDING));
@@ -504,7 +502,7 @@ contract WAGACoffeeRedemptionTest is Test {
         vm.expectEmit(true, true, false, true);
         emit EUDRComplianceValidated(BATCH_ID, 1, true, true);
 
-        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, true);
+        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, "EUDR Bank Details");
 
         console.log("Redemption requested with ID:", redemptionId);
 
@@ -555,7 +553,7 @@ contract WAGACoffeeRedemptionTest is Test {
             ,
         ) = redemption.getEnhancedRedemptionDetails(redemptionId);
 
-        assertEq(sellerId, accessControl.getSellerId(seller));
+        assertEq(sellerId, coffeeToken.getSellerId(seller));
         assertEq(uint8(finalStatus), uint8(IEthiopianCompliance.TransferStage.SELLER_PAYMENT_CONFIRMED));
         assertTrue(fiatTransferCompleted);
 
@@ -571,7 +569,7 @@ contract WAGACoffeeRedemptionTest is Test {
         vm.startPrank(consumer);
 
         // Request redemption with minimal requirements
-        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, false);
+        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, "Test Bank Details");
 
         // Verify basic redemption data is accessible
         uint64 sellerId = redemption.getRedemptionSellerId(redemptionId);
@@ -589,7 +587,7 @@ contract WAGACoffeeRedemptionTest is Test {
 
         // Measure gas for redemption request
         uint256 gasStart = gasleft();
-        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, false);
+        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, "Test Bank Details");
         uint256 gasUsedRedemption = gasStart - gasleft();
 
         vm.stopPrank();
@@ -625,7 +623,7 @@ contract WAGACoffeeRedemptionTest is Test {
         vm.startPrank(consumer);
 
         // Request redemption for all available tokens
-        redemption.requestRedemption(BATCH_ID, QUANTITY, false);
+        redemption.requestRedemption(BATCH_ID, QUANTITY, "Test Bank Details");
 
         vm.stopPrank();
 
@@ -650,7 +648,7 @@ contract WAGACoffeeRedemptionTest is Test {
 
         assertEq(sellerId1, sellerId2);
         assertEq(sellerId2, sellerId3);
-        assertEq(sellerId1, accessControl.getSellerId(seller));
+        assertEq(sellerId1, coffeeToken.getSellerId(seller));
     }
 
     function test_EdgeCase_RedemptionWithoutSellerId() public {
@@ -658,7 +656,7 @@ contract WAGACoffeeRedemptionTest is Test {
         // For now, test passes with current setup where seller is registered
         vm.startPrank(consumer);
 
-        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, false);
+        uint256 redemptionId = redemption.requestRedemption(BATCH_ID, QUANTITY, "Test Bank Details");
         uint64 sellerId = redemption.getRedemptionSellerId(redemptionId);
 
         assertGt(sellerId, 0);

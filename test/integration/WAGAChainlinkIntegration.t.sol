@@ -69,6 +69,7 @@ contract WAGAChainlinkIntegration is Test {
             , // ethiopianCompliance
             , // ecxOracle
             circomVerifier,
+            , // accessControl
             helperConfig
         ) = deployer.run();
 
@@ -87,11 +88,11 @@ contract WAGAChainlinkIntegration is Test {
         // Grant roles using the deployer address which has DEFAULT_ADMIN_ROLE
         vm.startPrank(deployerAddress);
 
-        // Grant roles to test addresses
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), processorUser);
-        coffeeToken.grantRole(keccak256("DISTRIBUTOR_ROLE"), distributorUser);
-        coffeeToken.grantRole(keccak256("VERIFIER_ROLE"), verifierUser);
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), adminUser); // Admin also gets processor role for testing
+        // Grant roles using unified ConfigManager functions
+        coffeeToken.grantProcessorRole(processorUser);
+        coffeeToken.grantDistributorRole(distributorUser);
+        coffeeToken.grantVerifierRole(verifierUser);
+        coffeeToken.grantProcessorRole(adminUser); // Admin also gets processor role for testing
 
         vm.stopPrank();
 

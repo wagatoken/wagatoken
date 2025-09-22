@@ -74,7 +74,7 @@ contract RoleBasedBatchCreationTest is Test {
     function testCooperativeCanCreateBatch() public {
         // Grant cooperative role to testUser
         vm.prank(admin);
-        coffeeToken.grantRole(keccak256("COOPERATIVE_ROLE"), testUser);
+        coffeeToken.grantCooperativeRole(testUser);
         
         // Cooperative creates batch
         vm.prank(testUser);
@@ -96,7 +96,7 @@ contract RoleBasedBatchCreationTest is Test {
     function testRoasterCanCreateBatch() public {
         // Grant roaster role to testUser
         vm.prank(admin);
-        coffeeToken.grantRole(keccak256("ROASTER_ROLE"), testUser);
+        coffeeToken.grantRoasterRole(testUser);
         
         // Roaster creates batch
         vm.prank(testUser);
@@ -118,7 +118,7 @@ contract RoleBasedBatchCreationTest is Test {
     function testProcessorCanCreateBatch() public {
         // Grant processor role to testUser
         vm.prank(admin);
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), testUser);
+        coffeeToken.grantProcessorRole(testUser);
         
         // Processor creates batch
         vm.prank(testUser);
@@ -173,7 +173,7 @@ contract RoleBasedBatchCreationTest is Test {
     function testRevokedRoleCannotCreateBatch() public {
         // Grant cooperative role to testUser
         vm.prank(admin);
-        coffeeToken.grantRole(keccak256("COOPERATIVE_ROLE"), testUser);
+        coffeeToken.grantCooperativeRole(testUser);
         
         // Verify user can create batch
         vm.prank(testUser);
@@ -209,8 +209,8 @@ contract RoleBasedBatchCreationTest is Test {
     function testMultipleRolesCanCreateBatches() public {
         // Grant multiple roles to testUser
         vm.startPrank(admin);
-        coffeeToken.grantRole(keccak256("COOPERATIVE_ROLE"), testUser);
-        coffeeToken.grantRole(keccak256("ROASTER_ROLE"), testUser);
+        coffeeToken.grantCooperativeRole(testUser);
+        coffeeToken.grantRoasterRole(testUser);
         vm.stopPrank();
         
         // User with multiple roles can create batch

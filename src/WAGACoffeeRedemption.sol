@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+// AccessControl removed - using coffee token for role checks
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import {WAGACoffeeTokenCore} from "./WAGACoffeeTokenCore.sol";
@@ -9,10 +9,9 @@ import {IWAGATreasury} from "./Interfaces/IWAGATreasury.sol";
 import {IEthiopianCompliance} from "./Interfaces/IEthiopianCompliance.sol";
 import {IWAGABatchManager} from "./Interfaces/IWAGABatchManager.sol";
 import {IWAGAZKManager} from "./Interfaces/IWAGAZKManager.sol";
-import {IWAGAAccessControl} from "./Interfaces/IWAGAAccessControl.sol";
 import {IZKVerifier} from "./Interfaces/IZKVerifier.sol";
 
-contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
+contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
     /* -------------------------------------------------------------------------- */
     /*                                CUSTOM ERRORS                               */
     /* -------------------------------------------------------------------------- */
@@ -52,7 +51,6 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     error WAGACoffeeRedemption__InvalidEthiopianComplianceAddress_constructor();
     error WAGACoffeeRedemption__InvalidBatchManagerAddress_constructor();
     error WAGACoffeeRedemption__InvalidZKManagerAddress_constructor();
-    error WAGACoffeeRedemption__InvalidAccessControlAddress_constructor();
     error WAGACoffeeRedemption__Unauthorized_updateEthiopianCompliance();
     error WAGACoffeeRedemption__Unauthorized_setEthiopianComplianceAddress();
     error WAGACoffeeRedemption__InvalidEthiopianComplianceAddress_setEthiopianComplianceAddress();
@@ -83,8 +81,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
     // ZK manager for compliance validation
     IWAGAZKManager public zkManager;
 
-    // Access control for seller ID resolution
-    IWAGAAccessControl public accessControl;
+    // Note: Access control is handled through coffeeToken (inherits from WAGAConfigManager)
 
     /* -------------------------------------------------------------------------- */
     /*                               TYPE DECLARATIONS                            */
@@ -216,8 +213,7 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         address _treasury,
         address _ethiopianCompliance,
         address _batchManager,
-        address _zkManager,
-        address _accessControl
+        address _zkManager
     ) {
         if (_coffeeToken == address(0)) {
             revert WAGACoffeeRedemption__InvalidCoffeeTokenAddress_constructor();
@@ -234,16 +230,12 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         if (_zkManager == address(0)) {
             revert WAGACoffeeRedemption__InvalidZKManagerAddress_constructor();
         }
-        if (_accessControl == address(0)) {
-            revert WAGACoffeeRedemption__InvalidAccessControlAddress_constructor();
-        }
 
         coffeeToken = WAGACoffeeTokenCore(_coffeeToken);
         treasury = IWAGATreasury(_treasury);
         ethiopianCompliance = IEthiopianCompliance(_ethiopianCompliance);
         batchManager = IWAGABatchManager(_batchManager);
         zkManager = IWAGAZKManager(_zkManager);
-        accessControl = IWAGAAccessControl(_accessControl);
         nextRedemptionId = 1000;
     }
 
@@ -272,7 +264,8 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
      */
     function setTreasury(address _treasury) external {
         // Only allow admin or the contract itself to update treasury
-        if (!(msg.sender == address(this) || hasRole(DEFAULT_ADMIN_ROLE, msg.sender))) {
+        bytes32 adminRole = keccak256("ADMIN_ROLE");
+        if (!(msg.sender == address(this) || coffeeToken.hasRole(adminRole, msg.sender))) {
             revert WAGACoffeeRedemption__Unauthorized_updateEthiopianCompliance();
         }
         treasury = IWAGATreasury(_treasury);
@@ -283,7 +276,8 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
      * @param _ethiopianCompliance New Ethiopian compliance contract address
      */
     function setEthiopianCompliance(address _ethiopianCompliance) external {
-        if (!hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
+        bytes32 adminRole = keccak256("ADMIN_ROLE");
+        if (!coffeeToken.hasRole(adminRole, msg.sender)) {
             revert WAGACoffeeRedemption__Unauthorized_setEthiopianComplianceAddress();
         }
         if (_ethiopianCompliance == address(0)) {
@@ -859,12 +853,12 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         // Get batch creator address
         (, address creator, , , ) = batchManager.getBatchAdditionalInfo(batchId);
 
-        // Convert address to seller ID using access control contract
-        if (address(accessControl) != address(0)) {
-            return accessControl.getSellerId(creator);
+        // Convert address to seller ID using coffee token (which has access control)
+        try coffeeToken.getSellerId(creator) returns (uint64 sellerId) {
+            return sellerId;
+        } catch {
+            return 0; // Return 0 if seller not found
         }
-
-        return 0; // Return 0 if access control not configured
     }
 
     /**
@@ -873,12 +867,12 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
      * @return sellerAddress Ethereum address of the seller
      */
     function _getSellerAddress(uint64 sellerId) internal view returns (address sellerAddress) {
-        // Convert seller ID to address using access control contract
-        if (address(accessControl) != address(0)) {
-            return accessControl.getSellerAddress(sellerId);
+        // Convert seller ID to address using coffee token (which has access control)
+        try coffeeToken.getSellerAddress(sellerId) returns (address sellerAddress) {
+            return sellerAddress;
+        } catch {
+            return address(0); // Return zero address if seller not found
         }
-
-        return address(0); // Return zero address if access control not configured
     }
 
     /**
@@ -912,7 +906,11 @@ contract WAGACoffeeRedemption is AccessControl, ReentrancyGuard, ERC1155Holder {
         uint256 redemptionId,
         bool fiatCompleted,
         string memory transactionId
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external {
+        bytes32 adminRole = keccak256("ADMIN_ROLE");
+        if (!coffeeToken.hasRole(adminRole, msg.sender)) {
+            return;
+        }
         if (redemptionId >= nextRedemptionId) {
             revert WAGACoffeeRedemption__RedemptionDoesNotExist_confirmSellerPayment();
         }

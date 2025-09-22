@@ -54,10 +54,10 @@ contract SimpleRoleTest is Test {
         vm.startPrank(deployer);
 
         // First grant DEFAULT_ADMIN_ROLE to deployer so they can manage other roles
-        coffeeToken.grantRole(keccak256("DEFAULT_ADMIN_ROLE"), deployer);
+        // DEFAULT_ADMIN_ROLE granted automatically in ConfigManager constructor
 
         // Now try to grant VERIFIER_ROLE to a test address
-        coffeeToken.grantRole(keccak256("VERIFIER_ROLE"), verifier);
+        coffeeToken.grantVerifierRole(verifier);
 
         // Verify the role was granted
         bool hasVerifierRole = coffeeToken.hasRole(keccak256("VERIFIER_ROLE"), verifier);
@@ -95,11 +95,11 @@ contract SimpleRoleTest is Test {
         vm.startPrank(deployer);
 
         // Grant DEFAULT_ADMIN_ROLE first
-        coffeeToken.grantRole(keccak256("DEFAULT_ADMIN_ROLE"), deployer);
+        // DEFAULT_ADMIN_ROLE granted automatically in ConfigManager constructor
 
         // Grant various roles
-        coffeeToken.grantRole(keccak256("ADMIN_ROLE"), verifier);
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), verifier);
+        coffeeToken.grantAdminRole(verifier);
+        coffeeToken.grantProcessorRole(verifier);
 
         // Verify roles
         bool hasAdmin = coffeeToken.hasRole(keccak256("ADMIN_ROLE"), verifier);

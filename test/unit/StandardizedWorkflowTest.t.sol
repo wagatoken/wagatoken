@@ -76,16 +76,16 @@ contract StandardizedWorkflowTest is Test {
         // The deployment script contract has DEFAULT_ADMIN_ROLE in test mode
         vm.startPrank(address(deployer));
         
-        // Grant roles following business logic: admins, cooperatives, processors, roasters can create batches
-        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), admin);          // Grant ADMIN_ROLE for admin functions
-        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), processor);
-        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), admin);        
-        coffeeToken.grantRole(coffeeToken.COOPERATIVE_ROLE(), admin);
-        coffeeToken.grantRole(coffeeToken.ROASTER_ROLE(), admin);
-        coffeeToken.grantRole(coffeeToken.MINTER_ROLE(), admin);
+        // Grant roles using unified ConfigManager functions
+        // Note: deployer already has ADMIN_ROLE from deployment, admin gets specific roles
+        coffeeToken.grantProcessorRole(processor);
+        coffeeToken.grantProcessorRole(admin);        
+        coffeeToken.grantCooperativeRole(admin);
+        coffeeToken.grantRoasterRole(admin);
+        // Note: MINTER_ROLE granted via setProofOfReserveManager in deployment
         
-        // Treasury also needs admin role for setBatchPayment function
-        treasury.grantRole(treasury.ADMIN_ROLE(), admin);
+        // Grant treasury roles using ConfigManager
+        coffeeToken.grantPaymentProcessorRole(address(treasury));
         
         vm.stopPrank();
         

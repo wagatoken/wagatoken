@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
 import {Groth16Verifier as PricePrivacyCircuitVerifier} from "./verifiers/PricePrivacyCircuitVerifier.sol";
 import {Groth16Verifier as QualityTierCircuitVerifier} from "./verifiers/QualityTierCircuitVerifier.sol";
 import {Groth16Verifier as SupplyChainPrivacyCircuitVerifier} from "./verifiers/SupplyChainPrivacyCircuitVerifier.sol";
@@ -14,9 +14,12 @@ import {EthiopianComplianceCircuitVerifier} from "./verifiers/EthiopianComplianc
  * @dev Real ZK verification using Circom circuits for WAGA MVP
  * @dev Focuses on 3 core proofs: Price, Quality, Supply Chain
  */
-contract CircomVerifier is AccessControl {
-    bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+contract CircomVerifier {
+    // Coffee token for role checks
+    IWAGACoffeeToken public coffeeToken;
+    // Role constants - defined in WAGAConfigManager
+    bytes32 private constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
+    bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     /* -------------------------------------------------------------------------- */
     /*                              Type Declarations                             */
@@ -113,11 +116,21 @@ contract CircomVerifier is AccessControl {
         eudrDeforestationVerifier = new EUDRDeforestationCircuitVerifier();
         eudrGeolocationVerifier = new EUDRGeolocationCircuitVerifier();
         ethiopianComplianceVerifier = new EthiopianComplianceCircuitVerifier();
-
-        // Setup roles
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _grantRole(VERIFIER_ROLE, msg.sender);
+        // No role initialization needed - roles managed by coffee token
+    }
+    
+    /**
+     * @dev Set the coffee token contract for role checks
+     * @param _coffeeToken Address of the WAGACoffeeTokenCore contract
+     */
+    function setCoffeeToken(address _coffeeToken) external {
+        // Only allow setting if not already set or called by admin
+        if (address(coffeeToken) != address(0)) {
+            if (!coffeeToken.hasRole(keccak256("ADMIN_ROLE"), msg.sender)) {
+                revert();
+            }
+        }
+        coffeeToken = IWAGACoffeeToken(_coffeeToken);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -136,7 +149,10 @@ contract CircomVerifier is AccessControl {
         bytes calldata zkProofData,
         uint256[] calldata publicSignals,
         string calldata publicClaim
-    ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
+    ) external returns (bool verified) {
+        if (!coffeeToken.hasRole(VERIFIER_ROLE, msg.sender)) {
+            revert CircomVerifier__InvalidProofLength__decodeGroth16Proof();
+        }
         if (publicSignals.length > 5) {
             revert CircomVerifier__TooManyPublicSignals_verifyPriceCompetitiveness();
         }
@@ -188,7 +204,10 @@ contract CircomVerifier is AccessControl {
         bytes calldata zkProofData,
         uint256[] calldata publicSignals,
         string calldata publicClaim
-    ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
+    ) external returns (bool verified) {
+        if (!coffeeToken.hasRole(VERIFIER_ROLE, msg.sender)) {
+            revert CircomVerifier__InvalidProofLength__decodeGroth16Proof();
+        }
         if (publicSignals.length > 5) {
             revert CircomVerifier__TooManyPublicSignals_verifyQualityStandards();
         }
@@ -239,7 +258,10 @@ contract CircomVerifier is AccessControl {
         bytes calldata zkProofData,
         uint256[] calldata publicSignals,
         string calldata publicClaim
-    ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
+    ) external returns (bool verified) {
+        if (!coffeeToken.hasRole(VERIFIER_ROLE, msg.sender)) {
+            revert CircomVerifier__InvalidProofLength__decodeGroth16Proof();
+        }
         if (publicSignals.length > 7) {
             revert CircomVerifier__TooManyPublicSignals_verifySupplyChainProvenance();
         }
@@ -290,7 +312,10 @@ contract CircomVerifier is AccessControl {
         bytes calldata zkProofData,
         uint256[] calldata publicSignals,
         string calldata publicClaim
-    ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
+    ) external returns (bool verified) {
+        if (!coffeeToken.hasRole(VERIFIER_ROLE, msg.sender)) {
+            revert CircomVerifier__InvalidProofLength__decodeGroth16Proof();
+        }
         if (publicSignals.length > 5) {
             revert CircomVerifier__TooManyPublicSignals_verifyEUDRDeforestationCompliance();
         }
@@ -342,7 +367,10 @@ contract CircomVerifier is AccessControl {
         bytes calldata zkProofData,
         uint256[] calldata publicSignals,
         string calldata publicClaim
-    ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
+    ) external returns (bool verified) {
+        if (!coffeeToken.hasRole(VERIFIER_ROLE, msg.sender)) {
+            revert CircomVerifier__InvalidProofLength__decodeGroth16Proof();
+        }
         if (publicSignals.length > 7) {
             revert CircomVerifier__TooManyPublicSignals_verifyEUDRGeolocationVerification();
         }
@@ -394,7 +422,10 @@ contract CircomVerifier is AccessControl {
         bytes calldata zkProofData,
         uint256[] calldata publicSignals,
         string calldata publicClaim
-    ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
+    ) external returns (bool verified) {
+        if (!coffeeToken.hasRole(VERIFIER_ROLE, msg.sender)) {
+            revert CircomVerifier__InvalidProofLength__decodeGroth16Proof();
+        }
         if (publicSignals.length > 6) {
             revert CircomVerifier__TooManyPublicSignals_verifyEthiopianCompliance();
         }
@@ -595,14 +626,20 @@ contract CircomVerifier is AccessControl {
     /**
      * @dev Grant verifier role to address
      */
-    function grantVerifierRole(address verifier) external onlyRole(ADMIN_ROLE) {
-        _grantRole(VERIFIER_ROLE, verifier);
+    function grantVerifierRole(address verifier) external {
+        if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
+            revert CircomVerifier__InvalidProofLength__decodeGroth16Proof();
+        }
+        // Role granting should be done through coffee token contract
     }
 
     /**
      * @dev Revoke verifier role from address
      */
-    function revokeVerifierRole(address verifier) external onlyRole(ADMIN_ROLE) {
-        _revokeRole(VERIFIER_ROLE, verifier);
+    function revokeVerifierRole(address verifier) external {
+        if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
+            revert CircomVerifier__InvalidProofLength__decodeGroth16Proof();
+        }
+        // Role revoking should be done through coffee token contract
     }
 }

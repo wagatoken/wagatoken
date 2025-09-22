@@ -11,7 +11,7 @@ import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
-import {WAGAAccessControl} from "../../src/WAGAAccessControl.sol";
+// WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockOfframpPartner} from "../../src/MockOfframpPartner.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
@@ -43,7 +43,7 @@ contract CrossContractIntegrationTest is Test {
     WAGACoffeeRedemption public redemptionContract;
     WAGATreasury public treasury;
     PrivacyLayer public privacyLayer;
-    WAGAAccessControl public accessControl;
+    // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
     CircomVerifier public circomVerifier;
     MockUSDC public usdcToken;
 
@@ -84,7 +84,7 @@ contract CrossContractIntegrationTest is Test {
         ) = deployer.run();
 
         // Get access control using getter function to avoid stack too deep
-        accessControl = deployer.getAccessControl();
+        // Note: AccessControl functionality now in ConfigManager (inherited by CoffeeToken)
         admin = vm.addr(helperConfig.getActiveNetworkConfig().deployerKey);
         usdcToken = MockUSDC(address(treasury.usdcToken()));
 
@@ -95,9 +95,9 @@ contract CrossContractIntegrationTest is Test {
         coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), admin);
 
         // Register seller
-        sellerId = accessControl.registerSeller(
+        sellerId = coffeeToken.registerSeller(
             processor,
-            WAGAAccessControl.SellerType.PROCESSOR,
+            WAGACoffeeTokenCore.SellerType.PROCESSOR,
             "Integration Test Processor",
             "INT001",
             bytes11("TESTSWIFTXX")
@@ -307,7 +307,7 @@ contract CrossContractIntegrationTest is Test {
         uint256 redemptionId;
 
         // 1. Seller registration (AccessControl)
-        assertEq(accessControl.getSellerId(processor), sellerId, "AccessControl should have seller registered");
+        assertEq(coffeeToken.getSellerId(processor), sellerId, "ConfigManager should have seller registered");
 
         // 2. Create batch and register with BoE
         vm.startPrank(processor);
@@ -360,7 +360,7 @@ contract CrossContractIntegrationTest is Test {
         ) = redemptionContract.getEnhancedRedemptionDetails(redemptionId);
 
         assertEq(redemptionSellerId, sellerId, "Redemption should have correct seller ID");
-        assertEq(accessControl.getSellerAddress(redemptionSellerId), processor, "Seller address should resolve correctly");
+        assertEq(coffeeToken.getSellerAddress(redemptionSellerId), processor, "Seller address should resolve correctly");
 
         console.log("AccessControl -> EthiopianCompliance -> Redemption flow validated");
     }

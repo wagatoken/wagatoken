@@ -11,7 +11,7 @@ import {WAGACoffeeViews} from "../src/WAGACoffeeViews.sol";
 import {WAGABatchManager} from "../src/WAGABatchManager.sol";
 import {WAGAZKManager} from "../src/WAGAZKManager.sol";
 import {PrivacyLayer} from "../src/PrivacyLayer.sol";
-import {WAGAAccessControl} from "../src/WAGAAccessControl.sol";
+// WAGAAccessControl removed - functionality moved to WAGAConfigManager
 
 // Payment & Treasury Contracts
 import {WAGATreasury} from "../src/WAGATreasury.sol";
@@ -47,7 +47,6 @@ contract DeployRealZKMVP is Script {
     WAGAEthiopianCompliance public ethiopianCompliance;
     WAGAECXPriceOracle public ecxOracle;
     CircomVerifier public circomVerifier;
-    WAGAAccessControl public accessControlContract;
     WAGACoffeeViews public coffeeViews;
     PriceVerifier public priceVerifier;
     QualityVerifier public qualityVerifier;
@@ -72,7 +71,6 @@ contract DeployRealZKMVP is Script {
             WAGAEthiopianCompliance,
             WAGAECXPriceOracle,
             CircomVerifier,
-            WAGAAccessControl,
             HelperConfig
         )
     {
@@ -94,7 +92,6 @@ contract DeployRealZKMVP is Script {
             WAGAEthiopianCompliance,
             WAGAECXPriceOracle,
             CircomVerifier,
-            WAGAAccessControl,
             HelperConfig
         )
     {
@@ -116,7 +113,6 @@ contract DeployRealZKMVP is Script {
             WAGAEthiopianCompliance,
             WAGAECXPriceOracle,
             CircomVerifier,
-            WAGAAccessControl,
             HelperConfig
         )
     {
@@ -157,9 +153,7 @@ contract DeployRealZKMVP is Script {
         console.log("Deploying Ethiopian Compliance System...");
         ethiopianCompliance = new WAGAEthiopianCompliance();
 
-        // 4b. Deploy Access Control
-        console.log("Deploying Access Control...");
-        accessControlContract = new WAGAAccessControl();
+        // Note: Access Control functionality moved to WAGAConfigManager (inherited by WAGACoffeeTokenCore)
 
         // 4c. Deploy ECX Price Oracle
         console.log("Deploying ECX Price Oracle...");
@@ -194,8 +188,7 @@ contract DeployRealZKMVP is Script {
         batchManager.setEthiopianCompliance(address(ethiopianCompliance));
         zkManager.setEthiopianCompliance(address(ethiopianCompliance));
         
-        // 7c. Connect access control to Ethiopian compliance
-        ethiopianCompliance.setAccessControl(address(accessControlContract));
+        // Note: Ethiopian compliance now uses coffeeToken for access control
 
         // 8. Deploy Redemption with treasury and Ethiopian compliance integration
         console.log("Deploying Redemption with treasury and Ethiopian compliance integration...");
@@ -205,7 +198,7 @@ contract DeployRealZKMVP is Script {
             address(ethiopianCompliance),
             address(batchManager),
             address(zkManager),
-            address(accessControlContract)
+            address(coffeeToken) // Use coffeeToken for access control instead of separate contract
         );
 
         // 9. Deploy CDP Integration
@@ -234,43 +227,48 @@ contract DeployRealZKMVP is Script {
             address(proofOfReserve)
         );
 
-        // 12. Grant roles
-        console.log("Setting up roles and permissions...");
-        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(circomVerifier));
-        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(zkManager));
-        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(proofOfReserve));
-        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), msg.sender);
-        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), address(coffeeToken)); // Coffee token needs to call batch manager
-        coffeeToken.grantRole(coffeeToken.DISTRIBUTOR_ROLE(), msg.sender);
-        coffeeToken.grantRole(coffeeToken.PROOF_OF_RESERVE_ROLE(), address(proofOfReserve)); // For batch verification
-        coffeeToken.grantRole(coffeeToken.MINTER_ROLE(), address(proofOfReserve));
-        coffeeToken.grantRole(coffeeToken.REDEMPTION_ROLE(), address(redemptionManager));
-        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(batchManager));
-        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(zkManager));
+        // 12. Link contracts with setCoffeeToken (CRITICAL SECURITY)
+        console.log("Linking contracts to coffee token for access control...");
+        ethiopianCompliance.setCoffeeToken(address(coffeeToken));
+        cdpIntegration.setCoffeeToken(address(coffeeToken));
+        ecxOracle.setCoffeeToken(address(coffeeToken));
+        circomVerifier.setCoffeeToken(address(coffeeToken));
+        treasury.setCoffeeToken(address(coffeeToken));
         
-        // Grant ADMIN_ROLE to deployer for role management
-        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), msg.sender);
+        // 13. Setup unified access control via ConfigManager (inherited by CoffeeToken)
+        console.log("Setting up unified access control system...");
         
-        // Grant deployer ability to manage cooperative and roaster roles
-        console.log("Granting role management permissions to deployer...");
-
-        // Grant offramp executor role to treasury and deployer
-        console.log("Setting up offramp transfer roles...");
-        treasury.grantRole(treasury.OFFRAMP_EXECUTOR_ROLE(), msg.sender);
-
-        console.log("Deployment completed successfully!");
-        console.log("Note: For tests, roles should be granted using the actual DEFAULT_ADMIN_ROLE holders from each contract");
+        // Grant system contract roles via ConfigManager functions
+        coffeeToken.setProofOfReserveManager(address(proofOfReserve));  // Grants MINTER_ROLE + PROOF_OF_RESERVE_ROLE
+        coffeeToken.setRedemptionManager(address(redemptionManager));   // Grants REDEMPTION_ROLE
+        coffeeToken.setInventoryManager(address(inventoryManager));     // Grants INVENTORY_MANAGER_ROLE
         
-        // Grant redemption contract permission to register BoE trades
-        ethiopianCompliance.grantRole(ethiopianCompliance.COMPLIANCE_MANAGER_ROLE(), address(redemptionManager));
+        // Grant individual roles using new ConfigManager functions
+        coffeeToken.grantVerifierRole(address(circomVerifier));
+        coffeeToken.grantVerifierRole(address(zkManager));
+        coffeeToken.grantZKVerifierRole(address(zkManager));
+        coffeeToken.grantProcessorRole(msg.sender);  // Deployer can create batches
+        coffeeToken.grantDistributorRole(msg.sender);
+        
+        // Grant payment system roles
+        coffeeToken.grantPaymentProcessorRole(address(treasury));
+        coffeeToken.grantPaymentHandlerRole(address(cdpIntegration));
+        coffeeToken.grantOfframpExecutorRole(msg.sender);  // Deployer for testing
+        
+        // Grant compliance roles  
+        coffeeToken.grantComplianceManagerRole(msg.sender);  // Deployer for setup
+        coffeeToken.grantOriginVerifierRole(msg.sender);     // Deployer for testing
+        coffeeToken.grantQualityInspectorRole(msg.sender);   // Deployer for testing
+        
+        // Grant price oracle roles
+        coffeeToken.grantPriceUpdaterRole(msg.sender);       // Deployer for testing
+        coffeeToken.grantPricingViewerRole(msg.sender);
 
-        // Setup ECX Price Oracle roles
-        console.log("Setting up ECX Price Oracle roles...");
-        ecxOracle.grantRole(ecxOracle.PRICE_UPDATER_ROLE(), msg.sender);
-        ecxOracle.grantRole(ecxOracle.ZK_VERIFIER_ROLE(), address(zkManager));
-        ecxOracle.grantRole(ecxOracle.PRICING_VIEWER_ROLE(), msg.sender);
-
-        console.log("Note: ZK Manager roles managed via coffee token");
+        console.log("Unified access control setup completed!");
+        console.log("All roles are now managed centrally via WAGAConfigManager (inherited by CoffeeToken)");
+        
+        // Grant additional system roles
+        coffeeToken.grantComplianceManagerRole(address(redemptionManager));  // Redemption can manage compliance
 
         if (useBroadcast) {
             vm.stopBroadcast();
@@ -284,27 +282,27 @@ contract DeployRealZKMVP is Script {
         console.log("ECX Price Oracle:", address(ecxOracle));
         console.log("CDP Integration:", address(cdpIntegration));
         console.log("");
-        console.log("IMPORTANT: After deployment, grant COOPERATIVE_ROLE and ROASTER_ROLE");
-        console.log("to actual stakeholders using the coffee token's grantRole function.");
-        console.log("All stakeholders with these roles can create batches.");
+        console.log("=== UNIFIED ACCESS CONTROL SYSTEM DEPLOYED ===");
         console.log("");
-        console.log("Ethiopian Compliance Setup:");
-        console.log("1. Add banking partners using addBankingPartner()");
-        console.log("2. Grant compliance roles to Ethiopian regulators");
-        console.log("3. Configure ECTA permits, quality certificates, and origin verification");
+        console.log("🔐 ROLE MANAGEMENT:");
+        console.log("All roles managed via: coffeeToken.grantXXXRole(address)");
+        console.log("- coffeeToken.grantCooperativeRole(address) - Coffee cooperatives");
+        console.log("- coffeeToken.grantProcessorRole(address) - Coffee processors");
+        console.log("- coffeeToken.grantRoasterRole(address) - Coffee roasters");
+        console.log("- coffeeToken.grantBankingPartnerRole(address) - Ethiopian banks");
         console.log("");
-        console.log("ECX Price Oracle Setup:");
-        console.log("1. Update ECX prices using updateECXPrice()");
-        console.log("2. Configure exchange rates with updateExchangeRate()");
-        console.log("3. Add ZK price proofs using addZKPriceProof()");
+        console.log("📊 BUSINESS OPERATIONS:");
+        console.log("1. Register sellers: coffeeToken.registerSeller(address, type, name, registration, swift)");
+        console.log("2. Grant banking roles: coffeeToken.grantBankingPartnerRole(bankAddress)");
+        console.log("3. Update ECX prices: ecxOracle.updateECXPrice() [requires PRICE_UPDATER_ROLE]");
+        console.log("4. Manage compliance: ethiopianCompliance functions [require COMPLIANCE_MANAGER_ROLE]");
         console.log("");
-        console.log("EUDR & Enhanced Compliance Setup:");
-        console.log("1. Register sellers using WAGAAccessControl.registerSeller()");
-        console.log("2. Add EUDR certificates using ethiopianCompliance.addEUDRCertificate()");
-        console.log("3. Add geolocation data using ethiopianCompliance.addGeolocationData()");
-        console.log("4. Submit ZK proofs for EUDR compliance using zkManager.addEUDRComplianceZKProof()");
-        console.log("5. Configure selective disclosure using privacyLayer.configureEUDRDisclosureRules()");
-        console.log("6. Grant OFFRAMP_EXECUTOR_ROLE for fiat transfers using treasury.grantRole()");
+        console.log("🔄 SYSTEM STATUS:");
+        console.log("✅ Unified access control active");
+        console.log("✅ All contracts linked to coffee token");
+        console.log("✅ Payment systems integrated");
+        console.log("✅ Ethiopian compliance ready");
+        console.log("✅ Price oracle configured");
 
         return (
             coffeeToken,
@@ -319,7 +317,6 @@ contract DeployRealZKMVP is Script {
             ethiopianCompliance,
             ecxOracle,
             circomVerifier,
-            accessControlContract,
             helperConfig
         );
     }
@@ -353,7 +350,7 @@ contract DeployRealZKMVP is Script {
         return coffeeViews;
     }
 
-    function getAccessControl() external view returns (WAGAAccessControl) {
-        return accessControlContract;
+    function getEthiopianCompliance() external view returns (WAGAEthiopianCompliance) {
+        return ethiopianCompliance;
     }
 }

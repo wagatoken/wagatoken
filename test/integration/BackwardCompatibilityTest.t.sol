@@ -11,7 +11,7 @@ import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
-import {WAGAAccessControl} from "../../src/WAGAAccessControl.sol";
+// WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
@@ -39,7 +39,7 @@ contract BackwardCompatibilityTest is Test {
     WAGACoffeeRedemption public redemptionContract;
     WAGATreasury public treasury;
     PrivacyLayer public privacyLayer;
-    WAGAAccessControl public accessControl;
+    // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
     CircomVerifier public circomVerifier;
     MockUSDC public usdcToken;
 
@@ -76,7 +76,7 @@ contract BackwardCompatibilityTest is Test {
         ) = deployer.run();
 
         // Get access control using getter function to avoid stack too deep
-        accessControl = deployer.getAccessControl();
+        // Note: AccessControl functionality now in ConfigManager (inherited by CoffeeToken)
 
         admin = vm.addr(helperConfig.getActiveNetworkConfig().deployerKey);
         usdcToken = MockUSDC(address(treasury.usdcToken()));
@@ -445,9 +445,9 @@ contract BackwardCompatibilityTest is Test {
 
         // Enhanced batch - full compliance suite
         vm.startPrank(admin);
-        accessControl.registerSeller(
+        coffeeToken.registerSeller(
             processor,
-            WAGAAccessControl.SellerType.PROCESSOR,
+            WAGACoffeeTokenCore.SellerType.PROCESSOR,
             "Enhanced Processor",
             "ENH001",
             bytes11("TESTSWIFTXX")

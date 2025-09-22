@@ -91,5 +91,38 @@ interface IWAGACoffeeToken {
      * @dev Get available quantity for a batch
      */
     function getAvailableQuantity(uint256 batchId) external view returns (uint256);
+
+    // ========== ACCESS CONTROL FUNCTIONS ==========
+    
+    /**
+     * @dev Check if an account has a specific role
+     * @param role The role to check
+     * @param account The account to check
+     * @return bool True if the account has the role
+     */
+    function hasRole(bytes32 role, address account) external view returns (bool);
+
+    // ========== SELLER REGISTRATION FUNCTIONS ==========
+    
+    /**
+     * @dev Get seller ID for an address
+     * @param sellerAddress The seller's address
+     * @return uint64 The seller ID
+     */
+    function getSellerId(address sellerAddress) external view returns (uint64);
+    
+    /**
+     * @dev Get seller address from ID
+     * @param sellerId The seller ID
+     * @return address The seller's address
+     */
+    function getSellerAddress(uint64 sellerId) external view returns (address);
+    
+    /**
+     * @dev Check if an address is a registered seller
+     * @param account The address to check
+     * @return bool True if registered
+     */
+    function isRegisteredSeller(address account) external view returns (bool);
 }
 

@@ -50,11 +50,11 @@ contract WAGAInventoryVerification is Test {
     MockFunctionsRouter public mockRouter;
     MockFunctionsHelper public mockHelper;
 
-    // Test addresses
-    address public constant ADMIN_USER = address(0x1);
-    address public constant PROCESSOR_USER = address(0x2);
-    address public constant DISTRIBUTOR_USER = address(0x3);
-    address public constant VERIFIER_USER = address(0x4);
+    // Test addresses - using makeAddr for proper test isolation
+    address public ADMIN_USER = makeAddr("admin");
+    address public PROCESSOR_USER = makeAddr("processor");
+    address public DISTRIBUTOR_USER = makeAddr("distributor");
+    address public VERIFIER_USER = makeAddr("verifier");
 
     // Test data
     uint256 public testBatchId;
@@ -95,6 +95,7 @@ contract WAGAInventoryVerification is Test {
             ethiopianCompliance,
             ecxOracle,
             circomVerifier,
+            ,  // accessControl - not needed for this test
             helperConfig
         ) = deployer.run();
 
@@ -103,17 +104,19 @@ contract WAGAInventoryVerification is Test {
         mockHelper = new MockFunctionsHelper(address(mockRouter));
 
         // Set up roles correctly
-        address deployer_address = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266; // Default anvil account
+        // Use deployer from config instead of hardcoded address
+        HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
+        address deployer_address = vm.addr(config.deployerKey);
 
         // Grant roles using the deployer address which has DEFAULT_ADMIN_ROLE
         vm.startPrank(deployer_address);
 
-        // Grant roles to test addresses
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), PROCESSOR_USER);
-        coffeeToken.grantRole(keccak256("DISTRIBUTOR_ROLE"), DISTRIBUTOR_USER);
-        coffeeToken.grantRole(keccak256("VERIFIER_ROLE"), VERIFIER_USER);
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), ADMIN_USER); // Admin also gets processor role for testing
-        coffeeToken.grantRole(keccak256("MINTER_ROLE"), ADMIN_USER); // Admin needs MINTER_ROLE for minting
+        // Grant roles using unified ConfigManager functions
+        coffeeToken.grantProcessorRole(PROCESSOR_USER);
+        coffeeToken.grantDistributorRole(DISTRIBUTOR_USER);
+        coffeeToken.grantVerifierRole(VERIFIER_USER);
+        coffeeToken.grantProcessorRole(ADMIN_USER); // Admin also gets processor role for testing
+        // Note: MINTER_ROLE granted via setProofOfReserveManager in deployment script
 
         vm.stopPrank();
 
@@ -317,7 +320,10 @@ contract WAGAInventoryVerification is Test {
         assertTrue(address(inventoryManager) != address(0), "Inventory manager should be deployed");
 
         // Test setting a configuration value
-        vm.prank(address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266)); // Default deployer
+        // Use proper deployer address from config
+        HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
+        address deployer_address = vm.addr(config.deployerKey);
+        vm.prank(deployer_address);
         inventoryManager.setLowInventoryThreshold(20);
 
         console.log("Configuration setters test passed");

@@ -18,6 +18,7 @@ import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {WAGACoffeeViews} from "../../src/WAGACoffeeViews.sol";
 import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
+// WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
 
@@ -41,6 +42,7 @@ contract WAGABaseForkTest is Test {
     WAGAECXPriceOracle public ecxOracle;
     WAGACoffeeViews public coffeeViews;
     WAGACDPIntegration public cdpIntegration;
+    // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
     HelperConfig public helperConfig;
 
     // Base Sepolia configuration
@@ -48,9 +50,10 @@ contract WAGABaseForkTest is Test {
     string public constant BASE_SEPOLIA_RPC_URL = "https://sepolia.base.org";
 
     // Test addresses
-    address public constant TEST_ADMIN = address(0x1);
-    address public constant TEST_PROCESSOR = address(0x2);
-    address public constant TEST_VERIFIER = address(0x3);
+    // Test addresses - using makeAddr for proper test isolation
+    address public TEST_ADMIN = makeAddr("admin");
+    address public TEST_PROCESSOR = makeAddr("processor");
+    address public TEST_VERIFIER = makeAddr("verifier");
 
     function setUp() public {
         // Create fork of Base Sepolia
@@ -81,6 +84,7 @@ contract WAGABaseForkTest is Test {
             ethiopianCompliance,
             ecxOracle,
             circomVerifier,
+            accessControl,
             helperConfig
         ) = deployer.run();
 
@@ -117,9 +121,9 @@ contract WAGABaseForkTest is Test {
         address deployerAddress = vm.addr(config.deployerKey);
         
         vm.startPrank(deployerAddress);
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), TEST_PROCESSOR);
-        coffeeToken.grantRole(keccak256("VERIFIER_ROLE"), TEST_VERIFIER);
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), TEST_ADMIN); // Admin also gets processor role for testing
+        coffeeToken.grantProcessorRole(TEST_PROCESSOR);
+        coffeeToken.grantVerifierRole(TEST_VERIFIER);
+        coffeeToken.grantProcessorRole(TEST_ADMIN); // Admin also gets processor role for testing
         
         // Deploy MockCircomVerifier for testing and replace the real one in ZK Manager
         MockCircomVerifier mockVerifier = new MockCircomVerifier();

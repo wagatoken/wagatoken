@@ -197,8 +197,8 @@ contract WAGACDPIntegrationTest is Test {
     }
 
     function testUpdateCDPConfig() public {
-        address newFactory = address(0x999);
-        address newPaymaster = address(0x888);
+        address newFactory = makeAddr("newFactory");
+        address newPaymaster = makeAddr("newPaymaster");
 
         vm.prank(admin);
         cdpIntegration.updateCDPConfig(newFactory, newPaymaster);
@@ -211,7 +211,7 @@ contract WAGACDPIntegrationTest is Test {
     function testUpdateCDPConfigOnlyAdmin() public {
         vm.prank(user);
         vm.expectRevert();
-        cdpIntegration.updateCDPConfig(address(0x999), address(0x888));
+        cdpIntegration.updateCDPConfig(makeAddr("testFactory"), makeAddr("testPaymaster"));
     }
 
     function testEmergencyPause() public {
@@ -232,7 +232,7 @@ contract WAGACDPIntegrationTest is Test {
     }
 
     function testGetNonexistentSmartAccount() public view {
-        address newUser = address(0x123);
+        address newUser = makeAddr("newUser");
         address storedAccount = cdpIntegration.getUserSmartAccount(newUser);
         assertEq(storedAccount, address(0));
     }

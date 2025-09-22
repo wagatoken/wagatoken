@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {FunctionsClient} from "@chainlink/contracts/src/v0.8/functions/v1_3_0/FunctionsClient.sol";
 import {FunctionsRequest} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol";
+import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
 
 /**
  * @title WAGAChainlinkFunctionsBase
@@ -11,7 +11,6 @@ import {FunctionsRequest} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/l
  * This contract provides common functionality for contracts that use Chainlink Functions
  */
 abstract contract WAGAChainlinkFunctionsBase is
-    AccessControl,
     FunctionsClient
 {
     using FunctionsRequest for FunctionsRequest.Request;
@@ -41,10 +40,26 @@ abstract contract WAGAChainlinkFunctionsBase is
         uint64 _subscriptionId,
         bytes32 _donId
     ) FunctionsClient(router) {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-
         subscriptionId = _subscriptionId;
         donId = _donId;
+        // No role initialization needed - roles managed by coffee token
+    }
+    
+    // Coffee token for role checks
+    IWAGACoffeeToken public coffeeToken;
+    
+    /**
+     * @dev Set the coffee token contract for role checks
+     * @param _coffeeToken Address of the WAGACoffeeTokenCore contract
+     */
+    function setCoffeeToken(address _coffeeToken) external {
+        // Only allow setting if not already set or called by admin
+        if (address(coffeeToken) != address(0)) {
+            if (!coffeeToken.hasRole(keccak256("ADMIN_ROLE"), msg.sender)) {
+                revert();
+            }
+        }
+        coffeeToken = IWAGACoffeeToken(_coffeeToken);
     }
 
     /*
@@ -73,7 +88,11 @@ abstract contract WAGAChainlinkFunctionsBase is
      */
     function updateSubscriptionId(
         uint64 _subscriptionId
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external {
+        bytes32 adminRole = keccak256("ADMIN_ROLE");
+        if (!coffeeToken.hasRole(adminRole, msg.sender)) {
+            return;
+        }
         subscriptionId = _subscriptionId;
         emit ChainlinkSubscriptionUpdated(_subscriptionId);
     }
@@ -82,7 +101,11 @@ abstract contract WAGAChainlinkFunctionsBase is
      * @dev Updates the Chainlink DON ID
      * @param _donId New DON ID
      */
-    function updateDonId(bytes32 _donId) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function updateDonId(bytes32 _donId) external {
+        bytes32 adminRole = keccak256("ADMIN_ROLE");
+        if (!coffeeToken.hasRole(adminRole, msg.sender)) {
+            return;
+        }
         donId = _donId;
         emit ChainlinkDonIdUpdated(_donId);
     }

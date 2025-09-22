@@ -2,12 +2,13 @@
 pragma solidity ^0.8.19;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import "forge-std/Test.sol";
 
 /**
  * @title MockCoinbaseSDK
  * @dev Mock contract to simulate Coinbase SDK interactions for testing
  */
-contract MockCoinbaseSDK is AccessControl {
+contract MockCoinbaseSDK is AccessControl, Test {
     bytes32 public constant CDP_ADMIN_ROLE = keccak256("CDP_ADMIN_ROLE");
     bytes32 public constant PAYMENT_HANDLER_ROLE = keccak256("PAYMENT_HANDLER_ROLE");
 
@@ -50,8 +51,8 @@ contract MockCoinbaseSDK is AccessControl {
         _grantRole(PAYMENT_HANDLER_ROLE, msg.sender);
 
         // Set default mock addresses
-        cdpSmartAccountFactory = address(0x123);
-        cdpPaymaster = address(0x456);
+        cdpSmartAccountFactory = makeAddr("cdp_factory");
+        cdpPaymaster = makeAddr("cdp_paymaster");
     }
 
     /**

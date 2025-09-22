@@ -12,7 +12,7 @@ import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
-import {WAGAAccessControl} from "../../src/WAGAAccessControl.sol";
+// WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockCircomVerifier} from "../../src/MockCircomVerifier.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
@@ -43,7 +43,7 @@ contract EUDRComplianceIntegrationTest is Test {
     WAGACoffeeRedemption public redemption;
     WAGAEthiopianCompliance public ethiopianCompliance;
     WAGATreasury public treasury;
-    WAGAAccessControl public accessControl;
+    // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
     CircomVerifier public circomVerifier;
     MockCircomVerifier public mockVerifier;
     PrivacyLayer public privacyLayer;
@@ -91,9 +91,8 @@ contract EUDRComplianceIntegrationTest is Test {
             helperConfig
         ) = deployer.run();
 
-        // Get access control using getter function to avoid stack too deep
-        accessControl = deployer.getAccessControl();
-
+        // Note: AccessControl functionality now in ConfigManager (inherited by CoffeeToken)
+        
         // Get the actual admin address from the deployment
         HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
         address deployerAddress = vm.addr(config.deployerKey);
@@ -101,19 +100,18 @@ contract EUDRComplianceIntegrationTest is Test {
         // Setup roles and test environment
         vm.startPrank(deployerAddress);
 
-        // Grant roles to test addresses
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), processor);
-        coffeeToken.grantRole(keccak256("VERIFIER_ROLE"), verifier);
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), admin); // Admin also gets processor role
+        // Grant roles using unified ConfigManager functions
+        coffeeToken.grantProcessorRole(processor);
+        coffeeToken.grantVerifierRole(verifier);
+        coffeeToken.grantProcessorRole(admin); // Admin also gets processor role
 
-        // Register seller
-        accessControl.grantRole(accessControl.PROCESSOR_ROLE(), deployerAddress);
-        accessControl.registerSeller(
+        // Register seller using ConfigManager
+        coffeeToken.registerSeller(
             seller,
-            WAGAAccessControl.SellerType.COOPERATIVE,
+            WAGACoffeeTokenCore.SellerType.COOPERATIVE,
             "Test Cooperative",
             "REG001",
-            bytes11("TESTSWIFTXX")
+            "TESTSWIFTXX"
         );
 
         // Setup banking

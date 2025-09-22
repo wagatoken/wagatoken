@@ -50,8 +50,8 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     /* -------------------------------------------------------------------------- */
 
     constructor(string memory baseURI) ERC1155(baseURI) {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, msg.sender);
+        // Note: Role granting is handled by WAGAConfigManager constructor
+        // since this contract inherits from WAGAConfigManager
     }
 
     /* -------------------------------------------------------------------------- */

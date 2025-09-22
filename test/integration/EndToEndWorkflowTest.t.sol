@@ -11,7 +11,7 @@ import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
-import {WAGAAccessControl} from "../../src/WAGAAccessControl.sol";
+// WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockOfframpPartner} from "../../src/MockOfframpPartner.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
@@ -42,7 +42,7 @@ contract EndToEndWorkflowTest is Test {
     WAGACoffeeRedemption public redemptionContract;
     WAGATreasury public treasury;
     PrivacyLayer public privacyLayer;
-    WAGAAccessControl public accessControl;
+    // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
     CircomVerifier public circomVerifier;
     MockUSDC public usdcToken;
 
@@ -94,7 +94,7 @@ contract EndToEndWorkflowTest is Test {
         ) = deployer.run();
 
         admin = vm.addr(helperConfig.getActiveNetworkConfig().deployerKey);
-        accessControl = deployer.getAccessControl();
+        // Note: AccessControl functionality now in ConfigManager (inherited by CoffeeToken)
         usdcToken = MockUSDC(address(treasury.usdcToken()));
 
         // Setup roles and permissions
@@ -104,9 +104,9 @@ contract EndToEndWorkflowTest is Test {
         coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), admin);
 
         // Register seller
-        sellerId = accessControl.registerSeller(
+        sellerId = coffeeToken.registerSeller(
             processor,
-            WAGAAccessControl.SellerType.PROCESSOR,
+            WAGACoffeeTokenCore.SellerType.PROCESSOR,
             "Test Ethiopian Processor",
             "TEST001",
             bytes11("TESTSWIFTXX")
@@ -166,8 +166,8 @@ contract EndToEndWorkflowTest is Test {
         /* ---------------------------------------------------------------------- */
 
         console.log("Phase 1: Seller Registration");
-        assertEq(accessControl.getSellerId(processor), sellerId, "Seller ID should be registered");
-        assertEq(accessControl.getSellerAddress(sellerId), processor, "Seller address should be mapped");
+        assertEq(coffeeToken.getSellerId(processor), sellerId, "Seller ID should be registered");
+        assertEq(coffeeToken.getSellerAddress(sellerId), processor, "Seller address should be mapped");
 
         /* ---------------------------------------------------------------------- */
         /*                    PHASE 2: EUDR COMPLIANT BATCH CREATION              */

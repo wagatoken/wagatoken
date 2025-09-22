@@ -2,7 +2,7 @@
 pragma solidity ^0.8.18;
 
 import {IZKVerifier} from "./Interfaces/IZKVerifier.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
 
 /**
  * @title MockCircomVerifier
@@ -10,9 +10,13 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
  * @notice This contract provides simplified ZK verification for testing the integration
  * @notice It validates basic proof structure without cryptographic verification
  */
-contract MockCircomVerifier is IZKVerifier, AccessControl {
-    bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+contract MockCircomVerifier is IZKVerifier {
+    // Role constants - defined in WAGAConfigManager
+    bytes32 private constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
+    bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    
+    // Coffee token for role checks
+    IWAGACoffeeToken public coffeeToken;
 
     /* -------------------------------------------------------------------------- */
     /*                                  Errors                                    */
@@ -60,9 +64,21 @@ contract MockCircomVerifier is IZKVerifier, AccessControl {
     /* -------------------------------------------------------------------------- */
 
     constructor() {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(VERIFIER_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, msg.sender);
+        // No role initialization needed - roles managed by coffee token
+    }
+    
+    /**
+     * @dev Set the coffee token contract for role checks
+     * @param _coffeeToken Address of the WAGACoffeeTokenCore contract
+     */
+    function setCoffeeToken(address _coffeeToken) external {
+        // Only allow setting if not already set or called by admin
+        if (address(coffeeToken) != address(0)) {
+            if (!coffeeToken.hasRole(keccak256("ADMIN_ROLE"), msg.sender)) {
+                revert();
+            }
+        }
+        coffeeToken = IWAGACoffeeToken(_coffeeToken);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -82,7 +98,10 @@ contract MockCircomVerifier is IZKVerifier, AccessControl {
         bytes calldata zkProofData,
         uint256[] calldata publicSignals,
         string calldata publicClaim
-    ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
+    ) external returns (bool verified) {
+        if (!coffeeToken.hasRole(VERIFIER_ROLE, msg.sender)) {
+            return false;
+        }
         // Basic validation for testing
         if (zkProofData.length == 0) {
             revert MockCircomVerifier__EmptyProofData_verifyPriceCompetitiveness();
@@ -118,7 +137,10 @@ contract MockCircomVerifier is IZKVerifier, AccessControl {
         bytes calldata zkProofData,
         uint256[] calldata publicSignals,
         string calldata publicClaim
-    ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
+    ) external returns (bool verified) {
+        if (!coffeeToken.hasRole(VERIFIER_ROLE, msg.sender)) {
+            return false;
+        }
         // Basic validation
         if (zkProofData.length == 0) {
             revert MockCircomVerifier__EmptyProofData_verifyQualityStandards();
@@ -154,7 +176,10 @@ contract MockCircomVerifier is IZKVerifier, AccessControl {
         bytes calldata zkProofData,
         uint256[] calldata publicSignals,
         string calldata publicClaim
-    ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
+    ) external returns (bool verified) {
+        if (!coffeeToken.hasRole(VERIFIER_ROLE, msg.sender)) {
+            return false;
+        }
         // Basic validation
         if (zkProofData.length == 0) {
             revert MockCircomVerifier__EmptyProofData_verifySupplyChainProvenance();
@@ -190,7 +215,10 @@ contract MockCircomVerifier is IZKVerifier, AccessControl {
         bytes calldata zkProofData,
         uint256[] calldata publicSignals,
         string calldata publicClaim
-    ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
+    ) external returns (bool verified) {
+        if (!coffeeToken.hasRole(VERIFIER_ROLE, msg.sender)) {
+            return false;
+        }
         // Basic validation
         if (zkProofData.length == 0) {
             revert MockCircomVerifier__EmptyProofData_verifyEUDRDeforestationCompliance();
@@ -255,7 +283,10 @@ contract MockCircomVerifier is IZKVerifier, AccessControl {
         bytes calldata zkProofData,
         uint256[] calldata publicSignals,
         string calldata publicClaim
-    ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
+    ) external returns (bool verified) {
+        if (!coffeeToken.hasRole(VERIFIER_ROLE, msg.sender)) {
+            return false;
+        }
         // Basic validation
         if (zkProofData.length == 0) {
             revert MockCircomVerifier__EmptyProofData_verifyEUDRGeolocationVerification();
@@ -291,7 +322,10 @@ contract MockCircomVerifier is IZKVerifier, AccessControl {
         bytes calldata zkProofData,
         uint256[] calldata publicSignals,
         string calldata publicClaim
-    ) external onlyRole(VERIFIER_ROLE) returns (bool verified) {
+    ) external returns (bool verified) {
+        if (!coffeeToken.hasRole(VERIFIER_ROLE, msg.sender)) {
+            return false;
+        }
         // Basic validation
         if (zkProofData.length == 0) {
             revert MockCircomVerifier__EmptyProofData_verifyEthiopianCompliance();
@@ -392,15 +426,21 @@ contract MockCircomVerifier is IZKVerifier, AccessControl {
      * @dev Grant VERIFIER_ROLE to an address (for testing)
      * @param verifier Address to grant verifier role to
      */
-    function grantVerifierRole(address verifier) external onlyRole(ADMIN_ROLE) {
-        grantRole(VERIFIER_ROLE, verifier);
+    function grantVerifierRole(address verifier) external {
+        if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
+            return;
+        }
+        // Role granting should be done through coffee token contract
     }
 
     /**
      * @dev Reset proof status for a batch (for testing)
      * @param batchId Batch identifier
      */
-    function resetBatchProofStatus(uint256 batchId) external onlyRole(ADMIN_ROLE) {
+    function resetBatchProofStatus(uint256 batchId) external {
+        if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
+            return;
+        }
         delete batchProofStatuses[batchId];
     }
 

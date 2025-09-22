@@ -4,7 +4,8 @@ pragma solidity ^0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
-import {WAGAAccessControl} from "../../src/WAGAAccessControl.sol";
+import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
+// WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.sol";
 import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
@@ -15,7 +16,8 @@ import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
  */
 contract WAGAEthiopianComplianceTest is Test {
     WAGAEthiopianCompliance public compliance;
-    WAGAAccessControl public accessControl;
+    WAGACoffeeTokenCore public coffeeToken;
+    // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
     MockUSDC public usdc;
 
     // Test accounts
@@ -61,29 +63,30 @@ contract WAGAEthiopianComplianceTest is Test {
     function setUp() public {
         vm.startPrank(admin);
 
-        // Deploy contracts
-        accessControl = new WAGAAccessControl();
+        // Deploy contracts - Note: AccessControl functionality moved to ConfigManager
         usdc = new MockUSDC();
+        
+        // Deploy coffee token (includes ConfigManager functionality)
+        coffeeToken = new WAGACoffeeTokenCore("");
+        
+        // Deploy Ethiopian compliance
         compliance = new WAGAEthiopianCompliance();
+        
+        // Link compliance to coffee token for access control
+        compliance.setCoffeeToken(address(coffeeToken));
 
-        // Setup roles
-        accessControl.grantRole(accessControl.DEFAULT_ADMIN_ROLE(), admin);
-        compliance.grantRole(compliance.DEFAULT_ADMIN_ROLE(), admin);
-        compliance.grantRole(compliance.COMPLIANCE_MANAGER_ROLE(), complianceManager);
+        // Setup roles using ConfigManager functions
+        coffeeToken.grantComplianceManagerRole(complianceManager);
+        coffeeToken.grantBankingPartnerRole(bankingPartner);
+        coffeeToken.grantBankingPartnerRole(offrampPartner);
 
-        // Register banking partners
-        compliance.addBankingPartner(bankingPartner, "Test Bank Ethiopia");
-        compliance.addBankingPartner(offrampPartner, "Global Offramp Partner");
-
-        // Register seller for testing
-        accessControl.grantRole(accessControl.PROCESSOR_ROLE(), admin);
-        accessControl.registerSeller(
+        // Register seller using ConfigManager
+        coffeeToken.registerSeller(
             seller,
-            WAGAAccessControl.SellerType.COOPERATIVE,
+            WAGACoffeeTokenCore.SellerType.COOPERATIVE,
             "Test Cooperative",
             "REG001",
-            "contact@test.com",
-            "+251911123456"
+            "CBETETAA"
         );
 
         vm.stopPrank();
@@ -268,7 +271,7 @@ contract WAGAEthiopianComplianceTest is Test {
         vm.stopPrank();
 
         // Get seller ID
-        uint64 sellerId = accessControl.getSellerId(seller);
+        uint64 sellerId = coffeeToken.getSellerId(seller);
 
         vm.startPrank(offrampPartner);
 
@@ -345,7 +348,7 @@ contract WAGAEthiopianComplianceTest is Test {
         vm.stopPrank();
 
         // Confirm seller payment
-        uint64 sellerId = accessControl.getSellerId(seller);
+        uint64 sellerId = coffeeToken.getSellerId(seller);
         vm.startPrank(bankingPartner); // Banking partner confirms payment
 
         vm.expectEmit(true, true, false, true);
@@ -367,7 +370,7 @@ contract WAGAEthiopianComplianceTest is Test {
         vm.stopPrank();
 
         // Get seller ID
-        uint64 sellerId = accessControl.getSellerId(seller);
+        uint64 sellerId = coffeeToken.getSellerId(seller);
 
         // Stage 1: Record offramp transfer initiation
         vm.startPrank(offrampPartner);
@@ -587,7 +590,7 @@ contract WAGAEthiopianComplianceTest is Test {
             bool sellerPaid
         ) = compliance.getFiatTransfer(BATCH_ID, buyer);
 
-        assertEq(sellerId, accessControl.getSellerId(seller));
+        assertEq(sellerId, coffeeToken.getSellerId(seller));
         assertEq(offrampSwift, OFFRAMP_SWIFT);
         assertEq(usdAmount, USD_AMOUNT);
         assertEq(usdReceived, USD_AMOUNT);
@@ -644,7 +647,7 @@ contract WAGAEthiopianComplianceTest is Test {
         ) = compliance.getEnhancedTransferDetails(BATCH_ID, buyer);
 
         assertEq(consumer, buyer);
-        assertEq(sellerId, accessControl.getSellerId(seller));
+        assertEq(sellerId, coffeeToken.getSellerId(seller));
         assertEq(batchId_, BATCH_ID);
         assertEq(offrampSwift, OFFRAMP_SWIFT);
         assertFalse(fiatTransferCompleted);

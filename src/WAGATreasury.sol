@@ -2,16 +2,16 @@
 pragma solidity ^0.8.19;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IWAGATreasury} from "./Interfaces/IWAGATreasury.sol";
+import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
 
 /**
  * @title WAGATreasury
  * @dev Treasury contract for collecting USDC payments for coffee token redemptions
  * Integrates with Coinbase Commerce for cross-border payments
  */
-contract WAGATreasury is IWAGATreasury, AccessControl, ReentrancyGuard {
+contract WAGATreasury is IWAGATreasury, ReentrancyGuard {
     /* -------------------------------------------------------------------------- */
     /*                                   ERRORS                                   */
     /* -------------------------------------------------------------------------- */
@@ -40,9 +40,13 @@ contract WAGATreasury is IWAGATreasury, AccessControl, ReentrancyGuard {
     error WAGATreasury__InsufficientBalance_receive();
     error WAGATreasury__TransferFailed_receive();
 
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant PAYMENT_PROCESSOR_ROLE = keccak256("PAYMENT_PROCESSOR_ROLE");
-    bytes32 public constant OFFRAMP_EXECUTOR_ROLE = keccak256("OFFRAMP_EXECUTOR_ROLE");
+    // Role constants - use ConfigManager definitions instead of duplicating
+    bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 private constant PAYMENT_PROCESSOR_ROLE = keccak256("PAYMENT_PROCESSOR_ROLE");
+    bytes32 private constant OFFRAMP_EXECUTOR_ROLE = keccak256("OFFRAMP_EXECUTOR_ROLE");
+    
+    // Coffee token for role checks
+    IWAGACoffeeToken public coffeeToken;
 
     // USDC token contract on Base network
     ERC20 public usdcToken;
@@ -72,13 +76,19 @@ contract WAGATreasury is IWAGATreasury, AccessControl, ReentrancyGuard {
         if (_usdcTokenAddress == address(0)) {
             revert WAGATreasury__InvalidUSDCAddress_constructor();
         }
-
         usdcToken = ERC20(_usdcTokenAddress);
-
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _grantRole(PAYMENT_PROCESSOR_ROLE, msg.sender);
-        _grantRole(OFFRAMP_EXECUTOR_ROLE, msg.sender);
+        // No role initialization needed - roles managed by coffee token
+    }
+    
+    /**
+     * @dev Set the coffee token contract for role checks
+     * @param _coffeeToken Address of the WAGACoffeeTokenCore contract
+     */
+    function setCoffeeToken(address _coffeeToken) external {
+        if (_coffeeToken == address(0)) {
+            revert WAGATreasury__InvalidUSDCAddress_constructor();
+        }
+        coffeeToken = IWAGACoffeeToken(_coffeeToken);
     }
 
     /**
@@ -86,7 +96,10 @@ contract WAGATreasury is IWAGATreasury, AccessControl, ReentrancyGuard {
      * @param batchId The batch ID
      * @param amount The required payment amount in USDC (6 decimals)
      */
-    function setBatchPayment(uint256 batchId, uint256 amount) external onlyRole(ADMIN_ROLE) {
+    function setBatchPayment(uint256 batchId, uint256 amount) external {
+        if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
+            revert WAGATreasury__UnauthorizedOfframpExecutor_transferToOfframpPartner();
+        }
         batchPaymentRequired[batchId] = amount;
         emit BatchPaymentRequired(batchId, amount);
     }
@@ -148,7 +161,10 @@ contract WAGATreasury is IWAGATreasury, AccessControl, ReentrancyGuard {
         uint256 batchId,
         uint256 amount,
         string calldata chargeId
-    ) external onlyRole(PAYMENT_PROCESSOR_ROLE) {
+    ) external {
+        if (!coffeeToken.hasRole(PAYMENT_PROCESSOR_ROLE, msg.sender)) {
+            revert WAGATreasury__UnauthorizedOfframpExecutor_transferToOfframpPartner();
+        }
         if (processedChargeIds[chargeId]) {
             revert WAGATreasury__ChargeAlreadyProcessed_processChargePayment();
         }
@@ -178,7 +194,10 @@ contract WAGATreasury is IWAGATreasury, AccessControl, ReentrancyGuard {
         address recipient,
         uint256 amount,
         string calldata reason
-    ) external onlyRole(ADMIN_ROLE) nonReentrant {
+    ) external nonReentrant {
+        if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
+            revert WAGATreasury__UnauthorizedOfframpExecutor_transferToOfframpPartner();
+        }
         if (recipient == address(0)) {
             revert WAGATreasury__InvalidRecipientAddress_distributeFunds();
         }
@@ -217,7 +236,10 @@ contract WAGATreasury is IWAGATreasury, AccessControl, ReentrancyGuard {
         address buyer,
         address offrampPartner,
         uint256 usdAmount
-    ) external onlyRole(OFFRAMP_EXECUTOR_ROLE) nonReentrant {
+    ) external nonReentrant {
+        if (!coffeeToken.hasRole(OFFRAMP_EXECUTOR_ROLE, msg.sender)) {
+            revert WAGATreasury__UnauthorizedOfframpExecutor_transferToOfframpPartner();
+        }
         if (offrampPartner == address(0)) {
             revert WAGATreasury__InvalidOfframpPartnerAddress_transferToOfframpPartner();
         }
@@ -313,7 +335,10 @@ contract WAGATreasury is IWAGATreasury, AccessControl, ReentrancyGuard {
      * @dev Update USDC token address (admin only) - for testing purposes
      * @param _usdcAddress New USDC token address
      */
-    function updateUSDCAddress(address _usdcAddress) external onlyRole(ADMIN_ROLE) {
+    function updateUSDCAddress(address _usdcAddress) external {
+        if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
+            revert WAGATreasury__UnauthorizedOfframpExecutor_transferToOfframpPartner();
+        }
         usdcToken = ERC20(_usdcAddress);
     }
 
@@ -322,7 +347,10 @@ contract WAGATreasury is IWAGATreasury, AccessControl, ReentrancyGuard {
      * @param token The token to withdraw (should be USDC)
      * @param amount The amount to withdraw
      */
-    function emergencyWithdraw(address token, uint256 amount) external onlyRole(ADMIN_ROLE) {
+    function emergencyWithdraw(address token, uint256 amount) external {
+        if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
+            revert WAGATreasury__UnauthorizedOfframpExecutor_transferToOfframpPartner();
+        }
         if (token != address(usdcToken)) {
             revert WAGATreasury__OnlyUSDCWithdrawalsAllowed_receive();
         }

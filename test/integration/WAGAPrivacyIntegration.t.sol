@@ -56,6 +56,7 @@ contract WAGAPrivacyIntegration is Test {
             , // ethiopianCompliance
             , // ecxOracle
             circomVerifier,
+            , // accessControl
             helperConfig
         ) = deployer.run();
 
@@ -64,18 +65,20 @@ contract WAGAPrivacyIntegration is Test {
         address deployer_address = vm.addr(config.deployerKey);
         
         vm.startPrank(deployer_address);
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), processor);
-        coffeeToken.grantRole(keccak256("DISTRIBUTOR_ROLE"), distributor);
-
-        // Also grant PROCESSOR_ROLE to admin for testing ZK proofs
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), admin);
-
-        // Grant VERIFIER_ROLE to the ZK Manager contract so it can call verifier functions
-        circomVerifier.grantRole(circomVerifier.VERIFIER_ROLE(), address(zkManager));
+        
+        // Grant roles using unified ConfigManager functions
+        coffeeToken.grantProcessorRole(processor);
+        coffeeToken.grantDistributorRole(distributor);
+        coffeeToken.grantProcessorRole(admin); // Admin gets processor role for testing ZK proofs
+        
+        // Link contracts to coffee token for access control
+        circomVerifier.setCoffeeToken(address(coffeeToken));
+        coffeeToken.grantVerifierRole(address(zkManager)); // ZK Manager can call verifier functions
 
         // Deploy and configure MockCircomVerifier for testing
         mockVerifier = new MockCircomVerifier();
-        mockVerifier.grantRole(mockVerifier.VERIFIER_ROLE(), address(admin));
+        mockVerifier.setCoffeeToken(address(coffeeToken));
+        coffeeToken.grantVerifierRole(address(admin));
         
         // Create a new ZKManager with MockCircomVerifier for testing ZK functionality
         WAGAZKManager testZKManager = new WAGAZKManager(
@@ -84,9 +87,9 @@ contract WAGAPrivacyIntegration is Test {
         );
         
         // Grant necessary roles to the test ZK Manager
-        mockVerifier.grantRole(mockVerifier.VERIFIER_ROLE(), address(testZKManager));
-        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(testZKManager));
-        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), address(testZKManager));
+        coffeeToken.grantVerifierRole(address(testZKManager));
+        coffeeToken.grantZKVerifierRole(address(testZKManager));
+        // Note: Using specific roles instead of broad ADMIN_ROLE
         
         // Replace the zkManager reference for tests that need ZK verification
         zkManager = testZKManager;

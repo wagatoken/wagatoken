@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -11,9 +11,13 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * @notice This contract simulates receiving USDC from treasury and converting to fiat
  * @notice It validates SWIFT codes and tracks offramp transactions for testing
  */
-contract MockOfframpPartner is AccessControl, ReentrancyGuard {
-    bytes32 public constant OFFRAMP_EXECUTOR_ROLE = keccak256("OFFRAMP_EXECUTOR_ROLE");
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+contract MockOfframpPartner is ReentrancyGuard {
+    // Role constants - defined in WAGAConfigManager
+    bytes32 private constant OFFRAMP_EXECUTOR_ROLE = keccak256("OFFRAMP_EXECUTOR_ROLE");
+    bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    
+    // Coffee token for role checks
+    IWAGACoffeeToken public coffeeToken;
 
     /* -------------------------------------------------------------------------- */
     /*                                  Errors                                    */
@@ -90,12 +94,24 @@ contract MockOfframpPartner is AccessControl, ReentrancyGuard {
         }
 
         usdcToken = IERC20(_usdcToken);
-
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, msg.sender);
-
+        // No role initialization needed - roles managed by coffee token
+        
         // Setup some default supported SWIFT codes for testing
         _setupDefaultSupportedSwiftCodes();
+    }
+    
+    /**
+     * @dev Set the coffee token contract for role checks
+     * @param _coffeeToken Address of the WAGACoffeeTokenCore contract
+     */
+    function setCoffeeToken(address _coffeeToken) external {
+        // Only allow setting if not already set or called by admin
+        if (address(coffeeToken) != address(0)) {
+            if (!coffeeToken.hasRole(keccak256("ADMIN_ROLE"), msg.sender)) {
+                revert();
+            }
+        }
+        coffeeToken = IWAGACoffeeToken(_coffeeToken);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -116,7 +132,10 @@ contract MockOfframpPartner is AccessControl, ReentrancyGuard {
         uint256 sellerId,
         uint256 usdAmount,
         bytes11 receivingBankSwift
-    ) external onlyRole(OFFRAMP_EXECUTOR_ROLE) nonReentrant {
+    ) external nonReentrant {
+        if (!coffeeToken.hasRole(OFFRAMP_EXECUTOR_ROLE, msg.sender)) {
+            revert MockOfframpPartner__UnauthorizedOfframpExecutor_receiveOfframp();
+        }
         if (buyer == address(0)) {
             revert MockOfframpPartner__InvalidRecipientAddress_receiveOfframp();
         }
@@ -157,7 +176,10 @@ contract MockOfframpPartner is AccessControl, ReentrancyGuard {
     function initiateFiatTransfer(
         uint256 sellerId,
         string calldata transactionId
-    ) external onlyRole(ADMIN_ROLE) {
+    ) external {
+        if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
+            return;
+        }
         OfframpRecord storage record = offrampRecords[sellerId];
         if (record.timestamp == 0) {
             revert MockOfframpPartner__NoOfframpRecordFound_getOfframpRecord();
@@ -246,7 +268,10 @@ contract MockOfframpPartner is AccessControl, ReentrancyGuard {
      * @param swiftCode SWIFT code to add
      * @param bankName Associated bank name
      */
-    function addSupportedSwiftCode(bytes11 swiftCode, string calldata bankName) external onlyRole(ADMIN_ROLE) {
+    function addSupportedSwiftCode(bytes11 swiftCode, string calldata bankName) external {
+        if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
+            return;
+        }
         supportedSwiftCodes[swiftCode] = true;
         swiftToBankName[swiftCode] = bankName;
     }
@@ -255,7 +280,10 @@ contract MockOfframpPartner is AccessControl, ReentrancyGuard {
      * @dev Remove support for a SWIFT code
      * @param swiftCode SWIFT code to remove
      */
-    function removeSupportedSwiftCode(bytes11 swiftCode) external onlyRole(ADMIN_ROLE) {
+    function removeSupportedSwiftCode(bytes11 swiftCode) external {
+        if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
+            return;
+        }
         supportedSwiftCodes[swiftCode] = false;
         delete swiftToBankName[swiftCode];
     }
@@ -264,8 +292,11 @@ contract MockOfframpPartner is AccessControl, ReentrancyGuard {
      * @dev Grant OFFRAMP_EXECUTOR_ROLE to an address
      * @param executor Address to grant role to
      */
-    function grantOfframpExecutorRole(address executor) external onlyRole(ADMIN_ROLE) {
-        grantRole(OFFRAMP_EXECUTOR_ROLE, executor);
+    function grantOfframpExecutorRole(address executor) external {
+        if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
+            return;
+        }
+        // Role granting should be done through coffee token contract
     }
 
     /* -------------------------------------------------------------------------- */

@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+import "forge-std/Test.sol";
+
 /**
  * @title TestHelperUtilities
  * @dev Comprehensive test utilities for WAGA MVP testing
  * @notice Provides helper functions for SWIFT codes, seller IDs, and multi-stage transfer testing
+ * @dev Changed from library to contract to access makeAddr() function
  */
-library TestHelperUtilities {
+contract TestHelperUtilities is Test {
     /* -------------------------------------------------------------------------- */
     /*                              SWIFT Code Utilities                          */
     /* -------------------------------------------------------------------------- */
@@ -89,7 +92,7 @@ library TestHelperUtilities {
             businessRegistration: "COOP001",
             contactEmail: "contact@yirgacheffe.com",
             contactPhone: "+251911123456",
-            walletAddress: address(0x1001)
+            walletAddress: makeAddr("yirgacheffe_coop")
         });
 
         profiles[1] = SellerProfileData({
@@ -99,7 +102,7 @@ library TestHelperUtilities {
             businessRegistration: "PROC001",
             contactEmail: "contact@sidamo.com",
             contactPhone: "+251922654321",
-            walletAddress: address(0x1002)
+            walletAddress: makeAddr("sidamo_processor")
         });
 
         profiles[2] = SellerProfileData({
@@ -109,7 +112,7 @@ library TestHelperUtilities {
             businessRegistration: "ROAST001",
             contactEmail: "contact@addisroast.com",
             contactPhone: "+251933987654",
-            walletAddress: address(0x1003)
+            walletAddress: makeAddr("addis_roastery")
         });
 
         return profiles;
@@ -168,7 +171,7 @@ library TestHelperUtilities {
         return TransferStageData({
             batchId: batchId,
             sellerId: sellerId,
-            buyer: address(0x2001),
+            buyer: makeAddr("test_buyer"),
             offrampSwift: generateValidOfframpSwift(),
             receivingSwift: generateValidEthiopianSwift(),
             usdAmount: 10000 * 1e6, // 10,000 USDC

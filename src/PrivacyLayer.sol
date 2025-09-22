@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import {WAGAAccessControl} from "./WAGAAccessControl.sol";
+import {WAGACoffeeTokenCore} from "./WAGACoffeeTokenCore.sol";
 import {IPrivacyLayer} from "./Interfaces/IPrivacyLayer.sol";
 import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
 import {IZKVerifier} from "./Interfaces/IZKVerifier.sol";
@@ -11,7 +11,7 @@ import {IWAGAZKManager} from "./Interfaces/IWAGAZKManager.sol";
  * @title PrivacyLayer
  * @dev Simplified privacy layer for WAGA MVP with lightweight data protection
  */
-contract PrivacyLayer is WAGAAccessControl, IPrivacyLayer {
+contract PrivacyLayer is IPrivacyLayer {
     IWAGACoffeeToken public coffeeToken;
 
     constructor(address _coffeeToken, address _zkManager) {

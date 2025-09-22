@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import {Test, console} from "forge-std/Test.sol";
 import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
-import {WAGAAccessControl} from "../../src/WAGAAccessControl.sol";
+// WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {MockOfframpPartner} from "../../src/MockOfframpPartner.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
@@ -24,7 +24,7 @@ contract GasOptimizationTest is Test {
 
     DeployRealZKMVP public deployer;
     HelperConfig public helperConfig;
-    WAGAAccessControl public accessControl;
+    // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
     WAGAEthiopianCompliance public ethiopianCompliance;
     MockUSDC public usdcToken;
     MockOfframpPartner public offrampPartner;
@@ -47,7 +47,8 @@ contract GasOptimizationTest is Test {
         // Deploy system
         deployer = new DeployRealZKMVP();
         deployer.run();
-        accessControl = deployer.getAccessControl();
+        // Note: AccessControl functionality now in ConfigManager (inherited by CoffeeToken)
+        coffeeToken = deployer.getCoffeeToken();
         ethiopianCompliance = deployer.getEthiopianCompliance();
 
         admin = vm.addr(helperConfig.getActiveNetworkConfig().deployerKey);
@@ -78,13 +79,12 @@ contract GasOptimizationTest is Test {
         vm.startPrank(admin);
         for (uint256 i = 1; i <= NUM_ITERATIONS; i++) {
             address sellerAddr = makeAddr(string(abi.encodePacked("seller", i)));
-            accessControl.registerSeller(
+            coffeeToken.registerSeller(
                 sellerAddr,
-                WAGAAccessControl.SellerType.PROCESSOR,
+                WAGACoffeeTokenCore.SellerType.PROCESSOR,
                 string(abi.encodePacked("Processor ", i)),
                 string(abi.encodePacked("REG", i)),
-                string(abi.encodePacked("contact", i, "@test.com")),
-                "+1234567890"
+                bytes11("CBETETAA")
             );
         }
         vm.stopPrank();
@@ -101,18 +101,17 @@ contract GasOptimizationTest is Test {
         // Verify seller ID mappings work correctly
         address testSeller = makeAddr("testSeller");
         vm.startPrank(admin);
-        uint64 sellerId = accessControl.registerSeller(
+        uint64 sellerId = coffeeToken.registerSeller(
             testSeller,
-            WAGAAccessControl.SellerType.COOPERATIVE,
+            WAGACoffeeTokenCore.SellerType.COOPERATIVE,
             "Test Cooperative",
             "TEST001",
-            "test@cooperative.com",
-            "+9876543210"
+            bytes11("CBETETAA")
         );
         vm.stopPrank();
 
-        assertEq(accessControl.getSellerId(testSeller), sellerId, "Seller ID should be retrievable");
-        assertEq(accessControl.getSellerAddress(sellerId), testSeller, "Seller address should be retrievable");
+        assertEq(coffeeToken.getSellerId(testSeller), sellerId, "Seller ID should be retrievable");
+        assertEq(coffeeToken.getSellerAddress(sellerId), testSeller, "Seller address should be retrievable");
 
         console.log("Seller ID gas optimization test completed successfully");
     }
@@ -130,13 +129,12 @@ contract GasOptimizationTest is Test {
         vm.startPrank(admin);
         for (uint256 i = 0; i < NUM_ITERATIONS; i++) {
             sellerAddresses[i] = makeAddr(string(abi.encodePacked("lookupSeller", i)));
-            sellerIds[i] = accessControl.registerSeller(
+            sellerIds[i] = coffeeToken.registerSeller(
                 sellerAddresses[i],
-                WAGAAccessControl.SellerType.PROCESSOR,
+                WAGACoffeeTokenCore.SellerType.PROCESSOR,
                 string(abi.encodePacked("Lookup Processor ", i)),
                 string(abi.encodePacked("LOOKUP", i)),
-                "lookup@test.com",
-                "+1234567890"
+                bytes11("CBETETAA")
             );
         }
         vm.stopPrank();
@@ -144,7 +142,7 @@ contract GasOptimizationTest is Test {
         // Measure gas for ID-to-address lookups
         uint256 gasStartIdToAddress = gasleft();
         for (uint256 i = 0; i < NUM_ITERATIONS; i++) {
-            address retrieved = accessControl.getSellerAddress(sellerIds[i]);
+            address retrieved = coffeeToken.getSellerAddress(sellerIds[i]);
             assertEq(retrieved, sellerAddresses[i], "Address lookup should work");
         }
         uint256 gasUsedIdToAddress = gasStartIdToAddress - gasleft();
@@ -152,7 +150,7 @@ contract GasOptimizationTest is Test {
         // Measure gas for address-to-ID lookups
         uint256 gasStartAddressToId = gasleft();
         for (uint256 i = 0; i < NUM_ITERATIONS; i++) {
-            uint64 retrieved = accessControl.getSellerId(sellerAddresses[i]);
+            uint64 retrieved = coffeeToken.getSellerId(sellerAddresses[i]);
             assertEq(retrieved, sellerIds[i], "ID lookup should work");
         }
         uint256 gasUsedAddressToId = gasStartAddressToId - gasleft();
@@ -266,13 +264,12 @@ contract GasOptimizationTest is Test {
 
         for (uint256 i = 0; i < 10; i++) {
             sellers[i] = makeAddr(string(abi.encodePacked("comprehensiveSeller", i)));
-            sellerIds[i] = accessControl.registerSeller(
+            sellerIds[i] = coffeeToken.registerSeller(
                 sellers[i],
-                WAGAAccessControl.SellerType.PROCESSOR,
+                WAGACoffeeTokenCore.SellerType.PROCESSOR,
                 string(abi.encodePacked("Comp Processor ", i)),
                 string(abi.encodePacked("COMP", i)),
-                "comp@test.com",
-                "+1234567890"
+                bytes11("CBETETAA")
             );
         }
 
@@ -290,8 +287,8 @@ contract GasOptimizationTest is Test {
         // Perform various operations using optimized data types
         for (uint256 i = 0; i < 10; i++) {
             // Seller ID operations
-            uint64 retrievedId = accessControl.getSellerId(sellers[i]);
-            address retrievedAddr = accessControl.getSellerAddress(sellerIds[i]);
+            uint64 retrievedId = coffeeToken.getSellerId(sellers[i]);
+            address retrievedAddr = coffeeToken.getSellerAddress(sellerIds[i]);
             assertEq(retrievedId, sellerIds[i], "ID retrieval should work");
             assertEq(retrievedAddr, sellers[i], "Address retrieval should work");
 
@@ -352,21 +349,20 @@ contract GasOptimizationTest is Test {
         offrampPartner.addSupportedSwiftCode(testSwift, "Test SWIFT Bank");
 
         // Register seller
-        uint64 sellerId = accessControl.registerSeller(
+        uint64 sellerId = coffeeToken.registerSeller(
             testAddr,
-            WAGAAccessControl.SellerType.COOPERATIVE,
+            WAGACoffeeTokenCore.SellerType.COOPERATIVE,
             "Test Cooperative",
             "TEST001",
-            "test@cooperative.com",
-            "+1234567890"
+            bytes11("CBETETAA")
         );
 
         vm.stopPrank();
 
         // Verify operations work
         assertTrue(offrampPartner.isSupportedSwiftCode(testSwift), "SWIFT mapping should work");
-        assertEq(accessControl.getSellerId(testAddr), sellerId, "Seller ID mapping should work");
-        assertEq(accessControl.getSellerAddress(sellerId), testAddr, "Seller address mapping should work");
+        assertEq(coffeeToken.getSellerId(testAddr), sellerId, "Seller ID mapping should work");
+        assertEq(coffeeToken.getSellerAddress(sellerId), testAddr, "Seller address mapping should work");
 
         console.log("Gas optimization validation completed successfully");
         console.log("uint64 seller IDs: WORKING");

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
 
 /**
  * @title WAGAECXPriceOracle
@@ -10,14 +10,18 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
  * @notice Provides ECX coffee price data while maintaining competitive pricing privacy through ZK proofs
  * @author WAGA Team
  */
-contract WAGAECXPriceOracle is AccessControl, ReentrancyGuard {
+contract WAGAECXPriceOracle is ReentrancyGuard {
     /* -------------------------------------------------------------------------- */
-    /*                                  ROLES                                     */
+    /*                                  ROLE CONSTANTS                            */
     /* -------------------------------------------------------------------------- */
 
-    bytes32 public constant PRICE_UPDATER_ROLE = keccak256("PRICE_UPDATER_ROLE");
-    bytes32 public constant ZK_VERIFIER_ROLE = keccak256("ZK_VERIFIER_ROLE");
-    bytes32 public constant PRICING_VIEWER_ROLE = keccak256("PRICING_VIEWER_ROLE");
+    // Role constants - defined in WAGAConfigManager
+    bytes32 private constant PRICE_UPDATER_ROLE = keccak256("PRICE_UPDATER_ROLE");
+    bytes32 private constant ZK_VERIFIER_ROLE = keccak256("ZK_VERIFIER_ROLE");
+    bytes32 private constant PRICING_VIEWER_ROLE = keccak256("PRICING_VIEWER_ROLE");
+    
+    // Coffee token for role checks
+    IWAGACoffeeToken public coffeeToken;
 
     /* -------------------------------------------------------------------------- */
     /*                                  Errors                                    */
@@ -131,8 +135,21 @@ contract WAGAECXPriceOracle is AccessControl, ReentrancyGuard {
     /* -------------------------------------------------------------------------- */
 
     constructor() {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(PRICE_UPDATER_ROLE, msg.sender);
+        // No role initialization needed - roles managed by coffee token
+    }
+    
+    /**
+     * @dev Set the coffee token contract for role checks
+     * @param _coffeeToken Address of the WAGACoffeeTokenCore contract
+     */
+    function setCoffeeToken(address _coffeeToken) external {
+        // Only allow setting if not already set or called by admin
+        if (address(coffeeToken) != address(0)) {
+            if (!coffeeToken.hasRole(keccak256("ADMIN_ROLE"), msg.sender)) {
+                revert();
+            }
+        }
+        coffeeToken = IWAGACoffeeToken(_coffeeToken);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -155,7 +172,10 @@ contract WAGAECXPriceOracle is AccessControl, ReentrancyGuard {
         DataQuality quality,
         string memory source,
         uint256 confidence
-    ) external onlyRole(PRICE_UPDATER_ROLE) {
+    ) external {
+        if (!coffeeToken.hasRole(PRICE_UPDATER_ROLE, msg.sender)) {
+            revert WAGAECXPriceOracle__InvalidPrice_updateECXPrice();
+        }
         if (pricePerFeresulla == 0) {
             revert WAGAECXPriceOracle__InvalidPrice_updateECXPrice();
         }
@@ -212,7 +232,10 @@ contract WAGAECXPriceOracle is AccessControl, ReentrancyGuard {
         CoffeeOrigin origin,
         bytes calldata zkProofData,
         string calldata competitiveClaim
-    ) external onlyRole(ZK_VERIFIER_ROLE) {
+    ) external {
+        if (!coffeeToken.hasRole(ZK_VERIFIER_ROLE, msg.sender)) {
+            revert WAGAECXPriceOracle__InvalidPrice_updateECXPrice();
+        }
         bytes32 gradeOriginHash = _getGradeOriginHash(grade, origin);
         ECXPrice memory benchmarkPrice = latestPrices[gradeOriginHash];
 
@@ -315,7 +338,10 @@ contract WAGAECXPriceOracle is AccessControl, ReentrancyGuard {
     function getPriceHistory(
         CoffeeGrade grade,
         CoffeeOrigin origin
-    ) external view onlyRole(PRICING_VIEWER_ROLE) returns (ECXPrice[] memory prices) {
+    ) external view returns (ECXPrice[] memory prices) {
+        if (!coffeeToken.hasRole(PRICING_VIEWER_ROLE, msg.sender)) {
+            revert WAGAECXPriceOracle__InvalidPrice_updateECXPrice();
+        }
         bytes32 gradeOriginHash = _getGradeOriginHash(grade, origin);
         return priceHistory[gradeOriginHash];
     }
@@ -337,7 +363,11 @@ contract WAGAECXPriceOracle is AccessControl, ReentrancyGuard {
      * @dev Update ETB to USD exchange rate
      * @param newRate New exchange rate (multiplied by 10^8 for precision)
      */
-    function updateExchangeRate(uint256 newRate) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function updateExchangeRate(uint256 newRate) external {
+        bytes32 adminRole = keccak256("ADMIN_ROLE");
+        if (!coffeeToken.hasRole(adminRole, msg.sender)) {
+            revert WAGAECXPriceOracle__InvalidRate_updateUSDToETBRate();
+        }
         if (newRate == 0) {
             revert WAGAECXPriceOracle__InvalidRate_updateUSDToETBRate();
         }
@@ -353,7 +383,11 @@ contract WAGAECXPriceOracle is AccessControl, ReentrancyGuard {
     function updateValidationParameters(
         uint256 maxDeviation,
         uint256 validityPeriod
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external {
+        bytes32 adminRole = keccak256("ADMIN_ROLE");
+        if (!coffeeToken.hasRole(adminRole, msg.sender)) {
+            revert WAGAECXPriceOracle__InvalidRate_updateUSDToETBRate();
+        }
         maxPriceDeviation = maxDeviation;
         priceValidityPeriod = validityPeriod;
         emit PriceValidationParametersUpdated(maxDeviation, validityPeriod);

@@ -1,22 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IEthiopianCompliance} from "./Interfaces/IEthiopianCompliance.sol";
-
-// Forward declaration for integration
-interface IWAGAAccessControl {
-    function getSellerId(address sellerAddress) external view returns (uint64);
-    function isRegisteredSeller(address account) external view returns (bool);
-}
+import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
 
 /**
  * @title WAGAEthiopianCompliance
  * @dev Manages Ethiopian coffee export compliance and Bank of Ethiopia integration
  * @author WAGA Team
  */
-contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, ReentrancyGuard {
+contract WAGAEthiopianCompliance is IEthiopianCompliance, ReentrancyGuard {
     /* -------------------------------------------------------------------------- */
     /*                                   ERRORS                                   */
     /* -------------------------------------------------------------------------- */
@@ -61,13 +55,13 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
     error WAGAEthiopianCompliance__InvalidRate_setExchangeRate();
 
     /* -------------------------------------------------------------------------- */
-    /*                                  ROLES                                     */
+    /*                                  ROLE CONSTANTS                            */
     /* -------------------------------------------------------------------------- */
 
-    bytes32 public constant COMPLIANCE_MANAGER_ROLE = keccak256("COMPLIANCE_MANAGER_ROLE");
-    bytes32 public constant BANKING_PARTNER_ROLE = keccak256("BANKING_PARTNER_ROLE");
-    bytes32 public constant ORIGIN_VERIFIER_ROLE = keccak256("ORIGIN_VERIFIER_ROLE");
-    bytes32 public constant QUALITY_INSPECTOR_ROLE = keccak256("QUALITY_INSPECTOR_ROLE");
+    // Role constants - use ConfigManager definitions instead of duplicating
+    bytes32 private constant COMPLIANCE_MANAGER_ROLE = keccak256("COMPLIANCE_MANAGER_ROLE");
+    bytes32 private constant ORIGIN_VERIFIER_ROLE = keccak256("ORIGIN_VERIFIER_ROLE");
+    bytes32 private constant QUALITY_INSPECTOR_ROLE = keccak256("QUALITY_INSPECTOR_ROLE");
 
     /* -------------------------------------------------------------------------- */
     /*                               STATE VARIABLES                              */
@@ -101,35 +95,36 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
     mapping(uint256 => mapping(uint64 => OfframpTransfer)) private offrampTransfers;
 
     // Contract dependencies
-    IWAGAAccessControl public accessControl;
+    IWAGACoffeeToken public coffeeToken;
 
     /* -------------------------------------------------------------------------- */
     /*                                 MODIFIERS                                  */
     /* -------------------------------------------------------------------------- */
 
     modifier onlyComplianceManager() {
-        if (!hasRole(COMPLIANCE_MANAGER_ROLE, msg.sender)) {
+        if (!coffeeToken.hasRole(COMPLIANCE_MANAGER_ROLE, msg.sender)) {
             revert WAGAEthiopianCompliance__NotComplianceManager_addEUDRCertificate();
         }
         _;
     }
 
     modifier onlyAuthorizedBank() {
-        if (!authorizedBanks[msg.sender]) {
+        bytes32 bankingRole = keccak256("BANKING_PARTNER_ROLE");
+        if (!coffeeToken.hasRole(bankingRole, msg.sender)) {
             revert WAGAEthiopianCompliance__NotAuthorizedBankingPartner_addECTAPermit();
         }
         _;
     }
 
     modifier onlyOriginVerifier() {
-        if (!hasRole(ORIGIN_VERIFIER_ROLE, msg.sender)) {
+        if (!coffeeToken.hasRole(ORIGIN_VERIFIER_ROLE, msg.sender)) {
             revert WAGAEthiopianCompliance__NotOriginVerifier_addOriginVerification();
         }
         _;
     }
 
     modifier onlyQualityInspector() {
-        if (!hasRole(QUALITY_INSPECTOR_ROLE, msg.sender)) {
+        if (!coffeeToken.hasRole(QUALITY_INSPECTOR_ROLE, msg.sender)) {
             revert WAGAEthiopianCompliance__NotQualityInspector_addQualityCertificate();
         }
         _;
@@ -140,19 +135,25 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
     /* -------------------------------------------------------------------------- */
 
     constructor() {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(COMPLIANCE_MANAGER_ROLE, msg.sender);
+        // No role initialization needed - roles managed by coffee token
     }
 
     /**
-     * @dev Set the access control contract for seller ID resolution
-     * @param _accessControl Address of the WAGAAccessControl contract
+     * @dev Set the coffee token contract for seller ID resolution
+     * @param _coffeeToken Address of the WAGACoffeeTokenCore contract
      */
-    function setAccessControl(address _accessControl) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (_accessControl == address(0)) {
+    function setCoffeeToken(address _coffeeToken) external {
+        // Only allow setting if not already set or called by admin
+        if (address(coffeeToken) != address(0)) {
+            bytes32 adminRole = keccak256("ADMIN_ROLE");
+            if (!coffeeToken.hasRole(adminRole, msg.sender)) {
+                revert WAGAEthiopianCompliance__NotComplianceManager_addEUDRCertificate();
+            }
+        }
+        if (_coffeeToken == address(0)) {
             revert WAGAEthiopianCompliance__InvalidAccessControlAddress_constructor();
         }
-        accessControl = IWAGAAccessControl(_accessControl);
+        coffeeToken = IWAGACoffeeToken(_coffeeToken);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -287,7 +288,11 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
         address bankAddress,
         string memory bankName,
         BankingCapabilities memory capabilities
-    ) external override onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external override {
+        bytes32 adminRole = keccak256("ADMIN_ROLE");
+        if (!coffeeToken.hasRole(adminRole, msg.sender)) {
+            revert WAGAEthiopianCompliance__NotComplianceManager_addEUDRCertificate();
+        }
         if (swiftCode == bytes11(0)) {
             revert WAGAEthiopianCompliance__InvalidSWIFTCode_registerBankingPartner();
         }
@@ -309,7 +314,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
         // Grant banking partner role
         authorizedBanks[bankAddress] = true;
         bankNames[bankAddress] = bankName;
-        _grantRole(BANKING_PARTNER_ROLE, bankAddress);
+        // Banking partner role should be managed through coffee token
 
         emit BankingPartnerRegistered(swiftCode, bankAddress, bankName);
     }
@@ -326,9 +331,25 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
     }
 
     /**
+     * @dev Get banking partner details by address
+     * @param partner The address of the banking partner
+     * @return swiftCode The SWIFT code of the partner
+     * @return bankName The name of the bank
+     * @return canOfframp Whether the partner can act as offramp
+     */
+    function getBankingPartner(address partner) external view returns (bytes11 swiftCode, string memory bankName, bool canOfframp) {
+        swiftCode = addressToSwift[partner];
+        if (swiftCode == bytes11(0)) {
+            revert WAGAEthiopianCompliance__BankNotFound_getBankingCapabilities();
+        }
+        BankingCapabilities memory capabilities = bankCapabilitiesBySwift[swiftCode];
+        return (swiftCode, capabilities.bankName, capabilities.canActAsOfframp);
+    }
+
+    /**
      * @inheritdoc IEthiopianCompliance
      */
-    function assignOfframpPartner(uint256 batchId) external override returns (bytes11 offrampSwift, OfframpPartnerType partnerType) {
+    function assignOfframpPartner(uint256 batchId) external override onlyComplianceManager returns (bytes11 offrampSwift, OfframpPartnerType partnerType) {
         // For MVP, assign first available offramp-capable bank
         // In production, this would use more sophisticated logic based on
         // seller preferences, geographic location, etc.
@@ -354,7 +375,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
             revert WAGAEthiopianCompliance__InvalidTransferStage_confirmFiatTransferStage();
         }
 
-        uint64 sellerId = accessControl.getSellerId(buyer);
+        uint64 sellerId = coffeeToken.getSellerId(buyer);
         if (sellerId == 0) {
             revert WAGAEthiopianCompliance__InvalidTransferStage_confirmFiatTransferStage();
         }
@@ -367,7 +388,8 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
                 revert WAGAEthiopianCompliance__UnauthorizedOfframpConfirmation_confirmFiatTransferStage();
             }
         } else if (stage >= TransferStage.FIAT_CONFIRMED_BY_BANK) {
-            if (!authorizedBanks[msg.sender]) {
+            bytes32 bankingRole = keccak256("BANKING_PARTNER_ROLE");
+            if (!coffeeToken.hasRole(bankingRole, msg.sender)) {
                 revert WAGAEthiopianCompliance__UnauthorizedBankConfirmation_confirmFiatTransferStage();
             }
         } else {
@@ -396,7 +418,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
             revert WAGAEthiopianCompliance__UnauthorizedSellerConfirmation_confirmSellerPayment();
         }
 
-        uint64 sellerId = accessControl.getSellerId(buyer);
+        uint64 sellerId = coffeeToken.getSellerId(buyer);
         if (sellerId == 0) {
             revert WAGAEthiopianCompliance__SellerNotRegistered_confirmSellerPayment();
         }
@@ -435,7 +457,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
             revert WAGAEthiopianCompliance__TransferNotFound_recordOfframpTransferInitiated();
         }
 
-        uint64 sellerId = accessControl.getSellerId(buyer);
+        uint64 sellerId = coffeeToken.getSellerId(buyer);
         if (sellerId == 0) {
             revert WAGAEthiopianCompliance__TransferNotFound_recordOfframpTransferInitiated();
         }
@@ -471,7 +493,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
             revert WAGAEthiopianCompliance__InvalidSellerId_getFiatTransfer();
         }
 
-        sellerId = accessControl.getSellerId(buyer);
+        sellerId = coffeeToken.getSellerId(buyer);
         if (sellerId == 0) {
             revert WAGAEthiopianCompliance__InvalidSellerId_getFiatTransfer();
         }
@@ -501,7 +523,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
             revert WAGAEthiopianCompliance__TransferNotFound_getTransferStageStatus();
         }
 
-        uint64 sellerId = accessControl.getSellerId(buyer);
+        uint64 sellerId = coffeeToken.getSellerId(buyer);
         if (sellerId == 0) {
             revert WAGAEthiopianCompliance__TransferNotFound_getTransferStageStatus();
         }
@@ -543,7 +565,11 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
     function addBankingPartner(
         address bankAddress,
         string memory bankName
-    ) external override onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external override {
+        bytes32 adminRole = keccak256("ADMIN_ROLE");
+        if (!coffeeToken.hasRole(adminRole, msg.sender)) {
+            revert WAGAEthiopianCompliance__NotComplianceManager_addEUDRCertificate();
+        }
         if (bankAddress == address(0)) {
             revert WAGAEthiopianCompliance__InvalidBankAddress_addBankingPartner();
         }
@@ -553,7 +579,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
 
         authorizedBanks[bankAddress] = true;
         bankNames[bankAddress] = bankName;
-        _grantRole(BANKING_PARTNER_ROLE, bankAddress);
+        // Banking partner role should be managed through coffee token
 
         emit BankingPartnerAdded(bankAddress, bankName);
     }
@@ -561,10 +587,14 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
     /**
      * @inheritdoc IEthiopianCompliance
      */
-    function removeBankingPartner(address bankAddress) external override onlyRole(DEFAULT_ADMIN_ROLE) {
+    function removeBankingPartner(address bankAddress) external override {
+        bytes32 adminRole = keccak256("ADMIN_ROLE");
+        if (!coffeeToken.hasRole(adminRole, msg.sender)) {
+            revert WAGAEthiopianCompliance__NotComplianceManager_addEUDRCertificate();
+        }
         authorizedBanks[bankAddress] = false;
         delete bankNames[bankAddress];
-        _revokeRole(BANKING_PARTNER_ROLE, bankAddress);
+        // Role revoking should be managed through coffee token
         
         emit BankingPartnerRemoved(bankAddress);
     }
@@ -621,7 +651,10 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
         uint256 quantity,
         uint256 valueUSD,
         string memory buyerBankDetails
-    ) external onlyRole(COMPLIANCE_MANAGER_ROLE) {
+    ) external {
+        if (!coffeeToken.hasRole(COMPLIANCE_MANAGER_ROLE, msg.sender)) {
+            revert WAGAEthiopianCompliance__NotComplianceManager_addEUDRCertificate();
+        }
         if (!this.validateUpstreamCompliance(batchId)) {
             revert WAGAEthiopianCompliance__UpstreamComplianceNotMet_registerTradeWithBoE();
         }
@@ -632,7 +665,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
         uint256 valueETB = (valueUSD * usdToEtbRate) / RATE_PRECISION;
         
         // Convert seller address to sellerId for gas-efficient storage
-        uint64 sellerId = accessControl.getSellerId(seller);
+        uint64 sellerId = coffeeToken.getSellerId(seller);
 
         BoETradeRegistration memory registration = BoETradeRegistration({
             batchId: batchId,
@@ -674,7 +707,11 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, AccessControl, Reentra
      * @dev Update USD to ETB conversion rate
      * @param newRate New conversion rate (multiplied by 10^8 for precision)
      */
-    function updateUSDToETBRate(uint256 newRate) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function updateUSDToETBRate(uint256 newRate) external {
+        bytes32 adminRole = keccak256("ADMIN_ROLE");
+        if (!coffeeToken.hasRole(adminRole, msg.sender)) {
+            revert WAGAEthiopianCompliance__NotComplianceManager_addEUDRCertificate();
+        }
         if (newRate == 0) {
             revert WAGAEthiopianCompliance__InvalidRate_setExchangeRate();
         }

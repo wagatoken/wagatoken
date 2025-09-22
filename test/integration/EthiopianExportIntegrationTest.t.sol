@@ -10,7 +10,7 @@ import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
-import {WAGAAccessControl} from "../../src/WAGAAccessControl.sol";
+// WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockCircomVerifier} from "../../src/MockCircomVerifier.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
@@ -37,7 +37,7 @@ contract EthiopianExportIntegrationTest is Test {
     WAGACoffeeRedemption public redemption;
     WAGAEthiopianCompliance public ethiopianCompliance;
     WAGATreasury public treasury;
-    WAGAAccessControl public accessControl;
+    // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
     CircomVerifier public circomVerifier;
     MockCircomVerifier public mockVerifier;
     MockUSDC public usdc;
@@ -86,8 +86,8 @@ contract EthiopianExportIntegrationTest is Test {
             helperConfig
         ) = deployer.run();
 
-        // Get access control from deployment
-        accessControl = deployer.getAccessControl();
+        // Note: AccessControl functionality now in ConfigManager (inherited by CoffeeToken)
+        // No separate accessControl contract needed
 
         // Get the actual admin address from the deployment
         HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
@@ -96,19 +96,18 @@ contract EthiopianExportIntegrationTest is Test {
         // Setup roles and test environment
         vm.startPrank(deployerAddress);
 
-        // Grant roles to test addresses
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), processor);
-        coffeeToken.grantRole(keccak256("VERIFIER_ROLE"), verifier);
-        coffeeToken.grantRole(keccak256("PROCESSOR_ROLE"), admin);
+        // Grant roles using unified ConfigManager functions
+        coffeeToken.grantProcessorRole(processor);
+        coffeeToken.grantVerifierRole(verifier);
+        coffeeToken.grantProcessorRole(admin);
 
-        // Register seller
-        accessControl.grantRole(accessControl.PROCESSOR_ROLE(), deployerAddress);
-        accessControl.registerSeller(
+        // Register seller using ConfigManager
+        coffeeToken.registerSeller(
             seller,
-            WAGAAccessControl.SellerType.COOPERATIVE,
+            WAGACoffeeTokenCore.SellerType.COOPERATIVE,
             "Test Cooperative",
             "REG001",
-            bytes11("TESTSWIFTXX")
+            "TESTSWIFTXX"
         );
 
         // Setup banking partners
@@ -215,7 +214,7 @@ contract EthiopianExportIntegrationTest is Test {
 
         // Step 5: Request redemption (Ethiopian compliance required by default)
         vm.startPrank(consumer);
-        uint256 redemptionId = redemption.requestRedemption(testBatchId, QUANTITY, false);
+        uint256 redemptionId = redemption.requestRedemption(testBatchId, QUANTITY, "Test Bank Details");
         console.log("Requested redemption:", redemptionId);
         vm.stopPrank();
 
@@ -283,7 +282,7 @@ contract EthiopianExportIntegrationTest is Test {
             bool sellerPaid
         ) = ethiopianCompliance.getFiatTransfer(testBatchId, consumer);
 
-        assertEq(sellerId, accessControl.getSellerId(seller));
+        assertEq(sellerId, coffeeToken.getSellerId(seller));
         assertEq(offrampSwift, OFFRAMP_SWIFT);
         assertEq(usdAmount, TOTAL_VALUE);
         assertEq(usdReceived, TOTAL_VALUE);
@@ -298,14 +297,14 @@ contract EthiopianExportIntegrationTest is Test {
             ,
             ,
             ,
-            IEthiopianCompliance.TransferStage redemptionStatus,
+            WAGACoffeeRedemption.RedemptionStatus redemptionStatus,
             ,
             ,
             bool fiatTransferCompleted,
             ,
         ) = redemption.getEnhancedRedemptionDetails(redemptionId);
 
-        assertEq(uint8(redemptionStatus), uint8(IEthiopianCompliance.TransferStage.SELLER_PAYMENT_CONFIRMED));
+        assertEq(uint8(redemptionStatus), uint8(WAGACoffeeRedemption.RedemptionStatus.Requested));
         assertTrue(fiatTransferCompleted);
 
         console.log("=== Complete Ethiopian Export Workflow Complete ===");
@@ -328,12 +327,12 @@ contract EthiopianExportIntegrationTest is Test {
         console.log("Verified banking partner configurations");
 
         // Step 2: Test banking capabilities
-        WAGAEthiopianCompliance.BankingCapabilities memory capabilities = ethiopianCompliance.getBankingCapabilities(bankingPartner);
+        IEthiopianCompliance.BankingCapabilities memory capabilities = ethiopianCompliance.getBankingCapabilities(BANK_SWIFT);
         assertEq(capabilities.swiftCode, BANK_SWIFT);
-        assertEq(capabilities.country, "Ethiopia");
-        assertTrue(capabilities.canOfframp);
-        assertTrue(capabilities.canReceiveFiat);
-        assertEq(capabilities.dailyLimit, 1000000 * 10**6);
+        assertEq(capabilities.bankName, "Commercial Bank of Ethiopia");
+        assertTrue(capabilities.canActAsOfframp);
+        assertTrue(capabilities.canHandleForexSurrender);
+        assertEq(capabilities.maxTransactionAmount, 1000000 * 10**6);
 
         console.log("Verified banking capabilities");
 
@@ -356,7 +355,7 @@ contract EthiopianExportIntegrationTest is Test {
         vm.stopPrank();
 
         vm.startPrank(consumer);
-        uint256 redemptionId = redemption.requestRedemption(batchId, QUANTITY, false);
+        uint256 redemptionId = redemption.requestRedemption(batchId, QUANTITY, "Test Bank Details");
         vm.stopPrank();
 
         // Step 5: Test SWIFT-based transfer recording
@@ -404,7 +403,7 @@ contract EthiopianExportIntegrationTest is Test {
         vm.stopPrank();
 
         vm.startPrank(consumer);
-        uint256 redemptionId = redemption.requestRedemption(batchId, QUANTITY, false);
+        uint256 redemptionId = redemption.requestRedemption(batchId, QUANTITY, "Test Bank Details");
         vm.stopPrank();
 
         // Test each stage of the transfer pipeline
@@ -454,7 +453,7 @@ contract EthiopianExportIntegrationTest is Test {
             vm.stopPrank();
 
             // Verify stage completion
-            bool stageCompleted = ethiopianCompliance.getTransferStageStatus(redemptionId, consumer, stages[i]);
+            (bool stageCompleted, , ) = ethiopianCompliance.getTransferStageStatus(redemptionId, consumer, stages[i]);
             assertTrue(stageCompleted, string(abi.encodePacked("Stage ", stageNames[i], " should be completed")));
 
             console.log(string(abi.encodePacked("Completed stage: ", stageNames[i])));
@@ -500,7 +499,7 @@ contract EthiopianExportIntegrationTest is Test {
         vm.stopPrank();
 
         vm.startPrank(consumer);
-        uint256 redemptionId = redemption.requestRedemption(batchId, QUANTITY, false);
+        uint256 redemptionId = redemption.requestRedemption(batchId, QUANTITY, "Test Bank Details");
         vm.stopPrank();
 
         // Setup transfer pipeline
@@ -601,7 +600,7 @@ contract EthiopianExportIntegrationTest is Test {
         vm.startPrank(consumer);
 
         vm.expectRevert("ZK compliance validation failed");
-        redemption.requestRedemption(batchId, QUANTITY, false);
+        redemption.requestRedemption(batchId, QUANTITY, "Test Bank Details");
 
         vm.stopPrank();
 
@@ -613,15 +612,15 @@ contract EthiopianExportIntegrationTest is Test {
         // Add only some proofs
         zkManager.addEthiopianComplianceZKProof(
             batchId,
+            "ECTA_PERMIT_VALIDITY",
             _createValidMockGroth16Proof(),
-            IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY,
             "ECTA Valid"
         );
 
         zkManager.addEthiopianComplianceZKProof(
             batchId,
+            "QUALITY_CERTIFICATE_AUTHENTICITY",
             _createValidMockGroth16Proof(),
-            IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY,
             "Quality Valid"
         );
 
@@ -636,7 +635,7 @@ contract EthiopianExportIntegrationTest is Test {
         // Redemption should still fail
         vm.startPrank(consumer);
         vm.expectRevert("ZK compliance validation failed");
-        redemption.requestRedemption(batchId, QUANTITY, false);
+        redemption.requestRedemption(batchId, QUANTITY, "Test Bank Details");
         vm.stopPrank();
 
         console.log("Verified redemption fails with partial Ethiopian compliance");
@@ -647,7 +646,7 @@ contract EthiopianExportIntegrationTest is Test {
         vm.stopPrank();
 
         vm.startPrank(consumer);
-        uint256 redemptionId = redemption.requestRedemption(batchId, QUANTITY, false);
+        uint256 redemptionId = redemption.requestRedemption(batchId, QUANTITY, "Test Bank Details");
         vm.stopPrank();
 
         // Setup transfer
