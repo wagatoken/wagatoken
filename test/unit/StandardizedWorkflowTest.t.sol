@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 import {Test, console} from "forge-std/Test.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
@@ -80,8 +80,8 @@ contract StandardizedWorkflowTest is Test {
         // Note: deployer already has ADMIN_ROLE from deployment, admin gets specific roles
         coffeeToken.grantProcessorRole(processor);
         coffeeToken.grantProcessorRole(admin);        
-        coffeeToken.grantCooperativeRole(admin);
-        coffeeToken.grantRoasterRole(admin);
+        // Note: COOPERATIVE_ROLE is granted via registerSeller, not directly
+        // Note: ROASTER_ROLE is granted via registerSeller, not directly  
         // Note: MINTER_ROLE granted via setProofOfReserveManager in deployment
         
         // Grant treasury roles using ConfigManager

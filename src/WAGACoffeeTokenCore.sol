@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {ERC1155Supply} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
@@ -34,6 +34,7 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     event BatchMinted(uint256 indexed batchId, address indexed to, uint256 amount, uint256 totalMinted);
     event BatchBurned(uint256 indexed batchId, address indexed from, uint256 amount, uint256 totalMinted);
     event BatchTransferred(uint256 indexed batchId, address indexed from, address indexed to, uint256 amount);
+    event MintedQuantityInconsistency(uint256 indexed batchId, uint256 burnAmount, uint256 currentMintedQuantity);
 
     /* -------------------------------------------------------------------------- */
     /*                                   Errors                                   */
@@ -150,20 +151,28 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     }
 
     /**
-     * @dev Burn tokens for redemption - SIMPLIFIED
+     * @dev Burn tokens for redemption - FIXED STATE CONSISTENCY
      */
     function burnForRedemption(address from, uint256 batchId, uint256 amount) external onlyRole(REDEMPTION_ROLE) {
         if (balanceOf(from, batchId) < amount) {
             revert InsufficientBalance();
         }
         
-        _burn(from, batchId, amount);
-        
-        // Update minted quantity (reduce it when burning)
+        // Update minted quantity BEFORE burning to maintain consistency
         BatchInfo storage batch = s_batchInfo[batchId];
+        
+        // Always update mintedQuantity to maintain consistency with totalSupply
+        // This ensures mintedQuantity always equals totalSupply after operations
         if (batch.mintedQuantity >= amount) {
             batch.mintedQuantity -= amount;
+        } else {
+            // If for some reason mintedQuantity < amount (should not happen in normal flow)
+            // Set to 0 and emit warning event
+            batch.mintedQuantity = 0;
+            emit MintedQuantityInconsistency(batchId, amount, batch.mintedQuantity);
         }
+        
+        _burn(from, batchId, amount);
         
         emit BatchBurned(batchId, from, amount, totalSupply(batchId));
     }
@@ -380,6 +389,29 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
             revert BatchDoesNotExist();
         }
         s_batchMetadata[batchId] = ipfsUri;
+    }
+
+    /**
+     * @dev Emergency function to fix state consistency between mintedQuantity and totalSupply
+     * @param batchId Batch to fix
+     */
+    function fixStateConsistency(uint256 batchId) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        uint256 actualSupply = totalSupply(batchId);
+        BatchInfo storage batch = s_batchInfo[batchId];
+        
+        if (batch.mintedQuantity != actualSupply) {
+            emit MintedQuantityInconsistency(batchId, 0, batch.mintedQuantity);
+            batch.mintedQuantity = actualSupply;
+        }
+    }
+
+    /**
+     * @dev Check if state is consistent for a batch
+     * @param batchId Batch to check
+     * @return isConsistent Whether mintedQuantity equals totalSupply
+     */
+    function checkStateConsistency(uint256 batchId) external view returns (bool isConsistent) {
+        return s_batchInfo[batchId].mintedQuantity == totalSupply(batchId);
     }
 
     /* -------------------------------------------------------------------------- */

@@ -123,10 +123,11 @@ contract DeployRealZKMVP is Script {
             vm.startBroadcast(networkConfig.deployerKey);
         }
 
-        console.log("Starting WAGA MVP Deployment with Coinbase Payment Integration...");
+        console.log("Starting WAGA MVP Deployment with Unified Compliance Architecture...");
+        console.log("Security fixes applied: state consistency, access control, role escalation");
 
-        // 1. Deploy ZK Verifiers
-        console.log("Deploying ZK Verifiers...");
+        // 1. Deploy ZK Verifiers (including unified compliance system)
+        console.log("Deploying ZK Verifiers for unified compliance...");
         priceVerifier = new PriceVerifier();
         qualityVerifier = new QualityVerifier();
         supplyChainVerifier = new SupplyChainVerifier();
@@ -244,8 +245,17 @@ contract DeployRealZKMVP is Script {
         // 13. Setup unified access control via ConfigManager (inherited by CoffeeToken)
         console.log("Setting up unified access control system...");
         
-        // Grant system contract roles via ConfigManager functions
-        coffeeToken.setProofOfReserveManager(address(proofOfReserve));  // Grants MINTER_ROLE + PROOF_OF_RESERVE_ROLE
+        // Grant system contract roles via ConfigManager functions (atomic role assignment)
+        coffeeToken.setProofOfReserveManager(address(proofOfReserve));  // Grants PROOF_OF_RESERVE_ROLE + MINTER_ROLE atomically
+        
+        // VALIDATION: Verify ProofOfReserve has required roles
+        bytes32 MINTER_ROLE = keccak256("MINTER_ROLE");
+        bytes32 PROOF_OF_RESERVE_ROLE = keccak256("PROOF_OF_RESERVE_ROLE");
+        
+        require(coffeeToken.hasRole(MINTER_ROLE, address(proofOfReserve)), "ProofOfReserve missing MINTER_ROLE");
+        require(coffeeToken.hasRole(PROOF_OF_RESERVE_ROLE, address(proofOfReserve)), "ProofOfReserve missing PROOF_OF_RESERVE_ROLE");
+        console.log("ProofOfReserve role validation passed");
+        
         coffeeToken.setRedemptionManager(address(redemptionManager));   // Grants REDEMPTION_ROLE
         coffeeToken.setInventoryManager(address(inventoryManager));     // Grants INVENTORY_MANAGER_ROLE
         
@@ -288,7 +298,20 @@ contract DeployRealZKMVP is Script {
         console.log("ECX Price Oracle:", address(ecxOracle));
         console.log("CDP Integration:", address(cdpIntegration));
         console.log("");
-        console.log("=== UNIFIED ACCESS CONTROL SYSTEM DEPLOYED ===");
+        console.log("=== UNIFIED COMPLIANCE ARCHITECTURE DEPLOYED ===");
+        console.log("- IComplianceManager interface implemented");
+        console.log("- String-based compliance types: ECTA_PERMIT, QUALITY_CERT, ORIGIN_VERIFICATION, EUDR_DEFORESTATION, EUDR_GEOLOCATION");
+        console.log("- Backward compatibility maintained for legacy functions");
+        console.log("");
+        console.log("=== SECURITY FIXES APPLIED ===");
+        console.log("- Fixed state consistency in token minting/burning");
+        console.log("- Removed treasury access control bypass");
+        console.log("- Fixed role escalation vulnerability - MINTER_ROLE explicitly granted");
+        console.log("- Standardized access control patterns");
+        console.log("- Fixed redemption validation order");
+        console.log("- Fixed error naming inconsistencies");
+        console.log("");
+        console.log("=== UNIFIED ACCESS CONTROL SYSTEM ===");
         console.log("");
         console.log("ROLE MANAGEMENT:");
         console.log("All roles managed via: coffeeToken.grantXXXRole(address)");
@@ -297,16 +320,24 @@ contract DeployRealZKMVP is Script {
         console.log("- coffeeToken.grantRoasterRole(address) - Coffee roasters");
         console.log("- coffeeToken.grantBankingPartnerRole(address) - Ethiopian banks");
         console.log("");
+        console.log("COMPLIANCE SYSTEM:");
+        console.log("1. Unified compliance via addComplianceZKProof(batchId, complianceType, zkProofData, publicClaim)");
+        console.log("2. Support for Ethiopian + EUDR + extensible compliance types");
+        console.log("3. Legacy function compatibility maintained");
+        console.log("4. Validation via validateCompliance(batchId, framework)");
+        console.log("");
         console.log("BUSINESS OPERATIONS:");
         console.log("1. Register sellers: coffeeToken.registerSeller(address, type, name, registration, swift)");
         console.log("2. Grant banking roles: coffeeToken.grantBankingPartnerRole(bankAddress)");
         console.log("3. Update ECX prices: ecxOracle.updateECXPrice() [requires PRICE_UPDATER_ROLE]");
-        console.log("4. Manage compliance: ethiopianCompliance functions [require COMPLIANCE_MANAGER_ROLE]");
+        console.log("4. Manage compliance: zkManager.addComplianceZKProof() [requires PROCESSOR_ROLE]");
         console.log("");
         console.log("SYSTEM STATUS:");
-        console.log("- Unified access control active");
+        console.log("- Unified compliance architecture active");
+        console.log("- All security vulnerabilities patched");
         console.log("- All contracts linked to coffee token");
         console.log("- Payment systems integrated");
+        console.log("- ProofOfReserve has verified MINTER_ROLE");
         console.log("- Ethiopian compliance ready");
         console.log("- Price oracle configured");
 

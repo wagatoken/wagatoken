@@ -89,6 +89,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, ReentrancyGuard {
     mapping(bytes11 => BankingCapabilities) private bankCapabilitiesBySwift;
     mapping(bytes11 => address) private swiftToAddress;
     mapping(address => bytes11) private addressToSwift;
+    bytes11[] private registeredSwiftCodes; // Track all registered SWIFT codes for iteration
 
     // Multi-stage fiat transfer tracking
     mapping(uint256 => mapping(uint64 => FiatTransfer)) private fiatTransfers;
@@ -310,6 +311,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, ReentrancyGuard {
         bankCapabilitiesBySwift[swiftCode] = capabilities;
         swiftToAddress[swiftCode] = bankAddress;
         addressToSwift[bankAddress] = swiftCode;
+        registeredSwiftCodes.push(swiftCode); // Track for iteration
 
         // Grant banking partner role
         authorizedBanks[bankAddress] = true;
@@ -349,12 +351,28 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, ReentrancyGuard {
     /**
      * @inheritdoc IEthiopianCompliance
      */
+    /**
+     * @inheritdoc IEthiopianCompliance
+     */
     function assignOfframpPartner(uint256 batchId) external override onlyComplianceManager returns (bytes11 offrampSwift, OfframpPartnerType partnerType) {
-        // For MVP, assign first available offramp-capable bank
-        // In production, this would use more sophisticated logic based on
-        // seller preferences, geographic location, etc.
-
-        // This is a placeholder implementation - would need proper selection logic
+        // Iterate through registered banking partners to find an active offramp-capable one
+        for (uint256 i = 0; i < registeredSwiftCodes.length; i++) {
+            bytes11 swift = registeredSwiftCodes[i];
+            BankingCapabilities memory capabilities = bankCapabilitiesBySwift[swift];
+            
+            // Check if this partner can act as offramp and is active
+            if (capabilities.canActAsOfframp && capabilities.isActive) {
+                offrampSwift = swift;
+                partnerType = capabilities.partnerType;
+                
+                // Emit assignment event
+                emit OfframpPartnerAssigned(batchId, offrampSwift, partnerType);
+                
+                return (offrampSwift, partnerType);
+            }
+        }
+        
+        // If no offramp partner found, revert with specific error
         revert WAGAEthiopianCompliance__OfframpPartnerNotAssigned_assignOfframpPartner();
     }
 
@@ -592,6 +610,24 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, ReentrancyGuard {
         if (!coffeeToken.hasRole(adminRole, msg.sender)) {
             revert WAGAEthiopianCompliance__NotComplianceManager_addEUDRCertificate();
         }
+        
+        bytes11 swiftCode = addressToSwift[bankAddress];
+        if (swiftCode != bytes11(0)) {
+            // Remove from mappings
+            delete bankCapabilitiesBySwift[swiftCode];
+            delete swiftToAddress[swiftCode];
+            delete addressToSwift[bankAddress];
+            
+            // Remove from array (find and remove)
+            for (uint256 i = 0; i < registeredSwiftCodes.length; i++) {
+                if (registeredSwiftCodes[i] == swiftCode) {
+                    registeredSwiftCodes[i] = registeredSwiftCodes[registeredSwiftCodes.length - 1];
+                    registeredSwiftCodes.pop();
+                    break;
+                }
+            }
+        }
+        
         authorizedBanks[bankAddress] = false;
         delete bankNames[bankAddress];
         // Role revoking should be managed through coffee token
@@ -667,6 +703,9 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, ReentrancyGuard {
         // Convert seller address to sellerId for gas-efficient storage
         uint64 sellerId = coffeeToken.getSellerId(seller);
 
+        // Assign offramp partner dynamically instead of hardcoding
+        (bytes11 assignedOfframpSwift, OfframpPartnerType assignedPartnerType) = this.assignOfframpPartner(batchId);
+
         BoETradeRegistration memory registration = BoETradeRegistration({
             batchId: batchId,
             sellerId: sellerId,
@@ -678,9 +717,9 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, ReentrancyGuard {
             exportDocuments: permit.permitDocumentHash,
             registrationTimestamp: block.timestamp,
             boERegistered: true,
-            assignedOfframpPartner: "DBSSGB2LXXX", // Default DBS Singapore
+            assignedOfframpPartner: assignedOfframpSwift, // Dynamically assigned
             assignedBankingPartner: "CBETETAAXXX", // Default CBE Ethiopia
-            offrampType: OfframpPartnerType.DIRECT_BANK,
+            offrampType: assignedPartnerType, // Use assigned partner type
             fiatTransferInitiated: true,
             fiatTransferCompleted: false,
             bankTransactionId: "",
@@ -787,5 +826,26 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, ReentrancyGuard {
      */
     function convertUSDToETB(uint256 usdAmount) external view returns (uint256 etbAmount) {
         return (usdAmount * usdToEtbRate) / RATE_PRECISION;
+    }
+
+    /**
+     * @dev Get count of registered banking partners
+     * @return count Number of registered banking partners
+     */
+    function getRegisteredBankingPartnersCount() external view returns (uint256 count) {
+        return registeredSwiftCodes.length;
+    }
+
+    /**
+     * @dev Get registered banking partner by index
+     * @param index Index in the registered partners array
+     * @return swiftCode SWIFT code of the banking partner
+     * @return capabilities Banking capabilities of the partner
+     */
+    function getRegisteredBankingPartnerByIndex(uint256 index) external view returns (bytes11 swiftCode, BankingCapabilities memory capabilities) {
+        require(index < registeredSwiftCodes.length, "Index out of bounds");
+        swiftCode = registeredSwiftCodes[index];
+        capabilities = bankCapabilitiesBySwift[swiftCode];
+        return (swiftCode, capabilities);
     }
 }

@@ -93,8 +93,7 @@ contract WAGACoffeeRedemptionTest is Test {
             address(treasury),
             address(ethiopianCompliance),
             address(batchManager),
-            address(zkManager),
-            address(coffeeToken) // Use coffeeToken for access control instead of separate contract
+            address(zkManager)
         );
 
         // Setup roles using ConfigManager functions
@@ -112,11 +111,11 @@ contract WAGACoffeeRedemptionTest is Test {
         // Create batch
         vm.startPrank(processor);
         coffeeToken.createBatch(
-            "Ethiopian Yirgacheffe",
             block.timestamp,
             block.timestamp + 365 days,
             1000,
             PRICE_PER_UNIT,
+            "Ethiopian Yirgacheffe",
             "Premium packaging",
             "ipfs://batch-metadata"
         );
@@ -129,7 +128,7 @@ contract WAGACoffeeRedemptionTest is Test {
         usdc.mint(address(treasury), TOTAL_VALUE * 2);
 
         // Setup banking
-        ethiopianCompliance.addOfframpPartner(offrampPartner, "Global Offramp");
+        // ethiopianCompliance.addOfframpPartner(offrampPartner, "Global Offramp"); // Function doesn't exist
 
         vm.stopPrank();
     }
@@ -147,7 +146,7 @@ contract WAGACoffeeRedemptionTest is Test {
         uint256 redemptionId = redemption.requestRedemption(
             BATCH_ID,
             QUANTITY,
-            false // Not requiring EUDR
+            "Bank: CB123, Account: 456789" // Bank details instead of boolean
         );
 
         assertEq(redemptionId, 1);
@@ -181,7 +180,7 @@ contract WAGACoffeeRedemptionTest is Test {
         uint256 redemptionId = redemption.requestRedemption(
             BATCH_ID,
             QUANTITY,
-            true // Require EUDR
+            "Bank: CB456, Account: 789123" // Bank details instead of boolean
         );
 
         vm.stopPrank();
@@ -232,8 +231,7 @@ contract WAGACoffeeRedemptionTest is Test {
         batchManager.registerEUDRComplianceWithZK(
             BATCH_ID,
             eudrCert,
-            MOCK_PROOF_DATA,
-            "Deforestation-Free"
+            MOCK_PROOF_DATA
         );
 
         vm.stopPrank();
@@ -274,15 +272,15 @@ contract WAGACoffeeRedemptionTest is Test {
 
         zkManager.addEthiopianComplianceZKProof(
             BATCH_ID,
+            "ECTA_PERMIT_VALIDITY",
             MOCK_PROOF_DATA,
-            IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY,
             "ECTA Permit Valid"
         );
 
         zkManager.addEthiopianComplianceZKProof(
             BATCH_ID,
+            "QUALITY_CERTIFICATE_AUTHENTICITY",
             MOCK_PROOF_DATA,
-            IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY,
             "Quality Certificate Authentic"
         );
 
@@ -431,7 +429,7 @@ contract WAGACoffeeRedemptionTest is Test {
             uint64 sellerId,
             uint256 batchId_,
             uint256 quantity,
-            IEthiopianCompliance.TransferStage status,
+            WAGACoffeeRedemption.RedemptionStatus status,
             bool requiresEthiopianCompliance,
             bool requiresEUDRCompliance,
             bool fiatTransferCompleted,
@@ -443,7 +441,7 @@ contract WAGACoffeeRedemptionTest is Test {
         assertEq(sellerId, coffeeToken.getSellerId(seller));
         assertEq(batchId_, BATCH_ID);
         assertEq(quantity, QUANTITY);
-        assertEq(uint8(status), uint8(IEthiopianCompliance.TransferStage.PENDING));
+        assertEq(uint8(status), uint8(WAGACoffeeRedemption.RedemptionStatus.Requested));
         assertTrue(requiresEthiopianCompliance);
         assertTrue(requiresEUDRCompliance);
         assertFalse(fiatTransferCompleted);
@@ -482,15 +480,13 @@ contract WAGACoffeeRedemptionTest is Test {
         batchManager.registerEUDRComplianceWithZK(
             BATCH_ID,
             eudrCert,
-            MOCK_PROOF_DATA,
-            "Deforestation-Free"
+            MOCK_PROOF_DATA
         );
 
         batchManager.addEUDRGeolocationDataWithZK(
             BATCH_ID,
             geoData,
-            MOCK_PROOF_DATA,
-            "Geolocation Verified"
+            MOCK_PROOF_DATA
         );
 
         vm.stopPrank();
@@ -547,7 +543,7 @@ contract WAGACoffeeRedemptionTest is Test {
             uint64 sellerId,
             ,
             ,
-            IEthiopianCompliance.TransferStage finalStatus,
+            WAGACoffeeRedemption.RedemptionStatus finalStatus,
             ,
             ,
             bool fiatTransferCompleted,
@@ -555,7 +551,7 @@ contract WAGACoffeeRedemptionTest is Test {
         ) = redemption.getEnhancedRedemptionDetails(redemptionId);
 
         assertEq(sellerId, coffeeToken.getSellerId(seller));
-        assertEq(uint8(finalStatus), uint8(IEthiopianCompliance.TransferStage.SELLER_PAYMENT_CONFIRMED));
+        assertEq(uint8(finalStatus), uint8(WAGACoffeeRedemption.RedemptionStatus.Processing));
         assertTrue(fiatTransferCompleted);
 
         console.log("=== Redemption Workflow Complete ===");
@@ -615,7 +611,7 @@ contract WAGACoffeeRedemptionTest is Test {
         vm.startPrank(consumer);
 
         vm.expectRevert("Quantity must be greater than 0");
-        redemption.requestRedemption(BATCH_ID, 0, false);
+        redemption.requestRedemption(BATCH_ID, 0, "Bank: CB123, Account: 456789");
 
         vm.stopPrank();
     }
@@ -636,9 +632,9 @@ contract WAGACoffeeRedemptionTest is Test {
         vm.startPrank(consumer);
 
         // Request multiple redemptions
-        uint256 redemptionId1 = redemption.requestRedemption(BATCH_ID, 25, false);
-        uint256 redemptionId2 = redemption.requestRedemption(BATCH_ID, 25, false);
-        uint256 redemptionId3 = redemption.requestRedemption(BATCH_ID, 25, false);
+        uint256 redemptionId1 = redemption.requestRedemption(BATCH_ID, 25, "Bank: CB111, Account: 111111");
+        uint256 redemptionId2 = redemption.requestRedemption(BATCH_ID, 25, "Bank: CB222, Account: 222222");
+        uint256 redemptionId3 = redemption.requestRedemption(BATCH_ID, 25, "Bank: CB333, Account: 333333");
 
         vm.stopPrank();
 

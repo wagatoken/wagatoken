@@ -263,10 +263,13 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
      * @param _treasury New treasury contract address
      */
     function setTreasury(address _treasury) external {
-        // Only allow admin or the contract itself to update treasury
+        // FIXED: Removed self-reference bypass - only admin can update treasury
         bytes32 adminRole = keccak256("ADMIN_ROLE");
-        if (!(msg.sender == address(this) || coffeeToken.hasRole(adminRole, msg.sender))) {
+        if (!coffeeToken.hasRole(adminRole, msg.sender)) {
             revert WAGACoffeeRedemption__Unauthorized_updateEthiopianCompliance();
+        }
+        if (_treasury == address(0)) {
+            revert("Invalid treasury address");
         }
         treasury = IWAGATreasury(_treasury);
     }
@@ -388,6 +391,14 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
             }
         }
 
+        // Get seller ID for the batch creator (validate before token transfer)
+        uint64 sellerId = _getBatchSellerId(batchId);
+
+        // Create redemption ID (validate before token transfer)
+        redemptionId = nextRedemptionId;
+        nextRedemptionId++; // redemptionId = nextRedemptionId + 1;
+
+        // FIXED: All validations passed - now safe to transfer tokens
         // Transfer tokens from consumer to this contract
         coffeeToken.safeTransferFrom(
             msg.sender,
@@ -396,13 +407,6 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
             quantity,
             ""
         );
-
-        // Get seller ID for the batch creator
-        uint64 sellerId = _getBatchSellerId(batchId);
-
-        // Create redemption request
-        redemptionId = nextRedemptionId;
-        nextRedemptionId++; // redemptionId = nextRedemptionId + 1;
 
         // Update the redemption mapping
         redemptions[redemptionId] = RedemptionRequest({

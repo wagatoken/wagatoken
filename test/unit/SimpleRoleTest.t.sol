@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 import {Test, console} from "forge-std/Test.sol";
 import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
@@ -53,8 +53,8 @@ contract SimpleRoleTest is Test {
         console.log("Coffee token deployed at:", address(coffeeToken));
 
         // Check what roles the deployer has by default
-        bool hasAdmin = coffeeToken.hasRole(keccak256("ADMIN_ROLE"), deployer);
-        bool hasDefaultAdmin = coffeeToken.hasRole(keccak256("DEFAULT_ADMIN_ROLE"), deployer);
+        bool hasAdmin = coffeeToken.hasRole(coffeeToken.ADMIN_ROLE(), deployer);
+        bool hasDefaultAdmin = coffeeToken.hasRole(coffeeToken.DEFAULT_ADMIN_ROLE(), deployer);
 
         console.log("Deployer has ADMIN_ROLE:", hasAdmin);
         console.log("Deployer has DEFAULT_ADMIN_ROLE:", hasDefaultAdmin);
@@ -70,7 +70,7 @@ contract SimpleRoleTest is Test {
         coffeeToken.grantVerifierRole(verifier);
 
         // Verify the role was granted
-        bool hasVerifierRole = coffeeToken.hasRole(keccak256("VERIFIER_ROLE"), verifier);
+        bool hasVerifierRole = coffeeToken.hasRole(coffeeToken.VERIFIER_ROLE(), verifier);
 
         console.log("Verifier has VERIFIER_ROLE:", hasVerifierRole);
         console.log("Successfully granted VERIFIER_ROLE");
@@ -81,13 +81,13 @@ contract SimpleRoleTest is Test {
         assertTrue(true, "Basic role test completed");
     }
 
-    function testRoleConstants() public pure {
+    function testRoleConstants() public view {
         // Test that role constants are properly defined
-        bytes32 adminRole = keccak256("ADMIN_ROLE");
-        bytes32 defaultAdminRole = keccak256("DEFAULT_ADMIN_ROLE");
-        bytes32 processorRole = keccak256("PROCESSOR_ROLE");
-        bytes32 verifierRole = keccak256("VERIFIER_ROLE");
-        bytes32 distributorRole = keccak256("DISTRIBUTOR_ROLE");
+        bytes32 adminRole = coffeeToken.ADMIN_ROLE();
+        bytes32 defaultAdminRole = coffeeToken.DEFAULT_ADMIN_ROLE();
+        bytes32 processorRole = coffeeToken.PROCESSOR_ROLE();
+        bytes32 verifierRole = coffeeToken.VERIFIER_ROLE();
+        bytes32 distributorRole = coffeeToken.DISTRIBUTOR_ROLE();
 
         console.log("ADMIN_ROLE:", vm.toString(adminRole));
         console.log("DEFAULT_ADMIN_ROLE:", vm.toString(defaultAdminRole));
@@ -108,13 +108,13 @@ contract SimpleRoleTest is Test {
         // DEFAULT_ADMIN_ROLE granted automatically in ConfigManager constructor
 
         // Grant various roles
-        coffeeToken.grantAdminRole(verifier);
+        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), verifier);
         coffeeToken.grantProcessorRole(verifier);
 
         // Verify roles
-        bool hasAdmin = coffeeToken.hasRole(keccak256("ADMIN_ROLE"), verifier);
-        bool hasProcessor = coffeeToken.hasRole(keccak256("PROCESSOR_ROLE"), verifier);
-        bool hasVerifier = coffeeToken.hasRole(keccak256("VERIFIER_ROLE"), verifier);
+        bool hasAdmin = coffeeToken.hasRole(coffeeToken.ADMIN_ROLE(), verifier);
+        bool hasProcessor = coffeeToken.hasRole(coffeeToken.PROCESSOR_ROLE(), verifier);
+        bool hasVerifier = coffeeToken.hasRole(coffeeToken.VERIFIER_ROLE(), verifier);
 
         console.log("Verifier has ADMIN_ROLE:", hasAdmin);
         console.log("Verifier has PROCESSOR_ROLE:", hasProcessor);

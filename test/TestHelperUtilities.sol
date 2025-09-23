@@ -82,7 +82,7 @@ contract TestHelperUtilities is Test {
     /**
      * @dev Generate sample seller profiles for testing
      */
-    function generateSampleSellerProfiles() internal pure returns (SellerProfileData[] memory) {
+    function generateSampleSellerProfiles() internal returns (SellerProfileData[] memory) {
         SellerProfileData[] memory profiles = new SellerProfileData[](3);
 
         profiles[0] = SellerProfileData({
@@ -153,7 +153,6 @@ contract TestHelperUtilities is Test {
      */
     function generateSampleTransferStages(uint256 batchId, uint64 sellerId)
         internal
-        pure
         returns (TransferStageData memory)
     {
         string[] memory txIds = new string[](4);

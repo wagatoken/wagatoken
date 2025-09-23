@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
-import {CircomVerifier} from "../../src/CircomVerifier.sol";
+import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.sol";
 import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 
@@ -16,7 +16,7 @@ import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 contract WAGABatchManagerTest is Test {
     WAGABatchManager public batchManager;
     WAGACoffeeTokenCore public coffeeToken;
-    CircomVerifier public circomVerifier;
+    PrivacyLayer public privacyLayer;
 
     // Test accounts
     address public admin = makeAddr("admin");
@@ -57,10 +57,10 @@ contract WAGABatchManagerTest is Test {
 
         // Deploy contracts
         coffeeToken = new WAGACoffeeTokenCore("");
-        circomVerifier = new CircomVerifier();
+        privacyLayer = new PrivacyLayer(address(coffeeToken), address(0)); // Placeholder ZK manager
         batchManager = new WAGABatchManager(
             address(coffeeToken),
-            address(circomVerifier)
+            address(privacyLayer)
         );
 
         // Initialize test data
@@ -82,18 +82,18 @@ contract WAGABatchManagerTest is Test {
             verificationMethod: "GPS + Satellite"
         });
 
-        // Setup roles
+        // Setup roles using the correct role constants
         coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), processor);
         coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), verifier);
 
         // Create a test batch
         vm.startPrank(processor);
         coffeeToken.createBatch(
-            "Ethiopian Yirgacheffe",
             block.timestamp,
             block.timestamp + 365 days,
             1000,
             5000, // $50 per unit
+            "Ethiopian Yirgacheffe",
             "Premium packaging",
             "ipfs://batch-metadata"
         );
@@ -115,8 +115,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.registerEUDRComplianceWithZK(
             BATCH_ID,
             eudrCert,
-            MOCK_PROOF_DATA,
-            "Deforestation-Free - EUDR Compliant"
+            MOCK_PROOF_DATA
         );
 
         // Verify EUDR compliance data was stored
@@ -137,8 +136,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.addEUDRGeolocationDataWithZK(
             BATCH_ID,
             geoData,
-            MOCK_PROOF_DATA,
-            "Geolocation Verified - Plot Size: 250ha"
+            MOCK_PROOF_DATA
         );
 
         vm.stopPrank();
@@ -159,8 +157,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.addEUDRGeolocationDataWithZK(
             BATCH_ID,
             geoData,
-            MOCK_PROOF_DATA,
-            "Geolocation Verified"
+            MOCK_PROOF_DATA
         );
 
         vm.stopPrank();
@@ -179,17 +176,13 @@ contract WAGABatchManagerTest is Test {
         batchManager.addEUDRGeolocationDataWithZK(
             BATCH_ID,
             geoData,
-            MOCK_PROOF_DATA,
-            "Geolocation Verified"
-        );
+            MOCK_PROOF_DATA);
 
         // Add compliance certificate (which includes deforestation proof)
         batchManager.registerEUDRComplianceWithZK(
             BATCH_ID,
             eudrCert,
-            MOCK_PROOF_DATA,
-            "Deforestation-Free"
-        );
+            MOCK_PROOF_DATA);
 
         vm.stopPrank();
 
@@ -211,9 +204,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.registerEUDRComplianceWithZK(
             999, // Non-existent batch
             eudrCert,
-            MOCK_PROOF_DATA,
-            "Test"
-        );
+            MOCK_PROOF_DATA);
 
         vm.stopPrank();
     }
@@ -228,9 +219,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.registerEUDRComplianceWithZK(
             BATCH_ID,
             expiredCert,
-            MOCK_PROOF_DATA,
-            "Expired certificate"
-        );
+            MOCK_PROOF_DATA);
 
         vm.stopPrank();
     }
@@ -242,9 +231,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.addEUDRGeolocationDataWithZK(
             BATCH_ID,
             geoData,
-            MOCK_PROOF_DATA,
-            "Unauthorized geolocation"
-        );
+            MOCK_PROOF_DATA);
 
         vm.stopPrank();
     }
@@ -257,9 +244,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.registerEUDRComplianceWithZK(
             BATCH_ID,
             eudrCert,
-            MOCK_PROOF_DATA,
-            "Deforestation-Free"
-        );
+            MOCK_PROOF_DATA);
 
         // Should succeed in mock environment
         assertTrue(batchManager.hasEUDRCompliance(BATCH_ID));
@@ -284,9 +269,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.registerEUDRComplianceWithZK(
             BATCH_ID,
             eudrCert,
-            MOCK_PROOF_DATA,
-            "Deforestation-Free"
-        );
+            MOCK_PROOF_DATA);
 
         vm.stopPrank();
 
@@ -302,11 +285,11 @@ contract WAGABatchManagerTest is Test {
 
         // Create second batch
         coffeeToken.createBatch(
-            "Ethiopian Sidamo",
             block.timestamp,
             block.timestamp + 365 days,
             500,
             6000, // $60 per unit
+            "Ethiopian Sidamo",
             "Special packaging",
             "ipfs://batch-metadata-2"
         );
@@ -315,9 +298,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.registerEUDRComplianceWithZK(
             1,
             eudrCert,
-            MOCK_PROOF_DATA,
-            "Batch 1 EUDR"
-        );
+            MOCK_PROOF_DATA);
 
         // Register EUDR for batch 2 with different data
         IEthiopianCompliance.EUDRCertificate memory cert2 = eudrCert;
@@ -327,9 +308,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.registerEUDRComplianceWithZK(
             2,
             cert2,
-            MOCK_PROOF_DATA,
-            "Batch 2 EUDR"
-        );
+            MOCK_PROOF_DATA);
 
         vm.stopPrank();
 
@@ -359,9 +338,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.addEUDRGeolocationDataWithZK(
             BATCH_ID,
             geoData,
-            MOCK_PROOF_DATA,
-            "Geolocation OK"
-        );
+            MOCK_PROOF_DATA);
 
         (deforestationCompliant, geolocationVerified, fullyCompliant) = batchManager.validateEUDRZKCompliance(BATCH_ID);
         assertFalse(deforestationCompliant);
@@ -372,9 +349,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.registerEUDRComplianceWithZK(
             BATCH_ID,
             eudrCert,
-            MOCK_PROOF_DATA,
-            "Deforestation OK"
-        );
+            MOCK_PROOF_DATA);
 
         (deforestationCompliant, geolocationVerified, fullyCompliant) = batchManager.validateEUDRZKCompliance(BATCH_ID);
         assertTrue(deforestationCompliant);
@@ -404,9 +379,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.addEUDRGeolocationDataWithZK(
             BATCH_ID,
             geoData,
-            MOCK_PROOF_DATA,
-            "Geolocation Verified - Plot: 8.5476N, 39.2695E, Size: 250ha"
-        );
+            MOCK_PROOF_DATA);
 
         console.log("Added geolocation data");
 
@@ -421,9 +394,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.registerEUDRComplianceWithZK(
             BATCH_ID,
             eudrCert,
-            MOCK_PROOF_DATA,
-            "Deforestation-Free - Certificate: EUDR-2024-001, Level: High"
-        );
+            MOCK_PROOF_DATA);
 
         console.log("Registered EUDR certificate");
 
@@ -480,9 +451,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.registerEUDRComplianceWithZK(
             BATCH_ID,
             eudrCert,
-            MOCK_PROOF_DATA,
-            "Deforestation-Free"
-        );
+            MOCK_PROOF_DATA);
         uint256 gasUsedRegistration = gasStart - gasleft();
 
         // Measure gas for geolocation data addition
@@ -490,9 +459,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.addEUDRGeolocationDataWithZK(
             BATCH_ID,
             geoData,
-            MOCK_PROOF_DATA,
-            "Geolocation Verified"
-        );
+            MOCK_PROOF_DATA);
         uint256 gasUsedGeolocation = gasStart - gasleft();
 
         // Measure gas for compliance validation
@@ -527,9 +494,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.registerEUDRComplianceWithZK(
             BATCH_ID,
             largeCert,
-            MOCK_PROOF_DATA,
-            "Large certificate data test"
-        );
+            MOCK_PROOF_DATA);
 
         // Verify storage worked
         assertTrue(batchManager.hasEUDRCompliance(BATCH_ID));
@@ -548,9 +513,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.registerEUDRComplianceWithZK(
             BATCH_ID,
             zeroExpiryCert,
-            MOCK_PROOF_DATA,
-            "Zero expiry test"
-        );
+            MOCK_PROOF_DATA);
 
         vm.stopPrank();
     }
@@ -564,9 +527,7 @@ contract WAGABatchManagerTest is Test {
         batchManager.addEUDRGeolocationDataWithZK(
             BATCH_ID,
             maxPlotData,
-            MOCK_PROOF_DATA,
-            "Maximum plot size test"
-        );
+            MOCK_PROOF_DATA);
 
         // Should work without issues
         (bool deforestationCompliant, bool geolocationVerified, bool fullyCompliant) = batchManager.validateEUDRZKCompliance(BATCH_ID);
@@ -585,11 +546,11 @@ contract WAGABatchManagerTest is Test {
         // Create multiple batches
         for (uint256 i = 2; i <= 5; i++) {
             coffeeToken.createBatch(
-                string(abi.encodePacked("Batch ", vm.toString(i))),
                 block.timestamp,
                 block.timestamp + 365 days,
                 1000,
                 5000,
+                string(abi.encodePacked("Batch ", vm.toString(i))),
                 "Packaging",
                 "ipfs://metadata"
             );
@@ -603,16 +564,14 @@ contract WAGABatchManagerTest is Test {
             batchManager.registerEUDRComplianceWithZK(
                 i,
                 cert,
-                MOCK_PROOF_DATA,
-                string(abi.encodePacked("Batch ", vm.toString(i), " EUDR"))
+                MOCK_PROOF_DATA
             );
 
             // Add geolocation for each
             batchManager.addEUDRGeolocationDataWithZK(
                 i,
                 geoData,
-                MOCK_PROOF_DATA,
-                string(abi.encodePacked("Batch ", vm.toString(i), " Geolocation"))
+                MOCK_PROOF_DATA
             );
         }
 

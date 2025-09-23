@@ -39,6 +39,11 @@ contract WAGATreasury is IWAGATreasury, ReentrancyGuard {
     error WAGATreasury__OnlyUSDCWithdrawalsAllowed_receive();
     error WAGATreasury__InsufficientBalance_receive();
     error WAGATreasury__TransferFailed_receive();
+    
+    // FIXED: Added specific error for admin authorization
+    error WAGATreasury__UnauthorizedAdmin_setBatchPayment();
+    error WAGATreasury__UnauthorizedPaymentProcessor_processCoinbasePayment();
+    error WAGATreasury__UnauthorizedAdmin_distributeFunds();
 
     // Role constants - use ConfigManager definitions instead of duplicating
     bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -98,7 +103,7 @@ contract WAGATreasury is IWAGATreasury, ReentrancyGuard {
      */
     function setBatchPayment(uint256 batchId, uint256 amount) external {
         if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
-            revert WAGATreasury__UnauthorizedOfframpExecutor_transferToOfframpPartner();
+            revert WAGATreasury__UnauthorizedAdmin_setBatchPayment();
         }
         batchPaymentRequired[batchId] = amount;
         emit BatchPaymentRequired(batchId, amount);
@@ -163,7 +168,7 @@ contract WAGATreasury is IWAGATreasury, ReentrancyGuard {
         string calldata chargeId
     ) external {
         if (!coffeeToken.hasRole(PAYMENT_PROCESSOR_ROLE, msg.sender)) {
-            revert WAGATreasury__UnauthorizedOfframpExecutor_transferToOfframpPartner();
+            revert WAGATreasury__UnauthorizedPaymentProcessor_processCoinbasePayment();
         }
         if (processedChargeIds[chargeId]) {
             revert WAGATreasury__ChargeAlreadyProcessed_processChargePayment();
@@ -196,7 +201,7 @@ contract WAGATreasury is IWAGATreasury, ReentrancyGuard {
         string calldata reason
     ) external nonReentrant {
         if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
-            revert WAGATreasury__UnauthorizedOfframpExecutor_transferToOfframpPartner();
+            revert WAGATreasury__UnauthorizedAdmin_distributeFunds();
         }
         if (recipient == address(0)) {
             revert WAGATreasury__InvalidRecipientAddress_distributeFunds();

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 import "./Interfaces/IWAGACoffeeToken.sol";
 import "./WAGACoffeeTokenCore.sol";
@@ -26,6 +26,7 @@ contract WAGABatchManager is IWAGABatchManager {
     /* -------------------------------------------------------------------------- */
 
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE"); // Align with WAGAConfigManager
     bytes32 public constant PROCESSOR_ROLE = keccak256("PROCESSOR_ROLE");
     bytes32 public constant DISTRIBUTOR_ROLE = keccak256("DISTRIBUTOR_ROLE");
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
@@ -308,11 +309,11 @@ contract WAGABatchManager is IWAGABatchManager {
         // Verify ZK proof for deforestation compliance (if ZK manager available)
         if (address(coffeeTokenContract.getZKManager()) != address(0)) {
             IWAGAZKManager zkManager = IWAGAZKManager(address(coffeeTokenContract.getZKManager()));
-            bool deforestationVerified = zkManager.addEUDRComplianceZKProof(
+            bool deforestationVerified = zkManager.addComplianceZKProof(
                 batchId,
+                "EUDR_DEFORESTATION",
                 zkProofData,
-                IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
-                certificate.deforestationRisk
+                "Deforestation compliance verified for EU export"
             );
 
             if (!deforestationVerified) {
@@ -359,11 +360,11 @@ contract WAGABatchManager is IWAGABatchManager {
         // Verify ZK proof for geolocation (if ZK manager available)
         if (address(coffeeTokenContract.getZKManager()) != address(0)) {
             IWAGAZKManager zkManager = IWAGAZKManager(address(coffeeTokenContract.getZKManager()));
-            bool geolocationVerified = zkManager.addEUDRComplianceZKProof(
+            bool geolocationVerified = zkManager.addComplianceZKProof(
                 batchId,
+                "EUDR_GEOLOCATION",
                 zkProofData,
-                IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION,
-                geolocation.coordinates
+                "Geolocation verification for EU export compliance"
             );
 
             if (!geolocationVerified) {

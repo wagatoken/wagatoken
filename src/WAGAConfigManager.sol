@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -234,10 +234,11 @@ contract WAGAConfigManager is AccessControl, Ownable {
         }
         if (s_proofOfReserveManager != address(0)) {
             _revokeRole(PROOF_OF_RESERVE_ROLE, s_proofOfReserveManager);
+            _revokeRole(MINTER_ROLE, s_proofOfReserveManager);
         }
         s_proofOfReserveManager = _proofOfReserveManager;
         _grantRole(PROOF_OF_RESERVE_ROLE, _proofOfReserveManager);
-        _grantRole(MINTER_ROLE, _proofOfReserveManager);
+        _grantRole(MINTER_ROLE, _proofOfReserveManager);  // RESTORED: Atomic role assignment is more secure
         emit ProofOfReserveManagerUpdated(_proofOfReserveManager, msg.sender);
     }
 
