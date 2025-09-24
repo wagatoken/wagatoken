@@ -270,16 +270,16 @@ contract WAGACoffeeRedemptionTest is Test {
 
         vm.startPrank(admin);
 
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             BATCH_ID,
-            "ECTA_PERMIT_VALIDITY",
+            "ECTA_PERMIT",
             MOCK_PROOF_DATA,
             "ECTA Permit Valid"
         );
 
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             BATCH_ID,
-            "QUALITY_CERTIFICATE_AUTHENTICITY",
+            "QUALITY_CERT",
             MOCK_PROOF_DATA,
             "Quality Certificate Authentic"
         );

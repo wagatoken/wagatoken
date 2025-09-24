@@ -7,7 +7,6 @@ import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.sol";
-import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 
 /**
  * @title WAGABatchManagerTest

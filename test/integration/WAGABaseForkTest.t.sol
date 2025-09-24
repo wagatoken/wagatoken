@@ -19,8 +19,7 @@ import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {WAGACoffeeViews} from "../../src/WAGACoffeeViews.sol";
 import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
 // WAGAAccessControl removed - functionality moved to WAGAConfigManager
-import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
-import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
+
 
 /**
  * @title WAGABaseForkTest
@@ -51,9 +50,9 @@ contract WAGABaseForkTest is Test {
 
     // Test addresses
     // Test addresses - using makeAddr for proper test isolation
-    address public TEST_ADMIN = makeAddr("admin");
-    address public TEST_PROCESSOR = makeAddr("processor");
-    address public TEST_VERIFIER = makeAddr("verifier");
+    address public testAdmin = makeAddr("admin");
+    address public testProcessor = makeAddr("processor");
+    address public testVerifier = makeAddr("verifier");
 
     function setUp() public {
         // Create fork of Base Sepolia
@@ -120,9 +119,9 @@ contract WAGABaseForkTest is Test {
         address deployerAddress = vm.addr(config.deployerKey);
         
         vm.startPrank(deployerAddress);
-        coffeeToken.grantProcessorRole(TEST_PROCESSOR);
-        coffeeToken.grantVerifierRole(TEST_VERIFIER);
-        coffeeToken.grantProcessorRole(TEST_ADMIN); // Admin also gets processor role for testing
+        coffeeToken.grantProcessorRole(testProcessor);
+        coffeeToken.grantVerifierRole(testVerifier);
+        coffeeToken.grantProcessorRole(testAdmin); // Admin also gets processor role for testing
         
         // Deploy MockCircomVerifier for testing and replace the real one in ZK Manager
         MockCircomVerifier mockVerifier = new MockCircomVerifier();
@@ -218,9 +217,9 @@ contract WAGABaseForkTest is Test {
         console.log("Verifier role:", vm.toString(verifierRole));
         
         // Verify role assignments
-        assertTrue(coffeeToken.hasRole(processorRole, TEST_PROCESSOR), "TEST_PROCESSOR should have PROCESSOR_ROLE");
-        assertTrue(coffeeToken.hasRole(verifierRole, TEST_VERIFIER), "TEST_VERIFIER should have VERIFIER_ROLE");
-        assertTrue(coffeeToken.hasRole(processorRole, TEST_ADMIN), "TEST_ADMIN should have PROCESSOR_ROLE");
+        assertTrue(coffeeToken.hasRole(processorRole, testProcessor), "testProcessor should have PROCESSOR_ROLE");
+        assertTrue(coffeeToken.hasRole(verifierRole, testVerifier), "testVerifier should have VERIFIER_ROLE");
+        assertTrue(coffeeToken.hasRole(processorRole, testAdmin), "testAdmin should have PROCESSOR_ROLE");
         
         console.log("Role management system verified on fork");
     }
@@ -232,7 +231,7 @@ contract WAGABaseForkTest is Test {
         console.log("=== Testing Batch Creation on Base Sepolia Fork ===");
         
         // Create a batch using standardized workflow
-        vm.startPrank(TEST_PROCESSOR);
+        vm.startPrank(testProcessor);
         
         uint256 batchId = coffeeToken.createBatch(
             block.timestamp,
@@ -262,7 +261,7 @@ contract WAGABaseForkTest is Test {
         console.log("=== Testing ZK Proof Integration on Fork ===");
         
         // Create a batch using standardized workflow
-        vm.prank(TEST_PROCESSOR);
+        vm.prank(testProcessor);
         uint256 batchId = coffeeToken.createBatch(
             block.timestamp,
             block.timestamp + 365 days,
@@ -274,7 +273,7 @@ contract WAGABaseForkTest is Test {
         );
         
         // Test ZK proof submission (using mock proofs for fork testing)
-        vm.startPrank(TEST_ADMIN);
+        vm.startPrank(testProcessor); // Use testProcessor directly since they have PROCESSOR_ROLE
         
         // Create a properly formatted 256-byte mock Groth16 proof for testing
         bytes memory mockPricingProof = new bytes(256);
@@ -282,15 +281,14 @@ contract WAGABaseForkTest is Test {
             mockPricingProof[i] = bytes1(uint8(i % 256));
         }
         
-        zkManager.addZKProofWithCaller(
-            TEST_PROCESSOR, // Use TEST_PROCESSOR as original caller since it has PROCESSOR_ROLE
+        zkManager.addComplianceZKProof(
             batchId,
+            "QUALITY_CERT", // Use quality certification compliance type
             mockPricingProof,
-            IZKVerifier.ProofType(0), // PRICE_COMPETITIVENESS
             "premium"
         );
         
-        console.log("Successfully added pricing proof for batch:", batchId);
+        console.log("Successfully added quality compliance proof for batch:", batchId);
         
         vm.stopPrank();
         
@@ -307,7 +305,7 @@ contract WAGABaseForkTest is Test {
         uint256 gasUsed;
         
         // Test batch creation gas usage
-        vm.startPrank(TEST_PROCESSOR);
+        vm.startPrank(testProcessor);
         
         gasStart = gasleft();
         uint256 batchId = coffeeToken.createBatch(
@@ -367,9 +365,9 @@ contract WAGABaseForkTest is Test {
         
         uint256 initialBlockNumber = block.number;
         
-        // Create multiple batches as TEST_PROCESSOR
+        // Create multiple batches as testProcessor
         uint256[] memory batchIds = new uint256[](3);
-        vm.startPrank(TEST_PROCESSOR);
+        vm.startPrank(testProcessor);
         for (uint256 i = 0; i < 3; i++) {
             batchIds[i] = coffeeToken.createBatch(
                 block.timestamp,
@@ -441,7 +439,7 @@ contract WAGABaseForkTest is Test {
         console.log("=== Testing Ethiopian Compliance Integration on Fork ===");
         
         // Create a batch for compliance testing
-        vm.prank(TEST_PROCESSOR);
+        vm.prank(testProcessor);
         uint256 batchId = coffeeToken.createBatch(
             block.timestamp,
             block.timestamp + 365 days,
@@ -455,7 +453,7 @@ contract WAGABaseForkTest is Test {
         console.log("Created batch for Ethiopian compliance test:", batchId);
         
         // Test compliance status checking
-        vm.startPrank(TEST_ADMIN);
+        vm.startPrank(testAdmin);
         
         // Verify ECX oracle is properly configured
         assertTrue(address(ecxOracle) != address(0), "ECX Oracle should be deployed");

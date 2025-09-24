@@ -12,7 +12,6 @@ import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
-import {HelperConfig} from "../../script/HelperConfig.s.sol";
 
 /**
  * @title StandardizedWorkflowTest

@@ -14,11 +14,7 @@ import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockCircomVerifier} from "../../src/MockCircomVerifier.sol";
 import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
 import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
-import {Groth16Verifier as PriceVerifier} from "../../src/verifiers/PricePrivacyCircuitVerifier.sol";
-import {Groth16Verifier as QualityVerifier} from "../../src/verifiers/QualityTierCircuitVerifier.sol";
-import {Groth16Verifier as SupplyChainVerifier} from "../../src/verifiers/SupplyChainPrivacyCircuitVerifier.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
-import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
 import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 
 contract WAGAZKIntegration is Test {
@@ -83,7 +79,7 @@ contract WAGAZKIntegration is Test {
         
         // Create a new ZKManager with MockCircomVerifier for testing ZK functionality
         // while keeping the original for other functions that don't do ZK verification
-        WAGAZKManager testZKManager = new WAGAZKManager(
+        WAGAZKManager testZkManager = new WAGAZKManager(
             address(coffeeToken),
             address(mockVerifier)
         );
@@ -91,11 +87,11 @@ contract WAGAZKIntegration is Test {
         // Grant necessary roles to the test ZK Manager
         // Note: MockCircomVerifier doesn't require role setup - it's a mock for testing
         // Grant roles through ConfigManager
-        coffeeToken.grantRole(keccak256("ADMIN_ROLE"), address(testZKManager));
-        coffeeToken.grantVerifierRole(address(testZKManager));
+        coffeeToken.grantRole(keccak256("ADMIN_ROLE"), address(testZkManager));
+        coffeeToken.grantVerifierRole(address(testZkManager));
         
         // Replace the zkManager reference for tests that need ZK verification
-        zkManager = testZKManager;
+        zkManager = testZkManager;
 
         vm.stopPrank();
     }
@@ -158,34 +154,34 @@ contract WAGAZKIntegration is Test {
         console.log("Supply chain proof added successfully");
 
         // Test adding EUDR deforestation proof (NEW)
-        bytes memory mockEUDRDeforestationProof = _createValidMockGroth16Proof();
-        zkManager.addEUDRComplianceZKProof(
+        bytes memory mockEudrDeforestationProof = _createValidMockGroth16Proof();
+        zkManager.addComplianceZKProof(
             batchId,
-            mockEUDRDeforestationProof,
-            IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
+            "EUDR_DEFORESTATION",
+            mockEudrDeforestationProof,
             "Deforestation-Free - EUDR Compliant"
         );
 
         console.log("EUDR deforestation proof added successfully");
 
         // Test adding EUDR geolocation proof (NEW)
-        bytes memory mockEUDRGeolocationProof = _createValidMockGroth16Proof();
-        zkManager.addEUDRComplianceZKProof(
+        bytes memory mockEudrGeolocationProof = _createValidMockGroth16Proof();
+        zkManager.addComplianceZKProof(
             batchId,
-            mockEUDRGeolocationProof,
-            IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION,
+            "EUDR_GEOLOCATION",
+            mockEudrGeolocationProof,
             "Geolocation Verified - Plot Size: 50ha"
         );
 
         console.log("EUDR geolocation proof added successfully");
 
         // Test adding ECTA permit proof (NEW)
-        bytes memory mockECTAProof = _createValidMockGroth16Proof();
+        bytes memory mockEctaProof = _createValidMockGroth16Proof();
         // Updated to match actual function signature
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
             "ECTA_PERMIT_VALIDITY",
-            mockECTAProof,
+            mockEctaProof,
             "ECTA Permit Valid - Export Approved"
         );
 
@@ -194,7 +190,7 @@ contract WAGAZKIntegration is Test {
         // Test adding quality certificate proof (NEW)
         bytes memory mockCertificateProof = _createValidMockGroth16Proof();
         // Updated to match actual function signature
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
             "QUALITY_CERTIFICATE_AUTHENTICITY",
             mockCertificateProof,
@@ -206,47 +202,50 @@ contract WAGAZKIntegration is Test {
         // Test adding origin verification proof (NEW)
         bytes memory mockOriginProof = _createValidMockGroth16Proof();
         // Updated to match actual function signature
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
-            "ORIGIN_VERIFICATION_PROOF",
+            "ORIGIN_VERIFICATION",
             mockOriginProof,
             "Origin Verified - Single-Origin Ethiopian"
         );
 
         console.log("Origin verification proof added successfully");
 
-        // Test adding BoE compliance proof (NEW)
-        bytes memory mockBoEProof = _createValidMockGroth16Proof();
-        // Updated to match actual function signature
-        zkManager.addEthiopianComplianceZKProof(
+        // Test adding quality certificate proof
+        bytes memory mockQualityCertProof = _createValidMockGroth16Proof();
+        zkManager.addComplianceZKProof(
             batchId,
-            "BOE_FOREX_COMPLIANCE",
-            mockBoEProof,
-            "BoE Forex Compliance - Export Approved"
+            "QUALITY_CERT",
+            mockQualityCertProof,
+            "Quality Certificate - Premium Grade"
         );
 
-        console.log("BoE compliance proof added successfully");
+        console.log("Quality certificate proof added successfully");
 
-        // Verify that all original proofs were added
-        bool hasOriginalProofs = zkManager.hasAllRequiredProofs(batchId);
-        assertTrue(hasOriginalProofs, "Batch should have all required original proofs");
-        console.log("All required original proofs verified successfully");
+        // Verify that specific compliance proofs were added
+        bool hasOriginProof = zkManager.hasComplianceProof(batchId, "ORIGIN_VERIFICATION");
+        assertTrue(hasOriginProof, "Batch should have origin verification proof");
+        
+        bool hasQualityProof = zkManager.hasComplianceProof(batchId, "QUALITY_CERT");
+        assertTrue(hasQualityProof, "Batch should have quality certificate proof");
+        console.log("Required compliance proofs verified successfully");
 
         // Verify that EUDR proofs were added
-        bool hasEUDRProofs = zkManager.hasZKProof(batchId);
-        assertTrue(hasEUDRProofs, "Batch should have EUDR compliance proofs");
+        bool hasEudrDeforestation = zkManager.hasComplianceProof(batchId, "EUDR_DEFORESTATION");
+        bool hasEudrGeolocation = zkManager.hasComplianceProof(batchId, "EUDR_GEOLOCATION");
+        assertTrue(hasEudrDeforestation && hasEudrGeolocation, "Batch should have EUDR compliance proofs");
         console.log("EUDR compliance proofs verified successfully");
 
         // Verify that Ethiopian proofs were added
-        bool hasEthiopianProofs = zkManager.hasAllRequiredProofs(batchId);
-        assertTrue(hasEthiopianProofs, "Batch should have Ethiopian compliance proofs");
+        bool hasEctaProof = zkManager.hasComplianceProof(batchId, "ECTA_PERMIT");
+        assertTrue(hasEctaProof, "Batch should have ECTA permit proof");
         console.log("Ethiopian compliance proofs verified successfully");
 
         // Test compliance validation
-        bool eudrCompliant = zkManager.validateEUDRZKCompliance(batchId);
+        (,, bool eudrCompliant) = zkManager.validateEUDRZKCompliance(batchId);
         assertTrue(eudrCompliant, "Batch should be EUDR compliant");
 
-        bool ethiopianCompliant = zkManager.validateEthiopianZKCompliance(batchId);
+        bool ethiopianCompliant = zkManager.validateCompliance(batchId, "ETHIOPIAN");
         assertTrue(ethiopianCompliant, "Batch should be Ethiopian compliant");
 
         console.log("All enhanced ZK compliance proofs verified successfully");
@@ -273,24 +272,24 @@ contract WAGAZKIntegration is Test {
         // Test EUDR deforestation proof addition
         vm.startPrank(admin);
         bytes memory deforestationProof = _createValidMockGroth16Proof();
-        zkManager.addEUDRComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
+            "EUDR_DEFORESTATION",
             deforestationProof,
-            IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
             "Deforestation-Free - Verified by Satellite Imagery"
         );
 
         // Test EUDR geolocation proof addition
         bytes memory geolocationProof = _createValidMockGroth16Proof();
-        zkManager.addEUDRComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
+            "EUDR_GEOLOCATION",
             geolocationProof,
-            IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION,
             "Geolocation Verified - GPS Coordinates: 8.5476N, 39.2695E"
         );
 
         // Verify EUDR compliance
-        bool eudrCompliant = zkManager.validateEUDRZKCompliance(batchId);
+        (,, bool eudrCompliant) = zkManager.validateEUDRZKCompliance(batchId);
         assertTrue(eudrCompliant, "Batch should be EUDR compliant");
 
         // TODO: Update to match actual WAGAZKManager interface
@@ -304,7 +303,7 @@ contract WAGAZKIntegration is Test {
         // assertEq(geolocationClaim, "Geolocation Verified - GPS Coordinates: 8.5476N, 39.2695E");
         
         // Use available function instead
-        (bool hasDeforestation, bool hasGeolocation, bool hasFullCompliance) = zkManager.getEUDRZKComplianceStatus(batchId);
+        (bool hasDeforestation, bool hasGeolocation, bool hasFullCompliance) = zkManager.validateEUDRZKCompliance(batchId);
         assertTrue(hasDeforestation, "Should have deforestation proof");
         assertTrue(hasGeolocation, "Should have geolocation proof");
         assertTrue(hasFullCompliance, "Should have full EUDR compliance");
@@ -335,7 +334,7 @@ contract WAGAZKIntegration is Test {
         // ECTA permit validity
         bytes memory ectaProof = _createValidMockGroth16Proof();
         // Updated to match actual function signature
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
             "ECTA_PERMIT_VALIDITY",
             ectaProof,
@@ -345,7 +344,7 @@ contract WAGAZKIntegration is Test {
         // Quality certificate authenticity
         bytes memory qualityProof = _createValidMockGroth16Proof();
         // Updated to match actual function signature
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
             "QUALITY_CERTIFICATE_AUTHENTICITY",
             qualityProof,
@@ -355,7 +354,7 @@ contract WAGAZKIntegration is Test {
         // Origin verification
         bytes memory originProof = _createValidMockGroth16Proof();
         // Updated to match actual function signature
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
             "ORIGIN_VERIFICATION_PROOF",
             originProof,
@@ -365,7 +364,7 @@ contract WAGAZKIntegration is Test {
         // BoE forex compliance
         bytes memory boeProof = _createValidMockGroth16Proof();
         // Updated to match actual function signature
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
             "BOE_FOREX_COMPLIANCE",
             boeProof,
@@ -373,13 +372,19 @@ contract WAGAZKIntegration is Test {
         );
 
         // Verify Ethiopian compliance
-        bool ethiopianCompliant = zkManager.validateEthiopianZKCompliance(batchId);
+        bool ethiopianCompliant = zkManager.validateCompliance(batchId, "ETHIOPIAN");
         assertTrue(ethiopianCompliant, "Batch should be Ethiopian compliant");
 
-        // Get compliance claims
-        // Updated to use available function
-        string memory ethiopianClaim = zkManager.generateEthiopianComplianceClaim(batchId);
-        assertEq(ethiopianClaim, "BoE Forex Compliance - Export Declaration Filed"); // Last added proof
+        // Verify Ethiopian compliance status - individual proof checks
+        bool hasEctaProof = zkManager.hasComplianceProof(batchId, "ECTA_PERMIT_VALIDITY");
+        bool hasQualityProof = zkManager.hasComplianceProof(batchId, "QUALITY_CERTIFICATE_AUTHENTICITY");
+        bool hasOriginProof = zkManager.hasComplianceProof(batchId, "ORIGIN_VERIFICATION_PROOF");
+        bool hasBoeProof = zkManager.hasComplianceProof(batchId, "BOE_FOREX_COMPLIANCE");
+        
+        assertTrue(hasEctaProof, "Should have ECTA permit proof");
+        assertTrue(hasQualityProof, "Should have quality certificate proof");
+        assertTrue(hasOriginProof, "Should have origin verification proof");
+        assertTrue(hasBoeProof, "Should have BoE forex compliance proof");
 
         console.log("Ethiopian compliance ZK integration test passed");
         vm.stopPrank();
@@ -410,25 +415,24 @@ contract WAGAZKIntegration is Test {
         zkManager.addZKProof(batchId, _createValidMockGroth16Proof(), IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE, "Full traceability verified");
 
         // EUDR compliance proofs
-        zkManager.addEUDRComplianceZKProof(batchId, _createValidMockGroth16Proof(), IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE, "Deforestation-free verified");
-        zkManager.addEUDRComplianceZKProof(batchId, _createValidMockGroth16Proof(), IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION, "Geolocation verified");
+        zkManager.addComplianceZKProof(batchId, "EUDR_DEFORESTATION", _createValidMockGroth16Proof(), "Deforestation-free verified");
+        zkManager.addComplianceZKProof(batchId, "EUDR_GEOLOCATION", _createValidMockGroth16Proof(), "Geolocation verified");
 
         // Ethiopian compliance proofs
-        // Updated to match actual function signature
-        zkManager.addEthiopianComplianceZKProof(batchId, "ECTA_PERMIT_VALIDITY", _createValidMockGroth16Proof(), "ECTA permit valid");
-        zkManager.addEthiopianComplianceZKProof(batchId, "QUALITY_CERTIFICATE_AUTHENTICITY", _createValidMockGroth16Proof(), "Quality certificate authentic");
-        zkManager.addEthiopianComplianceZKProof(batchId, "ORIGIN_VERIFICATION_PROOF", _createValidMockGroth16Proof(), "Origin verified");
-        zkManager.addEthiopianComplianceZKProof(batchId, "BOE_FOREX_COMPLIANCE", _createValidMockGroth16Proof(), "BoE forex compliant");
+        // Updated to match unified compliance system
+        zkManager.addComplianceZKProof(batchId, "ECTA_PERMIT", _createValidMockGroth16Proof(), "ECTA permit valid");
+        zkManager.addComplianceZKProof(batchId, "QUALITY_CERT", _createValidMockGroth16Proof(), "Quality certificate authentic");
+        zkManager.addComplianceZKProof(batchId, "ORIGIN_VERIFICATION", _createValidMockGroth16Proof(), "Origin verified");
 
         // Verify complete compliance
-        bool hasOriginalProofs = zkManager.hasAllRequiredProofs(batchId);
-        bool hasEUDRProofs = zkManager.hasZKProof(batchId);
-        bool hasEthiopianProofs = zkManager.hasAllRequiredProofs(batchId);
-        bool eudrCompliant = zkManager.validateEUDRZKCompliance(batchId);
-        bool ethiopianCompliant = zkManager.validateEthiopianZKCompliance(batchId);
+        bool hasOriginalProofs = zkManager.hasComplianceProof(batchId, "QUALITY_CERT");
+        bool hasEudrProofs = zkManager.hasComplianceProof(batchId, "EUDR_DEFORESTATION") && zkManager.hasComplianceProof(batchId, "EUDR_GEOLOCATION");
+        bool hasEthiopianProofs = zkManager.hasComplianceProof(batchId, "ECTA_PERMIT");
+        (,, bool eudrCompliant) = zkManager.validateEUDRZKCompliance(batchId);
+        bool ethiopianCompliant = zkManager.validateCompliance(batchId, "ETHIOPIAN");
 
         assertTrue(hasOriginalProofs, "Should have original proofs");
-        assertTrue(hasEUDRProofs, "Should have EUDR proofs");
+        assertTrue(hasEudrProofs, "Should have EUDR proofs");
         assertTrue(hasEthiopianProofs, "Should have Ethiopian proofs");
         assertTrue(eudrCompliant, "Should be EUDR compliant");
         assertTrue(ethiopianCompliant, "Should be Ethiopian compliant");

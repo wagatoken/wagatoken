@@ -12,16 +12,10 @@ import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
-// WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockOfframpPartner} from "../../src/MockOfframpPartner.sol";
-import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
-import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
-import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
-import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {TestHelperUtilities} from "../TestHelperUtilities.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.sol";
 import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
@@ -48,15 +42,8 @@ contract CrossContractIntegrationTest is Test {
     WAGACoffeeRedemption public redemptionContract;
     WAGATreasury public treasury;
     PrivacyLayer public privacyLayer;
-    // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
     CircomVerifier public circomVerifier;
     MockUSDC public usdcToken;
-    
-    // Additional contracts now included in deployment
-    WAGACDPIntegration public cdpIntegration;
-    WAGAProofOfReserve public proofOfReserve;
-    WAGAInventoryManagerMVP public inventoryManager;
-    WAGAECXPriceOracle public ecxOracle;
     
     // Test utilities
     TestHelperUtilities public testUtils;
@@ -87,11 +74,11 @@ contract CrossContractIntegrationTest is Test {
             privacyLayer,
             treasury,
             redemptionContract,
-            cdpIntegration, // Now included in deployment
-            proofOfReserve, // Now included in deployment
-            inventoryManager, // Now included in deployment
+            ,  // cdpIntegration - not used in this test
+            ,  // proofOfReserve - not used in this test
+            ,  // inventoryManager - not used in this test
             ethiopianCompliance,
-            ecxOracle, // Now included in deployment
+            ,  // ecxOracle - not used in this test
             circomVerifier,
             helperConfig
         ) = deployer.run();
@@ -206,7 +193,7 @@ contract CrossContractIntegrationTest is Test {
         assertTrue(ethiopianCompliance.validateEUDRCompliance(batchId), "EthiopianCompliance should have EUDR certificate");
 
         // Verify BatchManager knows about EUDR compliance
-        (bool deforestationCompliant, bool geolocationVerified, bool fullyCompliant) =
+        (, , bool fullyCompliant) =
             batchManager.validateEUDRZKCompliance(batchId);
         assertTrue(fullyCompliant, "Batch should be fully EUDR compliant");
 
@@ -245,7 +232,7 @@ contract CrossContractIntegrationTest is Test {
         vm.stopPrank();
 
         // Verify ZKManager has the proof
-        assertTrue(zkManager.hasAllRequiredProofs(batchId), "ZKManager should have the proof");
+        assertTrue(circomVerifier.hasAllRequiredProofs(batchId), "ZKManager should have the proof");
 
         // Verify CircomVerifier recorded the proof
         assertTrue(circomVerifier.hasAllRequiredProofs(batchId), "CircomVerifier should have recorded the proof");
@@ -367,10 +354,10 @@ contract CrossContractIntegrationTest is Test {
 
         // Verify seller ID flows through the system
         (
-            address redemptionConsumer,
+            /*address redemptionConsumer*/,
             uint64 redemptionSellerId,
-            uint256 redemptionBatchId,
-            uint256 quantity,
+            /*uint256 redemptionBatchId*/,
+            /*uint256 quantity*/,
             ,
             ,
             ,
@@ -503,16 +490,16 @@ contract CrossContractIntegrationTest is Test {
             })
         );
 
-        zkManager.addEUDRComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
+            "EUDR_DEFORESTATION",
             testUtils.generateMockZKProof(),
-            IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
             "Deforestation-Free Verified"
         );
 
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
-            "ECTA",
+            "ECTA_PERMIT",
             testUtils.generateMockZKProof(),
             "ECTA Permit Valid"
         );
@@ -553,8 +540,8 @@ contract CrossContractIntegrationTest is Test {
         assertTrue(ethiopianCompliance.getECTAPermit(batchId).isValid, "Should have valid ECTA permit");
 
         // ZKManager state
-        assertTrue(zkManager.validateEUDRZKCompliance(batchId), "Should have EUDR proofs");
-        assertTrue(zkManager.validateEthiopianZKCompliance(batchId), "Should have Ethiopian proofs");
+        assertTrue(zkManager.validateCompliance(batchId, "EUDR"), "Should have EUDR proofs");
+        assertTrue(zkManager.validateCompliance(batchId, "ETHIOPIAN"), "Should have Ethiopian proofs");
 
         // Treasury state
         assertTrue(treasury.hasPaidForBatch(consumer, batchId), "Should have payment record");

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "./Interfaces/IWAGACoffeeToken.sol";
-import "./Interfaces/IZKVerifier.sol";
-import "./Interfaces/IComplianceManager.sol";
-import "./WAGACoffeeTokenCore.sol";
-import "./Interfaces/IEthiopianCompliance.sol";
+import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
+import {IZKVerifier} from "./Interfaces/IZKVerifier.sol";
+import {IComplianceManager} from "./Interfaces/IComplianceManager.sol";
+import {WAGACoffeeTokenCore} from "./WAGACoffeeTokenCore.sol";
+import {IEthiopianCompliance} from "./Interfaces/IEthiopianCompliance.sol";
 
 /**
  * @title WAGAZKManager

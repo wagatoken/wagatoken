@@ -3,11 +3,11 @@ pragma solidity ^0.8.19;
 
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {ERC1155Supply} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
-import "./WAGAConfigManager.sol";
-import "./Interfaces/IWAGABatchManager.sol";
-import "./WAGAZKManager.sol";
-import "./WAGAViewFunctions.sol";
-
+import {WAGAConfigManager} from "./WAGAConfigManager.sol";
+import {IWAGABatchManager} from "./Interfaces/IWAGABatchManager.sol";
+import {WAGAZKManager} from "./WAGAZKManager.sol";
+import {WAGAViewFunctions} from "./WAGAViewFunctions.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 /**
  * @title WAGACoffeeTokenCore 
  * @dev OPTIMIZED Core ERC1155 token functionality - LEAN VERSION

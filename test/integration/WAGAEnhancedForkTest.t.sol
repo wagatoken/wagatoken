@@ -19,8 +19,7 @@ import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 // WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {WAGACoffeeViews} from "../../src/WAGACoffeeViews.sol";
-import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
-import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
+
 import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 
@@ -632,11 +631,12 @@ contract WAGAEnhancedForkTest is Test {
         for (uint i = 0; i < 256; i++) {
             pricingProof[i] = bytes1(uint8((i + 10) % 256));
         }
-        zkManager.addZKProofWithCaller(
-            PROCESSOR_USER, // Use PROCESSOR_USER as it has PROCESSOR_ROLE
+        // Need to call as PROCESSOR_USER since they have PROCESSOR_ROLE
+        vm.prank(PROCESSOR_USER);
+        zkManager.addComplianceZKProof(
             batchId,
+            "QUALITY_CERT", // Use quality certification compliance type
             pricingProof,
-            IZKVerifier.ProofType(0), // PRICE_COMPETITIVENESS
             "premium"
         );
         console.log("Added pricing proof");
@@ -646,11 +646,11 @@ contract WAGAEnhancedForkTest is Test {
         for (uint i = 0; i < 256; i++) {
             qualityProof[i] = bytes1(uint8((i + 20) % 256));
         }
-        zkManager.addZKProofWithCaller(
-            PROCESSOR_USER, // Use PROCESSOR_USER as it has PROCESSOR_ROLE
+        vm.prank(PROCESSOR_USER);
+        zkManager.addComplianceZKProof(
             batchId,
+            "QUALITY_CERT", // QUALITY_STANDARDS maps to QUALITY_CERT
             qualityProof,
-            IZKVerifier.ProofType(1), // QUALITY_STANDARDS
             "premium"
         );
         console.log("Added quality proof");
@@ -660,11 +660,11 @@ contract WAGAEnhancedForkTest is Test {
         for (uint i = 0; i < 256; i++) {
             supplyChainProof[i] = bytes1(uint8((i + 30) % 256));
         }
-        zkManager.addZKProofWithCaller(
-            PROCESSOR_USER, // Use PROCESSOR_USER as it has PROCESSOR_ROLE
+        vm.prank(PROCESSOR_USER);
+        zkManager.addComplianceZKProof(
             batchId,
+            "ORIGIN_VERIFICATION", // SUPPLY_CHAIN_PROVENANCE maps to ORIGIN_VERIFICATION
             supplyChainProof,
-            IZKVerifier.ProofType(2), // SUPPLY_CHAIN_PROVENANCE
             "compliance"
         );
         console.log("Added supply chain proof");
@@ -836,11 +836,11 @@ contract WAGAEnhancedForkTest is Test {
             exportComplianceProof[i] = bytes1(uint8((i + 50) % 256));
         }
         
-        zkManager.addZKProofWithCaller(
-            PROCESSOR_USER,
+        vm.prank(PROCESSOR_USER);
+        zkManager.addComplianceZKProof(
             exportBatchId,
+            "ORIGIN_VERIFICATION", // SUPPLY_CHAIN_PROVENANCE maps to ORIGIN_VERIFICATION for export compliance
             exportComplianceProof,
-            IZKVerifier.ProofType(2), // SUPPLY_CHAIN_PROVENANCE for export compliance
             "export_compliant"
         );
         console.log("Added export compliance proof for batch:", exportBatchId);

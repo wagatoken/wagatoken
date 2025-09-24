@@ -16,7 +16,6 @@ import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
-import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
 import {MockFunctionsRouter} from "../mocks/MockFunctionsRouter.sol";
 import {MockFunctionsHelper} from "../mocks/MockFunctionsHelper.sol";
 

@@ -11,7 +11,6 @@ import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockCircomVerifier} from "../../src/MockCircomVerifier.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
-import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
 import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
 import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
@@ -135,11 +134,10 @@ contract WAGAPrivacyIntegration is Test {
         // Test pricing proof verification
         vm.startPrank(admin);
         bytes memory pricingProof = _createValidMockGroth16Proof();
-        zkManager.addZKProofWithCaller(
-            admin, // original caller
+        zkManager.addComplianceZKProof(
             batchId,
+            "QUALITY_CERT", // Use quality certification compliance type for pricing
             pricingProof,
-            IZKVerifier.ProofType.PRICE_COMPETITIVENESS,
             "premium"
         );
 
@@ -296,20 +294,20 @@ contract WAGAPrivacyIntegration is Test {
         );
         vm.stopPrank();
 
-        // Add EUDR compliance proofs
+                // Add EUDR compliance proofs
         vm.startPrank(admin);
 
-        zkManager.addEUDRComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
+            "EUDR_DEFORESTATION",
             _createValidMockGroth16Proof(),
-            IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
             "Deforestation-Free - Verified"
         );
 
-        zkManager.addEUDRComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
+            "EUDR_GEOLOCATION",
             _createValidMockGroth16Proof(),
-            IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION,
             "Geolocation Verified - GPS Confirmed"
         );
 
@@ -454,11 +452,10 @@ contract WAGAPrivacyIntegration is Test {
         // Test quality proof verification
         vm.startPrank(admin);
         bytes memory qualityProof = _createValidMockGroth16Proof();
-        zkManager.addZKProofWithCaller(
-            admin, // original caller
+        zkManager.addComplianceZKProof(
             batchId,
+            "QUALITY_CERT", // QUALITY_STANDARDS maps to QUALITY_CERT
             qualityProof,
-            IZKVerifier.ProofType(1), // QUALITY_STANDARDS
             "premium"
         );
 
@@ -486,11 +483,10 @@ contract WAGAPrivacyIntegration is Test {
         // Test supply chain proof verification
         vm.startPrank(admin);
         bytes memory supplyChainProof = _createValidMockGroth16Proof();
-        zkManager.addZKProofWithCaller(
-            admin, // original caller
+        zkManager.addComplianceZKProof(
             batchId,
+            "ORIGIN_VERIFICATION", // SUPPLY_CHAIN_PROVENANCE maps to ORIGIN_VERIFICATION
             supplyChainProof,
-            IZKVerifier.ProofType(2), // SUPPLY_CHAIN_PROVENANCE
             "compliance"
         );
 

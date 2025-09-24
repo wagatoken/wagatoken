@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {Test} from "forge-std/Test.sol";
-import {console} from "forge-std/console.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
 import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
 // WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.sol";
-import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 
 /**
  * @title WAGAEthiopianComplianceTest
@@ -209,11 +207,11 @@ contract WAGAEthiopianComplianceTest is Test {
         (
             uint64 storedSellerId,
             bytes11 offrampSwift,
-            bytes11 receivingSwift,
+            /*bytes11 receivingSwift*/,
             uint256 usdAmount,
-            uint256 usdReceived,
-            IEthiopianCompliance.TransferStage currentStage,
-            bool sellerPaid
+            /*uint256 usdReceived*/,
+            /*IEthiopianCompliance.TransferStage currentStage*/,
+            /*bool sellerPaid*/
         ) = compliance.getFiatTransfer(BATCH_ID, buyer);
 
         assertEq(storedSellerId, sellerId);
@@ -515,7 +513,7 @@ contract WAGAEthiopianComplianceTest is Test {
         (
             uint64 sellerId,
             bytes11 offrampSwift,
-            bytes11 receivingSwift,
+            /*bytes11 receivingSwift*/,
             uint256 usdAmount,
             uint256 usdReceived,
             IEthiopianCompliance.TransferStage finalStage,

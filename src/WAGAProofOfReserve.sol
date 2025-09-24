@@ -2,7 +2,6 @@
 pragma solidity ^0.8.18;
 
 import {WAGAChainlinkFunctionsBase} from "./WAGAChainlinkFunctionsBase.sol";
-import {WAGACoffeeTokenCore} from "./WAGACoffeeTokenCore.sol";
 import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IWAGABatchManager} from "./Interfaces/IWAGABatchManager.sol";

@@ -8,19 +8,13 @@ import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
 import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
 import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
 import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
-import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
-import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
-// WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockCircomVerifier} from "../../src/MockCircomVerifier.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
-import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
-import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
-import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.sol";
 import {IPrivacyLayer} from "../../src/Interfaces/IPrivacyLayer.sol";
 
@@ -41,19 +35,12 @@ contract EUDRComplianceIntegrationTest is Test {
     WAGACoffeeTokenCore public coffeeToken;
     WAGABatchManager public batchManager;
     WAGAZKManager public zkManager;
-    WAGAProofOfReserve public proofOfReserve;
-    WAGAInventoryManagerMVP public inventoryManager;
     WAGACoffeeRedemption public redemption;
     WAGAEthiopianCompliance public ethiopianCompliance;
     WAGATreasury public treasury;
-    // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
     CircomVerifier public circomVerifier;
     MockCircomVerifier public mockVerifier;
     PrivacyLayer public privacyLayer;
-    
-    // Additional contracts now included in deployment
-    WAGACDPIntegration public cdpIntegration;
-    WAGAECXPriceOracle public ecxOracle;
     MockUSDC public usdc;
 
     // Test accounts
@@ -88,11 +75,11 @@ contract EUDRComplianceIntegrationTest is Test {
             privacyLayer,
             treasury,
             redemption,
-            cdpIntegration, // Now included in deployment
-            proofOfReserve,
-            inventoryManager,
+            ,  // cdpIntegration - not used in this test
+            ,  // proofOfReserve - not used in this test
+            ,  // inventoryManager - not used in this test
             ethiopianCompliance,
-            ecxOracle, // Now included in deployment
+            ,  // ecxOracle - not used in this test
             circomVerifier,
             helperConfig
         ) = deployer.run();
@@ -205,18 +192,18 @@ contract EUDRComplianceIntegrationTest is Test {
         vm.startPrank(admin);
 
         // Add EUDR deforestation proof
-        zkManager.addEUDRComplianceZKProof(
+        zkManager.addComplianceZKProof(
             testBatchId,
+            "EUDR_DEFORESTATION",
             _createValidMockGroth16Proof(),
-            IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
             "Deforestation-Free - Satellite Verified"
         );
 
         // Add EUDR geolocation proof
-        zkManager.addEUDRComplianceZKProof(
+        zkManager.addComplianceZKProof(
             testBatchId,
+            "EUDR_GEOLOCATION",
             _createValidMockGroth16Proof(),
-            IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION,
             "Geolocation Verified - GPS Confirmed"
         );
 
@@ -265,10 +252,10 @@ contract EUDRComplianceIntegrationTest is Test {
         console.log("Minted tokens to consumer");
 
         // Step 6: Verify EUDR compliance status
-        bool eudrCompliant = zkManager.validateEUDRZKCompliance(testBatchId);
+        bool eudrCompliant = zkManager.validateCompliance(testBatchId, "EUDR");
         assertTrue(eudrCompliant, "Batch should be EUDR compliant");
 
-        bool hasEUDRProofs = zkManager.validateEUDRZKCompliance(testBatchId);
+        bool hasEUDRProofs = zkManager.validateCompliance(testBatchId, "EUDR");
         assertTrue(hasEUDRProofs, "Batch should have EUDR proofs");
 
         console.log("Verified EUDR compliance status");
@@ -370,30 +357,30 @@ contract EUDRComplianceIntegrationTest is Test {
         // Step 3: Add Ethiopian compliance proofs
         vm.startPrank(admin);
 
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
-            "ECTA",
+            "ECTA_PERMIT",
             _createValidMockGroth16Proof(),
             "ECTA Export Permit Valid - NBE Approved"
         );
 
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
-            "QUALITY",
+            "QUALITY_CERT",
             _createValidMockGroth16Proof(),
             "Quality Certificate Authentic - SCA Certified"
         );
 
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
-            "ORIGIN",
+            "ORIGIN_VERIFICATION",
             _createValidMockGroth16Proof(),
             "Origin Verified - Sidamo Region"
         );
 
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
-            "BOE",
+            "ECTA_PERMIT",
             _createValidMockGroth16Proof(),
             "BoE Forex Compliance - Export Declaration Filed"
         );
@@ -403,8 +390,8 @@ contract EUDRComplianceIntegrationTest is Test {
         console.log("Added both EUDR and Ethiopian compliance proofs");
 
         // Step 4: Verify dual compliance
-        bool eudrCompliant = zkManager.validateEUDRZKCompliance(batchId);
-        bool ethiopianCompliant = zkManager.validateEthiopianZKCompliance(batchId);
+        bool eudrCompliant = zkManager.validateCompliance(batchId, "EUDR");
+        bool ethiopianCompliant = zkManager.validateCompliance(batchId, "ETHIOPIAN");
 
         assertTrue(eudrCompliant, "Should be EUDR compliant");
         assertTrue(ethiopianCompliant, "Should be Ethiopian compliant");
@@ -435,13 +422,13 @@ contract EUDRComplianceIntegrationTest is Test {
             ,
             ,
             bool requiresEthiopianCompliance,
-            bool requiresEUDRCompliance_,
+            bool requiresEUDRCompliance,
             ,
             ,
         ) = redemption.getEnhancedRedemptionDetails(redemptionId);
 
         assertTrue(requiresEthiopianCompliance, "Should require Ethiopian compliance");
-        assertTrue(requiresEUDRCompliance_, "Should require EUDR compliance");
+        assertTrue(requiresEUDRCompliance, "Should require EUDR compliance");
 
         console.log("=== EUDR + Ethiopian Export Compliance Workflow Complete ===");
     }
@@ -628,10 +615,10 @@ contract EUDRComplianceIntegrationTest is Test {
 
         // Add only deforestation proof (no geolocation)
         vm.startPrank(admin);
-        zkManager.addEUDRComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
+            "EUDR_DEFORESTATION",
             _createValidMockGroth16Proof(),
-            IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
             "Deforestation compliant"
         );
         vm.stopPrank();

@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import {WAGACoffeeTokenCore} from "./WAGACoffeeTokenCore.sol";
 import {IPrivacyLayer} from "./Interfaces/IPrivacyLayer.sol";
 import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
-import {IZKVerifier} from "./Interfaces/IZKVerifier.sol";
 import {IWAGAZKManager} from "./Interfaces/IWAGAZKManager.sol";
 import {IWAGABatchManager} from "./Interfaces/IWAGABatchManager.sol";
 
@@ -367,7 +365,7 @@ contract PrivacyLayer is IPrivacyLayer {
     function getEUDRComplianceClaims(
         uint256 batchId,
         address accessor
-    ) external returns (ZKComplianceClaims memory claims) {
+    ) external view returns (ZKComplianceClaims memory claims) {
         ZKComplianceClaims memory fullClaims = eudrComplianceClaims[batchId];
         SelectiveDisclosureRules memory rules = eudrDisclosureRules[batchId];
         uint8 userRoleLevel = _getEnhancedRoleLevel(accessor);
@@ -531,13 +529,13 @@ contract PrivacyLayer is IPrivacyLayer {
     /*                            INTERNAL HELPER FUNCTIONS                       */
     /* -------------------------------------------------------------------------- */
 
-    /**
+    /*
      * @dev Check if an address is the creator of a batch
      * @param batchId The batch identifier
      * @param account The address to check
      * @return isCreator Whether the address is the batch creator
      */
-    function _isBatchCreator(uint256 batchId, address account) internal view returns (bool isCreator) {
+    function _isBatchCreator(uint256 /*batchId*/, address /*account*/) internal pure returns (bool /*isCreator*/) {
         // This would need to be implemented based on how batch creators are tracked
         // For now, return false - should be overridden in child contracts
         return false;

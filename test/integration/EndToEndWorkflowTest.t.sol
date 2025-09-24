@@ -21,9 +21,7 @@ import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {MockOfframpPartner} from "../../src/MockOfframpPartner.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {TestHelperUtilities} from "../TestHelperUtilities.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.sol";
-import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 
 /**
  * @title EndToEndWorkflowTest
@@ -236,26 +234,25 @@ contract EndToEndWorkflowTest is Test {
 
         // Submit EUDR ZK proofs
         bytes memory eudrDeforestationProof = testUtils.generateMockZKProof();
-        zkManager.addEUDRComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
+            "EUDR_DEFORESTATION",
             eudrDeforestationProof,
-            IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
             eudrData.deforestationStatus
         );
 
         bytes memory eudrGeolocationProof = testUtils.generateMockZKProof();
-        zkManager.addEUDRComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
+            "EUDR_GEOLOCATION",
             eudrGeolocationProof,
-            IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION,
             eudrData.geolocationData
         );
 
         vm.stopPrank();
 
         // Verify EUDR compliance
-        (bool deforestationCompliant, bool geolocationVerified, bool fullyCompliant) =
-            batchManager.validateEUDRZKCompliance(batchId);
+        bool fullyCompliant = zkManager.validateCompliance(batchId, "EUDR");
         assertTrue(fullyCompliant, "Batch should be fully EUDR compliant");
 
         console.log("Batch created with EUDR compliance:", batchId);
@@ -315,31 +312,31 @@ contract EndToEndWorkflowTest is Test {
 
         // Submit Ethiopian compliance ZK proofs
         bytes memory ectaProof = testUtils.generateMockZKProof();
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
-            "ECTA",
+            "ECTA_PERMIT",
             ectaProof,
             ethData.ectaPermitNumber
         );
 
         bytes memory qualityProof = testUtils.generateMockZKProof();
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
-            "QUALITY",
+            "QUALITY_CERT",
             qualityProof,
             ethData.qualityCertificateNumber
         );
 
         bytes memory originProof = testUtils.generateMockZKProof();
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
-            "ORIGIN",
+            "ORIGIN_VERIFICATION",
             originProof,
             "Yirgacheffe Origin Verified"
         );
 
         bytes memory boeProof = testUtils.generateMockZKProof();
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
             "BOE",
             boeProof,
@@ -349,7 +346,7 @@ contract EndToEndWorkflowTest is Test {
         vm.stopPrank();
 
         // Verify Ethiopian compliance
-        bool ethiopianCompliant = zkManager.validateEthiopianZKCompliance(batchId);
+        bool ethiopianCompliant = zkManager.validateCompliance(batchId, "ETHIOPIAN");
         assertTrue(ethiopianCompliant, "Batch should be Ethiopian compliant");
 
         console.log("Ethiopian compliance registered for batch:", batchId);
@@ -522,8 +519,10 @@ contract EndToEndWorkflowTest is Test {
 
         // Verify complete workflow
         assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be created");
-        assertTrue(zkManager.validateEUDRZKCompliance(batchId), "Batch should have EUDR proofs");
-        assertTrue(zkManager.validateEthiopianZKCompliance(batchId), "Batch should have Ethiopian ZK compliance");
+        bool eudrCompliant = zkManager.validateCompliance(batchId, "EUDR");
+        assertTrue(eudrCompliant, "Batch should have EUDR proofs");
+        bool ethiopianComplianceCheck = zkManager.validateCompliance(batchId, "ETHIOPIAN");
+        assertTrue(ethiopianComplianceCheck, "Batch should have Ethiopian ZK compliance");
         assertTrue(treasury.hasPaidForBatch(consumer, batchId), "Consumer payment should be recorded");
         assertTrue(treasury.hasOfframpTransferExecuted(batchId, consumer), "Offramp transfer should be executed");
         assertTrue(isFulfilled, "Redemption should be completed");
@@ -546,7 +545,7 @@ contract EndToEndWorkflowTest is Test {
     /**
      * @dev Test gas optimization for SWIFT codes vs addresses
      */
-    function testSwiftCodeGasOptimization() public {
+    function testSwiftCodeGasOptimization() public view {
         console.log("=== TESTING SWIFT CODE GAS OPTIMIZATION ===");
 
         uint256 numTransactions = 1000;
@@ -573,7 +572,7 @@ contract EndToEndWorkflowTest is Test {
     /**
      * @dev Test gas optimization for seller IDs vs addresses
      */
-    function testSellerIdGasOptimization() public {
+    function testSellerIdGasOptimization() public view {
         console.log("=== TESTING SELLER ID GAS OPTIMIZATION ===");
 
         uint256 numTransactions = 500;
@@ -640,15 +639,16 @@ contract EndToEndWorkflowTest is Test {
         // Test ZK manager integration
         vm.startPrank(complianceManager);
         bytes memory proof = testUtils.generateMockZKProof();
-        zkManager.addEUDRComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
+            "EUDR_DEFORESTATION",
             proof,
-            IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
             "Deforestation-Free Verified"
         );
         vm.stopPrank();
 
-        assertTrue(zkManager.validateEUDRZKCompliance(batchId), "ZKManager should have EUDR proofs");
+        bool eudrCompliant = zkManager.validateCompliance(batchId, "EUDR");
+        assertTrue(eudrCompliant, "ZKManager should have EUDR proofs");
 
         console.log("Cross-contract data flow test passed");
     }
@@ -696,20 +696,20 @@ contract EndToEndWorkflowTest is Test {
 
         (
             address redemptionConsumer,
-            uint64 redemptionSellerId,
+            /*uint64 redemptionSellerId*/,
             uint256 redemptionBatchId,
             uint256 quantity,
             ,
             ,
             ,
-            bool requiresEUDRCompliance,
+            bool requiresEudrCompliance,
             ,
         ) = redemptionContract.getEnhancedRedemptionDetails(redemptionId);
 
         assertEq(redemptionConsumer, consumer, "Legacy redemption consumer should match");
         assertEq(redemptionBatchId, batchId, "Legacy redemption batch should match");
         assertEq(quantity, 50, "Legacy redemption quantity should match");
-        assertFalse(requiresEUDRCompliance, "Legacy redemption should not require EUDR");
+        assertFalse(requiresEudrCompliance, "Legacy redemption should not require EUDR");
 
         console.log("Backward compatibility test passed");
     }

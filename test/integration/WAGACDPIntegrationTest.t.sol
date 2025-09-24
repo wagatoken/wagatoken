@@ -244,7 +244,7 @@ contract WAGACDPIntegrationTest is Test {
         assertEq(storedAccount, smartAccount);
     }
 
-    function testGetNonexistentSmartAccount() public view {
+    function testGetNonexistentSmartAccount() public {
         address newUser = makeAddr("newUser");
         address storedAccount = cdpIntegration.getUserSmartAccount(newUser);
         assertEq(storedAccount, address(0));

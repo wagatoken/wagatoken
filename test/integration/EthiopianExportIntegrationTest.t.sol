@@ -19,7 +19,6 @@ import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
 import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
 import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
-import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.sol";
 
 /**
@@ -171,31 +170,31 @@ contract EthiopianExportIntegrationTest is Test {
         vm.startPrank(admin);
 
         // ECTA permit validity
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             testBatchId,
-            "ECTA",
+            "ECTA_PERMIT",
             _createValidMockGroth16Proof(),
             "ECTA Export Permit Valid - NBE Approved"
         );
 
         // Quality certificate authenticity
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             testBatchId,
-            "QUALITY",
+            "QUALITY_CERT",
             _createValidMockGroth16Proof(),
             "Quality Certificate Authentic - SCA Certified"
         );
 
         // Origin verification
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             testBatchId,
-            "ORIGIN",
+            "ORIGIN_VERIFICATION",
             _createValidMockGroth16Proof(),
             "Origin Verified - Yirgacheffe Region"
         );
 
         // BoE forex compliance
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             testBatchId,
             "BOE",
             _createValidMockGroth16Proof(),
@@ -207,10 +206,10 @@ contract EthiopianExportIntegrationTest is Test {
         console.log("Added Ethiopian compliance proofs");
 
         // Step 3: Verify Ethiopian compliance
-        bool ethiopianCompliant = zkManager.validateEthiopianZKCompliance(testBatchId);
+        bool ethiopianCompliant = zkManager.validateCompliance(testBatchId, "ETHIOPIAN");
         assertTrue(ethiopianCompliant, "Batch should be Ethiopian compliant");
 
-        bool hasEthiopianProofs = zkManager.validateEthiopianZKCompliance(testBatchId);
+        bool hasEthiopianProofs = zkManager.validateCompliance(testBatchId, "ETHIOPIAN");
         assertTrue(hasEthiopianProofs, "Batch should have Ethiopian proofs");
 
         console.log("Verified Ethiopian compliance status");
@@ -620,16 +619,16 @@ contract EthiopianExportIntegrationTest is Test {
         vm.startPrank(admin);
 
         // Add only some proofs
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
-            "ECTA_PERMIT_VALIDITY",
+            "ECTA_PERMIT",
             _createValidMockGroth16Proof(),
             "ECTA Valid"
         );
 
-        zkManager.addEthiopianComplianceZKProof(
+        zkManager.addComplianceZKProof(
             batchId,
-            "QUALITY_CERTIFICATE_AUTHENTICITY",
+            "QUALITY_CERT",
             _createValidMockGroth16Proof(),
             "Quality Valid"
         );
@@ -639,7 +638,7 @@ contract EthiopianExportIntegrationTest is Test {
         vm.stopPrank();
 
         // Verify partial compliance
-        bool ethiopianCompliant = zkManager.validateEthiopianZKCompliance(batchId);
+        bool ethiopianCompliant = zkManager.validateCompliance(batchId, "ETHIOPIAN");
         assertFalse(ethiopianCompliant, "Should not be fully compliant with missing proofs");
 
         // Redemption should still fail

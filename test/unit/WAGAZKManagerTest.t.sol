@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {Test} from "forge-std/Test.sol";
-import {console} from "forge-std/console.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
-import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 
 /**
  * @title WAGAZKManagerTest
@@ -27,7 +25,6 @@ contract WAGAZKManagerTest is Test {
     // Test constants
     uint256 constant BATCH_ID = 1;
     bytes constant MOCK_PROOF_DATA = hex"00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
-    uint256[] MOCK_PUBLIC_SIGNALS;
 
     event ComplianceProofAdded(
         uint256 indexed batchId,
@@ -51,9 +48,6 @@ contract WAGAZKManagerTest is Test {
         circomVerifier = new CircomVerifier();
         ethiopianCompliance = new WAGAEthiopianCompliance();
         zkManager = new WAGAZKManager(address(coffeeToken), address(circomVerifier));
-
-        // Initialize test data
-        MOCK_PUBLIC_SIGNALS = [uint256(1), uint256(2), uint256(3), uint256(4), uint256(5)];
 
         // Setup roles
         coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), processor);
@@ -410,19 +404,19 @@ contract WAGAZKManagerTest is Test {
         vm.startPrank(verifier);
 
         // Step 1: Add ECTA permit proof using unified compliance
-        bool ectaVerified = zkManager.addComplianceZKProof(BATCH_ID, "ECTA_PERMIT", MOCK_PROOF_DATA, "ECTA Permit Valid - Export Approved"
+        /*bool ectaVerified =*/ zkManager.addComplianceZKProof(BATCH_ID, "ECTA_PERMIT", MOCK_PROOF_DATA, "ECTA Permit Valid - Export Approved"
         );
 
         // Step 2: Add quality certificate proof
-        bool qualityVerified = zkManager.addComplianceZKProof(BATCH_ID, "QUALITY_CERT", MOCK_PROOF_DATA, "Quality Certificate Authentic - SCA Certified"
+        /*bool qualityVerified =*/ zkManager.addComplianceZKProof(BATCH_ID, "QUALITY_CERT", MOCK_PROOF_DATA, "Quality Certificate Authentic - SCA Certified"
         );
 
         // Step 3: Add origin verification proof
-        bool originVerified = zkManager.addComplianceZKProof(BATCH_ID, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Origin Verified - Single-Origin Ethiopian"
+        /*bool originVerified =*/ zkManager.addComplianceZKProof(BATCH_ID, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Origin Verified - Single-Origin Ethiopian"
         );
 
         // Step 4: Add BoE compliance proof
-        bool boeVerified = zkManager.addComplianceZKProof(BATCH_ID, "ECTA_PERMIT", MOCK_PROOF_DATA, "BoE Forex Compliance - Export Approved"
+        /*bool boeVerified =*/ zkManager.addComplianceZKProof(BATCH_ID, "ECTA_PERMIT", MOCK_PROOF_DATA, "BoE Forex Compliance - Export Approved"
         );
 
         vm.stopPrank();
@@ -442,10 +436,10 @@ contract WAGAZKManagerTest is Test {
         (, , , string memory originClaim) = zkManager.getComplianceProof(BATCH_ID, "ORIGIN_VERIFICATION");
 
         console.log("=== Ethiopian Compliance Workflow Results ===");
-        console.log("ECTA verified:", ectaVerified);
-        console.log("Quality verified:", qualityVerified);
-        console.log("Origin verified:", originVerified);
-        console.log("BoE verified:", boeVerified);
+        console.log("ECTA added successfully");
+        console.log("Quality added successfully");
+        console.log("Origin added successfully");
+        console.log("BoE added successfully");
         console.log("Ethiopian compliant:", isEthiopianCompliant);
         console.log("Has Ethiopian proofs:", hasEthiopianProofs);
         console.log("ECTA claim:", ectaClaim);

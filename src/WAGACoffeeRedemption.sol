@@ -352,7 +352,7 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
 
         // Validate EUDR compliance if required
         if (requiresEUDRCompliance) {
-            (bool deforestationCompliant, bool geolocationVerified, bool fullyCompliant) = zkManager.validateEUDRZKCompliance(batchId);
+            (, , bool fullyCompliant) = zkManager.validateEUDRZKCompliance(batchId);
             if (!fullyCompliant) {
                 revert WAGACoffeeRedemption__EUDRComplianceNotMet_requestRedemption();
             }
@@ -434,7 +434,7 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
 
         // Handle compliance validations and events
         if (requiresEUDRCompliance) {
-            (bool deforestationCompliant, bool geolocationVerified, bool fullyCompliant) = zkManager.validateEUDRZKCompliance(batchId);
+            (bool deforestationCompliant, bool geolocationVerified, /*bool fullyCompliant*/) = zkManager.validateEUDRZKCompliance(batchId);
             emit EUDRComplianceValidated(batchId, redemptionId, deforestationCompliant, geolocationVerified);
 
             // Emit ZK compliance validation events

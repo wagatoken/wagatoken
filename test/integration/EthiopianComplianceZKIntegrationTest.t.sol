@@ -284,31 +284,31 @@ contract EthiopianComplianceZKIntegrationTest is Test {
         console.log("\n=== Adding ZK Compliance Proofs ===");
 
         // Add ZK proof for ECTA compliance via ZK Manager (proper integration test)
-        bytes memory ectaZKProof = _createValidMockGroth16Proof();
-        zkManager.addEthiopianComplianceZKProof(
+        bytes memory ectaZkProof = _createValidMockGroth16Proof();
+        zkManager.addComplianceZKProof(
             testBatchId,
             "ECTA_PERMIT",
-            ectaZKProof,
+            ectaZkProof,
             "ECTA Export Permit Verified"
         );
         console.log("[OK] ECTA ZK proof added");
 
         // Add ZK proof for quality compliance
-        bytes memory qualityZKProof = _createValidMockGroth16Proof();
-        zkManager.addEthiopianComplianceZKProof(
+        bytes memory qualityZkProof = _createValidMockGroth16Proof();
+        zkManager.addComplianceZKProof(
             testBatchId,
             "QUALITY_CERT",
-            qualityZKProof,
+            qualityZkProof,
             "Premium Quality Certified"
         );
         console.log("[OK] Quality ZK proof added");
 
         // Add ZK proof for origin compliance
-        bytes memory originZKProof = _createValidMockGroth16Proof();
-        zkManager.addEthiopianComplianceZKProof(
+        bytes memory originZkProof = _createValidMockGroth16Proof();
+        zkManager.addComplianceZKProof(
             testBatchId,
             "ORIGIN_VERIFICATION",
-            originZKProof,
+            originZkProof,
             "Single-Origin Sidamo Verified"
         );
         console.log("[OK] Origin ZK proof added");
@@ -317,10 +317,10 @@ contract EthiopianComplianceZKIntegrationTest is Test {
         // This is expected behavior when testing with mock proof data
         
         // Verify Ethiopian compliance status (this should still be true from earlier)
-        (bool hasECTA, bool hasQuality, bool hasOrigin, bool hasFullCompliance) = 
+        (bool hasEcta, bool hasQuality, bool hasOrigin, bool hasFullCompliance) = 
             ethiopianCompliance.getComplianceStatus(testBatchId);
         
-        assertTrue(hasECTA);
+        assertTrue(hasEcta);
         assertTrue(hasQuality);
         assertTrue(hasOrigin);
         assertTrue(hasFullCompliance);
@@ -328,11 +328,11 @@ contract EthiopianComplianceZKIntegrationTest is Test {
         console.log("[OK] Ethiopian compliance status confirmed");
         console.log("[OK] ZK proof integration test completed (proofs fail verification as expected with mock data)");
 
-        // Test compliance claim generation
-        string memory complianceClaim = zkManager.generateEthiopianComplianceClaim(testBatchId);
-        console.log("  Compliance Claim:", complianceClaim);
+        // Test compliance validation through unified system
+        bool isEthiopianCompliant = zkManager.validateCompliance(testBatchId, "ETHIOPIAN");
+        console.log("  Ethiopian Compliance Status:", isEthiopianCompliant ? "COMPLIANT" : "NOT_COMPLIANT");
         
-        assertTrue(bytes(complianceClaim).length > 0);
+        assertTrue(isEthiopianCompliant, "Batch should be Ethiopian compliant");
     }
 
     /* -------------------------------------------------------------------------- */
@@ -356,17 +356,17 @@ contract EthiopianComplianceZKIntegrationTest is Test {
         console.log("[OK] ECX price updated");
 
         // Get price benchmark
-        (uint256 priceUSDPerKg, uint256 confidence, uint256 age) = 
+        (uint256 priceUsdPerKg, uint256 confidence, uint256 age) = 
             ecxOracle.getPriceBenchmark(
                 WAGAECXPriceOracle.CoffeeGrade.LWSD4,
                 WAGAECXPriceOracle.CoffeeOrigin.SC
             );
         
-        console.log("  ECX Price (USD/kg):", priceUSDPerKg);
+        console.log("  ECX Price (USD/kg):", priceUsdPerKg);
         console.log("  Confidence:", confidence);
         console.log("  Age (seconds):", age);
 
-        assertTrue(priceUSDPerKg > 0);
+        assertTrue(priceUsdPerKg > 0);
         assertEq(confidence, 90);
 
         vm.stopPrank();
@@ -374,12 +374,12 @@ contract EthiopianComplianceZKIntegrationTest is Test {
         // Add ZK price proof through ZK Manager
         vm.startPrank(address(zkManager));
         
-        bytes memory priceZKProof = abi.encodePacked("competitive_price_zk_proof");
+        bytes memory priceZkProof = abi.encodePacked("competitive_price_zk_proof");
         ecxOracle.addZKPriceProof(
             testBatchId,
             WAGAECXPriceOracle.CoffeeGrade.LWSD4,
             WAGAECXPriceOracle.CoffeeOrigin.SC,
-            priceZKProof,
+            priceZkProof,
             "Competitively Priced vs ECX"
         );
         console.log("[OK] ZK price proof added");
@@ -491,7 +491,7 @@ contract EthiopianComplianceZKIntegrationTest is Test {
 
         // Final verification - check all systems are integrated
         assertTrue(batchManager.isReadyForExport(testBatchId));
-        assertTrue(zkManager.validateEthiopianZKCompliance(testBatchId));
+        assertTrue(zkManager.validateCompliance(testBatchId, "ETHIOPIAN"));
         
         (bool isCompetitive, ) = ecxOracle.validatePriceCompetitiveness(testBatchId);
         assertTrue(isCompetitive);

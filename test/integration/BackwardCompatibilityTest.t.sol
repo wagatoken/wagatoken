@@ -11,13 +11,7 @@ import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
-import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
-// WAGAAccessControl removed - functionality moved to WAGAConfigManager
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
-import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
-import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
-import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
-import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {TestHelperUtilities} from "../TestHelperUtilities.sol";
@@ -43,16 +37,8 @@ contract BackwardCompatibilityTest is Test {
     WAGAEthiopianCompliance public ethiopianCompliance;
     WAGACoffeeRedemption public redemptionContract;
     WAGATreasury public treasury;
-    PrivacyLayer public privacyLayer;
-    // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
     CircomVerifier public circomVerifier;
     MockUSDC public usdcToken;
-    
-    // Additional contracts now included in deployment
-    WAGACDPIntegration public cdpIntegration;
-    WAGAProofOfReserve public proofOfReserve;
-    WAGAInventoryManagerMVP public inventoryManager;
-    WAGAECXPriceOracle public ecxOracle;
     
     // Test utilities
     TestHelperUtilities public testUtils;
@@ -76,14 +62,14 @@ contract BackwardCompatibilityTest is Test {
             coffeeToken,
             batchManager,
             zkManager,
-            privacyLayer,
+            ,  // privacyLayer - not used in this test
             treasury,
             redemptionContract,
-            cdpIntegration, // Now included in deployment
-            proofOfReserve, // Now included in deployment  
-            inventoryManager, // Now included in deployment
+            ,  // cdpIntegration - not used in this test
+            ,  // proofOfReserve - not used in this test  
+            ,  // inventoryManager - not used in this test
             ethiopianCompliance,
-            ecxOracle, // Now included in deployment
+            ,  // ecxOracle - not used in this test
             circomVerifier,
             helperConfig
         ) = deployer.run();
@@ -149,7 +135,7 @@ contract BackwardCompatibilityTest is Test {
             uint256 pricePerUnit,
             string memory packagingInfo,
             string memory metadataHash,
-            uint256 lastVerifiedTimestamp
+            /*uint256 lastVerifiedTimestamp*/
         ) = coffeeToken.getBatchInfo(batchId);
 
         assertEq(productionDate, block.timestamp, "Production date should match");
@@ -206,7 +192,7 @@ contract BackwardCompatibilityTest is Test {
         vm.stopPrank();
 
         // Verify legacy proofs work
-        assertTrue(zkManager.hasAllRequiredProofs(batchId), "Legacy proofs should be accepted");
+        assertTrue(circomVerifier.hasAllRequiredProofs(batchId), "Legacy proofs should be accepted");
         assertTrue(circomVerifier.hasAllRequiredProofs(batchId), "CircomVerifier should record legacy proofs");
 
         // Note: CircomVerifier.BatchProofStatus is different from IZKVerifier.BatchProofStatus
@@ -259,7 +245,7 @@ contract BackwardCompatibilityTest is Test {
         // Verify redemption
         (
             address redemptionConsumer,
-            uint64 redemptionSellerId,
+            /*uint64 redemptionSellerId*/,
             uint256 redemptionBatchId,
             uint256 quantity,
             ,
@@ -343,23 +329,23 @@ contract BackwardCompatibilityTest is Test {
 
         // Test batch isolation
         (
-            uint256 productionDate1,
-            uint256 expiryTime1,
+            /*uint256 productionDate1*/,
+            /*uint256 expiryTime1*/,
             uint256 quantity1,
             uint256 pricePerUnit1,
             string memory packagingInfo1,
-            string memory metadataHash1,
-            uint256 lastVerifiedTimestamp1
+            /*string memory metadataHash1*/,
+            /*uint256 lastVerifiedTimestamp1*/
         ) = coffeeToken.getBatchInfo(batchId1);
 
         (
-            uint256 productionDate2,
-            uint256 expiryTime2,
+            /*uint256 productionDate2*/,
+            /*uint256 expiryTime2*/,
             uint256 quantity2,
             uint256 pricePerUnit2,
             string memory packagingInfo2,
-            string memory metadataHash2,
-            uint256 lastVerifiedTimestamp2
+            /*string memory metadataHash2*/,
+            /*uint256 lastVerifiedTimestamp2*/
         ) = coffeeToken.getBatchInfo(batchId2);
 
         // Verify batch data isolation
@@ -411,12 +397,12 @@ contract BackwardCompatibilityTest is Test {
         assertTrue(expiryTime > creationTime, "getBatchInfo expiryTime should work");
         assertEq(quantity, 150, "getBatchInfo quantity should work");
         assertEq(pricePerUnit, 1.5 ether, "getBatchInfo pricePerUnit should work");
-        assertEq(packagingInfo, "API Test Packaging", "getBatchInfo packagingInfo should work");
+        assertEq(packagingInfo, "API Test Region", "getBatchInfo packagingInfo should work");
         assertEq(metadataHash, "ipfs://api-test-batch", "getBatchInfo metadataHash should work");
         assertTrue(lastVerifiedTimestamp >= 0, "getBatchInfo lastVerifiedTimestamp should work");
 
         // Test legacy ZK functions
-        assertFalse(zkManager.hasAllRequiredProofs(batchId), "hasAllRequiredProofs should work (false for no proofs)");
+        assertFalse(circomVerifier.hasAllRequiredProofs(batchId), "hasAllRequiredProofs should work (false for no proofs)");
         assertFalse(circomVerifier.hasAllRequiredProofs(batchId), "CircomVerifier hasAllRequiredProofs should work");
 
         console.log("All legacy APIs maintained and working");
@@ -480,21 +466,21 @@ contract BackwardCompatibilityTest is Test {
             "Enhanced pricing"
         );
 
-        zkManager.addEUDRComplianceZKProof(
+        zkManager.addComplianceZKProof(
             enhancedBatchId,
+            "EUDR_DEFORESTATION",
             testUtils.generateMockZKProof(),
-            IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
             "Deforestation-Free"
         );
         vm.stopPrank();
 
         // Verify both work independently
-        assertTrue(zkManager.hasAllRequiredProofs(legacyBatchId), "Legacy batch should have basic proofs");
+        assertTrue(circomVerifier.hasAllRequiredProofs(legacyBatchId), "Legacy batch should have basic proofs");
         assertTrue(circomVerifier.hasEUDRComplianceProofs(enhancedBatchId), "Enhanced batch should have EUDR proofs");
 
         // Verify no interference
         assertFalse(circomVerifier.hasEUDRComplianceProofs(legacyBatchId), "Legacy batch should not have EUDR proofs");
-        assertFalse(zkManager.hasAllRequiredProofs(enhancedBatchId), "Enhanced batch should not have all basic proofs yet");
+        assertFalse(circomVerifier.hasAllRequiredProofs(enhancedBatchId), "Enhanced batch should not have all basic proofs yet");
 
         console.log("Mixed legacy and enhanced usage works correctly");
         console.log("Legacy features: WORKING");

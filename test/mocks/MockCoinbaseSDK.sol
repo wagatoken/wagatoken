@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 
 /**
  * @title MockCoinbaseSDK
