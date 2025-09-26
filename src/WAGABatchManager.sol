@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
 import {WAGACoffeeTokenCore} from "./WAGACoffeeTokenCore.sol";
+import {WAGAConfigManager} from "./WAGAConfigManager.sol";
 import {IPrivacyLayer} from "./Interfaces/IPrivacyLayer.sol";
 import {IWAGABatchManager} from "./Interfaces/IWAGABatchManager.sol";
 import {IEthiopianCompliance} from "./Interfaces/IEthiopianCompliance.sol";
@@ -28,6 +29,8 @@ contract WAGABatchManager is IWAGABatchManager {
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE"); // Align with WAGAConfigManager
     bytes32 public constant PROCESSOR_ROLE = keccak256("PROCESSOR_ROLE");
+    bytes32 public constant COOPERATIVE_ROLE = keccak256("COOPERATIVE_ROLE");
+    bytes32 public constant ROASTER_ROLE = keccak256("ROASTER_ROLE");
     bytes32 public constant DISTRIBUTOR_ROLE = keccak256("DISTRIBUTOR_ROLE");
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
 
@@ -140,9 +143,27 @@ contract WAGABatchManager is IWAGABatchManager {
         _;
     }
 
+    modifier callerCanCreateBatch(address creator) {
+        _checkCallerCanCreateBatch(creator);
+        _;
+    }
+
     function _checkCallerHasRoleFromCoffeeToken(bytes32 roleType, address caller) internal view {
         // Use the actual contract for direct role checking
         if (!coffeeTokenContract.hasRole(roleType, caller)) {
+            revert WAGABatchManager__CallerDoesNotHaveRequiredRole_callerHasRoleFromCoffeeToken();
+        }
+    }
+
+    function _checkCallerCanCreateBatch(address creator) internal view {
+        // Check if creator has any of the valid batch creation roles
+        bool hasValidRole = 
+            coffeeTokenContract.hasRole(PROCESSOR_ROLE, creator) ||
+            coffeeTokenContract.hasRole(COOPERATIVE_ROLE, creator) ||
+            coffeeTokenContract.hasRole(ROASTER_ROLE, creator) ||
+            coffeeTokenContract.hasRole(DEFAULT_ADMIN_ROLE, creator);
+            
+        if (!hasValidRole) {
             revert WAGABatchManager__CallerDoesNotHaveRequiredRole_callerHasRoleFromCoffeeToken();
         }
     }
@@ -170,7 +191,7 @@ contract WAGABatchManager is IWAGABatchManager {
         uint256 batchId,
         string calldata origin,
         address creator
-    ) external callerHasRoleFromCoffeeToken(PROCESSOR_ROLE) {
+    ) external callerCanCreateBatch(creator) {
         if (!coffeeToken.isBatchCreated(batchId)) {
             revert WAGABatchManager__BatchDoesNotExist_createBatchInfo();
         }

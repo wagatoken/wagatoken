@@ -4,7 +4,15 @@ pragma solidity ^0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
+import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
+import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
+import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
+import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
+import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
+import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
+import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
+import {HelperConfig} from "../../script/HelperConfig.s.sol";
 
 /**
  * @title WAGATreasuryEnhancedTest
@@ -12,10 +20,20 @@ import {MockUSDC} from "../mocks/MockUSDC.sol";
  */
 contract WAGATreasuryEnhancedTest is Test {
     WAGATreasury public treasury;
+    WAGACoffeeTokenCore public coffeeToken;
+    WAGABatchManager public batchManager;
+    WAGAZKManager public zkManager;
+    WAGACoffeeRedemption public redemption;
+    WAGAEthiopianCompliance public ethiopianCompliance;
+    CircomVerifier public circomVerifier;
     MockUSDC public usdc;
 
+    // Deployment infrastructure
+    DeployRealZKMVP public deployer;
+    HelperConfig public helperConfig;
+
     // Test accounts
-    address public admin = makeAddr("admin");
+    address public admin;
     address public offrampExecutor = makeAddr("offrampExecutor");
     address public buyer = makeAddr("buyer");
     address public offrampPartner = makeAddr("offrampPartner");
@@ -35,15 +53,35 @@ contract WAGATreasuryEnhancedTest is Test {
     );
 
     function setUp() public {
+        // Deploy the complete system using deployment script
+        deployer = new DeployRealZKMVP();
+        (
+            coffeeToken,
+            batchManager,
+            zkManager,
+            ,  // privacyLayer - not used in this test
+            treasury,
+            redemption,
+            ,  // cdpIntegration - not used in this test
+            ,  // proofOfReserve - not used in this test
+            ,  // inventoryManager - not used in this test
+            ethiopianCompliance,
+            ,  // ecxOracle - not used in this test
+            circomVerifier,
+            helperConfig
+        ) = deployer.run();
+
+        // Get admin address - use the default test admin address
+        admin = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
+        
+        // Get USDC from helper config
+        usdc = MockUSDC(helperConfig.getActiveNetworkConfig().usdcAddress);
+
         vm.startPrank(admin);
 
-        // Deploy contracts
-        usdc = new MockUSDC();
-        treasury = new WAGATreasury(address(usdc));
-
-        // For this test, we'll comment out role setup since it requires a coffee token
-        // treasury.setCoffeeToken(address(coffeeToken));
-        // coffeeToken.grantRole(keccak256("OFFRAMP_EXECUTOR_ROLE"), offrampExecutor);
+        // Setup roles for testing
+        coffeeToken.grantPaymentProcessorRole(offrampExecutor);
+        coffeeToken.grantPaymentProcessorRole(offrampPartner);
 
         // Fund the treasury with USDC
         usdc.mint(address(treasury), INITIAL_USDC_BALANCE);

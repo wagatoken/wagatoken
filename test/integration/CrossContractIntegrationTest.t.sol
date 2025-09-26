@@ -172,7 +172,7 @@ contract CrossContractIntegrationTest is Test {
         assertTrue(coffeeToken.isBatchCreated(batchId), "CoffeeToken should have the batch");
 
         // 2. Add EUDR compliance through BatchManager
-        vm.startPrank(complianceManager);
+        vm.startPrank(processor);
         batchManager.registerEUDRComplianceWithZK(
             batchId,
             IEthiopianCompliance.EUDRCertificate({
@@ -222,7 +222,7 @@ contract CrossContractIntegrationTest is Test {
         vm.stopPrank();
 
         // 2. Add ZK proof through ZKManager
-        vm.startPrank(complianceManager);
+        vm.startPrank(processor);
         zkManager.addZKProof(
             batchId,
             testUtils.generateMockZKProof(),

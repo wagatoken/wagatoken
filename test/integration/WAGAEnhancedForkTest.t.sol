@@ -230,7 +230,7 @@ contract WAGAEnhancedForkTest is Test {
         vm.stopPrank();
 
         vm.startPrank(CONSUMER_USER);
-        uint256 redemptionId = redemptionContract.requestRedemption(batchId, 100, "Test Bank Details");
+        /*redemptionId*/ redemptionContract.requestRedemption(batchId, 100, "Test Bank Details");
         vm.stopPrank();
 
         // Step 5: Record SWIFT-based offramp transfer
@@ -240,7 +240,7 @@ contract WAGAEnhancedForkTest is Test {
 
         // Step 6: Verify SWIFT codes in transfer data
         (
-            uint64 sellerId,
+            /*sellerId*/,
             bytes11 storedOfframpSwift,
             bytes11 storedReceivingSwift,
             ,

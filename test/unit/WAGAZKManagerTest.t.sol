@@ -6,6 +6,12 @@ import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
+import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
+import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
+import {WAGATreasury} from "../../src/WAGATreasury.sol";
+import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
+import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
+import {HelperConfig} from "../../script/HelperConfig.s.sol";
 
 /**
  * @title WAGAZKManagerTest
@@ -16,14 +22,22 @@ contract WAGAZKManagerTest is Test {
     WAGACoffeeTokenCore public coffeeToken;
     CircomVerifier public circomVerifier;
     WAGAEthiopianCompliance public ethiopianCompliance;
+    WAGABatchManager public batchManager;
+    PrivacyLayer public privacyLayer;
+    WAGATreasury public treasury;
+    WAGACoffeeRedemption public redemptionContract;
+    
+    // Deployment infrastructure
+    DeployRealZKMVP public deployer;
+    HelperConfig public helperConfig;
 
     // Test accounts
-    address public admin = makeAddr("admin");
+    address public admin;
     address public processor = makeAddr("processor");
     address public verifier = makeAddr("verifier");
 
     // Test constants
-    uint256 constant BATCH_ID = 1;
+    uint256 public batchId; // Will be set in setUp()
     bytes constant MOCK_PROOF_DATA = hex"00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 
     event ComplianceProofAdded(
@@ -41,22 +55,36 @@ contract WAGAZKManagerTest is Test {
     );
 
     function setUp() public {
+        // Deploy the complete system using deployment script
+        deployer = new DeployRealZKMVP();
+        (
+            coffeeToken,
+            batchManager,
+            zkManager,
+            privacyLayer,
+            treasury,
+            redemptionContract,
+            ,  // cdpIntegration - not used in this test
+            ,  // proofOfReserve - not used in this test
+            ,  // inventoryManager - not used in this test
+            ethiopianCompliance,
+            ,  // ecxOracle - not used in this test
+            circomVerifier,
+            helperConfig
+        ) = deployer.run();
+
+        // Get admin address from deployment config
+        admin = vm.addr(helperConfig.getActiveNetworkConfig().deployerKey);
+        
+        // Setup roles using the proper access control system
         vm.startPrank(admin);
+        coffeeToken.grantProcessorRole(processor);
+        coffeeToken.grantVerifierRole(verifier);
+        vm.stopPrank();
 
-        // Deploy contracts
-        coffeeToken = new WAGACoffeeTokenCore("");
-        circomVerifier = new CircomVerifier();
-        ethiopianCompliance = new WAGAEthiopianCompliance();
-        zkManager = new WAGAZKManager(address(coffeeToken), address(circomVerifier));
-
-        // Setup roles
-        coffeeToken.grantRole(coffeeToken.PROCESSOR_ROLE(), processor);
-        coffeeToken.grantRole(coffeeToken.VERIFIER_ROLE(), verifier);
-        zkManager.setEthiopianCompliance(address(ethiopianCompliance));
-
-        // Create a test batch
+        // Create a test batch using proper access control
         vm.startPrank(processor);
-        coffeeToken.createBatch(
+        batchId = coffeeToken.createBatch(
             block.timestamp,
             block.timestamp + 365 days,
             1000,
@@ -66,8 +94,6 @@ contract WAGAZKManagerTest is Test {
             "ipfs://batch-metadata"
         );
         vm.stopPrank();
-
-        vm.stopPrank();
     }
 
     /* -------------------------------------------------------------------------- */
@@ -75,11 +101,11 @@ contract WAGAZKManagerTest is Test {
     /* -------------------------------------------------------------------------- */
 
     function test_EUDR_AddDeforestationZKProof() public {
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
         vm.expectEmit(true, true, true, true);
         emit ComplianceProofAdded(
-            BATCH_ID,
+            batchId,
             "EUDR_DEFORESTATION",
             keccak256(abi.encodePacked(MOCK_PROOF_DATA, "EUDR_DEFORESTATION", block.timestamp)),
             "Deforestation-Free - EUDR Compliant",
@@ -87,7 +113,7 @@ contract WAGAZKManagerTest is Test {
         );
 
         zkManager.addComplianceZKProof(
-            BATCH_ID,
+            batchId,
             "EUDR_DEFORESTATION",
             MOCK_PROOF_DATA,
             "Deforestation-Free - EUDR Compliant"
@@ -101,18 +127,18 @@ contract WAGAZKManagerTest is Test {
     }
 
     function test_EUDR_AddGeolocationZKProof() public {
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
         vm.expectEmit(true, true, true, true);
         emit ComplianceProofAdded(
-            BATCH_ID,
+            batchId,
             "EUDR_GEOLOCATION",
             keccak256(abi.encodePacked(MOCK_PROOF_DATA, "EUDR_GEOLOCATION", block.timestamp)),
             "Geolocation Verified - Plot Size: 50ha",
             verifier
         );
 
-        zkManager.addComplianceZKProof(BATCH_ID, "EUDR_GEOLOCATION", MOCK_PROOF_DATA, "Geolocation Verified - Plot Size: 50ha"
+        zkManager.addComplianceZKProof(batchId, "EUDR_GEOLOCATION", MOCK_PROOF_DATA, "Geolocation Verified - Plot Size: 50ha"
         );
 
         console.log("EUDR Geolocation proof submitted");
@@ -121,9 +147,9 @@ contract WAGAZKManagerTest is Test {
     }
 
     function test_EUDR_AddPermitValidityZKProof() public {
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
-        zkManager.addComplianceZKProof(BATCH_ID, "ECTA_PERMIT", MOCK_PROOF_DATA, "ECTA Permit Valid - Export Approved"
+        zkManager.addComplianceZKProof(batchId, "ECTA_PERMIT", MOCK_PROOF_DATA, "ECTA Permit Valid - Export Approved"
         );
 
         console.log("ECTA Permit proof submitted");
@@ -132,9 +158,9 @@ contract WAGAZKManagerTest is Test {
     }
 
     function test_EUDR_AddCertificateAuthenticityZKProof() public {
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
-        zkManager.addComplianceZKProof(BATCH_ID, "QUALITY_CERT", MOCK_PROOF_DATA, "Quality Certificate Authentic - SCA Certified"
+        zkManager.addComplianceZKProof(batchId, "QUALITY_CERT", MOCK_PROOF_DATA, "Quality Certificate Authentic - SCA Certified"
         );
 
         console.log("Certificate authenticity proof submitted");
@@ -143,9 +169,9 @@ contract WAGAZKManagerTest is Test {
     }
 
     function test_EUDR_AddOriginVerificationZKProof() public {
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
-        zkManager.addComplianceZKProof(BATCH_ID, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Origin Verified - Single Estate Ethiopian"
+        zkManager.addComplianceZKProof(batchId, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Origin Verified - Single Estate Ethiopian"
         );
 
         console.log("Origin verification proof submitted");
@@ -154,9 +180,9 @@ contract WAGAZKManagerTest is Test {
     }
 
     function test_EUDR_AddBOEComplianceZKProof() public {
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
-        zkManager.addComplianceZKProof(BATCH_ID, "ECTA_PERMIT", MOCK_PROOF_DATA, "BoE Forex Compliance - Export Approved"
+        zkManager.addComplianceZKProof(batchId, "ECTA_PERMIT", MOCK_PROOF_DATA, "BoE Forex Compliance - Export Approved"
         );
 
         console.log("BoE compliance proof submitted");
@@ -170,21 +196,21 @@ contract WAGAZKManagerTest is Test {
 
     function test_Compliance_ValidateEUDRZKCompliance() public {
         // Add some mock proofs first
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
         // Add deforestation proof
-        zkManager.addComplianceZKProof(BATCH_ID, "EUDR_DEFORESTATION", MOCK_PROOF_DATA, "Deforestation-Free"
+        zkManager.addComplianceZKProof(batchId, "EUDR_DEFORESTATION", MOCK_PROOF_DATA, "Deforestation-Free"
         );
 
         // Add geolocation proof
-        zkManager.addComplianceZKProof(BATCH_ID, "EUDR_GEOLOCATION", MOCK_PROOF_DATA, "Geolocation Verified"
+        zkManager.addComplianceZKProof(batchId, "EUDR_GEOLOCATION", MOCK_PROOF_DATA, "Geolocation Verified"
         );
 
         vm.stopPrank();
 
         // Test EUDR compliance validation using unified system
-        bool deforestationCompliant = zkManager.hasComplianceProof(BATCH_ID, "EUDR_DEFORESTATION");
-        bool geolocationVerified = zkManager.hasComplianceProof(BATCH_ID, "EUDR_GEOLOCATION");
+        bool deforestationCompliant = zkManager.hasComplianceProof(batchId, "EUDR_DEFORESTATION");
+        bool geolocationVerified = zkManager.hasComplianceProof(batchId, "EUDR_GEOLOCATION");
         bool isCompliant = deforestationCompliant && geolocationVerified;
         console.log("EUDR ZK compliance validation result:", isCompliant);
         console.log("Deforestation compliant:", deforestationCompliant);
@@ -193,23 +219,23 @@ contract WAGAZKManagerTest is Test {
 
     function test_Compliance_ValidateEthiopianZKCompliance() public {
         // Add Ethiopian compliance proofs
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
-        zkManager.addComplianceZKProof(BATCH_ID, "ECTA_PERMIT", MOCK_PROOF_DATA, "ECTA Valid"
+        zkManager.addComplianceZKProof(batchId, "ECTA_PERMIT", MOCK_PROOF_DATA, "ECTA Valid"
         );
 
-        zkManager.addComplianceZKProof(BATCH_ID, "QUALITY_CERT", MOCK_PROOF_DATA, "Quality Authentic"
+        zkManager.addComplianceZKProof(batchId, "QUALITY_CERT", MOCK_PROOF_DATA, "Quality Authentic"
         );
 
-        zkManager.addComplianceZKProof(BATCH_ID, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Origin Verified"
+        zkManager.addComplianceZKProof(batchId, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Origin Verified"
         );
 
         vm.stopPrank();
 
         // Test Ethiopian compliance validation using unified system
-        bool hasECTA = zkManager.hasComplianceProof(BATCH_ID, "ECTA_PERMIT");
-        bool hasQuality = zkManager.hasComplianceProof(BATCH_ID, "QUALITY_CERT");
-        bool hasOrigin = zkManager.hasComplianceProof(BATCH_ID, "ORIGIN_VERIFICATION");
+        bool hasECTA = zkManager.hasComplianceProof(batchId, "ECTA_PERMIT");
+        bool hasQuality = zkManager.hasComplianceProof(batchId, "QUALITY_CERT");
+        bool hasOrigin = zkManager.hasComplianceProof(batchId, "ORIGIN_VERIFICATION");
         bool isCompliant = hasECTA && hasQuality && hasOrigin;
         console.log("Ethiopian ZK compliance validation result:", isCompliant);
     }
@@ -219,13 +245,13 @@ contract WAGAZKManagerTest is Test {
     /* -------------------------------------------------------------------------- */
 
     function test_ProofManagement_GetEUDRComplianceClaims() public {
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
         // Add proofs with claims
-        zkManager.addComplianceZKProof(BATCH_ID, "EUDR_DEFORESTATION", MOCK_PROOF_DATA, "Deforestation Compliant"
+        zkManager.addComplianceZKProof(batchId, "EUDR_DEFORESTATION", MOCK_PROOF_DATA, "Deforestation Compliant"
         );
 
-        zkManager.addComplianceZKProof(BATCH_ID, "EUDR_GEOLOCATION", MOCK_PROOF_DATA, "Geolocation Verified"
+        zkManager.addComplianceZKProof(batchId, "EUDR_GEOLOCATION", MOCK_PROOF_DATA, "Geolocation Verified"
         );
 
         vm.stopPrank();
@@ -235,7 +261,7 @@ contract WAGAZKManagerTest is Test {
             bool deforestationCompliant,
             bool geolocationVerified,
             bool fullyCompliant
-        ) = zkManager.validateEUDRZKCompliance(BATCH_ID);
+        ) = zkManager.validateEUDRZKCompliance(batchId);
 
         console.log("Deforestation compliant:", deforestationCompliant);
         console.log("Geolocation verified:", geolocationVerified);
@@ -243,10 +269,10 @@ contract WAGAZKManagerTest is Test {
     }
 
     function test_ProofManagement_GetEthiopianComplianceClaims() public {
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
         // Add Ethiopian proof
-        zkManager.addComplianceZKProof(BATCH_ID, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Ethiopian Export Compliant"
+        zkManager.addComplianceZKProof(batchId, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Ethiopian Export Compliant"
         );
 
         vm.stopPrank();
@@ -261,25 +287,25 @@ contract WAGAZKManagerTest is Test {
 
     function test_ProofStatus_HasEUDRComplianceProofs() public {
         // Initially no EUDR proofs - checking compliance status instead
-        (bool deforestationCompliant, bool geolocationVerified, bool fullyCompliant) = zkManager.validateEUDRZKCompliance(BATCH_ID);
+        (bool deforestationCompliant, bool geolocationVerified, bool fullyCompliant) = zkManager.validateEUDRZKCompliance(batchId);
         assertFalse(fullyCompliant);
 
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
         // Add deforestation proof
-        zkManager.addComplianceZKProof(BATCH_ID, "ECTA_PERMIT", MOCK_PROOF_DATA, "Deforestation Compliant"
+        zkManager.addComplianceZKProof(batchId, "ECTA_PERMIT", MOCK_PROOF_DATA, "Deforestation Compliant"
         );
 
         // Check compliance status - should have deforestation but not geolocation
-        (deforestationCompliant, geolocationVerified, fullyCompliant) = zkManager.validateEUDRZKCompliance(BATCH_ID);
+        (deforestationCompliant, geolocationVerified, fullyCompliant) = zkManager.validateEUDRZKCompliance(batchId);
         // May be true or false depending on implementation
 
         // Add geolocation proof
-        zkManager.addComplianceZKProof(BATCH_ID, "QUALITY_CERT", MOCK_PROOF_DATA, "Geolocation Verified"
+        zkManager.addComplianceZKProof(batchId, "QUALITY_CERT", MOCK_PROOF_DATA, "Geolocation Verified"
         );
 
         // Check again - should have both proofs now
-        (deforestationCompliant, geolocationVerified, fullyCompliant) = zkManager.validateEUDRZKCompliance(BATCH_ID);
+        (deforestationCompliant, geolocationVerified, fullyCompliant) = zkManager.validateEUDRZKCompliance(batchId);
         // assertTrue(fullyCompliant); // May depend on implementation
 
         vm.stopPrank();
@@ -289,16 +315,16 @@ contract WAGAZKManagerTest is Test {
     // This test is disabled due to non-existent hasEthiopianComplianceProofs function
     function test_ProofStatus_HasEthiopianComplianceProofs() public {
         // Initially no Ethiopian proofs
-        bool hasEthiopianProofs = zkManager.hasEthiopianComplianceProofs(BATCH_ID);
+        bool hasEthiopianProofs = zkManager.hasEthiopianComplianceProofs(batchId);
         assertFalse(hasEthiopianProofs);
 
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
         // Add Ethiopian compliance proof
-        zkManager.addComplianceZKProof(BATCH_ID, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Ethiopian Export Compliant"
+        zkManager.addComplianceZKProof(batchId, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Ethiopian Export Compliant"
         );
 
-        hasEthiopianProofs = zkManager.hasEthiopianComplianceProofs(BATCH_ID);
+        hasEthiopianProofs = zkManager.hasEthiopianComplianceProofs(batchId);
         assertTrue(hasEthiopianProofs);
 
         vm.stopPrank();
@@ -313,7 +339,7 @@ contract WAGAZKManagerTest is Test {
         vm.startPrank(processor); // Not a verifier
 
         vm.expectRevert("Caller does not have required role");
-        zkManager.addComplianceZKProof(BATCH_ID, "ECTA_PERMIT", MOCK_PROOF_DATA, "Unauthorized attempt"
+        zkManager.addComplianceZKProof(batchId, "ECTA_PERMIT", MOCK_PROOF_DATA, "Unauthorized attempt"
         );
 
         vm.stopPrank();
@@ -323,14 +349,14 @@ contract WAGAZKManagerTest is Test {
         vm.startPrank(processor); // Not a verifier
 
         vm.expectRevert("Caller does not have required role");
-        zkManager.addComplianceZKProof(BATCH_ID, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Unauthorized attempt"
+        zkManager.addComplianceZKProof(batchId, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Unauthorized attempt"
         );
 
         vm.stopPrank();
     }
 
     function test_Error_InvalidBatchId() public {
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
         vm.expectRevert("Batch does not exist");
         zkManager.addComplianceZKProof(
@@ -348,11 +374,11 @@ contract WAGAZKManagerTest is Test {
     /* -------------------------------------------------------------------------- */
 
     function test_Integration_FullEUDRComplianceWorkflow() public {
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
         // Step 1: Add EUDR deforestation proof
         zkManager.addComplianceZKProof(
-            BATCH_ID, 
+            batchId, 
             "EUDR_DEFORESTATION", 
             MOCK_PROOF_DATA, 
             "EUDR Deforestation Compliance Verified"
@@ -360,7 +386,7 @@ contract WAGAZKManagerTest is Test {
 
         // Step 2: Add EUDR geolocation proof  
         zkManager.addComplianceZKProof(
-            BATCH_ID, 
+            batchId, 
             "EUDR_GEOLOCATION", 
             MOCK_PROOF_DATA, 
             "EUDR Geolocation Verification Complete"
@@ -369,8 +395,8 @@ contract WAGAZKManagerTest is Test {
         vm.stopPrank();
 
         // Step 3: Validate complete EUDR compliance using unified system
-        bool deforestationVerified = zkManager.hasComplianceProof(BATCH_ID, "EUDR_DEFORESTATION");
-        bool geolocationVerified = zkManager.hasComplianceProof(BATCH_ID, "EUDR_GEOLOCATION");
+        bool deforestationVerified = zkManager.hasComplianceProof(batchId, "EUDR_DEFORESTATION");
+        bool geolocationVerified = zkManager.hasComplianceProof(batchId, "EUDR_GEOLOCATION");
         bool isEUDRCompliant = deforestationVerified && geolocationVerified;
 
         // Step 4: Get compliance proof details
@@ -379,14 +405,14 @@ contract WAGAZKManagerTest is Test {
             bool deforestationValid,
             uint256 deforestationTimestamp,
             string memory deforestationClaim
-        ) = zkManager.getComplianceProof(BATCH_ID, "EUDR_DEFORESTATION");
+        ) = zkManager.getComplianceProof(batchId, "EUDR_DEFORESTATION");
 
         (
             bytes32 geolocationProofHash,
             bool geolocationValid,
             uint256 geolocationTimestamp,
             string memory geolocationClaim
-        ) = zkManager.getComplianceProof(BATCH_ID, "EUDR_GEOLOCATION");
+        ) = zkManager.getComplianceProof(batchId, "EUDR_GEOLOCATION");
 
         // Step 5: Check general compliance validation
         bool hasEUDRProofs = deforestationVerified && geolocationVerified;
@@ -401,39 +427,39 @@ contract WAGAZKManagerTest is Test {
     }
 
     function test_Integration_FullEthiopianComplianceWorkflow() public {
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
         // Step 1: Add ECTA permit proof using unified compliance
-        /*bool ectaVerified =*/ zkManager.addComplianceZKProof(BATCH_ID, "ECTA_PERMIT", MOCK_PROOF_DATA, "ECTA Permit Valid - Export Approved"
+        /*bool ectaVerified =*/ zkManager.addComplianceZKProof(batchId, "ECTA_PERMIT", MOCK_PROOF_DATA, "ECTA Permit Valid - Export Approved"
         );
 
         // Step 2: Add quality certificate proof
-        /*bool qualityVerified =*/ zkManager.addComplianceZKProof(BATCH_ID, "QUALITY_CERT", MOCK_PROOF_DATA, "Quality Certificate Authentic - SCA Certified"
+        /*bool qualityVerified =*/ zkManager.addComplianceZKProof(batchId, "QUALITY_CERT", MOCK_PROOF_DATA, "Quality Certificate Authentic - SCA Certified"
         );
 
         // Step 3: Add origin verification proof
-        /*bool originVerified =*/ zkManager.addComplianceZKProof(BATCH_ID, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Origin Verified - Single-Origin Ethiopian"
+        /*bool originVerified =*/ zkManager.addComplianceZKProof(batchId, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Origin Verified - Single-Origin Ethiopian"
         );
 
         // Step 4: Add BoE compliance proof
-        /*bool boeVerified =*/ zkManager.addComplianceZKProof(BATCH_ID, "ECTA_PERMIT", MOCK_PROOF_DATA, "BoE Forex Compliance - Export Approved"
+        /*bool boeVerified =*/ zkManager.addComplianceZKProof(batchId, "ECTA_PERMIT", MOCK_PROOF_DATA, "BoE Forex Compliance - Export Approved"
         );
 
         vm.stopPrank();
 
         // Step 5: Validate complete Ethiopian compliance using unified system
-        bool hasECTA = zkManager.hasComplianceProof(BATCH_ID, "ECTA_PERMIT");
-        bool hasQuality = zkManager.hasComplianceProof(BATCH_ID, "QUALITY_CERT");
-        bool hasOrigin = zkManager.hasComplianceProof(BATCH_ID, "ORIGIN_VERIFICATION");
+        bool hasECTA = zkManager.hasComplianceProof(batchId, "ECTA_PERMIT");
+        bool hasQuality = zkManager.hasComplianceProof(batchId, "QUALITY_CERT");
+        bool hasOrigin = zkManager.hasComplianceProof(batchId, "ORIGIN_VERIFICATION");
         bool isEthiopianCompliant = hasECTA && hasQuality && hasOrigin;
 
         // Step 6: Check proof status
         bool hasEthiopianProofs = hasECTA || hasQuality || hasOrigin;
 
         // Step 7: Get compliance claims using unified interface
-        (, , , string memory ectaClaim) = zkManager.getComplianceProof(BATCH_ID, "ECTA_PERMIT");
-        (, , , string memory qualityClaim) = zkManager.getComplianceProof(BATCH_ID, "QUALITY_CERT");
-        (, , , string memory originClaim) = zkManager.getComplianceProof(BATCH_ID, "ORIGIN_VERIFICATION");
+        (, , , string memory ectaClaim) = zkManager.getComplianceProof(batchId, "ECTA_PERMIT");
+        (, , , string memory qualityClaim) = zkManager.getComplianceProof(batchId, "QUALITY_CERT");
+        (, , , string memory originClaim) = zkManager.getComplianceProof(batchId, "ORIGIN_VERIFICATION");
 
         console.log("=== Ethiopian Compliance Workflow Results ===");
         console.log("ECTA added successfully");
@@ -452,17 +478,17 @@ contract WAGAZKManagerTest is Test {
     /* -------------------------------------------------------------------------- */
 
     function test_GasOptimization_ZKProofOperations() public {
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
         // Measure gas for EUDR proof addition
         uint256 gasStart = gasleft();
-        zkManager.addComplianceZKProof(BATCH_ID, "ECTA_PERMIT", MOCK_PROOF_DATA, "Deforestation Compliant"
+        zkManager.addComplianceZKProof(batchId, "ECTA_PERMIT", MOCK_PROOF_DATA, "Deforestation Compliant"
         );
         uint256 gasUsedEUDR = gasStart - gasleft();
 
         // Measure gas for Ethiopian proof addition
         gasStart = gasleft();
-        zkManager.addComplianceZKProof(BATCH_ID, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Ethiopian Compliant"
+        zkManager.addComplianceZKProof(batchId, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Ethiopian Compliant"
         );
         uint256 gasUsedEthiopian = gasStart - gasleft();
 
@@ -477,9 +503,9 @@ contract WAGAZKManagerTest is Test {
     /* -------------------------------------------------------------------------- */
 
     function test_ViewFunctions_GetProof() public {
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
-        zkManager.addComplianceZKProof(BATCH_ID, "ECTA_PERMIT", MOCK_PROOF_DATA, "Deforestation Compliant"
+        zkManager.addComplianceZKProof(batchId, "ECTA_PERMIT", MOCK_PROOF_DATA, "Deforestation Compliant"
         );
 
         vm.stopPrank();
@@ -490,7 +516,7 @@ contract WAGAZKManagerTest is Test {
             bool isVerified,
             uint256 timestamp,
             string memory publicClaim
-        ) = zkManager.getComplianceProof(BATCH_ID, "ECTA_PERMIT");
+        ) = zkManager.getComplianceProof(batchId, "ECTA_PERMIT");
 
         assertTrue(isVerified);
         assertEq(publicClaim, "Deforestation Compliant");
@@ -499,29 +525,29 @@ contract WAGAZKManagerTest is Test {
     }
 
     function test_ViewFunctions_GetAllProofsForBatch() public {
-        vm.startPrank(verifier);
+        vm.startPrank(processor);
 
         // Add multiple proofs
-        zkManager.addComplianceZKProof(BATCH_ID, "ECTA_PERMIT", MOCK_PROOF_DATA, "Deforestation OK"
+        zkManager.addComplianceZKProof(batchId, "ECTA_PERMIT", MOCK_PROOF_DATA, "Deforestation OK"
         );
 
-        zkManager.addComplianceZKProof(BATCH_ID, "QUALITY_CERT", MOCK_PROOF_DATA, "Geolocation OK"
+        zkManager.addComplianceZKProof(batchId, "QUALITY_CERT", MOCK_PROOF_DATA, "Geolocation OK"
         );
 
-        zkManager.addComplianceZKProof(BATCH_ID, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Ethiopian OK"
+        zkManager.addComplianceZKProof(batchId, "ORIGIN_VERIFICATION", MOCK_PROOF_DATA, "Ethiopian OK"
         );
 
         vm.stopPrank();
 
         // Check that we can retrieve all proofs using unified compliance interface
-        bool hasECTA = zkManager.hasComplianceProof(BATCH_ID, "ECTA_PERMIT");
-        bool hasQuality = zkManager.hasComplianceProof(BATCH_ID, "QUALITY_CERT");
-        bool hasOrigin = zkManager.hasComplianceProof(BATCH_ID, "ORIGIN_VERIFICATION");
+        bool hasECTA = zkManager.hasComplianceProof(batchId, "ECTA_PERMIT");
+        bool hasQuality = zkManager.hasComplianceProof(batchId, "QUALITY_CERT");
+        bool hasOrigin = zkManager.hasComplianceProof(batchId, "ORIGIN_VERIFICATION");
 
         // Get compliance proof details
-        (, bool ectaVerified, , string memory ectaClaim) = zkManager.getComplianceProof(BATCH_ID, "ECTA_PERMIT");
-        (, bool qualityVerified, , string memory qualityClaim) = zkManager.getComplianceProof(BATCH_ID, "QUALITY_CERT");
-        (, bool originVerified, , string memory originClaim) = zkManager.getComplianceProof(BATCH_ID, "ORIGIN_VERIFICATION");
+        (, bool ectaVerified, , string memory ectaClaim) = zkManager.getComplianceProof(batchId, "ECTA_PERMIT");
+        (, bool qualityVerified, , string memory qualityClaim) = zkManager.getComplianceProof(batchId, "QUALITY_CERT");
+        (, bool originVerified, , string memory originClaim) = zkManager.getComplianceProof(batchId, "ORIGIN_VERIFICATION");
 
         assertTrue(ectaVerified);
         assertTrue(qualityVerified);

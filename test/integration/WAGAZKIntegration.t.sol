@@ -336,7 +336,7 @@ contract WAGAZKIntegration is Test {
         // Updated to match actual function signature
         zkManager.addComplianceZKProof(
             batchId,
-            "ECTA_PERMIT_VALIDITY",
+            "ECTA_PERMIT",
             ectaProof,
             "ECTA Export Permit Valid - NBE Approved"
         );
@@ -346,7 +346,7 @@ contract WAGAZKIntegration is Test {
         // Updated to match actual function signature
         zkManager.addComplianceZKProof(
             batchId,
-            "QUALITY_CERTIFICATE_AUTHENTICITY",
+            "QUALITY_CERT",
             qualityProof,
             "Quality Certificate Authentic - SCA Certified"
         );
@@ -356,7 +356,7 @@ contract WAGAZKIntegration is Test {
         // Updated to match actual function signature
         zkManager.addComplianceZKProof(
             batchId,
-            "ORIGIN_VERIFICATION_PROOF",
+            "ORIGIN_VERIFICATION",
             originProof,
             "Origin Verified - Single Estate Yirgacheffe"
         );
@@ -366,7 +366,7 @@ contract WAGAZKIntegration is Test {
         // Updated to match actual function signature
         zkManager.addComplianceZKProof(
             batchId,
-            "BOE_FOREX_COMPLIANCE",
+            "BOE_FOREX",
             boeProof,
             "BoE Forex Compliance - Export Declaration Filed"
         );
@@ -376,10 +376,10 @@ contract WAGAZKIntegration is Test {
         assertTrue(ethiopianCompliant, "Batch should be Ethiopian compliant");
 
         // Verify Ethiopian compliance status - individual proof checks
-        bool hasEctaProof = zkManager.hasComplianceProof(batchId, "ECTA_PERMIT_VALIDITY");
-        bool hasQualityProof = zkManager.hasComplianceProof(batchId, "QUALITY_CERTIFICATE_AUTHENTICITY");
-        bool hasOriginProof = zkManager.hasComplianceProof(batchId, "ORIGIN_VERIFICATION_PROOF");
-        bool hasBoeProof = zkManager.hasComplianceProof(batchId, "BOE_FOREX_COMPLIANCE");
+        bool hasEctaProof = zkManager.hasComplianceProof(batchId, "ECTA_PERMIT");
+        bool hasQualityProof = zkManager.hasComplianceProof(batchId, "QUALITY_CERT");
+        bool hasOriginProof = zkManager.hasComplianceProof(batchId, "ORIGIN_VERIFICATION");
+        bool hasBoeProof = zkManager.hasComplianceProof(batchId, "BOE_FOREX");
         
         assertTrue(hasEctaProof, "Should have ECTA permit proof");
         assertTrue(hasQualityProof, "Should have quality certificate proof");

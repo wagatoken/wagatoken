@@ -196,7 +196,7 @@ contract EthiopianExportIntegrationTest is Test {
         // BoE forex compliance
         zkManager.addComplianceZKProof(
             testBatchId,
-            "BOE",
+            "BOE_FOREX",
             _createValidMockGroth16Proof(),
             "BoE Forex Compliance - Export Declaration Filed"
         );

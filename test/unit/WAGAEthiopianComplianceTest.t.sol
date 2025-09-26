@@ -5,9 +5,15 @@ import {Test, console} from "forge-std/Test.sol";
 import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
 import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
-// WAGAAccessControl removed - functionality moved to WAGAConfigManager
+import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
+import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
+import {WAGATreasury} from "../../src/WAGATreasury.sol";
+import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
+import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.sol";
+import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
+import {HelperConfig} from "../../script/HelperConfig.s.sol";
 
 /**
  * @title WAGAEthiopianComplianceTest
@@ -16,16 +22,25 @@ import {IEthiopianCompliance} from "../../src/Interfaces/IEthiopianCompliance.so
 contract WAGAEthiopianComplianceTest is Test {
     WAGAEthiopianCompliance public compliance;
     WAGACoffeeTokenCore public coffeeToken;
-    // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
+    WAGABatchManager public batchManager;
+    WAGAZKManager public zkManager;
+    WAGATreasury public treasury;
+    WAGACoffeeRedemption public redemption;
+    CircomVerifier public circomVerifier;
     MockUSDC public usdc;
+    
+    // Deployment infrastructure
+    DeployRealZKMVP public deployer;
+    HelperConfig public helperConfig;
 
     // Test accounts
-    address public admin = makeAddr("admin");
+    address public admin;
     address public complianceManager = makeAddr("complianceManager");
     address public bankingPartner = makeAddr("bankingPartner");
     address public offrampPartner = makeAddr("offrampPartner");
     address public buyer = makeAddr("buyer");
     address public seller = makeAddr("seller");
+    address public processor = makeAddr("processor");
 
     // Test constants
     uint256 constant BATCH_ID = 1;
@@ -37,8 +52,8 @@ contract WAGAEthiopianComplianceTest is Test {
     IEthiopianCompliance.EUDRCertificate eudrCert = IEthiopianCompliance.EUDRCertificate({
         certificateId: "EUDR-2024-001",
         issuer: "European Commission",
-        issueDate: block.timestamp - 30 days,
-        expiryDate: block.timestamp + 365 days,
+        issueDate: 1704067200, // Jan 1, 2024
+        expiryDate: 1735689600, // Jan 1, 2025
         isValid: true,
         geoDataHash: "geo_hash_123",
         complianceLevel: "High",
@@ -60,26 +75,46 @@ contract WAGAEthiopianComplianceTest is Test {
     event SellerPaymentConfirmed(uint256 indexed batchId, address indexed buyer, uint64 indexed sellerId, uint256 usdAmountReceived, string sellerTransactionId);
 
     function setUp() public {
+        // Deploy the complete system using deployment script
+        deployer = new DeployRealZKMVP();
+        (
+            coffeeToken,
+            batchManager,
+            zkManager,
+            ,  // privacyLayer - not used in this test
+            treasury,
+            redemption,
+            ,  // cdpIntegration - not used in this test
+            ,  // proofOfReserve - not used in this test
+            ,  // inventoryManager - not used in this test
+            compliance,
+            ,  // ecxOracle - not used in this test
+            circomVerifier,
+            helperConfig
+        ) = deployer.run();
+
+        // Get admin address - use the default test admin address
+        admin = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
+        
+        // Get USDC from helper config
+        usdc = MockUSDC(helperConfig.getActiveNetworkConfig().usdcAddress);
+
+        // Setup roles using the proper access control system
         vm.startPrank(admin);
-
-        // Deploy contracts - Note: AccessControl functionality moved to ConfigManager
-        usdc = new MockUSDC();
+        coffeeToken.grantProcessorRole(processor);
         
-        // Deploy coffee token (includes ConfigManager functionality)
-        coffeeToken = new WAGACoffeeTokenCore("");
-        
-        // Deploy Ethiopian compliance
-        compliance = new WAGAEthiopianCompliance();
-        
-        // Link compliance to coffee token for access control
-        compliance.setCoffeeToken(address(coffeeToken));
-
-        // Setup roles using ConfigManager functions through coffeeToken
+        // Grant necessary roles for compliance operations
+        coffeeToken.grantQualityInspectorRole(complianceManager);
+        coffeeToken.grantOriginVerifierRole(complianceManager);
         coffeeToken.grantComplianceManagerRole(complianceManager);
-        coffeeToken.grantQualityInspectorRole(complianceManager); // EUDR cert requires quality inspector
-        coffeeToken.grantOriginVerifierRole(complianceManager);   // Geolocation requires origin verifier
         coffeeToken.grantBankingPartnerRole(bankingPartner);
         coffeeToken.grantBankingPartnerRole(offrampPartner);
+
+        // Grant roles to the contracts themselves for internal operations
+        coffeeToken.grantQualityInspectorRole(address(compliance));
+        coffeeToken.grantOriginVerifierRole(address(compliance));
+        coffeeToken.grantComplianceManagerRole(address(compliance));
+        coffeeToken.grantProcessorRole(address(compliance));
 
         // Register seller using ConfigManager
         coffeeToken.registerSeller(

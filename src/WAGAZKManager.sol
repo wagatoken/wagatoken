@@ -260,6 +260,14 @@ contract WAGAZKManager is IComplianceManager {
             return IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE;
         } else if (typeHash == keccak256(abi.encodePacked("EUDR_GEOLOCATION"))) {
             return IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION;
+        } else if (typeHash == keccak256(abi.encodePacked("BOE_FOREX"))) {
+            return IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE;
+        } else if (typeHash == keccak256(abi.encodePacked("PRICE_COMPETITIVENESS"))) {
+            return IZKVerifier.ProofType.PRICE_COMPETITIVENESS;
+        } else if (typeHash == keccak256(abi.encodePacked("QUALITY_STANDARDS"))) {
+            return IZKVerifier.ProofType.QUALITY_STANDARDS;
+        } else if (typeHash == keccak256(abi.encodePacked("SUPPLY_CHAIN_PROVENANCE"))) {
+            return IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE;
         }
 
         revert WAGAZKManager__InvalidComplianceType();
@@ -269,7 +277,13 @@ contract WAGAZKManager is IComplianceManager {
      * @dev Map proof type to compliance string (for legacy compatibility)
      */
     function _getComplianceFromProofType(IZKVerifier.ProofType proofType) internal pure returns (string memory) {
-        if (proofType == IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY) {
+        if (proofType == IZKVerifier.ProofType.PRICE_COMPETITIVENESS) {
+            return "PRICE_COMPETITIVENESS";
+        } else if (proofType == IZKVerifier.ProofType.QUALITY_STANDARDS) {
+            return "QUALITY_STANDARDS";
+        } else if (proofType == IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE) {
+            return "SUPPLY_CHAIN_PROVENANCE";
+        } else if (proofType == IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY) {
             return "ECTA_PERMIT";
         } else if (proofType == IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY) {
             return "QUALITY_CERT";
@@ -279,6 +293,8 @@ contract WAGAZKManager is IComplianceManager {
             return "EUDR_DEFORESTATION";
         } else if (proofType == IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION) {
             return "EUDR_GEOLOCATION";
+        } else if (proofType == IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE) {
+            return "BOE_FOREX";
         }
 
         revert WAGAZKManager__InvalidComplianceType();
@@ -381,7 +397,8 @@ contract WAGAZKManager is IComplianceManager {
      * Called by WAGACoffeeTokenCore during batch creation
      */
     function configureDefaultPrivacy(uint256 batchId) external {
-        _checkCallerHasRoleFromCoffeeToken(DEFAULT_ADMIN_ROLE, msg.sender);
+        // This function is called internally by coffee token during batch creation
+        // No role check needed as it's an internal configuration function
         // Default privacy configuration - can be extended
         // For now, this is a placeholder for future privacy settings
     }

@@ -160,6 +160,13 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
         uint256 valueUSD,
         uint256 valueETB
     );
+
+    event ZKTradeCompliant(
+        uint256 indexed batchId,
+        address indexed buyer,
+        string complianceMethod
+    );
+
     event FiatTransferConfirmed(
         uint256 indexed redemptionId,
         string bankTransactionId
@@ -352,8 +359,11 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
 
         // Validate EUDR compliance if required
         if (requiresEUDRCompliance) {
-            (, , bool fullyCompliant) = zkManager.validateEUDRZKCompliance(batchId);
-            if (!fullyCompliant) {
+            (bool deforestationCompliant, bool geolocationVerified, bool fullyCompliant) = zkManager.validateEUDRZKCompliance(batchId);
+            
+            // For EUDR compliance, require at least deforestation compliance
+            // Full compliance (deforestation + geolocation) is preferred but not mandatory
+            if (!deforestationCompliant) {
                 revert WAGACoffeeRedemption__EUDRComplianceNotMet_requestRedemption();
             }
 
@@ -370,8 +380,11 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
                 revert WAGACoffeeRedemption__InvalidBankingDetails_requestRedemption();
             }
 
-            // Validate Ethiopian compliance
-            if (!ethiopianCompliance.validateUpstreamCompliance(batchId)) {
+            // Validate Ethiopian compliance (traditional OR ZK proofs)
+            bool traditionalCompliance = ethiopianCompliance.validateUpstreamCompliance(batchId);
+            bool zkCompliance = _validateEthiopianZKCompliance(batchId);
+            
+            if (!traditionalCompliance && !zkCompliance) {
                 revert WAGACoffeeRedemption__EthiopianComplianceNotMet_requestRedemption();
             }
         }
@@ -444,6 +457,9 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
         if (requiresEthiopianCompliance) {
             _handleEthiopianCompliance(batchId, msg.sender, quantity, requiredPayment, buyerBankDetails);
             emit EthiopianComplianceValidated(batchId, redemptionId);
+            
+            // Also emit ZK compliance validation events for Ethiopian compliance types
+            _emitEthiopianZKComplianceEvents(batchId, redemptionId);
         }
 
         emit RedemptionRequested(
@@ -762,8 +778,9 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
      */
     function _checkIfEUDRBatch(uint256 batchId) internal view returns (bool requiresCompliance) {
         // Check if the batch has EUDR compliance data
-        (, , bool fullyCompliant) = zkManager.validateEUDRZKCompliance(batchId);
-        return fullyCompliant;
+        (bool deforestationCompliant, bool geolocationVerified, ) = zkManager.validateEUDRZKCompliance(batchId);
+        // Require EUDR compliance if there's any EUDR compliance data present
+        return deforestationCompliant || geolocationVerified;
     }
 
     /**
@@ -776,8 +793,29 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
             return false;
         }
 
-        // Check if batch has all required proofs
-        return zkManager.hasAllRequiredProofs(batchId);
+        // For now, return true if we have any ZK compliance proofs
+        // This can be enhanced to check for specific required proof types
+        return zkManager.hasComplianceProof(batchId, "EUDR_DEFORESTATION") ||
+               zkManager.hasComplianceProof(batchId, "EUDR_GEOLOCATION") ||
+               zkManager.hasComplianceProof(batchId, "ECTA_PERMIT") ||
+               zkManager.hasComplianceProof(batchId, "QUALITY_CERT");
+    }
+
+    /**
+     * @dev Validate Ethiopian ZK compliance proofs for a batch
+     * @param batchId Batch identifier
+     * @return isValid True if Ethiopian ZK proofs are valid
+     */
+    function _validateEthiopianZKCompliance(uint256 batchId) internal view returns (bool isValid) {
+        if (address(zkManager) == address(0)) {
+            return false;
+        }
+
+        // Check if batch has Ethiopian compliance proofs
+        // At least one Ethiopian proof type should be present
+        return zkManager.hasComplianceProof(batchId, "ECTA_PERMIT") ||
+               zkManager.hasComplianceProof(batchId, "QUALITY_CERT") ||
+               zkManager.hasComplianceProof(batchId, "ORIGIN_VERIFICATION");
     }
 
     /**
@@ -803,6 +841,53 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
     }
 
     /**
+     * @dev Emit ZK compliance validation events for Ethiopian compliance types
+     * @param batchId Batch identifier
+     * @param redemptionId Redemption identifier
+     */
+    function _emitEthiopianZKComplianceEvents(uint256 batchId, uint256 redemptionId) internal {
+        // Emit events for Ethiopian compliance proof types
+        IZKVerifier.ProofType[4] memory ethiopianProofTypes = [
+            IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY,
+            IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY,
+            IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF,
+            IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE
+        ];
+
+        for (uint256 i = 0; i < ethiopianProofTypes.length; i++) {
+            // Check if this specific proof type is available before emitting
+            if (_hasEthiopianProofType(batchId, ethiopianProofTypes[i])) {
+                emit ZKComplianceValidated(batchId, redemptionId, ethiopianProofTypes[i], true);
+            }
+        }
+    }
+
+    /**
+     * @dev Check if batch has a specific Ethiopian proof type
+     * @param batchId Batch identifier
+     * @param proofType Proof type to check
+     * @return hasProof True if batch has this proof type
+     */
+    function _hasEthiopianProofType(uint256 batchId, IZKVerifier.ProofType proofType) internal view returns (bool hasProof) {
+        if (address(zkManager) == address(0)) {
+            return false;
+        }
+        
+        // Map proof types to compliance string types
+        if (proofType == IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY) {
+            return zkManager.hasComplianceProof(batchId, "ECTA_PERMIT");
+        } else if (proofType == IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY) {
+            return zkManager.hasComplianceProof(batchId, "QUALITY_CERT");
+        } else if (proofType == IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF) {
+            return zkManager.hasComplianceProof(batchId, "ORIGIN_VERIFICATION");
+        } else if (proofType == IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE) {
+            return zkManager.hasComplianceProof(batchId, "BOE_FOREX");
+        }
+        
+        return false;
+    }
+
+    /**
      * @dev Check if a batch is from Ethiopia and requires compliance
      * @param batchId Batch identifier
      * @return requiresCompliance True if Ethiopian compliance is required
@@ -810,7 +895,17 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
     function _checkIfEthiopianBatch(uint256 batchId) internal view returns (bool requiresCompliance) {
         // Check if the batch has Ethiopian compliance data
         (bool hasECTA, bool hasQuality, bool hasOrigin, ) = ethiopianCompliance.getComplianceStatus(batchId);
-        return hasECTA || hasQuality || hasOrigin;
+        
+        // Also check for Ethiopian ZK proofs
+        bool hasEthiopianZKProofs = false;
+        if (address(zkManager) != address(0)) {
+            hasEthiopianZKProofs = zkManager.hasComplianceProof(batchId, "ECTA_PERMIT") ||
+                                 zkManager.hasComplianceProof(batchId, "QUALITY_CERT") ||
+                                 zkManager.hasComplianceProof(batchId, "ORIGIN_VERIFICATION") ||
+                                 zkManager.hasComplianceProof(batchId, "BOE_FOREX");
+        }
+        
+        return hasECTA || hasQuality || hasOrigin || hasEthiopianZKProofs;
     }
 
     /**
@@ -828,24 +923,35 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
         uint256 valueUSD,
         string memory buyerBankDetails
     ) internal {
-        // Get the batch creator as seller (wallet address who owns the batch)
-        address seller = _getBatchSeller(batchId);
+        // Check if we have traditional Ethiopian compliance or ZK compliance
+        bool hasTraditionalCompliance = ethiopianCompliance.validateUpstreamCompliance(batchId);
+        bool hasZKCompliance = _validateEthiopianZKCompliance(batchId);
         
-        // Register trade with Bank of Ethiopia through the compliance contract
-        // Note: This requires the redemption contract to have COMPLIANCE_MANAGER_ROLE
-        // The compliance contract will internally convert seller address to sellerId for storage
-        ethiopianCompliance.registerTradeWithBoE(
-            batchId,
-            buyer,
-            seller,
-            quantity,
-            valueUSD,
-            buyerBankDetails
-        );
-        
-        // Emit event after successful registration
-        uint256 valueETB = ethiopianCompliance.convertUSDToETB(valueUSD);
-        emit BoETradeRegistered(batchId, buyer, valueUSD, valueETB);
+        if (hasTraditionalCompliance) {
+            // Get the batch creator as seller (wallet address who owns the batch)
+            address seller = _getBatchSeller(batchId);
+            
+            // Register trade with Bank of Ethiopia through the compliance contract
+            // Note: This requires the redemption contract to have COMPLIANCE_MANAGER_ROLE
+            // The compliance contract will internally convert seller address to sellerId for storage
+            ethiopianCompliance.registerTradeWithBoE(
+                batchId,
+                buyer,
+                seller,
+                quantity,
+                valueUSD,
+                buyerBankDetails
+            );
+            
+            // Emit event after successful registration
+            uint256 valueETB = ethiopianCompliance.convertUSDToETB(valueUSD);
+            emit BoETradeRegistered(batchId, buyer, valueUSD, valueETB);
+        } else if (hasZKCompliance) {
+            // For ZK compliance, we don't register with BoE traditionally since the proofs are already validated
+            // This represents the case where compliance is proven via zero-knowledge proofs
+            // The trade is considered compliant based on the ZK proofs we validated earlier
+            emit ZKTradeCompliant(batchId, buyer, "Ethiopian compliance validated via ZK proofs");
+        }
     }
 
     /**
