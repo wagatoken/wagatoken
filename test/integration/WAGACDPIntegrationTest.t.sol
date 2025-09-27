@@ -71,6 +71,7 @@ contract WAGACDPIntegrationTest is Test {
         vm.startPrank(admin);
         // CDP Integration roles are managed through coffeeToken (unified access control)
         coffeeToken.grantPaymentHandlerRole(paymentHandler);
+        coffeeToken.grantCDPAdminRole(admin);  // Grant CDP admin role to admin for testing
         // Setup roles for mock contracts
         mockCoinbaseSDK.grantRole(mockCoinbaseSDK.PAYMENT_HANDLER_ROLE(), paymentHandler);
         vm.stopPrank();
@@ -81,9 +82,9 @@ contract WAGACDPIntegrationTest is Test {
     function testDeployment() public view {
         assertEq(address(cdpIntegration.usdcToken()), address(usdc));
         // Check role through coffeeToken (unified access control)
-        assertTrue(coffeeToken.hasRole(keccak256("CDP_ADMIN_ROLE"), admin));
+        assertTrue(coffeeToken.hasRole(coffeeToken.CDP_ADMIN_ROLE(), admin));
         // Check payment handler role through coffeeToken (unified access control)
-        assertTrue(coffeeToken.hasRole(keccak256("PAYMENT_HANDLER_ROLE"), paymentHandler));
+        assertTrue(coffeeToken.hasRole(coffeeToken.PAYMENT_HANDLER_ROLE(), paymentHandler));
     }
 
     function testCreateSmartAccount() public {
@@ -106,7 +107,7 @@ contract WAGACDPIntegrationTest is Test {
 
         // Now try to create again - should revert
         vm.prank(admin);
-        vm.expectRevert("Smart account already exists");
+        vm.expectRevert(WAGACDPIntegration.WAGACDPIntegration__SmartAccountAlreadyExists_createSmartAccount.selector);
         cdpIntegration.createSmartAccount(user);
     }
 

@@ -624,8 +624,6 @@ contract WAGAEnhancedForkTest is Test {
         console.log("Created batch for ZK workflow:", batchId);
         
         // Test multiple ZK proof types
-        vm.startPrank(ADMIN_USER);
-        
         // Pricing proof
         bytes memory pricingProof = new bytes(256);
         for (uint i = 0; i < 256; i++) {
@@ -828,8 +826,6 @@ contract WAGAEnhancedForkTest is Test {
         console.log("Created export batch:", exportBatchId);
         
         // Test compliance verification workflow
-        vm.startPrank(ADMIN_USER);
-        
         // Add ZK proofs for export compliance
         bytes memory exportComplianceProof = new bytes(256);
         for (uint i = 0; i < 256; i++) {

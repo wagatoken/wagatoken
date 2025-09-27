@@ -101,12 +101,28 @@ contract GasOptimizationTest is Test {
 
         // Setup offramp partner - simplified
         offrampPartner = new MockOfframpPartner(address(usdcToken));
+        offrampPartner.setCoffeeToken(address(coffeeToken));
 
-        // Comment out problematic calls for now
-        // vm.startPrank(admin);
-        // offrampPartner.addSupportedSwiftCode(TEST_SWIFT, "Test Bank");
-        // offrampPartner.addSupportedSwiftCode(ETHIOPIAN_SWIFT, "Commercial Bank of Ethiopia");
-        // vm.stopPrank();
+        // Setup required roles for gas optimization testing
+        vm.startPrank(admin);
+        
+        // Ensure admin has necessary roles for comprehensive testing
+        // Only grant if not already granted (deployment should have set these)
+        if (!coffeeToken.hasRole(coffeeToken.DEFAULT_ADMIN_ROLE(), admin)) {
+            coffeeToken.grantRole(coffeeToken.DEFAULT_ADMIN_ROLE(), admin);
+        }
+        if (!coffeeToken.hasRole(coffeeToken.ADMIN_ROLE(), admin)) {
+            coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), admin);
+        }
+        
+        // Grant OFFRAMP_EXECUTOR_ROLE for gas optimization tests
+        coffeeToken.grantOfframpExecutorRole(admin);
+        
+        // Setup offramp partner with SWIFT codes
+        offrampPartner.addSupportedSwiftCode(TEST_SWIFT, "Test Bank");
+        offrampPartner.addSupportedSwiftCode(ETHIOPIAN_SWIFT, "Commercial Bank of Ethiopia");
+        
+        vm.stopPrank();
     }
 
     /* -------------------------------------------------------------------------- */

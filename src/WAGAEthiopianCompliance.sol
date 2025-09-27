@@ -244,7 +244,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, ReentrancyGuard {
     /**
      * @inheritdoc IEthiopianCompliance
      */
-    function addEUDRCertificate(uint256 batchId, EUDRCertificate calldata certificate) external override onlyQualityInspector {
+    function addEUDRCertificate(uint256 batchId, EUDRCertificate calldata certificate) external override onlyComplianceManager {
         if (certificate.expiryDate <= block.timestamp) {
             revert WAGAEthiopianCompliance__EUDRCertificateExpired_addEUDRCertificate();
         }
@@ -255,7 +255,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, ReentrancyGuard {
     /**
      * @inheritdoc IEthiopianCompliance
      */
-    function addGeolocationData(uint256 batchId, GeolocationData calldata geoData) external override onlyOriginVerifier {
+    function addGeolocationData(uint256 batchId, GeolocationData calldata geoData) external override onlyComplianceManager {
         if (bytes(geoData.coordinates).length == 0) {
             revert WAGAEthiopianCompliance__InvalidGeolocationData_addGeolocationData();
         }

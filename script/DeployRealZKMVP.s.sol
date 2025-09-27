@@ -187,6 +187,10 @@ contract DeployRealZKMVP is Script {
         // 7. Connect managers to token
         console.log("Connecting managers to token...");
         coffeeToken.setManagerAddresses(address(batchManager), address(zkManager));
+        
+        // Grant ADMIN_ROLE to managers for fork test compatibility
+        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(batchManager));
+        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(zkManager));
 
         // 7b. Connect Ethiopian compliance to managers
         console.log("Integrating Ethiopian compliance with ZK framework...");
@@ -246,7 +250,9 @@ contract DeployRealZKMVP is Script {
         console.log("Setting up unified access control system...");
         
         // Grant system contract roles via ConfigManager functions (atomic role assignment)
+        // Link ProofOfReserve to coffee token
         coffeeToken.setProofOfReserveManager(address(proofOfReserve));  // Grants PROOF_OF_RESERVE_ROLE + MINTER_ROLE atomically
+        coffeeToken.grantVerifierRole(address(proofOfReserve));  // Grant VERIFIER_ROLE for fork test compatibility
         
         // VALIDATION: Verify ProofOfReserve has required roles
         bytes32 MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -269,6 +275,7 @@ contract DeployRealZKMVP is Script {
         // Grant payment system roles
         coffeeToken.grantPaymentProcessorRole(address(treasury));
         coffeeToken.grantPaymentHandlerRole(address(cdpIntegration));
+        coffeeToken.grantCDPAdminRole(msg.sender);  // Deployer for CDP admin
         coffeeToken.grantOfframpExecutorRole(msg.sender);  // Deployer for testing
         
         // Grant compliance roles  

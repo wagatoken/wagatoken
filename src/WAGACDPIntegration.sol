@@ -115,7 +115,7 @@ contract WAGACDPIntegration is IWAGACDPIntegration, ReentrancyGuard {
         string calldata chargeId
     ) external {
         if (!coffeeToken.hasRole(PAYMENT_HANDLER_ROLE, msg.sender)) {
-            return;
+            revert("WAGACDPIntegration: caller is not a payment handler");
         }
         if (amount == 0) {
             revert WAGACDPIntegration__InvalidPaymentAmount_initiateCDPPayment();
@@ -149,7 +149,7 @@ contract WAGACDPIntegration is IWAGACDPIntegration, ReentrancyGuard {
         bool success
     ) external {
         if (!coffeeToken.hasRole(PAYMENT_HANDLER_ROLE, msg.sender)) {
-            return;
+            revert("WAGACDPIntegration: caller is not a payment handler");
         }
         IWAGACDPIntegration.CDPPayment storage payment = cdpPayments[chargeId];
         if (payment.user == address(0)) {
@@ -177,7 +177,7 @@ contract WAGACDPIntegration is IWAGACDPIntegration, ReentrancyGuard {
         bytes calldata signature
     ) external returns (bool) {
         if (!coffeeToken.hasRole(PAYMENT_HANDLER_ROLE, msg.sender)) {
-            return false;
+            revert("WAGACDPIntegration: caller is not a payment handler");
         }
         // Calculate webhook ID for deduplication
         bytes32 webhookId = keccak256(abi.encodePacked(webhookData, signature));
@@ -261,7 +261,7 @@ contract WAGACDPIntegration is IWAGACDPIntegration, ReentrancyGuard {
         address _cdpPaymaster
     ) external {
         if (!coffeeToken.hasRole(CDP_ADMIN_ROLE, msg.sender)) {
-            return;
+            revert("WAGACDPIntegration: caller is not a CDP admin");
         }
         cdpSmartAccountFactory = _cdpSmartAccountFactory;
         cdpPaymaster = _cdpPaymaster;
