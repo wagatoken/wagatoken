@@ -409,7 +409,7 @@ abstract contract BaseWAGATest is Test {
         vm.prank(complianceManager);
         ethiopianCompliance.addEUDRCertificate(batchId, testEUDRCert);
         
-        vm.prank(complianceManager);
+        vm.prank(originVerifier);
         ethiopianCompliance.addGeolocationData(batchId, testGeoData);
     }
 

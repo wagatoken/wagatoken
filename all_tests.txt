@@ -1,0 +1,228 @@
+No files changed, compilation skipped
+test/integration/GasOptimizationTest.t.sol
+  GasOptimizationTest
+    testComprehensiveGasAnalysis
+    testGasOptimizationValidation
+    testSellerIdGasOptimization
+    testSellerIdLookupGasOptimization
+    testSwiftCodeGasOptimization
+    testSwiftCodeValidationGasOptimization
+    testUtils
+
+test/integration/RealCircomVerifierIntegrationSimple.t.sol
+  RealCircomVerifierIntegration
+    testComprehensiveCircuitTesting
+    testEUDRComplianceCircuitVerification
+    testGasCostsRealVerification
+    testGroth16ProofFormatValidation
+    testGroth16ProofStructureValidation
+    testRealPriceCircuitVerification
+    testRealQualityCircuitVerification
+    testRealSupplyChainCircuitVerification
+    testRealVerifierDeployment
+    testVerificationPerformanceBenchmarks
+    testZKManagerRealVerifierIntegration
+
+test/integration/WAGABaseForkTest.t.sol
+  WAGABaseForkTest
+    testAdmin
+    testBatchCreationOnFork
+    testChainlinkFunctionsConnection
+    testChainlinkRouterInteractionOnFork
+    testDeploymentOnBaseSepolia
+    testECXPriceOracleOnFork
+    testEthiopianComplianceOnFork
+    testGasCostsOnFork
+    testProcessor
+    testReadBaseSepoliaState
+    testRoleManagementOnFork
+    testStatePersistenceOnFork
+    testVerifier
+    testZKProofIntegrationOnFork
+
+test/integration/WAGACDPIntegrationTest.t.sol
+  WAGACDPIntegrationTest
+    testConfirmCDPPayment
+    testConfirmCDPPaymentFailure
+    testCreateSmartAccount
+    testCreateSmartAccountAlreadyExists
+    testDeployment
+    testEmergencyPause
+    testEmergencyUnpause
+    testGetNonexistentSmartAccount
+    testGetUserSmartAccount
+    testInitiateCDPPayment
+    testInitiateCDPPaymentOnlyHandler
+    testMultiplePayments
+    testPaymentStatusTransitions
+    testProcessCrossBorderPayment
+    testProcessMockWebhook
+    testProcessMockWebhookTwice
+    testUpdateCDPConfig
+    testUpdateCDPConfigOnlyAdmin
+
+test/integration/WAGAChainlinkIntegration.t.sol
+  WAGAChainlinkIntegration
+    testApiErrorHandling
+    testBatchId
+    testChainlinkFunctionsIntegration
+    testContractAddresses
+    testCreateBatchForChainlinkTesting
+    testCustomVerificationResponse
+    testMockRouterSubscriptionValidation
+    testMultipleVerificationRequests
+    testRequestId
+    testReserveVerificationFailure
+    testSuccessfulReserveVerification
+    testVerifierAccessControl
+
+test/integration/WAGAEndToEndWorkflowTest.t.sol
+  WAGAEndToEndWorkflowTest
+    testCompleteWorkflow_CooperativeToBuyer
+    testCompleteWorkflow_ProcessorToRoaster
+    testECTAPermit
+    testEUDRCert
+    testGeoData
+    testOriginVerification
+    testQualityCert
+    testSimpleWorkflow
+
+test/integration/WAGAEnhancedForkTest.t.sol
+  WAGAEnhancedForkTest
+    testAdvancedRoleManagementOnFork
+    testBatchId
+    testCDPIntegrationOnFork
+    testChainlinkRouterInteractionOnFork
+    testComprehensiveBatchWorkflowOnFork
+    testECXPriceOracleIntegrationOnFork
+    testEthiopianComplianceIntegrationOnFork
+    testEthiopianExportComplianceWorkflowOnFork
+    testGasUsageAnalysisOnFork
+    testSWIFTBankingIntegrationOnFork
+    testSellerIDIntegrationOnFork
+    testStatePersistenceOnFork
+    testTreasuryIntegrationOnFork
+    testVerificationRequestSetupOnFork
+    testZKProofWorkflowOnFork
+
+test/integration/WAGAIntegratedServicesTest.t.sol
+  WAGAIntegratedServicesTest
+    testBatchManagerIntegrationWithServices
+    testChainlinkFunctionsIntegration
+    testECTAPermit
+    testEUDRCert
+    testFullServiceIntegration
+    testGeoData
+    testIntegrationFailureScenarios
+    testOriginVerification
+    testPriceIntegrationWithECX
+    testQualityCert
+    testServiceRecovery
+    testTreasuryIntegrationWithCompliance
+    testZKProofWithCompliance
+
+test/unit/HelperConfigTest.t.sol
+  HelperConfigTest
+    testHelperConfigDeployment
+
+test/unit/WAGABatchManagerStreamlinedTest.t.sol
+  WAGABatchManagerStreamlinedTest
+    testAccessControl_AuthorizedUsers
+    testAccessControl_UnauthorizedUsers
+    testBatchCreation_MultipleRoles
+    testBatchCreation_Success
+    testBatchManagerIntegration_WithCompliance
+    testBatchManagerIntegration_WithTreasury
+    testBatchQuery_Success
+    testBatchUpdate_Success
+    testBatchValidation_EdgeCases
+    testBatchValidation_ValidData
+    testECTAPermit
+    testEUDRCert
+    testErrorHandling_DuplicateOperations
+    testErrorHandling_InvalidBatchId
+    testGeoData
+    testOriginVerification
+    testPerformance_BatchCreation
+    testPerformance_BatchQuery
+    testQualityCert
+    testZKProofIntegration_WithCompliance
+    testZKProofSubmission_Success
+
+test/unit/WAGACoffeeRedemptionStreamlinedTest.t.sol
+  WAGACoffeeRedemptionStreamlinedTest
+    testECTAPermit
+    testEUDRCert
+    testFiatTransfer_Offramp
+    testGeoData
+    testMinterRole
+    testOriginVerification
+    testQualityCert
+    testRedemptionRole
+    testRedemption_ComplianceRequired
+    testRedemption_WithPayment
+    testRedemption_ZKProofRequired
+
+test/unit/WAGAEthiopianComplianceStreamlinedTest.t.sol
+  WAGAEthiopianComplianceStreamlinedTest
+    testAddECTAPermit_OnlyComplianceManager
+    testAddECTAPermit_Success
+    testAddOriginVerification_OnlyOriginVerifier
+    testAddOriginVerification_Success
+    testAddQualityCertificate_Success
+    testComplianceManagerRole
+    testECTAPermit
+    testEUDRCert
+    testEUDRCompliance_Complete
+    testGeoData
+    testOriginVerification
+    testOriginVerifierRole
+    testQualityCert
+    testQualityInspectorRole
+    testUpstreamCompliance_Complete
+
+test/unit/WAGATreasuryConsolidatedTest.t.sol
+  WAGATreasuryConsolidatedTest
+    testBatchPaymentTracking
+    testDeployment
+    testDoublePayment_SameUser
+    testECTAPermit
+    testEUDRCert
+    testEndToEndPaymentWorkflow
+    testGasUsage_BatchPayment
+    testGasUsage_OfframpTransfer
+    testGeoData
+    testMultiplePayments_SameBatch
+    testOfframpExecutor_RoleAccess
+    testOfframpTransfer_InsufficientTreasuryBalance
+    testOfframpTransfer_OnlyOfframpExecutor
+    testOfframpTransfer_Success
+    testOriginVerification
+    testPayForBatch_ExcessiveAmount
+    testPayForBatch_InsufficientAllowance
+    testPayForBatch_InsufficientBalance
+    testPayForBatch_Success
+    testPayForNonExistentBatch
+    testPaymentProcessor_RoleAccess
+    testQualityCert
+    testSetBatchPayment_OnlyAdmin
+    testSetBatchPayment_Success
+    testTreasuryIntegrationWithBatchManager
+    testTreasuryIntegrationWithRedemption
+    testZeroAmountPayment
+
+test/unit/WAGAZKManagerStreamlinedTest.t.sol
+  WAGAZKManagerStreamlinedTest
+    testECTAPermit
+    testEUDRCert
+    testGeoData
+    testGetZKProofStatus_NonExistentProof
+    testOriginVerification
+    testQualityCert
+    testSubmitZKProof_MultipleTypes
+    testSubmitZKProof_Success
+    testSubmitZKProof_UnauthorizedVerifier
+    testVerifyZKProof_ValidProof
+    testZKAdminRole_Access
+    testZKVerifierRole_Access
+
