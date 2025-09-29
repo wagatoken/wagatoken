@@ -47,7 +47,7 @@ contract MockCircomVerifier is IZKVerifier {
 
     event MockProofVerified(
         uint256 indexed batchId,
-        ProofType indexed proofType,
+        IZKVerifier.ProofType indexed proofType,
         string publicClaim,
         bool success
     );
@@ -57,7 +57,7 @@ contract MockCircomVerifier is IZKVerifier {
     /* -------------------------------------------------------------------------- */
 
     // Track verified proofs for testing
-    mapping(uint256 => BatchProofStatus) public batchProofStatuses;
+    mapping(uint256 => IZKVerifier.BatchProofStatus) public batchProofStatuses;
 
     /* -------------------------------------------------------------------------- */
     /*                                 Constructor                                */
@@ -120,8 +120,8 @@ contract MockCircomVerifier is IZKVerifier {
         batchProofStatuses[batchId].hasPriceProof = true;
         batchProofStatuses[batchId].priceClaimText = publicClaim;
 
-        emit MockProofVerified(batchId, ProofType.PRICE_COMPETITIVENESS, publicClaim, true);
-        emit ProofVerified(batchId, ProofType.PRICE_COMPETITIVENESS, publicClaim, keccak256(zkProofData));
+        emit MockProofVerified(batchId, IZKVerifier.ProofType.PRICE_COMPETITIVENESS, publicClaim, true);
+        emit ProofVerified(batchId, IZKVerifier.ProofType.PRICE_COMPETITIVENESS, publicClaim, keccak256(zkProofData));
     }
 
     /**
@@ -159,8 +159,8 @@ contract MockCircomVerifier is IZKVerifier {
         batchProofStatuses[batchId].hasQualityProof = true;
         batchProofStatuses[batchId].qualityClaimText = publicClaim;
 
-        emit MockProofVerified(batchId, ProofType.QUALITY_STANDARDS, publicClaim, true);
-        emit ProofVerified(batchId, ProofType.QUALITY_STANDARDS, publicClaim, keccak256(zkProofData));
+        emit MockProofVerified(batchId, IZKVerifier.ProofType.QUALITY_STANDARDS, publicClaim, true);
+        emit ProofVerified(batchId, IZKVerifier.ProofType.QUALITY_STANDARDS, publicClaim, keccak256(zkProofData));
     }
 
     /**
@@ -198,8 +198,8 @@ contract MockCircomVerifier is IZKVerifier {
         batchProofStatuses[batchId].hasSupplyChainProof = true;
         batchProofStatuses[batchId].supplyChainClaimText = publicClaim;
 
-        emit MockProofVerified(batchId, ProofType.SUPPLY_CHAIN_PROVENANCE, publicClaim, true);
-        emit ProofVerified(batchId, ProofType.SUPPLY_CHAIN_PROVENANCE, publicClaim, keccak256(zkProofData));
+        emit MockProofVerified(batchId, IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE, publicClaim, true);
+        emit ProofVerified(batchId, IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE, publicClaim, keccak256(zkProofData));
     }
 
     /**
@@ -237,8 +237,8 @@ contract MockCircomVerifier is IZKVerifier {
         batchProofStatuses[batchId].hasEUDRDeforestationProof = true;
         batchProofStatuses[batchId].eudrDeforestationClaimText = publicClaim;
 
-        emit MockProofVerified(batchId, ProofType.EUDR_DEFORESTATION_COMPLIANCE, publicClaim, true);
-        emit ProofVerified(batchId, ProofType.EUDR_DEFORESTATION_COMPLIANCE, publicClaim, keccak256(zkProofData));
+        emit MockProofVerified(batchId, IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE, publicClaim, true);
+        emit ProofVerified(batchId, IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE, publicClaim, keccak256(zkProofData));
     }
 
     /**
@@ -258,7 +258,7 @@ contract MockCircomVerifier is IZKVerifier {
         // Simple mock verification - accept any proof that isn't "invalid_proof"
         if (keccak256(zkProofData) == keccak256("invalid_proof")) {
             verified = false;
-            emit MockProofVerified(batchId, ProofType.EUDR_GEOLOCATION_VERIFICATION, publicClaim, false);
+            emit MockProofVerified(batchId, IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION, publicClaim, false);
             return verified;
         }
 
@@ -266,8 +266,8 @@ contract MockCircomVerifier is IZKVerifier {
         batchProofStatuses[batchId].hasEUDRGeolocationProof = true;
         batchProofStatuses[batchId].eudrGeolocationClaimText = publicClaim;
 
-        emit MockProofVerified(batchId, ProofType.EUDR_GEOLOCATION_VERIFICATION, publicClaim, true);
-        emit ProofVerified(batchId, ProofType.EUDR_GEOLOCATION_VERIFICATION, publicClaim, keccak256(zkProofData));
+        emit MockProofVerified(batchId, IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION, publicClaim, true);
+        emit ProofVerified(batchId, IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION, publicClaim, keccak256(zkProofData));
     }
 
     /**
@@ -305,8 +305,8 @@ contract MockCircomVerifier is IZKVerifier {
         batchProofStatuses[batchId].hasEUDRGeolocationProof = true;
         batchProofStatuses[batchId].eudrGeolocationClaimText = publicClaim;
 
-        emit MockProofVerified(batchId, ProofType.EUDR_GEOLOCATION_VERIFICATION, publicClaim, true);
-        emit ProofVerified(batchId, ProofType.EUDR_GEOLOCATION_VERIFICATION, publicClaim, keccak256(zkProofData));
+        emit MockProofVerified(batchId, IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION, publicClaim, true);
+        emit ProofVerified(batchId, IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION, publicClaim, keccak256(zkProofData));
     }
 
     /**
@@ -344,8 +344,8 @@ contract MockCircomVerifier is IZKVerifier {
         batchProofStatuses[batchId].hasEthiopianComplianceProof = true;
         batchProofStatuses[batchId].ethiopianComplianceClaimText = publicClaim;
 
-        emit MockProofVerified(batchId, ProofType.SUPPLY_CHAIN_PROVENANCE, publicClaim, true);
-        emit ProofVerified(batchId, ProofType.SUPPLY_CHAIN_PROVENANCE, publicClaim, keccak256(zkProofData));
+        emit MockProofVerified(batchId, IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE, publicClaim, true);
+        emit ProofVerified(batchId, IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE, publicClaim, keccak256(zkProofData));
     }
 
     /**
@@ -355,7 +355,7 @@ contract MockCircomVerifier is IZKVerifier {
      */
     function getBatchProofStatus(
         uint256 batchId
-    ) external view returns (BatchProofStatus memory proofStatus) {
+    ) external view returns (IZKVerifier.BatchProofStatus memory proofStatus) {
         return batchProofStatuses[batchId];
     }
 
@@ -367,7 +367,7 @@ contract MockCircomVerifier is IZKVerifier {
     function hasAllRequiredProofs(
         uint256 batchId
     ) external view returns (bool hasAllProofs) {
-        BatchProofStatus memory status = batchProofStatuses[batchId];
+        IZKVerifier.BatchProofStatus memory status = batchProofStatuses[batchId];
         return status.hasPriceProof && status.hasQualityProof && status.hasSupplyChainProof;
     }
 
@@ -379,7 +379,7 @@ contract MockCircomVerifier is IZKVerifier {
     function hasEUDRComplianceProofs(
         uint256 batchId
     ) external view returns (bool hasEUDRProofs) {
-        BatchProofStatus memory status = batchProofStatuses[batchId];
+        IZKVerifier.BatchProofStatus memory status = batchProofStatuses[batchId];
         return status.hasEUDRDeforestationProof && status.hasEUDRGeolocationProof;
     }
 
@@ -403,7 +403,7 @@ contract MockCircomVerifier is IZKVerifier {
     function getEUDRComplianceClaims(
         uint256 batchId
     ) external view returns (string memory deforestationClaim, string memory geolocationClaim) {
-        BatchProofStatus memory status = batchProofStatuses[batchId];
+        IZKVerifier.BatchProofStatus memory status = batchProofStatuses[batchId];
         return (status.eudrDeforestationClaimText, status.eudrGeolocationClaimText);
     }
 
@@ -461,7 +461,7 @@ contract MockCircomVerifier is IZKVerifier {
         // Simple mock verification - accept any proof that isn't "invalid_proof"
         if (keccak256(zkProofData) == keccak256("invalid_proof")) {
             verified = false;
-            emit MockProofVerified(batchId, ProofType.ECTA_PERMIT_VALIDITY, publicClaim, false);
+            emit MockProofVerified(batchId, IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY, publicClaim, false);
             return verified;
         }
 
@@ -469,8 +469,8 @@ contract MockCircomVerifier is IZKVerifier {
         batchProofStatuses[batchId].hasEthiopianComplianceProof = true;
         batchProofStatuses[batchId].ethiopianComplianceClaimText = publicClaim;
 
-        emit MockProofVerified(batchId, ProofType.ECTA_PERMIT_VALIDITY, publicClaim, true);
-        emit ProofVerified(batchId, ProofType.ECTA_PERMIT_VALIDITY, publicClaim, keccak256(zkProofData));
+        emit MockProofVerified(batchId, IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY, publicClaim, true);
+        emit ProofVerified(batchId, IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY, publicClaim, keccak256(zkProofData));
     }
 
     /**
@@ -490,7 +490,7 @@ contract MockCircomVerifier is IZKVerifier {
         // Simple mock verification - accept any proof that isn't "invalid_proof"
         if (keccak256(zkProofData) == keccak256("invalid_proof")) {
             verified = false;
-            emit MockProofVerified(batchId, ProofType.QUALITY_CERTIFICATE_AUTHENTICITY, publicClaim, false);
+            emit MockProofVerified(batchId, IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY, publicClaim, false);
             return verified;
         }
 
@@ -498,8 +498,8 @@ contract MockCircomVerifier is IZKVerifier {
         batchProofStatuses[batchId].hasEthiopianComplianceProof = true;
         batchProofStatuses[batchId].ethiopianComplianceClaimText = publicClaim;
 
-        emit MockProofVerified(batchId, ProofType.QUALITY_CERTIFICATE_AUTHENTICITY, publicClaim, true);
-        emit ProofVerified(batchId, ProofType.QUALITY_CERTIFICATE_AUTHENTICITY, publicClaim, keccak256(zkProofData));
+        emit MockProofVerified(batchId, IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY, publicClaim, true);
+        emit ProofVerified(batchId, IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY, publicClaim, keccak256(zkProofData));
     }
 
     /**
@@ -519,7 +519,7 @@ contract MockCircomVerifier is IZKVerifier {
         // Simple mock verification - accept any proof that isn't "invalid_proof"
         if (keccak256(zkProofData) == keccak256("invalid_proof")) {
             verified = false;
-            emit MockProofVerified(batchId, ProofType.ORIGIN_VERIFICATION_PROOF, publicClaim, false);
+            emit MockProofVerified(batchId, IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF, publicClaim, false);
             return verified;
         }
 
@@ -527,8 +527,8 @@ contract MockCircomVerifier is IZKVerifier {
         batchProofStatuses[batchId].hasEthiopianComplianceProof = true;
         batchProofStatuses[batchId].ethiopianComplianceClaimText = publicClaim;
 
-        emit MockProofVerified(batchId, ProofType.ORIGIN_VERIFICATION_PROOF, publicClaim, true);
-        emit ProofVerified(batchId, ProofType.ORIGIN_VERIFICATION_PROOF, publicClaim, keccak256(zkProofData));
+        emit MockProofVerified(batchId, IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF, publicClaim, true);
+        emit ProofVerified(batchId, IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF, publicClaim, keccak256(zkProofData));
     }
 
     /**
@@ -548,7 +548,7 @@ contract MockCircomVerifier is IZKVerifier {
         // Simple mock verification - accept any proof that isn't "invalid_proof"
         if (keccak256(zkProofData) == keccak256("invalid_proof")) {
             verified = false;
-            emit MockProofVerified(batchId, ProofType.BOE_FOREX_COMPLIANCE, publicClaim, false);
+            emit MockProofVerified(batchId, IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE, publicClaim, false);
             return verified;
         }
 
@@ -556,8 +556,8 @@ contract MockCircomVerifier is IZKVerifier {
         batchProofStatuses[batchId].hasEthiopianComplianceProof = true;
         batchProofStatuses[batchId].ethiopianComplianceClaimText = publicClaim;
 
-        emit MockProofVerified(batchId, ProofType.BOE_FOREX_COMPLIANCE, publicClaim, true);
-        emit ProofVerified(batchId, ProofType.BOE_FOREX_COMPLIANCE, publicClaim, keccak256(zkProofData));
+        emit MockProofVerified(batchId, IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE, publicClaim, true);
+        emit ProofVerified(batchId, IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE, publicClaim, keccak256(zkProofData));
     }
 
     /**

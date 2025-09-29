@@ -216,6 +216,9 @@ abstract contract BaseWAGATest is Test {
         coffeeToken.grantZKAdminRole(admin);
         coffeeToken.grantPrivacyAdminRole(admin);
         
+        // Price oracle role
+        coffeeToken.grantPriceUpdaterRole(admin);
+        
         // Grant necessary roles to contracts for internal operations
         _setupContractRoles();
         
@@ -245,6 +248,13 @@ abstract contract BaseWAGATest is Test {
         // Grant roles to test contracts (for direct calls)
         coffeeToken.grantComplianceManagerRole(address(this));
         coffeeToken.grantOriginVerifierRole(address(this));
+        
+        // Link contracts with setCoffeeToken (CRITICAL SECURITY) - matching deploy script
+        ethiopianCompliance.setCoffeeToken(address(coffeeToken));
+        cdpIntegration.setCoffeeToken(address(coffeeToken));
+        ecxOracle.setCoffeeToken(address(coffeeToken));
+        circomVerifier.setCoffeeToken(address(coffeeToken));
+        treasury.setCoffeeToken(address(coffeeToken));
         coffeeToken.grantQualityInspectorRole(address(this));
         coffeeToken.grantProcessorRole(address(this));
         coffeeToken.grantRole(keccak256("DEFAULT_ADMIN_ROLE"), address(this));
@@ -253,6 +263,13 @@ abstract contract BaseWAGATest is Test {
         coffeeToken.grantRole(keccak256("MINTER_ROLE"), address(redemption));
         coffeeToken.grantPaymentProcessorRole(address(treasury));
         coffeeToken.grantOfframpExecutorRole(address(treasury));
+        
+        // Link contracts with setCoffeeToken (CRITICAL SECURITY)
+        ethiopianCompliance.setCoffeeToken(address(coffeeToken));
+        cdpIntegration.setCoffeeToken(address(coffeeToken));
+        ecxOracle.setCoffeeToken(address(coffeeToken));
+        circomVerifier.setCoffeeToken(address(coffeeToken));
+        treasury.setCoffeeToken(address(coffeeToken));
     }
 
     function _initializeTestData() internal {

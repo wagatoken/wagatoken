@@ -255,7 +255,7 @@ contract WAGAEthiopianCompliance is IEthiopianCompliance, ReentrancyGuard {
     /**
      * @inheritdoc IEthiopianCompliance
      */
-    function addGeolocationData(uint256 batchId, GeolocationData calldata geoData) external override onlyComplianceManager {
+    function addGeolocationData(uint256 batchId, GeolocationData calldata geoData) external override onlyOriginVerifier {
         if (bytes(geoData.coordinates).length == 0) {
             revert WAGAEthiopianCompliance__InvalidGeolocationData_addGeolocationData();
         }

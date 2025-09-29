@@ -325,6 +325,47 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     }
 
     /**
+     * @dev Creates a new batch request for verification workflow
+     */
+    function createBatchRequest(
+        uint256 batchId,
+        uint256 requestedQuantity,
+        string memory requestDetails
+    ) external returns (uint256) {
+        // Check if batch exists
+        if (!isBatchCreated(batchId)) {
+            revert("Batch does not exist");
+        }
+        
+        // Check if requester has appropriate role (processor or verifier)
+        bytes32 processorRole = keccak256("PROCESSOR_ROLE");
+        bytes32 verifierRole = keccak256("VERIFIER_ROLE");
+        if (!hasRole(processorRole, msg.sender) && !hasRole(verifierRole, msg.sender)) {
+            revert("Caller must have PROCESSOR_ROLE or VERIFIER_ROLE");
+        }
+        
+        // Get the next request index for this batch
+        uint256 requestIndex = s_batchRequestCount[batchId];
+        
+        // Create the batch request
+        batchRequestsByIndex[batchId][requestIndex] = BatchRequest({
+            batchId: batchId,
+            requester: msg.sender,
+            requestedQuantity: requestedQuantity,
+            requestDetails: requestDetails,
+            requestTimestamp: block.timestamp,
+            isFulfilled: false,
+            fulfilledQuantity: 0,
+            fulfilledTimestamp: 0
+        });
+        
+        // Increment the request count
+        s_batchRequestCount[batchId]++;
+        
+        return requestIndex;
+    }
+
+    /**
      * @dev Get batch request - delegate to inherited function
      * @notice Uses uint256 requestIndex to match WAGAViewFunctions.getBatchRequest
      */

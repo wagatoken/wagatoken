@@ -68,7 +68,7 @@ contract WAGAEthiopianComplianceStreamlinedTest is BaseWAGATest {
     /* -------------------------------------------------------------------------- */
 
     function testEUDRCompliance_Complete() public {
-        vm.prank(qualityInspector);
+        vm.prank(complianceManager);
         ethiopianCompliance.addEUDRCertificate(testBatchId, testEUDRCert);
         
         vm.prank(originVerifier);

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.18;
 
 import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
+import {IZKVerifier} from "./Interfaces/IZKVerifier.sol";
 import {Groth16Verifier as PricePrivacyCircuitVerifier} from "./verifiers/PricePrivacyCircuitVerifier.sol";
 import {Groth16Verifier as QualityTierCircuitVerifier} from "./verifiers/QualityTierCircuitVerifier.sol";
 import {Groth16Verifier as SupplyChainPrivacyCircuitVerifier} from "./verifiers/SupplyChainPrivacyCircuitVerifier.sol";
@@ -14,7 +15,7 @@ import {EthiopianComplianceCircuitVerifier} from "./verifiers/EthiopianComplianc
  * @dev Real ZK verification using Circom circuits for WAGA MVP
  * @dev Focuses on 3 core proofs: Price, Quality, Supply Chain
  */
-contract CircomVerifier {
+contract CircomVerifier is IZKVerifier {
     // Coffee token for role checks
     IWAGACoffeeToken public coffeeToken;
     // Role constants - defined in WAGAConfigManager
@@ -25,38 +26,14 @@ contract CircomVerifier {
     /*                              Type Declarations                             */
     /* -------------------------------------------------------------------------- */
 
-    enum ProofType {
-        PRICE_COMPETITIVENESS,         // Prove price is competitive without revealing actual price
-        QUALITY_STANDARDS,             // Prove quality meets standards without revealing scores
-        SUPPLY_CHAIN_PROVENANCE,       // Prove origin/traceability without revealing sensitive details
-        EUDR_DEFORESTATION_COMPLIANCE, // Prove deforestation-free status without revealing geolocation
-        EUDR_GEOLOCATION_VERIFICATION, // Prove valid geolocation data without revealing coordinates
-        ETHIOPIAN_COMPLIANCE           // Prove Ethiopian export compliance (ECTA, quality, origin)
-    }
-
-    struct ZKProof {
+    struct ZKProofInternal {
         bytes32 proofHash;
-        ProofType proofType;
+        IZKVerifier.ProofType proofType;
         bool isVerified;
         uint256 timestamp;
         string publicClaim;       // What we can publicly claim
         bytes proofData;          // Raw ZK proof data
         uint256[] publicSignals;  // Public inputs to the circuit
-    }
-
-    struct BatchProofStatus {
-        bool hasPriceProof;
-        bool hasQualityProof;
-        bool hasSupplyChainProof;
-        bool hasEUDRDeforestationProof;
-        bool hasEUDRGeolocationProof;
-        bool hasEthiopianComplianceProof;
-        string priceClaimText;
-        string qualityClaimText;
-        string supplyChainClaimText;
-        string eudrDeforestationClaimText;
-        string eudrGeolocationClaimText;
-        string ethiopianComplianceClaimText;
     }
 
     /* -------------------------------------------------------------------------- */
@@ -72,23 +49,16 @@ contract CircomVerifier {
     EthiopianComplianceCircuitVerifier public immutable ethiopianComplianceVerifier;
 
     // Proof storage
-    mapping(uint256 => mapping(ProofType => ZKProof)) public batchProofs;
-    mapping(uint256 => BatchProofStatus) public batchProofStatus;
+    mapping(uint256 => mapping(IZKVerifier.ProofType => ZKProofInternal)) public batchProofs;
+    mapping(uint256 => IZKVerifier.BatchProofStatus) public batchProofStatus;
 
     /* -------------------------------------------------------------------------- */
     /*                                   Events                                   */
     /* -------------------------------------------------------------------------- */
 
-    event ProofVerified(
-        uint256 indexed batchId,
-        ProofType indexed proofType,
-        string publicClaim,
-        bytes32 proofHash
-    );
-
     event CircuitProofGenerated(
         uint256 indexed batchId,
-        ProofType indexed proofType,
+        IZKVerifier.ProofType indexed proofType,
         uint256[] publicSignals
     );
 
@@ -172,9 +142,9 @@ contract CircomVerifier {
         if (verified) {
             bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, block.timestamp));
             
-            batchProofs[batchId][ProofType.PRICE_COMPETITIVENESS] = ZKProof({
+            batchProofs[batchId][IZKVerifier.ProofType.PRICE_COMPETITIVENESS] = ZKProofInternal({
                 proofHash: proofHash,
-                proofType: ProofType.PRICE_COMPETITIVENESS,
+                proofType: IZKVerifier.ProofType.PRICE_COMPETITIVENESS,
                 isVerified: true,
                 timestamp: block.timestamp,
                 publicClaim: publicClaim,
@@ -185,8 +155,8 @@ contract CircomVerifier {
             batchProofStatus[batchId].hasPriceProof = true;
             batchProofStatus[batchId].priceClaimText = publicClaim;
             
-            emit ProofVerified(batchId, ProofType.PRICE_COMPETITIVENESS, publicClaim, proofHash);
-            emit CircuitProofGenerated(batchId, ProofType.PRICE_COMPETITIVENESS, publicSignals);
+            emit ProofVerified(batchId, IZKVerifier.ProofType.PRICE_COMPETITIVENESS, publicClaim, proofHash);
+            emit CircuitProofGenerated(batchId, IZKVerifier.ProofType.PRICE_COMPETITIVENESS, publicSignals);
         }
         
         return verified;
@@ -226,9 +196,9 @@ contract CircomVerifier {
         if (verified) {
             bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, block.timestamp));
             
-            batchProofs[batchId][ProofType.QUALITY_STANDARDS] = ZKProof({
+            batchProofs[batchId][IZKVerifier.ProofType.QUALITY_STANDARDS] = ZKProofInternal({
                 proofHash: proofHash,
-                proofType: ProofType.QUALITY_STANDARDS,
+                proofType: IZKVerifier.ProofType.QUALITY_STANDARDS,
                 isVerified: true,
                 timestamp: block.timestamp,
                 publicClaim: publicClaim,
@@ -239,8 +209,8 @@ contract CircomVerifier {
             batchProofStatus[batchId].hasQualityProof = true;
             batchProofStatus[batchId].qualityClaimText = publicClaim;
             
-            emit ProofVerified(batchId, ProofType.QUALITY_STANDARDS, publicClaim, proofHash);
-            emit CircuitProofGenerated(batchId, ProofType.QUALITY_STANDARDS, publicSignals);
+            emit ProofVerified(batchId, IZKVerifier.ProofType.QUALITY_STANDARDS, publicClaim, proofHash);
+            emit CircuitProofGenerated(batchId, IZKVerifier.ProofType.QUALITY_STANDARDS, publicSignals);
         }
         
         return verified;
@@ -280,9 +250,9 @@ contract CircomVerifier {
         if (verified) {
             bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, block.timestamp));
             
-            batchProofs[batchId][ProofType.SUPPLY_CHAIN_PROVENANCE] = ZKProof({
+            batchProofs[batchId][IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE] = ZKProofInternal({
                 proofHash: proofHash,
-                proofType: ProofType.SUPPLY_CHAIN_PROVENANCE,
+                proofType: IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE,
                 isVerified: true,
                 timestamp: block.timestamp,
                 publicClaim: publicClaim,
@@ -293,8 +263,8 @@ contract CircomVerifier {
             batchProofStatus[batchId].hasSupplyChainProof = true;
             batchProofStatus[batchId].supplyChainClaimText = publicClaim;
             
-            emit ProofVerified(batchId, ProofType.SUPPLY_CHAIN_PROVENANCE, publicClaim, proofHash);
-            emit CircuitProofGenerated(batchId, ProofType.SUPPLY_CHAIN_PROVENANCE, publicSignals);
+            emit ProofVerified(batchId, IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE, publicClaim, proofHash);
+            emit CircuitProofGenerated(batchId, IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE, publicSignals);
         }
         
         return verified;
@@ -335,9 +305,9 @@ contract CircomVerifier {
         if (verified) {
             bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, block.timestamp));
 
-            batchProofs[batchId][ProofType.EUDR_DEFORESTATION_COMPLIANCE] = ZKProof({
+            batchProofs[batchId][IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE] = ZKProofInternal({
                 proofHash: proofHash,
-                proofType: ProofType.EUDR_DEFORESTATION_COMPLIANCE,
+                proofType: IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE,
                 isVerified: true,
                 timestamp: block.timestamp,
                 publicClaim: publicClaim,
@@ -348,8 +318,8 @@ contract CircomVerifier {
             batchProofStatus[batchId].hasEUDRDeforestationProof = true;
             batchProofStatus[batchId].eudrDeforestationClaimText = publicClaim;
 
-            emit ProofVerified(batchId, ProofType.EUDR_DEFORESTATION_COMPLIANCE, publicClaim, proofHash);
-            emit CircuitProofGenerated(batchId, ProofType.EUDR_DEFORESTATION_COMPLIANCE, publicSignals);
+            emit ProofVerified(batchId, IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE, publicClaim, proofHash);
+            emit CircuitProofGenerated(batchId, IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE, publicSignals);
         }
 
         return verified;
@@ -362,7 +332,7 @@ contract CircomVerifier {
      * @param publicSignals Public inputs: [plotType, plotSize, verificationMethod, complianceLevel, timestamp]
      * @param publicClaim Public claim text (e.g., "Geolocation Verified - Plot Size: 50ha")
      */
-    function verifyEUDRGeolocationVerification(
+    function verifyEUDRGeolocation(
         uint256 batchId,
         bytes calldata zkProofData,
         uint256[] calldata publicSignals,
@@ -390,9 +360,9 @@ contract CircomVerifier {
         if (verified) {
             bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, block.timestamp));
 
-            batchProofs[batchId][ProofType.EUDR_GEOLOCATION_VERIFICATION] = ZKProof({
+            batchProofs[batchId][IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION] = ZKProofInternal({
                 proofHash: proofHash,
-                proofType: ProofType.EUDR_GEOLOCATION_VERIFICATION,
+                proofType: IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION,
                 isVerified: true,
                 timestamp: block.timestamp,
                 publicClaim: publicClaim,
@@ -403,8 +373,8 @@ contract CircomVerifier {
             batchProofStatus[batchId].hasEUDRGeolocationProof = true;
             batchProofStatus[batchId].eudrGeolocationClaimText = publicClaim;
 
-            emit ProofVerified(batchId, ProofType.EUDR_GEOLOCATION_VERIFICATION, publicClaim, proofHash);
-            emit CircuitProofGenerated(batchId, ProofType.EUDR_GEOLOCATION_VERIFICATION, publicSignals);
+            emit ProofVerified(batchId, IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION, publicClaim, proofHash);
+            emit CircuitProofGenerated(batchId, IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION, publicSignals);
         }
 
         return verified;
@@ -445,9 +415,9 @@ contract CircomVerifier {
         if (verified) {
             bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, block.timestamp));
 
-            batchProofs[batchId][ProofType.SUPPLY_CHAIN_PROVENANCE] = ZKProof({
+            batchProofs[batchId][IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY] = ZKProofInternal({
                 proofHash: proofHash,
-                proofType: ProofType.SUPPLY_CHAIN_PROVENANCE,
+                proofType: IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY,
                 isVerified: true,
                 timestamp: block.timestamp,
                 publicClaim: publicClaim,
@@ -458,8 +428,166 @@ contract CircomVerifier {
             batchProofStatus[batchId].hasEthiopianComplianceProof = true;
             batchProofStatus[batchId].ethiopianComplianceClaimText = publicClaim;
 
-            emit ProofVerified(batchId, ProofType.SUPPLY_CHAIN_PROVENANCE, publicClaim, proofHash);
-            emit CircuitProofGenerated(batchId, ProofType.SUPPLY_CHAIN_PROVENANCE, publicSignals);
+            emit ProofVerified(batchId, IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY, publicClaim, proofHash);
+            emit CircuitProofGenerated(batchId, IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY, publicSignals);
+        }
+
+        return verified;
+    }
+
+    /**
+     * @dev Verify ECTA permit validity using real ZK circuit
+     * Maps to verifyEthiopianCompliance for compatibility
+     */
+    function verifyECTAPermitValidity(
+        uint256 batchId,
+        bytes calldata zkProofData,
+        uint256[] calldata publicSignals,
+        string calldata publicClaim
+    ) external returns (bool verified) {
+        return this.verifyEthiopianCompliance(batchId, zkProofData, publicSignals, publicClaim);
+    }
+
+    /**
+     * @dev Verify quality certificate authenticity using real ZK circuit
+     * Maps to verifyQualityStandards for compatibility
+     */
+    function verifyQualityCertificateAuthenticity(
+        uint256 batchId,
+        bytes calldata zkProofData,
+        uint256[] calldata publicSignals,
+        string calldata publicClaim
+    ) external returns (bool verified) {
+        if (!coffeeToken.hasRole(VERIFIER_ROLE, msg.sender)) {
+            revert CircomVerifier__InvalidProofLength__decodeGroth16Proof();
+        }
+        if (publicSignals.length > 5) {
+            revert CircomVerifier__TooManyPublicSignals_verifyQualityStandards();
+        }
+
+        // Decode Groth16 proof from bytes
+        (uint[2] memory _pA, uint[2][2] memory _pB, uint[2] memory _pC) = _decodeGroth16Proof(zkProofData);
+
+        // Convert public signals to fixed-size array for verifier
+        uint[5] memory _pubSignals;
+        for (uint i = 0; i < publicSignals.length; i++) {
+            _pubSignals[i] = publicSignals[i];
+        }
+
+        verified = qualityVerifier.verifyProof(_pA, _pB, _pC, _pubSignals);
+        
+        if (verified) {
+            bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, block.timestamp));
+            
+            batchProofs[batchId][IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY] = ZKProofInternal({
+                proofHash: proofHash,
+                proofType: IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY,
+                isVerified: true,
+                timestamp: block.timestamp,
+                publicClaim: publicClaim,
+                proofData: zkProofData,
+                publicSignals: publicSignals
+            });
+            
+            emit ProofVerified(batchId, IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY, publicClaim, proofHash);
+            emit CircuitProofGenerated(batchId, IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY, publicSignals);
+        }
+        
+        return verified;
+    }
+
+    /**
+     * @dev Verify origin using real ZK circuit
+     * Maps to verifySupplyChainProvenance for compatibility
+     */
+    function verifyOrigin(
+        uint256 batchId,
+        bytes calldata zkProofData,
+        uint256[] calldata publicSignals,
+        string calldata publicClaim
+    ) external returns (bool verified) {
+        if (!coffeeToken.hasRole(VERIFIER_ROLE, msg.sender)) {
+            revert CircomVerifier__InvalidProofLength__decodeGroth16Proof();
+        }
+        if (publicSignals.length > 7) {
+            revert CircomVerifier__TooManyPublicSignals_verifySupplyChainProvenance();
+        }
+
+        // Decode Groth16 proof from bytes
+        (uint[2] memory _pA, uint[2][2] memory _pB, uint[2] memory _pC) = _decodeGroth16Proof(zkProofData);
+
+        // Convert public signals to fixed-size array for verifier
+        uint[7] memory _pubSignals;
+        for (uint i = 0; i < publicSignals.length; i++) {
+            _pubSignals[i] = publicSignals[i];
+        }
+
+        verified = supplyChainVerifier.verifyProof(_pA, _pB, _pC, _pubSignals);
+        
+        if (verified) {
+            bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, block.timestamp));
+            
+            batchProofs[batchId][IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF] = ZKProofInternal({
+                proofHash: proofHash,
+                proofType: IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF,
+                isVerified: true,
+                timestamp: block.timestamp,
+                publicClaim: publicClaim,
+                proofData: zkProofData,
+                publicSignals: publicSignals
+            });
+            
+            emit ProofVerified(batchId, IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF, publicClaim, proofHash);
+            emit CircuitProofGenerated(batchId, IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF, publicSignals);
+        }
+        
+        return verified;
+    }
+
+    /**
+     * @dev Verify BoE forex compliance using real ZK circuit
+     * Maps to verifyEthiopianCompliance for compatibility
+     */
+    function verifyBoEForexCompliance(
+        uint256 batchId,
+        bytes calldata zkProofData,
+        uint256[] calldata publicSignals,
+        string calldata publicClaim
+    ) external returns (bool verified) {
+        if (!coffeeToken.hasRole(VERIFIER_ROLE, msg.sender)) {
+            revert CircomVerifier__InvalidProofLength__decodeGroth16Proof();
+        }
+        if (publicSignals.length > 6) {
+            revert CircomVerifier__TooManyPublicSignals_verifyEthiopianCompliance();
+        }
+
+        // Decode Groth16 proof from bytes
+        (uint[2] memory _pA, uint[2][2] memory _pB, uint[2] memory _pC) = _decodeGroth16Proof(zkProofData);
+
+        // Convert public signals to fixed-size array for verifier
+        uint[6] memory _pubSignals;
+        for (uint i = 0; i < publicSignals.length; i++) {
+            _pubSignals[i] = publicSignals[i];
+        }
+
+        // Verify ZK proof using circuit verifier (reuse Ethiopian compliance for forex)
+        verified = ethiopianComplianceVerifier.verifyProof(_pA, _pB, _pC, _pubSignals);
+
+        if (verified) {
+            bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, block.timestamp));
+
+            batchProofs[batchId][IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE] = ZKProofInternal({
+                proofHash: proofHash,
+                proofType: IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE,
+                isVerified: true,
+                timestamp: block.timestamp,
+                publicClaim: publicClaim,
+                proofData: zkProofData,
+                publicSignals: publicSignals
+            });
+
+            emit ProofVerified(batchId, IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE, publicClaim, proofHash);
+            emit CircuitProofGenerated(batchId, IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE, publicSignals);
         }
 
         return verified;
@@ -517,7 +645,7 @@ contract CircomVerifier {
      */
     function getBatchProofStatus(
         uint256 batchId
-    ) external view returns (BatchProofStatus memory proofStatus) {
+    ) external view returns (IZKVerifier.BatchProofStatus memory proofStatus) {
         return batchProofStatus[batchId];
     }
 
@@ -527,7 +655,7 @@ contract CircomVerifier {
     function hasAllRequiredProofs(
         uint256 batchId
     ) external view returns (bool hasAllProofs) {
-        BatchProofStatus memory status = batchProofStatus[batchId];
+        IZKVerifier.BatchProofStatus memory status = batchProofStatus[batchId];
         return status.hasPriceProof && status.hasQualityProof && status.hasSupplyChainProof;
     }
 
@@ -537,7 +665,7 @@ contract CircomVerifier {
     function hasEUDRComplianceProofs(
         uint256 batchId
     ) external view returns (bool hasEUDRProofs) {
-        BatchProofStatus memory status = batchProofStatus[batchId];
+        IZKVerifier.BatchProofStatus memory status = batchProofStatus[batchId];
         return status.hasEUDRDeforestationProof && status.hasEUDRGeolocationProof;
     }
 
@@ -547,7 +675,7 @@ contract CircomVerifier {
     function hasEthiopianComplianceProofs(
         uint256 batchId
     ) external view returns (bool hasEthiopianProofs) {
-        BatchProofStatus memory status = batchProofStatus[batchId];
+        IZKVerifier.BatchProofStatus memory status = batchProofStatus[batchId];
         return status.hasEthiopianComplianceProof;
     }
 
@@ -556,8 +684,8 @@ contract CircomVerifier {
      */
     function getProof(
         uint256 batchId,
-        ProofType proofType
-    ) external view returns (ZKProof memory proof) {
+        IZKVerifier.ProofType proofType
+    ) external view returns (ZKProofInternal memory proof) {
         return batchProofs[batchId][proofType];
     }
 
@@ -571,7 +699,7 @@ contract CircomVerifier {
         string memory qualityClaim,
         string memory supplyChainClaim
     ) {
-        BatchProofStatus memory status = batchProofStatus[batchId];
+        IZKVerifier.BatchProofStatus memory status = batchProofStatus[batchId];
         return (status.priceClaimText, status.qualityClaimText, status.supplyChainClaimText);
     }
 
@@ -584,7 +712,7 @@ contract CircomVerifier {
         string memory deforestationClaim,
         string memory geolocationClaim
     ) {
-        BatchProofStatus memory status = batchProofStatus[batchId];
+        IZKVerifier.BatchProofStatus memory status = batchProofStatus[batchId];
         return (status.eudrDeforestationClaimText, status.eudrGeolocationClaimText);
     }
 
@@ -594,11 +722,9 @@ contract CircomVerifier {
     function getEthiopianComplianceClaims(
         uint256 batchId
     ) external view returns (string memory ethiopianComplianceClaim) {
-        BatchProofStatus memory status = batchProofStatus[batchId];
+        IZKVerifier.BatchProofStatus memory status = batchProofStatus[batchId];
         return status.ethiopianComplianceClaimText;
-    }
-
-    /**
+    }    /**
      * @dev Get verifier contract addresses
      */
     function getVerifierAddresses() external view returns (
@@ -625,21 +751,25 @@ contract CircomVerifier {
 
     /**
      * @dev Grant verifier role to address
+     * @dev This is a placeholder - actual role management is done through coffee token contract
      */
-    function grantVerifierRole(address verifier) external {
+    function grantVerifierRole(address) external view {
         if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
-            revert CircomVerifier__InvalidProofLength__decodeGroth16Proof();
+            revert("CircomVerifier: Not authorized");
         }
         // Role granting should be done through coffee token contract
+        // This function exists for interface compatibility but doesn't perform actions
     }
 
     /**
      * @dev Revoke verifier role from address
+     * @dev This is a placeholder - actual role management is done through coffee token contract
      */
-    function revokeVerifierRole(address verifier) external {
+    function revokeVerifierRole(address) external view {
         if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
-            revert CircomVerifier__InvalidProofLength__decodeGroth16Proof();
+            revert("CircomVerifier: Not authorized");
         }
         // Role revoking should be done through coffee token contract
+        // This function exists for interface compatibility but doesn't perform actions
     }
 }

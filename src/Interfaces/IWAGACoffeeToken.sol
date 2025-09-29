@@ -35,6 +35,19 @@ interface IWAGACoffeeToken {
     function getBatchQuantity(uint256 batchId) external view returns (uint256);
 
     /**
+     * @dev Creates a new batch request for verification workflow
+     * @param batchId ID of the batch to request
+     * @param requestedQuantity Amount of tokens requested
+     * @param requestDetails Additional details for the request
+     * @return uint256 The request index for this batch
+     */
+    function createBatchRequest(
+        uint256 batchId,
+        uint256 requestedQuantity,
+        string memory requestDetails
+    ) external returns (uint256);
+
+    /**
      * @dev Get batch request details by batch ID and request index
      */
     function getBatchRequest(uint256 batchId, uint256 requestIndex) external view returns (
