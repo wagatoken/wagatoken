@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IEthiopianCompliance} from "./Interfaces/IEthiopianCompliance.sol";
 import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
+import {EthiopianComplianceLib} from "./libraries/EthiopianComplianceLib.sol";
 
 /**
  * @title WAGAEthiopianCompliance

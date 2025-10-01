@@ -4,37 +4,61 @@ pragma solidity ^0.8.19;
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {ERC1155Supply} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import {WAGAConfigManager} from "./WAGAConfigManager.sol";
-import {IWAGABatchManager} from "./Interfaces/IWAGABatchManager.sol";
-import {WAGAZKManager} from "./WAGAZKManager.sol";
-import {WAGAViewFunctions} from "./WAGAViewFunctions.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
+
 /**
- * @title WAGACoffeeTokenCore 
- * @dev OPTIMIZED Core ERC1155 token functionality - LEAN VERSION
- * @notice Focused on essential token operations only, inherits batch data from WAGAViewFunctions
+ * @title WAGACoffeeTokenCore
+ * @dev ULTRA-LEAN ERC1155 token contract using Central Authority pattern
+ * @notice This contract handles ONLY minting, burning, transfers, and basic storage
+ * All business logic is delegated to WAGACoffeeBatchOperations contract
+ * NO inheritance from WAGAConfigManager = MASSIVE size savings!
  */
-contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFunctions {
+contract WAGACoffeeTokenCore is ERC1155Supply, IWAGACoffeeToken {
+
+    /* -------------------------------------------------------------------------- */
+    /*                                Role Constants                              */
+    /* -------------------------------------------------------------------------- */
+    
+    // Role constants for compatibility with existing contracts
+    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant PROCESSOR_ROLE = keccak256("PROCESSOR_ROLE");
+    bytes32 public constant COOPERATIVE_ROLE = keccak256("COOPERATIVE_ROLE");
+    bytes32 public constant ROASTER_ROLE = keccak256("ROASTER_ROLE");
+    bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
+    bytes32 public constant REDEMPTION_ROLE = keccak256("REDEMPTION_ROLE");
+    bytes32 public constant COMPLIANCE_MANAGER_ROLE = keccak256("COMPLIANCE_MANAGER_ROLE");
+    bytes32 public constant ORIGIN_VERIFIER_ROLE = keccak256("ORIGIN_VERIFIER_ROLE");
+    bytes32 public constant QUALITY_INSPECTOR_ROLE = keccak256("QUALITY_INSPECTOR_ROLE");
+    bytes32 public constant PAYMENT_PROCESSOR_ROLE = keccak256("PAYMENT_PROCESSOR_ROLE");
+    bytes32 public constant OFFRAMP_EXECUTOR_ROLE = keccak256("OFFRAMP_EXECUTOR_ROLE");
+    bytes32 public constant FULFILLER_ROLE = keccak256("FULFILLER_ROLE");
+    bytes32 public constant BATCH_CREATOR_ROLE = keccak256("BATCH_CREATOR_ROLE");
+    bytes32 public constant PROOF_OF_RESERVE_ROLE = keccak256("PROOF_OF_RESERVE_ROLE");
+    bytes32 public constant INVENTORY_MANAGER_ROLE = keccak256("INVENTORY_MANAGER_ROLE");
 
     /* -------------------------------------------------------------------------- */
     /*                               State Variables                              */
     /* -------------------------------------------------------------------------- */
-
-    // MINIMAL STATE - Only essential token data
-    mapping(uint256 => string) public s_batchMetadata; // Token metadata URIs
     
-    // Manager contracts
-    IWAGABatchManager public batchManager;
-    WAGAZKManager public zkManager;
+    // Central authority for access control - NO inheritance saves 17KB+!
+    WAGAConfigManager public immutable authority;
+    
+    // Operations contract that manages all business logic
+    address public immutable batchOperations;
+    
+    // Minimal storage - only what's needed for tokens
+    mapping(uint256 => string) public batchMetadata; // Token metadata URIs
+    mapping(uint256 => bool) public batchExists; // Track which batches exist
 
     /* -------------------------------------------------------------------------- */
     /*                                   Events                                   */
     /* -------------------------------------------------------------------------- */
 
-    event BatchCreated(uint256 indexed batchId, address indexed creator, uint256 quantity, uint256 pricePerUnit, string metadataURI);
     event BatchMinted(uint256 indexed batchId, address indexed to, uint256 amount, uint256 totalMinted);
     event BatchBurned(uint256 indexed batchId, address indexed from, uint256 amount, uint256 totalMinted);
     event BatchTransferred(uint256 indexed batchId, address indexed from, address indexed to, uint256 amount);
-    event MintedQuantityInconsistency(uint256 indexed batchId, uint256 burnAmount, uint256 currentMintedQuantity);
 
     /* -------------------------------------------------------------------------- */
     /*                                   Errors                                   */
@@ -43,145 +67,87 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     error CallerNotAuthorized();
     error BatchDoesNotExist();
     error InvalidQuantity();
-    error InsufficientInventory();
     error InsufficientBalance();
 
     /* -------------------------------------------------------------------------- */
     /*                                Constructor                                 */
     /* -------------------------------------------------------------------------- */
 
-    constructor(string memory baseURI) ERC1155(baseURI) {
-        // Note: Role granting is handled by WAGAConfigManager constructor
-        // since this contract inherits from WAGAConfigManager
+    constructor(
+        string memory baseURI,
+        address _authority,
+        address _batchOperations
+    ) ERC1155(baseURI) {
+        authority = WAGAConfigManager(_authority);
+        batchOperations = _batchOperations;
     }
 
     /* -------------------------------------------------------------------------- */
     /*                                 Modifiers                                  */
     /* -------------------------------------------------------------------------- */
 
-    modifier onlyBatchCreator() override {
-        if (!(hasRole(ADMIN_ROLE, msg.sender) || 
-              hasRole(PROCESSOR_ROLE, msg.sender) ||
-              hasRole(COOPERATIVE_ROLE, msg.sender) ||
-              hasRole(ROASTER_ROLE, msg.sender))) {
+    modifier onlyRole(bytes32 role) {
+        if (!authority.hasRole(role, msg.sender)) {
             revert CallerNotAuthorized();
         }
         _;
     }
 
-    /* -------------------------------------------------------------------------- */
-    /*                              Core Functions                                */
-    /* -------------------------------------------------------------------------- */
-
-    /**
-     * @dev Creates a new batch - LEAN VERSION
-     */
-    function createBatch(
-        uint256 productionDate,
-        uint256 expiryDate,
-        uint256 quantity,
-        uint256 pricePerUnit,
-        string memory origin,
-        string memory packagingInfo,
-        string memory metadataURI
-    ) external onlyBatchCreator returns (uint256) {
-        if (quantity == 0 || pricePerUnit == 0) {
-            revert InvalidQuantity();
-        }
-
-        uint256 newBatchId = _nextBatchId++;
-        
-        // Store batch data using inherited storage from WAGAViewFunctions
-        s_batchInfo[newBatchId] = BatchInfo({
-            productionDate: productionDate,
-            expiryDate: expiryDate,
-            isVerified: false,
-            quantity: quantity,
-            mintedQuantity: 0,
-            pricePerUnit: pricePerUnit,
-            packagingInfo: packagingInfo,
-            metadataHash: "",
-            isMetadataVerified: false,
-            lastVerifiedTimestamp: 0
-        });
-
-        // Set batch as active using inherited storage
-        s_isActiveBatch[newBatchId] = true;
-        s_activeBatchIds.push(newBatchId);
-        s_activeBatchIndex[newBatchId] = s_activeBatchIds.length - 1;
-        
-        // Store metadata URI
-        if (bytes(metadataURI).length > 0) {
-            s_batchMetadata[newBatchId] = metadataURI;
-        }
-
-        // Register with BatchManager
-        if (address(batchManager) != address(0)) {
-            batchManager.registerBatchCreation(newBatchId, origin, msg.sender);
-        }
-
-        // Configure privacy with default public settings
-        if (address(zkManager) != address(0)) {
-            zkManager.configureDefaultPrivacy(newBatchId);
-        }
-
-        emit BatchCreated(newBatchId, msg.sender, quantity, pricePerUnit, metadataURI);
-        return newBatchId;
+    modifier onlyBatchOperations() {
+        require(msg.sender == batchOperations, "Only batch operations contract");
+        _;
     }
 
+    /* -------------------------------------------------------------------------- */
+    /*                              Core Token Functions                          */
+    /* -------------------------------------------------------------------------- */
+
     /**
-     * @dev Mint tokens - SIMPLIFIED
+     * @dev Mint tokens - MINIMAL implementation
      */
-    function mintBatch(address to, uint256 batchId, uint256 amount) external onlyRole(MINTER_ROLE) {
-        if (!s_isActiveBatch[batchId]) {
+    function mintBatch(address to, uint256 batchId, uint256 amount) external onlyRole(keccak256("MINTER_ROLE")) {
+        if (!batchExists[batchId]) {
             revert BatchDoesNotExist();
         }
-        
-        // Validate using inherited storage
-        BatchInfo storage batch = s_batchInfo[batchId];
-        if (batch.mintedQuantity + amount > batch.quantity) {
-            revert InsufficientInventory();
+        if (amount == 0) {
+            revert InvalidQuantity();
         }
         
-        // Update minted quantity
-        batch.mintedQuantity += amount;
-        
         _mint(to, batchId, amount, "");
+        
+        // Notify batch operations of the mint
+        (bool success,) = batchOperations.call(
+            abi.encodeWithSignature("notifyMint(uint256,uint256)", batchId, amount)
+        );
+        require(success, "Failed to notify batch operations");
+        
         emit BatchMinted(batchId, to, amount, totalSupply(batchId));
     }
 
     /**
-     * @dev Burn tokens for redemption - FIXED STATE CONSISTENCY
+     * @dev Burn tokens for redemption
      */
-    function burnForRedemption(address from, uint256 batchId, uint256 amount) external onlyRole(REDEMPTION_ROLE) {
+    function burnForRedemption(address from, uint256 batchId, uint256 amount) external onlyRole(keccak256("REDEMPTION_ROLE")) {
         if (balanceOf(from, batchId) < amount) {
             revert InsufficientBalance();
         }
         
-        // Update minted quantity BEFORE burning to maintain consistency
-        BatchInfo storage batch = s_batchInfo[batchId];
-        
-        // Always update mintedQuantity to maintain consistency with totalSupply
-        // This ensures mintedQuantity always equals totalSupply after operations
-        if (batch.mintedQuantity >= amount) {
-            batch.mintedQuantity -= amount;
-        } else {
-            // If for some reason mintedQuantity < amount (should not happen in normal flow)
-            // Set to 0 and emit warning event
-            batch.mintedQuantity = 0;
-            emit MintedQuantityInconsistency(batchId, amount, batch.mintedQuantity);
-        }
-        
         _burn(from, batchId, amount);
+        
+        // Notify batch operations of the burn
+        (bool success,) = batchOperations.call(
+            abi.encodeWithSignature("notifyBurn(uint256,uint256)", batchId, amount)
+        );
+        require(success, "Failed to notify batch operations");
         
         emit BatchBurned(batchId, from, amount, totalSupply(batchId));
     }
 
     /**
-     * @dev Transfer batch tokens - LEAN VERSION
+     * @dev Transfer batch tokens
      */
     function transferBatch(uint256 batchId, address from, address to, uint256 amount) external {
-        if (!s_isActiveBatch[batchId]) {
+        if (!batchExists[batchId]) {
             revert BatchDoesNotExist();
         }
         if (balanceOf(from, batchId) < amount) {
@@ -192,33 +158,87 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
     }
 
     /* -------------------------------------------------------------------------- */
-    /*                               View Functions                               */
+    /*                              Batch Management Functions                    */
     /* -------------------------------------------------------------------------- */
 
     /**
-     * @dev Check if batch has been created - override from WAGAViewFunctions
+     * @dev Register a new batch - called by batch operations contract
      */
-    function isBatchCreated(uint256 batchId) public view override returns (bool) {
-        return s_batchInfo[batchId].productionDate != 0;
+    function registerBatch(uint256 batchId, string memory metadataURI) external onlyBatchOperations {
+        batchExists[batchId] = true;
+        if (bytes(metadataURI).length > 0) {
+            batchMetadata[batchId] = metadataURI;
+        }
     }
 
     /**
-     * @dev Check if batch is active - override from WAGAViewFunctions
+     * @dev Update batch IPFS URI
      */
-    function isBatchActive(uint256 batchId) external view override returns (bool) {
-        return s_isActiveBatch[batchId];
+    function updateBatchIPFS(uint256 batchId, string memory ipfsUri) external onlyRole(keccak256("ADMIN_ROLE")) {
+        if (!batchExists[batchId]) {
+            revert BatchDoesNotExist();
+        }
+        batchMetadata[batchId] = ipfsUri;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              Delegation Functions                          */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Delegate batch creation to operations contract
+     */
+    function createBatch(
+        uint256 productionDate,
+        uint256 expiryDate,
+        uint256 quantity,
+        uint256 pricePerUnit,
+        string memory origin,
+        string memory packagingInfo,
+        string memory metadataURI
+    ) external returns (uint256) {
+        // Delegate to batch operations contract
+        (bool success, bytes memory data) = batchOperations.call(
+            abi.encodeWithSignature(
+                "createBatch(uint256,uint256,uint256,uint256,string,string,string)",
+                productionDate, expiryDate, quantity, pricePerUnit, origin, packagingInfo, metadataURI
+            )
+        );
+        require(success, "Batch creation failed");
+        return abi.decode(data, (uint256));
     }
 
     /**
-     * @dev Get next batch ID - override from WAGAViewFunctions
+     * @dev Delegate batch request creation to operations contract
      */
-    function getNextBatchId() external view override returns (uint256) {
-        return _nextBatchId;
+    function createBatchRequest(
+        uint256 batchId,
+        uint256 requestedQuantity,
+        string memory requestDetails
+    ) external returns (uint256) {
+        (bool success, bytes memory data) = batchOperations.call(
+            abi.encodeWithSignature(
+                "createBatchRequest(uint256,uint256,string)",
+                batchId, requestedQuantity, requestDetails
+            )
+        );
+        require(success, "Batch request creation failed");
+        return abi.decode(data, (uint256));
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              View Functions (IWAGACoffeeToken)             */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Check if batch has been created
+     */
+    function isBatchCreated(uint256 batchId) external view returns (bool) {
+        return batchExists[batchId];
     }
 
     /**
-     * @dev Get batch information - INTERFACE REQUIRED FUNCTION
-     * @notice Returns the 7 core parameters expected by IWAGACoffeeToken interface
+     * @dev Get batch information - delegate to operations contract
      */
     function getBatchInfo(uint256 batchId) external view returns (
         uint256 productionDate,
@@ -229,147 +249,17 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
         string memory metadataHash,
         uint256 lastVerifiedTimestamp
     ) {
-        if (!isBatchCreated(batchId)) {
-            revert BatchDoesNotExist();
-        }
-        
-        BatchInfo storage info = s_batchInfo[batchId];
-        return (
-            info.productionDate,
-            info.expiryDate,
-            info.quantity,
-            info.pricePerUnit,
-            info.packagingInfo,
-            info.metadataHash,
-            info.lastVerifiedTimestamp
+        (bool success, bytes memory data) = batchOperations.staticcall(
+            abi.encodeWithSignature("getBatchInfo(uint256)", batchId)
         );
+        require(success, "Failed to get batch info");
+        return abi.decode(data, (uint256, uint256, uint256, uint256, string, string, uint256));
     }
 
     /**
-     * @dev Get complete batch information - override from WAGAViewFunctions
-     * @notice Extended version with additional verification fields
+     * @dev Get batch request - delegate to operations contract
      */
-    function getBasicBatchInfo(uint256 batchId) public view override returns (
-        uint256 productionDate,
-        uint256 expiryDate,
-        bool isVerified,
-        uint256 quantity,
-        uint256 pricePerUnit,
-        string memory packagingInfo,
-        string memory metadataHash,
-        bool isMetadataVerified,
-        uint256 lastVerifiedTimestamp
-    ) {
-        BatchInfo storage info = s_batchInfo[batchId];
-        return (
-            info.productionDate,
-            info.expiryDate,
-            info.isVerified,
-            info.quantity,
-            info.pricePerUnit,
-            info.packagingInfo,
-            info.metadataHash,
-            info.isMetadataVerified,
-            info.lastVerifiedTimestamp
-        );
-    }
-
-    /**
-     * @dev Get minted quantity for a batch - override from WAGAViewFunctions
-     */
-    function getBatchMintedQuantity(uint256 batchId) external view override returns (uint256) {
-        if (!isBatchCreated(batchId)) {
-            revert BatchDoesNotExist();
-        }
-        return s_batchInfo[batchId].mintedQuantity;
-    }
-
-    /**
-     * @dev Get minted quantity for a batch - INTERFACE REQUIRED FUNCTION
-     * @notice Alias for getBatchMintedQuantity to satisfy IWAGACoffeeToken interface
-     */
-    function getMintedQuantity(uint256 batchId) external view returns (uint256) {
-        if (!isBatchCreated(batchId)) {
-            revert BatchDoesNotExist();
-        }
-        return s_batchInfo[batchId].mintedQuantity;
-    }
-
-    /**
-     * @dev Get available quantity for a batch - INTERFACE REQUIRED FUNCTION
-     * @notice Returns quantity - mintedQuantity to satisfy IWAGACoffeeToken interface
-     */
-    function getAvailableQuantity(uint256 batchId) external view returns (uint256) {
-        if (!isBatchCreated(batchId)) {
-            revert BatchDoesNotExist();
-        }
-        BatchInfo storage info = s_batchInfo[batchId];
-        return info.quantity - info.mintedQuantity;
-    }
-
-    /**
-     * @dev Get batch quantity - delegate to inherited function
-     */
-    function getBatchQuantity(uint256 batchId) external view override returns (uint256) {
-        if (!isBatchCreated(batchId)) {
-            revert BatchDoesNotExist();
-        }
-        return s_batchInfo[batchId].quantity;
-    }
-
-    /**
-     * @dev Get active batch IDs - delegate to inherited function
-     */
-    function getActiveBatchIds() external view override returns (uint256[] memory) {
-        return s_activeBatchIds;
-    }
-
-    /**
-     * @dev Creates a new batch request for verification workflow
-     */
-    function createBatchRequest(
-        uint256 batchId,
-        uint256 requestedQuantity,
-        string memory requestDetails
-    ) external returns (uint256) {
-        // Check if batch exists
-        if (!isBatchCreated(batchId)) {
-            revert("Batch does not exist");
-        }
-        
-        // Check if requester has appropriate role (processor or verifier)
-        bytes32 processorRole = keccak256("PROCESSOR_ROLE");
-        bytes32 verifierRole = keccak256("VERIFIER_ROLE");
-        if (!hasRole(processorRole, msg.sender) && !hasRole(verifierRole, msg.sender)) {
-            revert("Caller must have PROCESSOR_ROLE or VERIFIER_ROLE");
-        }
-        
-        // Get the next request index for this batch
-        uint256 requestIndex = s_batchRequestCount[batchId];
-        
-        // Create the batch request
-        batchRequestsByIndex[batchId][requestIndex] = BatchRequest({
-            batchId: batchId,
-            requester: msg.sender,
-            requestedQuantity: requestedQuantity,
-            requestDetails: requestDetails,
-            requestTimestamp: block.timestamp,
-            isFulfilled: false,
-            fulfilledQuantity: 0,
-            fulfilledTimestamp: 0
-        });
-        
-        // Increment the request count
-        s_batchRequestCount[batchId]++;
-        
-        return requestIndex;
-    }
-
-    /**
-     * @dev Get batch request - delegate to inherited function
-     * @notice Uses uint256 requestIndex to match WAGAViewFunctions.getBatchRequest
-     */
-    function getBatchRequest(uint256 batchId, uint256 requestIndex) external view override returns (
+    function getBatchRequest(uint256 batchId, uint256 requestIndex) external view returns (
         uint256 requestBatchId,
         address requester,
         uint256 requestedQuantity,
@@ -379,91 +269,94 @@ contract WAGACoffeeTokenCore is ERC1155Supply, WAGAConfigManager, WAGAViewFuncti
         uint256 fulfilledQuantity,
         uint256 fulfilledTimestamp
     ) {
-        // Directly return the data from storage using inherited storage mappings
-        BatchRequest storage request = batchRequestsByIndex[batchId][requestIndex];
-        return (
-            request.batchId,
-            request.requester,
-            request.requestedQuantity,
-            request.requestDetails,
-            request.requestTimestamp,
-            request.isFulfilled,
-            request.fulfilledQuantity,
-            request.fulfilledTimestamp
+        (bool success, bytes memory data) = batchOperations.staticcall(
+            abi.encodeWithSignature("getBatchRequest(uint256,uint256)", batchId, requestIndex)
         );
+        require(success, "Failed to get batch request");
+        return abi.decode(data, (uint256, address, uint256, string, uint256, bool, uint256, uint256));
+    }
+
+    /**
+     * @dev Get batch quantity - delegate to operations contract
+     */
+    function getBatchQuantity(uint256 batchId) external view returns (uint256) {
+        (bool success, bytes memory data) = batchOperations.staticcall(
+            abi.encodeWithSignature("getBatchQuantity(uint256)", batchId)
+        );
+        require(success, "Failed to get batch quantity");
+        return abi.decode(data, (uint256));
+    }
+
+    /**
+     * @dev Get next batch ID - delegate to operations contract
+     */
+    function getNextBatchId() external view returns (uint256) {
+        (bool success, bytes memory data) = batchOperations.staticcall(
+            abi.encodeWithSignature("getNextBatchId()")
+        );
+        require(success, "Failed to get next batch ID");
+        return abi.decode(data, (uint256));
+    }
+
+    /**
+     * @dev Get minted quantity for a batch
+     */
+    function getMintedQuantity(uint256 batchId) external view returns (uint256) {
+        return totalSupply(batchId);
+    }
+
+    /**
+     * @dev Get available quantity for a batch - delegate to operations contract
+     */
+    function getAvailableQuantity(uint256 batchId) external view returns (uint256) {
+        (bool success, bytes memory data) = batchOperations.staticcall(
+            abi.encodeWithSignature("getAvailableQuantity(uint256)", batchId)
+        );
+        require(success, "Failed to get available quantity");
+        return abi.decode(data, (uint256));
     }
 
     /* -------------------------------------------------------------------------- */
-    /*                              Manager Functions                             */
+    /*                              Access Control Functions (IWAGACoffeeToken)   */
     /* -------------------------------------------------------------------------- */
 
     /**
-     * @dev Set manager contract address
+     * @dev Check if an account has a specific role - delegate to authority
      */
-    function setBatchManager(address _batchManager) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        batchManager = IWAGABatchManager(_batchManager);
+    function hasRole(bytes32 role, address account) external view returns (bool) {
+        return authority.hasRole(role, account);
     }
 
     /**
-     * @dev Set manager addresses - for deployment script compatibility
-     * @param _batchManager Address of the batch manager
-     * @param _zkManager Address of the ZK manager
+     * @dev Get seller ID for an address - delegate to authority
      */
-    function setManagerAddresses(address _batchManager, address _zkManager) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        batchManager = IWAGABatchManager(_batchManager);
-        zkManager = WAGAZKManager(_zkManager);
+    function getSellerId(address sellerAddress) external view returns (uint64) {
+        return authority.getSellerId(sellerAddress);
     }
 
     /**
-     * @dev Get the ZK manager address
-     * @return ZK manager contract address
+     * @dev Get seller address from ID - delegate to authority
      */
-    function getZKManager() external view returns (WAGAZKManager) {
-        return zkManager;
+    function getSellerAddress(uint64 sellerId) external view returns (address) {
+        return authority.getSellerAddress(sellerId);
     }
 
     /**
-     * @dev Update batch IPFS URI
+     * @dev Check if an address is a registered seller - delegate to authority
      */
-    function updateBatchIPFS(uint256 batchId, string memory ipfsUri) external onlyRole(ADMIN_ROLE) {
-        if (!s_isActiveBatch[batchId]) {
-            revert BatchDoesNotExist();
-        }
-        s_batchMetadata[batchId] = ipfsUri;
-    }
-
-    /**
-     * @dev Emergency function to fix state consistency between mintedQuantity and totalSupply
-     * @param batchId Batch to fix
-     */
-    function fixStateConsistency(uint256 batchId) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        uint256 actualSupply = totalSupply(batchId);
-        BatchInfo storage batch = s_batchInfo[batchId];
-        
-        if (batch.mintedQuantity != actualSupply) {
-            emit MintedQuantityInconsistency(batchId, 0, batch.mintedQuantity);
-            batch.mintedQuantity = actualSupply;
-        }
-    }
-
-    /**
-     * @dev Check if state is consistent for a batch
-     * @param batchId Batch to check
-     * @return isConsistent Whether mintedQuantity equals totalSupply
-     */
-    function checkStateConsistency(uint256 batchId) external view returns (bool isConsistent) {
-        return s_batchInfo[batchId].mintedQuantity == totalSupply(batchId);
+    function isRegisteredSeller(address account) external view returns (bool) {
+        return authority.isRegisteredSeller(account);
     }
 
     /* -------------------------------------------------------------------------- */
     /*                              Override Functions                            */
     /* -------------------------------------------------------------------------- */
 
-    function supportsInterface(bytes4 interfaceId) public view override(ERC1155, AccessControl) returns (bool) {
-        return super.supportsInterface(interfaceId);
+    function uri(uint256 tokenId) public view override returns (string memory) {
+        return batchMetadata[tokenId];
     }
 
-    function uri(uint256 tokenId) public view override returns (string memory) {
-        return s_batchMetadata[tokenId];
+    function supportsInterface(bytes4 interfaceId) public view override(ERC1155) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 }

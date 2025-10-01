@@ -5,6 +5,7 @@ import {WAGAChainlinkFunctionsBase} from "./WAGAChainlinkFunctionsBase.sol";
 import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IWAGABatchManager} from "./Interfaces/IWAGABatchManager.sol";
+import {WAGAConfigManager} from "./WAGAConfigManager.sol";
 
 /**
  * @title WAGAProofOfReserve
@@ -67,6 +68,7 @@ contract WAGAProofOfReserve is
     // bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     // Note: coffeeToken inherited from WAGAChainlinkFunctionsBase
     IWAGABatchManager public batchManager;
+    WAGAConfigManager public immutable authority; // Central authority for access control
 
     // Mapping from request ID to verification request
     mapping(bytes32 requestId => VerificationRequest verificationRequest)
@@ -98,6 +100,7 @@ contract WAGAProofOfReserve is
     /**
      * @dev Constructor to initialize the contract
      * @param coffeeTokenAddress Address of the WAGACoffeeTokenCore contract
+     * @param authorityAddress Address of the central WAGAConfigManager authority
      * @param router Address of the Chainlink Functions router
      * @param _subscriptionId Chainlink subscription ID
      * @param _donId Decentralized Oracle Network (DON) ID
@@ -105,6 +108,7 @@ contract WAGAProofOfReserve is
     constructor(
         address coffeeTokenAddress,
         address batchManagerAddress,
+        address authorityAddress,
         address router,
         uint64 _subscriptionId,
         bytes32 _donId
@@ -112,11 +116,12 @@ contract WAGAProofOfReserve is
         WAGAChainlinkFunctionsBase(router, _subscriptionId, _donId)
     {
         coffeeToken = IWAGACoffeeToken(coffeeTokenAddress);
-    batchManager = IWAGABatchManager(batchManagerAddress);
+        batchManager = IWAGABatchManager(batchManagerAddress);
+        authority = WAGAConfigManager(authorityAddress);
     }
 
-    modifier callerHasRoleFromCoffeeToken(bytes32 roleType) {
-        if (!coffeeToken.hasRole(roleType, msg.sender)) {
+    modifier callerHasRole(bytes32 roleType) {
+        if (!authority.hasRole(roleType, msg.sender)) {
             revert WAGAProofOfReserve__CallerDoesNotHaveRequiredRole_callHasRoleFromCoffeeToken();
         }
         _;
@@ -147,8 +152,7 @@ contract WAGAProofOfReserve is
         string calldata source // Get quantity, price, packaging, metadata hash (API call to offchain database)
     )
         external
-        callerHasRoleFromCoffeeToken(keccak256("VERIFIER_ROLE"))
-       // onlyRole(coffeeToken.VERIFIER_ROLE())
+        callerHasRole(keccak256("VERIFIER_ROLE"))
         returns (bytes32 verificationRequestId)
     {
         return _requestReserveVerificationInternal(batchId, requestId, source);
@@ -268,8 +272,7 @@ contract WAGAProofOfReserve is
         string calldata source
     )
         external
-        callerHasRoleFromCoffeeToken(keccak256("INVENTORY_MANAGER_ROLE"))
-       // onlyRole(coffeeToken.INVENTORY_MANAGER_ROLE())
+        callerHasRole(keccak256("INVENTORY_MANAGER_ROLE"))
         returns (bytes32 requestId)
     {
         // Check if the batch exists

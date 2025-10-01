@@ -14,8 +14,9 @@ import {IEthiopianCompliance} from "./Interfaces/IEthiopianCompliance.sol";
  * @dev Gas-optimized with single storage mapping and unified functions
  */
 contract WAGAZKManager is IComplianceManager {
+
     /* -------------------------------------------------------------------------- */
-    /*                                   Constants                                */
+    /*                                 Constants                                  */
     /* -------------------------------------------------------------------------- */
     
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
@@ -116,36 +117,33 @@ contract WAGAZKManager is IComplianceManager {
     /**
      * @dev Add compliance ZK proof for any origin and compliance type
      * @param batchId Batch identifier
-     * @param complianceType Type of compliance (ECTA_PERMIT, QUALITY_CERT, ORIGIN_VERIFICATION, EUDR_DEFORESTATION, EUDR_GEOLOCATION)
-     * @param zkProofData ZK proof data
-     * @param publicClaim Public claim about compliance
-     * @return verified Whether proof verification succeeded
+     * @param proof ZK proof data
+     * @param proofHash Hash of the proof
      */
-    function addComplianceZKProof(
+    function verifyAndStoreZKProof(
         uint256 batchId,
-        string calldata complianceType,
-        bytes calldata zkProofData,
+        bytes calldata proof,
+        IZKVerifier.ProofType proofType,
+        bytes32 proofHash,
+        uint256[] memory publicSignals,
         string calldata publicClaim
-    ) external callerHasRoleFromCoffeeToken(PROCESSOR_ROLE) returns (bool verified) {
+    ) external callerHasRoleFromCoffeeToken(PROCESSOR_ROLE) {
         if (!COFFEE_TOKEN.isBatchCreated(batchId)) {
             revert WAGAZKManager__BatchDoesNotExist();
         }
 
-        // Map compliance type to ZK verifier proof type
-        IZKVerifier.ProofType proofType = _getProofTypeFromCompliance(complianceType);
-
-        // Verify ZK proof
-        verified = _verifyZKProofByType(batchId, proofType, zkProofData, new uint256[](0), publicClaim);
+        // Verify ZK proof using the appropriate verifier method
+        bool verified = _verifyZKProofByType(batchId, proofType, proof, publicSignals, publicClaim);
 
         if (!verified) {
             revert WAGAZKManager__ZKProofVerificationFailed();
         }
 
-        // Store compliance proof in unified mapping
-        bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, complianceType, block.timestamp));
-        complianceProofs[batchId][complianceType] = ZKProof({
-            proofHash: proofHash,
-            proofData: zkProofData,
+        // Store the ZK proof data for future reference
+        bytes32 computedHash = keccak256(abi.encodePacked(proof, proofHash, block.timestamp));
+        complianceProofs[batchId]["ZK_VERIFICATION"] = ZKProof({
+            proofHash: computedHash,
+            proofData: proof,
             proofTimestamp: block.timestamp,
             proofGenerator: msg.sender,
             isValid: true,
@@ -155,9 +153,7 @@ contract WAGAZKManager is IComplianceManager {
 
         zkProofExists[proofHash] = true;
 
-        emit ComplianceProofAdded(batchId, complianceType, proofHash, publicClaim, msg.sender);
-
-        return verified;
+        emit ZKProofAdded(batchId, computedHash, proofType, publicClaim, msg.sender);
     }
 
     /**
@@ -215,7 +211,7 @@ contract WAGAZKManager is IComplianceManager {
     function getRequiredComplianceTypes(
         string calldata origin,
         bool isEUDestination
-    ) external view returns (string[] memory requiredTypes) {
+    ) external pure returns (string[] memory requiredTypes) {
         bool isEthiopian = _isEthiopianOrigin(origin);
         
         if (isEthiopian && isEUDestination) {
@@ -247,7 +243,7 @@ contract WAGAZKManager is IComplianceManager {
     /**
      * @dev Map compliance type string to ZK verifier proof type
      */
-    function _getProofTypeFromCompliance(string calldata complianceType) internal pure returns (IZKVerifier.ProofType) {
+    function _getProofTypeFromCompliance(string memory complianceType) internal pure returns (IZKVerifier.ProofType) {
         bytes32 typeHash = keccak256(abi.encodePacked(complianceType));
 
         if (typeHash == keccak256(abi.encodePacked("ECTA_PERMIT"))) {
@@ -367,7 +363,7 @@ contract WAGAZKManager is IComplianceManager {
     }
 
     /**
-     * @dev Verify ZK proof by type (placeholder implementation)
+     * @dev Verify ZK proof by type using the appropriate verifier method
      */
     function _verifyZKProofByType(
         uint256 batchId,
@@ -375,10 +371,28 @@ contract WAGAZKManager is IComplianceManager {
         bytes calldata zkProofData,
         uint256[] memory publicSignals,
         string calldata publicClaim
-    ) internal view returns (bool) {
-        // Placeholder implementation - in production this would call actual ZK verifier
-        // For now, accept any non-empty proof data as valid
-        return zkProofData.length > 0 && batchId > 0;
+    ) internal returns (bool) {
+        if (proofType == IZKVerifier.ProofType.PRICE_COMPETITIVENESS) {
+            return ZK_VERIFIER.verifyPriceCompetitiveness(batchId, zkProofData, publicSignals, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.QUALITY_STANDARDS) {
+            return ZK_VERIFIER.verifyQualityStandards(batchId, zkProofData, publicSignals, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.SUPPLY_CHAIN_PROVENANCE) {
+            return ZK_VERIFIER.verifySupplyChainProvenance(batchId, zkProofData, publicSignals, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.EUDR_DEFORESTATION_COMPLIANCE) {
+            return ZK_VERIFIER.verifyEUDRDeforestationCompliance(batchId, zkProofData, publicSignals, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.EUDR_GEOLOCATION_VERIFICATION) {
+            return ZK_VERIFIER.verifyEUDRGeolocation(batchId, zkProofData, publicSignals, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.ECTA_PERMIT_VALIDITY) {
+            return ZK_VERIFIER.verifyECTAPermitValidity(batchId, zkProofData, publicSignals, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.QUALITY_CERTIFICATE_AUTHENTICITY) {
+            return ZK_VERIFIER.verifyQualityCertificateAuthenticity(batchId, zkProofData, publicSignals, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.ORIGIN_VERIFICATION_PROOF) {
+            return ZK_VERIFIER.verifyOrigin(batchId, zkProofData, publicSignals, publicClaim);
+        } else if (proofType == IZKVerifier.ProofType.BOE_FOREX_COMPLIANCE) {
+            return ZK_VERIFIER.verifyBoEForexCompliance(batchId, zkProofData, publicSignals, publicClaim);
+        }
+        
+        revert WAGAZKManager__InvalidComplianceType();
     }
 
     /**
@@ -419,6 +433,47 @@ contract WAGAZKManager is IComplianceManager {
         // Convert to unified compliance system
         string memory complianceType = _getComplianceFromProofType(proofType);
         return this.addComplianceZKProof(batchId, complianceType, zkProofData, publicClaim);
+    }
+
+    /**
+     * @dev Add compliance ZK proof for specific compliance type
+     */
+    function addComplianceZKProof(
+        uint256 batchId,
+        string memory complianceType,
+        bytes calldata zkProofData,
+        string calldata publicClaim
+    ) public callerHasRoleFromCoffeeToken(PROCESSOR_ROLE) returns (bool verified) {
+        if (!COFFEE_TOKEN.isBatchCreated(batchId)) {
+            revert WAGAZKManager__BatchDoesNotExist();
+        }
+
+        // Get the proof type from compliance type and verify through ZK verifier
+        IZKVerifier.ProofType proofType = _getProofTypeFromCompliance(complianceType);
+        uint256[] memory emptySignals = new uint256[](0);
+        verified = _verifyZKProofByType(batchId, proofType, zkProofData, emptySignals, publicClaim);
+
+        if (!verified) {
+            revert WAGAZKManager__ZKProofVerificationFailed();
+        }
+
+        // Store compliance proof
+        bytes32 proofHash = keccak256(abi.encodePacked(zkProofData, complianceType, block.timestamp));
+        complianceProofs[batchId][complianceType] = ZKProof({
+            proofHash: proofHash,
+            proofData: zkProofData,
+            proofTimestamp: block.timestamp,
+            proofGenerator: msg.sender,
+            isValid: true,
+            proofType: proofType,
+            publicClaim: publicClaim
+        });
+
+        zkProofExists[proofHash] = true;
+
+        emit ComplianceProofAdded(batchId, complianceType, proofHash, publicClaim, msg.sender);
+        
+        return verified;
     }
 
     /**
