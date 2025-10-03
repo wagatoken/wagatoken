@@ -181,10 +181,13 @@ contract WAGAInventoryManagerMVP is Ownable {
 
     /**
      * @notice Get all active batches that need checking
-     * @return Array of active batch IDs
+     * @dev For MVP, this returns an empty array - batches should be checked individually
+     * @return Array of active batch IDs (empty for MVP)
      */
-    function getActiveBatches() external view returns (uint256[] memory) {
-        return coffeeToken.getActiveBatchIds();
+    function getActiveBatches() external pure returns (uint256[] memory) {
+        // For MVP, return empty array - individual batch checking is preferred
+        // This avoids the need for complex active batch tracking
+        return new uint256[](0);
     }
 
     /**

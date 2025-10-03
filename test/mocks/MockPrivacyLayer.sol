@@ -74,6 +74,15 @@ contract MockPrivacyLayer is IPrivacyLayer {
     }
 
     /**
+     * @dev Get privacy configuration for a batch (alias for compatibility)
+     */
+    function getBatchPrivacyConfig(
+        uint256 batchId
+    ) external view override returns (PrivacyConfig memory) {
+        return batchPrivacyConfigs[batchId];
+    }
+
+    /**
      * @dev Update public claims after ZK proof verification
      */
     function updatePublicClaims(

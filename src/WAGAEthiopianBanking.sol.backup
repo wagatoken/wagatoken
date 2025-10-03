@@ -1,0 +1,755 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {IEthiopianCompliance} from "./Interfaces/IEthiopianCompliance.sol";
+import {IWAGAEthiopianBanking} from "./Interfaces/IWAGAEthiopianBanking.sol";
+import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
+import {WAGAConfigManager} from "./WAGAConfigManager.sol";
+import {SWIFTValidationLib} from "./libraries/SWIFTValidationLib.sol";
+import {BankingWorkflowLib} from "./libraries/BankingWorkflowLib.sol";
+import {TradeRegistrationLib} from "./libraries/TradeRegistrationLib.sol";
+
+/**
+ * @title WAGAEthiopianBanking
+ * @dev Manages Ethiopian banking integration, SWIFT banking, and multi-stage transfers
+ * @notice Uses Central Authority pattern - queries WAGAConfigManager for all access control
+ * @author WAGA Team
+ */
+contract WAGAEthiopianBanking is IWAGAEthiopianBanking, ReentrancyGuard {
+    /* -------------------------------------------------------------------------- */
+    /*                                   ERRORS                                   */
+    /* -------------------------------------------------------------------------- */
+
+    error InvalidSWIFTCode();
+    error InvalidSWIFTCodeFormat();
+    error InvalidSWIFTCountryCode();
+    error InvalidSWIFTBankCode();
+    error UnsupportedSWIFTCountry();
+    error BankAlreadyRegistered();
+    error SWIFTCodeAlreadyUsed();
+    error BankNotFound();
+    error OfframpPartnerNotAssigned();
+    error UnauthorizedOfframpConfirmation();
+    error UnauthorizedBankConfirmation();
+    error InvalidTransferStage();
+    error UnauthorizedSellerConfirmation();
+    error SellerNotRegistered();
+    error PaymentAlreadyConfirmed();
+    error TransferNotFound();
+    error TransferAlreadyExists();
+    error InvalidSellerId();
+    error CallerDoesNotHaveRequiredRole();
+    error InvalidAccessControlAddress();
+    error InvalidBankAddress();
+    error InvalidBankName();
+    error TradeRegistrationNotFound();
+    error FiatTransferAlreadyInitiated();
+    error FiatTransferAlreadyCompleted();
+    error UpstreamComplianceNotMet();
+    error InvalidRate();
+
+    /* -------------------------------------------------------------------------- */
+    /*                               STATE VARIABLES                              */
+    /* -------------------------------------------------------------------------- */
+
+    // Central Authority
+    WAGAConfigManager public immutable authority;
+
+    // Banking integration
+    mapping(address => bool) private authorizedBanks;
+    mapping(address => string) private bankNames;
+    mapping(uint256 => mapping(address => IEthiopianCompliance.BoETradeRegistration)) private tradeRegistrations;
+    
+    // USD to ETB conversion rate (stored as rate * 10^8 for precision)
+    uint256 private usdToEtbRate = 5650000000; // 56.50 ETB per USD (example rate)
+    uint256 private constant RATE_PRECISION = 10**8;
+
+    // SWIFT-based banking system
+    mapping(bytes11 => IEthiopianCompliance.BankingCapabilities) private bankCapabilitiesBySwift;
+    mapping(bytes11 => address) private swiftToAddress;
+    mapping(address => bytes11) private addressToSwift;
+    bytes11[] private registeredSwiftCodes; // Track all registered SWIFT codes for iteration
+    
+    // SWIFT validation system
+    mapping(bytes2 => bool) private supportedCountryCodes; // ISO 3166-1 alpha-2 country codes
+    mapping(bytes4 => bool) private recognizedBankCodes; // Known bank identifier codes
+    mapping(bytes11 => bool) private validatedSWIFTCodes; // Cache for validated SWIFT codes
+
+    // Multi-stage fiat transfer tracking
+    mapping(uint256 => mapping(uint64 => IEthiopianCompliance.FiatTransfer)) private fiatTransfers;
+    mapping(uint256 => mapping(uint64 => IEthiopianCompliance.OfframpTransfer)) private offrampTransfers;
+
+    // Contract dependencies
+    IWAGACoffeeToken public coffeeToken;
+    address public complianceCore;
+
+    /* -------------------------------------------------------------------------- */
+    /*                                   Events                                   */
+    /* -------------------------------------------------------------------------- */
+
+    event BankingPartnerRegistered(bytes11 indexed swiftCode, address indexed bankAddress, string bankName);
+    event OfframpPartnerAssigned(uint256 indexed batchId, bytes11 indexed offrampSwift, IEthiopianCompliance.OfframpPartnerType partnerType);
+    event FiatTransferStageConfirmed(uint256 indexed batchId, address indexed buyer, IEthiopianCompliance.TransferStage stage, string transactionId);
+    event SellerPaymentConfirmed(uint256 indexed batchId, address indexed buyer, uint64 indexed sellerId, uint256 usdAmountReceived, string transactionId);
+    event OfframpTransferExecuted(uint256 indexed batchId, address indexed buyer, bytes11 indexed offrampSwift, uint256 usdAmount, uint256 timestamp);
+    event BankingPartnerAdded(address indexed bankAddress, string bankName);
+    event BankingPartnerRemoved(address indexed bankAddress);
+    event TradeRegisteredWithBoE(uint256 indexed batchId, address indexed buyer, uint256 tradeId);
+    event FiatTransferRequested(
+        uint256 indexed batchId,
+        address indexed buyer,
+        address indexed seller,
+        uint256 valueUSD,
+        uint256 valueETB,
+        string buyerBankDetails,
+        string ectaPermitNumber
+    );
+    event FiatTransferCompleted(uint256 indexed batchId, address indexed buyer, string bankTransactionId);
+    event PhysicalShipmentAuthorized(uint256 indexed batchId, address indexed buyer);
+
+    /* -------------------------------------------------------------------------- */
+    /*                                 MODIFIERS                                  */
+    /* -------------------------------------------------------------------------- */
+
+    modifier callerHasRole(bytes32 role) {
+        if (!authority.hasRole(role, msg.sender)) {
+            revert Unauthorized();
+        }
+        _;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                CONSTRUCTOR                                 */
+    /* -------------------------------------------------------------------------- */
+
+    constructor(address _authority) {
+        if (_authority == address(0)) {
+            revert InvalidAccessControlAddress();
+        }
+        authority = WAGAConfigManager(_authority);
+        
+        // Initialize supported countries for SWIFT validation
+        SWIFTValidationLib.initializeSupportedCountries(supportedCountryCodes);
+        SWIFTValidationLib.initializeRecognizedBanks(recognizedBankCodes);
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              Configuration                                 */
+    /* -------------------------------------------------------------------------- */
+
+    function setCoffeeToken(address _coffeeToken) external callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+        if (_coffeeToken == address(0)) {
+            revert InvalidAccessControlAddress();
+        }
+        coffeeToken = IWAGACoffeeToken(_coffeeToken);
+    }
+
+    function setComplianceCore(address _complianceCore) external callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+        if (_complianceCore == address(0)) {
+            revert InvalidAccessControlAddress();
+        }
+        complianceCore = _complianceCore;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              SWIFT BANKING FUNCTIONS                       */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function registerBankingPartner(
+        bytes11 swiftCode,
+        address bankAddress,
+        string memory bankName,
+        IEthiopianCompliance.BankingCapabilities memory capabilities
+    ) external override callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+        // Comprehensive SWIFT validation
+        _validateSWIFTCode(swiftCode);
+        if (bankAddress == address(0)) {
+            revert InvalidBankAddress();
+        }
+        if (swiftToAddress[swiftCode] != address(0)) {
+            revert SWIFTCodeAlreadyUsed();
+        }
+        if (addressToSwift[bankAddress] != bytes11(0)) {
+            revert BankAlreadyRegistered();
+        }
+
+        capabilities.swiftCode = swiftCode;
+        bankCapabilitiesBySwift[swiftCode] = capabilities;
+        swiftToAddress[swiftCode] = bankAddress;
+        addressToSwift[bankAddress] = swiftCode;
+        registeredSwiftCodes.push(swiftCode); // Track for iteration
+
+        // Grant banking partner role
+        authorizedBanks[bankAddress] = true;
+        bankNames[bankAddress] = bankName;
+
+        emit BankingPartnerRegistered(swiftCode, bankAddress, bankName);
+    }
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function getBankingCapabilities(bytes11 swiftCode) external view override returns (IEthiopianCompliance.BankingCapabilities memory capabilities) {
+        capabilities = bankCapabilitiesBySwift[swiftCode];
+        if (capabilities.swiftCode != swiftCode) {
+            revert BankNotFound();
+        }
+        return capabilities;
+    }
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function getBankingPartner(address partner) external view override returns (bytes11 swiftCode, string memory bankName, bool canOfframp) {
+        swiftCode = addressToSwift[partner];
+        if (swiftCode == bytes11(0)) {
+            revert BankNotFound();
+        }
+        IEthiopianCompliance.BankingCapabilities memory capabilities = bankCapabilitiesBySwift[swiftCode];
+        return (swiftCode, capabilities.bankName, capabilities.canActAsOfframp);
+    }
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function assignOfframpPartner(uint256 batchId) external override callerHasRole(keccak256("COMPLIANCE_MANAGER_ROLE")) returns (bytes11 offrampSwift, IEthiopianCompliance.OfframpPartnerType partnerType) {
+        // Iterate through registered banking partners to find an active offramp-capable one
+        for (uint256 i = 0; i < registeredSwiftCodes.length; i++) {
+            bytes11 swift = registeredSwiftCodes[i];
+            IEthiopianCompliance.BankingCapabilities memory capabilities = bankCapabilitiesBySwift[swift];
+            
+            // Check if this partner can act as offramp and is active
+            if (capabilities.canActAsOfframp && capabilities.isActive) {
+                offrampSwift = swift;
+                partnerType = capabilities.partnerType;
+                
+                // Emit assignment event
+                emit OfframpPartnerAssigned(batchId, offrampSwift, partnerType);
+                
+                return (offrampSwift, partnerType);
+            }
+        }
+        
+        // If no offramp partner found, revert with specific error
+        revert OfframpPartnerNotAssigned();
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                           MULTI-STAGE TRANSFER FUNCTIONS                   */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function confirmFiatTransferStage(
+        uint256 batchId,
+        address buyer,
+        IEthiopianCompliance.TransferStage stage,
+        string memory transactionId
+    ) external override {
+        if (address(coffeeToken) == address(0)) {
+            revert InvalidTransferStage();
+        }
+
+        uint64 sellerId = coffeeToken.getSellerId(buyer);
+        if (sellerId == 0) {
+            revert InvalidTransferStage();
+        }
+
+        IEthiopianCompliance.FiatTransfer storage transfer = fiatTransfers[batchId][sellerId];
+
+        // Verify caller authorization based on stage
+        if (stage == IEthiopianCompliance.TransferStage.USDC_CONFIRMED_BY_OFFRAMP) {
+            if (swiftToAddress[transfer.offrampBankSwift] != msg.sender) {
+                revert UnauthorizedOfframpConfirmation();
+            }
+        } else if (stage >= IEthiopianCompliance.TransferStage.FIAT_CONFIRMED_BY_BANK) {
+            if (!authority.hasRole(keccak256("BANKING_PARTNER_ROLE"), msg.sender)) {
+                revert UnauthorizedBankConfirmation();
+            }
+        } else {
+            revert InvalidTransferStage();
+        }
+
+        // Update transfer stage
+        transfer.currentStage = stage;
+        transfer.stageCompleted[stage] = true;
+        transfer.stageTransactionIds[stage] = transactionId;
+        transfer.stageTimestamps[stage] = block.timestamp;
+
+        emit FiatTransferStageConfirmed(batchId, buyer, stage, transactionId);
+    }
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function confirmSellerPayment(
+        uint256 batchId,
+        address buyer,
+        uint256 usdAmountReceived,
+        string memory sellerTransactionId
+    ) external override {
+        if (address(coffeeToken) == address(0)) {
+            revert UnauthorizedSellerConfirmation();
+        }
+
+        uint64 sellerId = coffeeToken.getSellerId(buyer);
+        if (sellerId == 0) {
+            revert SellerNotRegistered();
+        }
+
+        // Only the seller can confirm their payment
+        if (msg.sender != buyer) {
+            revert UnauthorizedSellerConfirmation();
+        }
+
+        IEthiopianCompliance.FiatTransfer storage transfer = fiatTransfers[batchId][sellerId];
+        if (transfer.sellerPaymentConfirmed) {
+            revert PaymentAlreadyConfirmed();
+        }
+
+        // Update transfer with seller payment confirmation
+        transfer.currentStage = IEthiopianCompliance.TransferStage.SELLER_PAYMENT_CONFIRMED;
+        transfer.stageCompleted[IEthiopianCompliance.TransferStage.SELLER_PAYMENT_CONFIRMED] = true;
+        transfer.stageTransactionIds[IEthiopianCompliance.TransferStage.SELLER_PAYMENT_CONFIRMED] = sellerTransactionId;
+        transfer.stageTimestamps[IEthiopianCompliance.TransferStage.SELLER_PAYMENT_CONFIRMED] = block.timestamp;
+        transfer.usdAmountReceivedBySeller = usdAmountReceived;
+        transfer.sellerPaymentConfirmed = true;
+
+        emit SellerPaymentConfirmed(batchId, buyer, sellerId, usdAmountReceived, sellerTransactionId);
+    }
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function recordOfframpTransferInitiated(
+        uint256 batchId,
+        address buyer,
+        bytes11 offrampSwift,
+        uint256 usdAmount
+    ) external override {
+        if (address(coffeeToken) == address(0)) {
+            revert TransferNotFound();
+        }
+
+        uint64 sellerId = coffeeToken.getSellerId(buyer);
+        if (sellerId == 0) {
+            revert TransferNotFound();
+        }
+
+        if (offrampTransfers[batchId][sellerId].offrampPartner != bytes11(0)) {
+            revert TransferAlreadyExists();
+        }
+
+        offrampTransfers[batchId][sellerId] = IEthiopianCompliance.OfframpTransfer({
+            offrampPartner: offrampSwift,
+            usdAmount: usdAmount,
+            transferTimestamp: block.timestamp,
+            transferCompleted: false,
+            transferTxHash: ""
+        });
+
+        emit OfframpTransferExecuted(batchId, buyer, offrampSwift, usdAmount, block.timestamp);
+    }
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function getFiatTransfer(uint256 batchId, address buyer) external view override returns (
+        uint64 sellerId,
+        bytes11 offrampBankSwift,
+        bytes11 receivingBankSwift,
+        uint256 usdAmountPaid,
+        uint256 usdAmountReceivedBySeller,
+        IEthiopianCompliance.TransferStage currentStage,
+        bool sellerPaymentConfirmed
+    ) {
+        if (address(coffeeToken) == address(0)) {
+            revert InvalidSellerId();
+        }
+
+        sellerId = coffeeToken.getSellerId(buyer);
+        if (sellerId == 0) {
+            revert InvalidSellerId();
+        }
+
+        IEthiopianCompliance.FiatTransfer storage transfer = fiatTransfers[batchId][sellerId];
+
+        return (
+            sellerId,
+            transfer.offrampBankSwift,
+            transfer.receivingBankSwift,
+            transfer.usdAmountPaid,
+            transfer.usdAmountReceivedBySeller,
+            transfer.currentStage,
+            transfer.sellerPaymentConfirmed
+        );
+    }
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function getTransferStageStatus(
+        uint256 batchId,
+        address buyer,
+        IEthiopianCompliance.TransferStage stage
+    ) external view override returns (bool completed, string memory transactionId, uint256 timestamp) {
+        if (address(coffeeToken) == address(0)) {
+            revert TransferNotFound();
+        }
+
+        uint64 sellerId = coffeeToken.getSellerId(buyer);
+        if (sellerId == 0) {
+            revert TransferNotFound();
+        }
+
+        IEthiopianCompliance.FiatTransfer storage transfer = fiatTransfers[batchId][sellerId];
+
+        return (
+            transfer.stageCompleted[stage],
+            transfer.stageTransactionIds[stage],
+            transfer.stageTimestamps[stage]
+        );
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                            BANKING INTEGRATION                             */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function addBankingPartner(
+        address bankAddress,
+        string memory bankName
+    ) external override callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+        if (bankAddress == address(0)) {
+            revert InvalidBankAddress();
+        }
+        if (bytes(bankName).length == 0) {
+            revert InvalidBankName();
+        }
+
+        authorizedBanks[bankAddress] = true;
+        bankNames[bankAddress] = bankName;
+
+        emit BankingPartnerAdded(bankAddress, bankName);
+    }
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function removeBankingPartner(address bankAddress) external override callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+        bytes11 swiftCode = addressToSwift[bankAddress];
+        if (swiftCode != bytes11(0)) {
+            // Remove from mappings
+            delete bankCapabilitiesBySwift[swiftCode];
+            delete swiftToAddress[swiftCode];
+            delete addressToSwift[bankAddress];
+            
+            // Remove from array (find and remove)
+            for (uint256 i = 0; i < registeredSwiftCodes.length; i++) {
+                if (registeredSwiftCodes[i] == swiftCode) {
+                    registeredSwiftCodes[i] = registeredSwiftCodes[registeredSwiftCodes.length - 1];
+                    registeredSwiftCodes.pop();
+                    break;
+                }
+            }
+        }
+        
+        authorizedBanks[bankAddress] = false;
+        delete bankNames[bankAddress];
+        
+        emit BankingPartnerRemoved(bankAddress);
+    }
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function isAuthorizedBank(address bankAddress) external view override returns (bool isAuthorized) {
+        return authorizedBanks[bankAddress];
+    }
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function confirmFiatTransfer(
+        uint256 batchId,
+        address buyer,
+        string memory bankTransactionId
+    ) external override callerHasRole(keccak256("BANKING_PARTNER_ROLE")) nonReentrant {
+        IEthiopianCompliance.BoETradeRegistration storage registration = tradeRegistrations[batchId][buyer];
+        if (registration.batchId != batchId) {
+            revert TradeRegistrationNotFound();
+        }
+        if (!registration.fiatTransferInitiated) {
+            revert FiatTransferAlreadyInitiated();
+        }
+        if (registration.fiatTransferCompleted) {
+            revert FiatTransferAlreadyCompleted();
+        }
+        
+        registration.bankTransactionId = bankTransactionId;
+        
+        emit FiatTransferCompleted(batchId, buyer, bankTransactionId);
+        emit PhysicalShipmentAuthorized(batchId, buyer);
+    }
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function registerTradeWithBoE(
+        uint256 batchId,
+        address buyer,
+        address seller,
+        uint256 quantity,
+        uint256 valueUSD,
+        string memory buyerBankDetails
+    ) external override callerHasRole(keccak256("COMPLIANCE_MANAGER_ROLE")) {
+        // Validate upstream compliance using library
+        bool isValid = TradeRegistrationLib.validateUpstreamCompliance(complianceCore, batchId);
+        if (!isValid) {
+            revert UpstreamComplianceNotMet();
+        }
+        
+        // Get compliance documents using library
+        IEthiopianCompliance.ECTAPermit memory permit = TradeRegistrationLib.getECTAPermit(complianceCore, batchId);
+        IEthiopianCompliance.QualityCertificate memory certificate = TradeRegistrationLib.getQualityCertificate(complianceCore, batchId);
+        
+        // Convert USD to ETB using library
+        uint256 valueETB = TradeRegistrationLib.convertUSDToETB(valueUSD, usdToEtbRate);
+        
+        // Convert seller address to sellerId for gas-efficient storage
+        uint64 sellerId = coffeeToken.getSellerId(seller);
+
+        // Assign offramp partner dynamically
+        (bytes11 assignedOfframpSwift, IEthiopianCompliance.OfframpPartnerType assignedPartnerType) = this.assignOfframpPartner(batchId);
+
+        // Create registration using library
+        IEthiopianCompliance.BoETradeRegistration memory registration = TradeRegistrationLib.createTradeRegistration(
+            batchId,
+            sellerId,
+            buyer,
+            quantity,
+            valueUSD,
+            permit,
+            certificate,
+            assignedOfframpSwift,
+            assignedPartnerType
+        );
+        
+        // Validate registration using library
+        TradeRegistrationLib.validateTradeRegistration(registration);
+        
+        // Store registration
+        tradeRegistrations[batchId][buyer] = registration;
+        
+        // Generate trade ID using library
+        uint256 tradeId = TradeRegistrationLib.generateTradeId(batchId, buyer, block.timestamp);
+        
+        emit TradeRegisteredWithBoE(batchId, buyer, tradeId);
+        emit FiatTransferRequested(
+            batchId,
+            buyer,
+            seller,
+            valueUSD,
+            valueETB,
+            buyerBankDetails,
+            permit.permitNumber
+        );
+    }
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function getBoETradeRegistration(
+        uint256 batchId,
+        address buyer
+    ) external view override returns (IEthiopianCompliance.BoETradeRegistration memory registration) {
+        return tradeRegistrations[batchId][buyer];
+    }
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function convertUSDToETB(uint256 usdAmount) external view override returns (uint256 etbAmount) {
+        return TradeRegistrationLib.convertUSDToETB(usdAmount, usdToEtbRate);
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              UTILITY FUNCTIONS                             */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function resolveBankAddress(bytes11 swiftCode) external view override returns (address bankAddress) {
+        return swiftToAddress[swiftCode];
+    }
+
+    /**
+     * @inheritdoc IWAGAEthiopianBanking
+     */
+    function resolveSwiftCode(address bankAddress) external view override returns (bytes11 swiftCode) {
+        return addressToSwift[bankAddress];
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                            ADMINISTRATIVE FUNCTIONS                        */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Update USD to ETB conversion rate
+     * @param newRate New conversion rate (multiplied by 10^8 for precision)
+     */
+    function updateUSDToETBRate(uint256 newRate) external callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+        if (newRate == 0) {
+            revert InvalidRate();
+        }
+        usdToEtbRate = newRate;
+    }
+
+    /**
+     * @dev Get current USD to ETB conversion rate
+     * @return rate Current conversion rate (multiplied by 10^8)
+     */
+    function getUSDToETBRate() external view returns (uint256 rate) {
+        return usdToEtbRate;
+    }
+
+    /**
+     * @dev Get count of registered banking partners
+     * @return count Number of registered banking partners
+     */
+    function getRegisteredBankingPartnersCount() external view returns (uint256 count) {
+        return registeredSwiftCodes.length;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                            SWIFT VALIDATION FUNCTIONS                      */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Validate SWIFT code format and content
+     * @param swiftCode SWIFT code to validate
+     */
+    function _validateSWIFTCode(bytes11 swiftCode) internal view {
+        if (swiftCode == bytes11(0)) {
+            revert InvalidSWIFTCode();
+        }
+        
+        // Check if already validated (cache)
+        if (validatedSWIFTCodes[swiftCode]) {
+            return;
+        }
+        
+        // Use library for validation
+        SWIFTValidationLib.validateSWIFTCode(swiftCode, supportedCountryCodes, recognizedBankCodes);
+    }
+
+    /**
+     * @dev Add supported country code for SWIFT validation
+     * @param countryCode ISO 3166-1 alpha-2 country code
+     */
+    function addSupportedCountryCode(bytes2 countryCode) external callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+        supportedCountryCodes[countryCode] = true;
+    }
+
+    /**
+     * @dev Remove supported country code
+     * @param countryCode ISO 3166-1 alpha-2 country code
+     */
+    function removeSupportedCountryCode(bytes2 countryCode) external callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+        supportedCountryCodes[countryCode] = false;
+    }
+
+    /**
+     * @dev Add recognized bank code for validation
+     * @param bankCode 4-character bank identifier
+     */
+    function addRecognizedBankCode(bytes4 bankCode) external callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+        recognizedBankCodes[bankCode] = true;
+    }
+
+    /**
+     * @dev Remove recognized bank code
+     * @param bankCode 4-character bank identifier
+     */
+    function removeRecognizedBankCode(bytes4 bankCode) external callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+        recognizedBankCodes[bankCode] = false;
+    }
+
+    /**
+     * @dev Validate and cache a SWIFT code
+     * @param swiftCode SWIFT code to validate and cache
+     */
+    function validateAndCacheSWIFTCode(bytes11 swiftCode) external callerHasRole(keccak256("COMPLIANCE_MANAGER_ROLE")) {
+        _validateSWIFTCode(swiftCode);
+        validatedSWIFTCodes[swiftCode] = true;
+    }
+
+    /**
+     * @dev Check if country code is supported
+     * @param countryCode ISO 3166-1 alpha-2 country code
+     * @return isSupported Whether the country is supported
+     */
+    function isCountryCodeSupported(bytes2 countryCode) external view returns (bool isSupported) {
+        return supportedCountryCodes[countryCode];
+    }
+
+    /**
+     * @dev Check if bank code is recognized
+     * @param bankCode 4-character bank identifier
+     * @return isRecognized Whether the bank code is recognized
+     */
+    function isBankCodeRecognized(bytes4 bankCode) external view returns (bool isRecognized) {
+        return recognizedBankCodes[bankCode];
+    }
+
+    /**
+     * @dev Check if SWIFT code is cached as validated
+     * @param swiftCode SWIFT code to check
+     * @return isValidated Whether the SWIFT code is cached as validated
+     */
+    function isSWIFTCodeValidated(bytes11 swiftCode) external view returns (bool isValidated) {
+        return validatedSWIFTCodes[swiftCode];
+    }
+
+    /**
+     * @dev Extract country code from SWIFT code
+     * @param swiftCode SWIFT code
+     * @return countryCode Extracted country code
+     */
+    function extractCountryCode(bytes11 swiftCode) external pure returns (bytes2 countryCode) {
+        return SWIFTValidationLib.extractCountryCode(swiftCode);
+    }
+
+    /**
+     * @dev Extract bank code from SWIFT code
+     * @param swiftCode SWIFT code
+     * @return bankCode Extracted bank code
+     */
+    function extractBankCode(bytes11 swiftCode) external pure returns (bytes4 bankCode) {
+        return SWIFTValidationLib.extractBankCode(swiftCode);
+    }
+
+    /**
+     * @dev Get registered banking partner by index
+     * @param index Index in the registered partners array
+     * @return swiftCode SWIFT code of the banking partner
+     * @return capabilities Banking capabilities of the partner
+     */
+    function getRegisteredBankingPartnerByIndex(uint256 index) external view returns (bytes11 swiftCode, IEthiopianCompliance.BankingCapabilities memory capabilities) {
+        if (index >= registeredSwiftCodes.length) {
+            revert InvalidSWIFTCode();
+        }
+        swiftCode = registeredSwiftCodes[index];
+        capabilities = bankCapabilitiesBySwift[swiftCode];
+        return (swiftCode, capabilities);
+    }
+
+}

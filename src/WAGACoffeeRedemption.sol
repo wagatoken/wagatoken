@@ -7,6 +7,7 @@ import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155
 import {WAGACoffeeTokenCore} from "./WAGACoffeeTokenCore.sol";
 import {IWAGATreasury} from "./Interfaces/IWAGATreasury.sol";
 import {IEthiopianCompliance} from "./Interfaces/IEthiopianCompliance.sol";
+import {IWAGAEthiopianBanking} from "./Interfaces/IWAGAEthiopianBanking.sol";
 import {IWAGABatchManager} from "./Interfaces/IWAGABatchManager.sol";
 import {IWAGAZKManager} from "./Interfaces/IWAGAZKManager.sol";
 import {IZKVerifier} from "./Interfaces/IZKVerifier.sol";
@@ -55,6 +56,10 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
     error WAGACoffeeRedemption__Unauthorized_updateEthiopianCompliance();
     error WAGACoffeeRedemption__Unauthorized_setEthiopianComplianceAddress();
     error WAGACoffeeRedemption__InvalidEthiopianComplianceAddress_setEthiopianComplianceAddress();
+    error WAGACoffeeRedemption__Unauthorized_setEthiopianBanking();
+    error WAGACoffeeRedemption__InvalidEthiopianBankingAddress();
+    error WAGACoffeeRedemption__InvalidTreasuryAddress();
+    error WAGACoffeeRedemption__TreasuryNotConfigured();
     error WAGACoffeeRedemption__RedemptionDoesNotExist_confirmFiatTransferStage();
     error WAGACoffeeRedemption__NotEthiopianBatch_confirmFiatTransferStage();
     error WAGACoffeeRedemption__FiatTransferAlreadyCompleted_confirmFiatTransferStage();
@@ -73,8 +78,9 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
     // Treasury contract for payment verification
     IWAGATreasury public treasury;
     
-    // Ethiopian compliance contract
-    IEthiopianCompliance public ethiopianCompliance;
+    // Ethiopian compliance contracts (split architecture)
+    IEthiopianCompliance public ethiopianCompliance;           // For type definitions
+    IWAGAEthiopianBanking public ethiopianBanking;             // For banking operations
     
     // Batch manager contract
     IWAGABatchManager public batchManager;
@@ -205,8 +211,8 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
     /*                                 MODIFIERS                                  */
     /* -------------------------------------------------------------------------- */
 
-    modifier callerHasRoleFromCoffeeToken(bytes32 roleType) {
-        if (!coffeeToken.hasRole(roleType, msg.sender)) {
+    modifier callerHasRole(bytes32 role) {
+        if (!coffeeToken.hasRole(role, msg.sender)) {
             revert WAGACoffeeRedemption__CallerDoesNotHaveRequiredRole_callHasRoleFromCoffeeToken();
         }
         _;
@@ -220,6 +226,7 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
         address _coffeeToken,
         address _treasury,
         address _ethiopianCompliance,
+        address _ethiopianBanking,
         address _batchManager,
         address _zkManager
     ) {
@@ -232,6 +239,9 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
         if (_ethiopianCompliance == address(0)) {
             revert WAGACoffeeRedemption__InvalidEthiopianComplianceAddress_constructor();
         }
+        if (_ethiopianBanking == address(0)) {
+            revert("Invalid Ethiopian banking address");
+        }
         if (_batchManager == address(0)) {
             revert WAGACoffeeRedemption__InvalidBatchManagerAddress_constructor();
         }
@@ -242,6 +252,7 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
         coffeeToken = WAGACoffeeTokenCore(_coffeeToken);
         treasury = IWAGATreasury(_treasury);
         ethiopianCompliance = IEthiopianCompliance(_ethiopianCompliance);
+        ethiopianBanking = IWAGAEthiopianBanking(_ethiopianBanking);
         batchManager = IWAGABatchManager(_batchManager);
         zkManager = IWAGAZKManager(_zkManager);
         nextRedemptionId = 1000;
@@ -262,6 +273,10 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
         if (address(ethiopianCompliance) == address(0)) {
             return (false, "Ethiopian compliance not configured");
         }
+
+        if (address(ethiopianBanking) == address(0)) {
+            return (false, "Ethiopian banking not configured");
+        }
         
         return (true, "Configuration is valid");
     }
@@ -277,7 +292,7 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
             revert WAGACoffeeRedemption__Unauthorized_updateEthiopianCompliance();
         }
         if (_treasury == address(0)) {
-            revert("Invalid treasury address");
+            revert WAGACoffeeRedemption__InvalidTreasuryAddress();
         }
         treasury = IWAGATreasury(_treasury);
     }
@@ -295,6 +310,21 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
             revert WAGACoffeeRedemption__InvalidEthiopianComplianceAddress_setEthiopianComplianceAddress();
         }
         ethiopianCompliance = IEthiopianCompliance(_ethiopianCompliance);
+    }
+
+    /**
+     * @dev Update Ethiopian banking contract address (admin only)
+     * @param _ethiopianBanking New Ethiopian banking contract address
+     */
+    function setEthiopianBanking(address _ethiopianBanking) external {
+        bytes32 adminRole = keccak256("ADMIN_ROLE");
+        if (!coffeeToken.hasRole(adminRole, msg.sender)) {
+            revert WAGACoffeeRedemption__Unauthorized_setEthiopianBanking();
+        }
+        if (_ethiopianBanking == address(0)) {
+            revert("Invalid Ethiopian banking address");
+        }
+        ethiopianBanking = IWAGAEthiopianBanking(_ethiopianBanking);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -378,7 +408,7 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
 
         // MANDATORY payment verification - no optional checks
         if (address(treasury) == address(0)) {
-            revert("Treasury contract not configured");
+            revert WAGACoffeeRedemption__TreasuryNotConfigured();
         }
         
         // Check if payment is required for this batch
@@ -460,7 +490,7 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
     function updateRedemptionStatus(
         uint256 redemptionId,
         RedemptionStatus status
-    ) external callerHasRoleFromCoffeeToken(coffeeToken.FULFILLER_ROLE()) {
+    ) external callerHasRole(coffeeToken.FULFILLER_ROLE()) {
         // Check if redemption exists
         if (redemptionId >= nextRedemptionId) {
             revert WAGACoffeeRedemption__RedemptionDoesNotExist_updateRedemptionStatus();
@@ -550,7 +580,7 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
         }
 
         // Only authorized banking partners can confirm fiat transfers
-        if (!ethiopianCompliance.isAuthorizedBank(msg.sender)) {
+        if (!ethiopianBanking.isAuthorizedBank(msg.sender)) {
             revert WAGACoffeeRedemption__NotAuthorizedBankingPartner_confirmFiatTransfer();
         }
         
@@ -645,7 +675,7 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
         }
 
         // Confirm the stage through the compliance contract
-        ethiopianCompliance.confirmFiatTransferStage(
+        ethiopianBanking.confirmFiatTransferStage(
             request.batchId,
             request.consumer,
             stage,
@@ -674,12 +704,12 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
 
         // Only the seller or authorized banking partner can confirm seller payment
         if (msg.sender != _getSellerAddress(request.sellerId) &&
-            !ethiopianCompliance.isAuthorizedBank(msg.sender)) {
+            !ethiopianBanking.isAuthorizedBank(msg.sender)) {
             revert WAGACoffeeRedemption__UnauthorizedSellerConfirmation_confirmSellerPayment();
         }
 
         // Confirm seller payment through compliance contract
-        ethiopianCompliance.confirmSellerPayment(
+        ethiopianBanking.confirmSellerPayment(
             request.batchId,
             request.consumer,
             usdAmountReceived,

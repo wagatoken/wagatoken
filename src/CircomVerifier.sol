@@ -78,14 +78,21 @@ contract CircomVerifier is IZKVerifier {
     /*                                Constructor                                 */
     /* -------------------------------------------------------------------------- */
 
-    constructor() {
-        // Deploy circuit verifiers
-        priceVerifier = new PricePrivacyCircuitVerifier();
-        qualityVerifier = new QualityTierCircuitVerifier();
-        supplyChainVerifier = new SupplyChainPrivacyCircuitVerifier();
-        eudrDeforestationVerifier = new EUDRDeforestationCircuitVerifier();
-        eudrGeolocationVerifier = new EUDRGeolocationCircuitVerifier();
-        ethiopianComplianceVerifier = new EthiopianComplianceCircuitVerifier();
+    constructor(
+        address _priceVerifier,
+        address _qualityVerifier,
+        address _supplyChainVerifier,
+        address _eudrDeforestationVerifier,
+        address _eudrGeolocationVerifier,
+        address _ethiopianComplianceVerifier
+    ) {
+        // Use pre-deployed circuit verifiers (deployed by script)
+        priceVerifier = PricePrivacyCircuitVerifier(_priceVerifier);
+        qualityVerifier = QualityTierCircuitVerifier(_qualityVerifier);
+        supplyChainVerifier = SupplyChainPrivacyCircuitVerifier(_supplyChainVerifier);
+        eudrDeforestationVerifier = EUDRDeforestationCircuitVerifier(_eudrDeforestationVerifier);
+        eudrGeolocationVerifier = EUDRGeolocationCircuitVerifier(_eudrGeolocationVerifier);
+        ethiopianComplianceVerifier = EthiopianComplianceCircuitVerifier(_ethiopianComplianceVerifier);
         // No role initialization needed - roles managed by coffee token
     }
     

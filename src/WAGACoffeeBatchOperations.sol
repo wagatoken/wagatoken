@@ -43,6 +43,11 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
     /* -------------------------------------------------------------------------- */
 
     error CallerNotAuthorized();
+    error WAGACoffeeBatchOperations__BatchDoesNotExist();
+    error WAGACoffeeBatchOperations__CallerMustHaveProcessorOrVerifierRole();
+    error WAGACoffeeBatchOperations__OnlyCoreContractCanNotifyMint();
+    error WAGACoffeeBatchOperations__OnlyCoreContractCanNotifyBurn();
+    error WAGACoffeeBatchOperations__FailedToRegisterBatchWithCore();
     error BatchDoesNotExist();
     error InvalidQuantity();
     error InsufficientInventory();
@@ -60,7 +65,7 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
     /*                                 Modifiers                                  */
     /* -------------------------------------------------------------------------- */
 
-    modifier onlyRole(bytes32 role) {
+    modifier callerHasRole(bytes32 role) {
         if (!authority.hasRole(role, msg.sender)) {
             revert CallerNotAuthorized();
         }
@@ -135,10 +140,12 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
         // Update batch IPFS metadata in core contract
         if (bytes(metadataURI).length > 0) {
             // Register batch with core and set metadata
-            (bool success,) = address(coreContract).call(
-                abi.encodeWithSignature("registerBatch(uint256,string)", newBatchId, metadataURI)
+            (bool success, ) = address(coreContract).call(
+                abi.encodeWithSignature("registerBatchCreation(uint256,address)", newBatchId, msg.sender)
             );
-            require(success, "Failed to register batch with core");
+            if (!success) {
+                revert WAGACoffeeBatchOperations__FailedToRegisterBatchWithCore();
+            }
         } else {
             // Register batch without metadata
             (bool success,) = address(coreContract).call(
@@ -161,14 +168,14 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
     ) external returns (uint256) {
         // Check if batch exists
         if (!isBatchCreated(batchId)) {
-            revert("Batch does not exist");
+            revert WAGACoffeeBatchOperations__BatchDoesNotExist();
         }
         
         // Check if requester has appropriate role (processor or verifier)
         bytes32 processorRole = keccak256("PROCESSOR_ROLE");
         bytes32 verifierRole = keccak256("VERIFIER_ROLE");
         if (!authority.hasRole(processorRole, msg.sender) && !authority.hasRole(verifierRole, msg.sender)) {
-            revert("Caller must have PROCESSOR_ROLE or VERIFIER_ROLE");
+            revert WAGACoffeeBatchOperations__CallerMustHaveProcessorOrVerifierRole();
         }
         
         // Get the next request index for this batch
@@ -200,7 +207,7 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
     /**
      * @dev Set manager contract addresses
      */
-    function setManagerAddresses(address _batchManager, address _zkManager) external onlyRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+    function setManagerAddresses(address _batchManager, address _zkManager) external callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
         batchManager = IWAGABatchManager(_batchManager);
         zkManager = WAGAZKManager(_zkManager);
     }
@@ -208,7 +215,7 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
     /**
      * @dev Set batch manager address
      */
-    function setBatchManager(address _batchManager) external onlyRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+    function setBatchManager(address _batchManager) external callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
         batchManager = IWAGABatchManager(_batchManager);
     }
 
@@ -223,7 +230,7 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
      * @dev Emergency function to fix state consistency between mintedQuantity and totalSupply
      * @param batchId Batch to fix
      */
-    function fixStateConsistency(uint256 batchId) external onlyRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+    function fixStateConsistency(uint256 batchId) external callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
         uint256 actualSupply = coreContract.getMintedQuantity(batchId);
         BatchInfo storage batch = s_batchInfo[batchId];
         
@@ -252,7 +259,9 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
      * @param amount Amount that was minted
      */
     function notifyMint(uint256 batchId, uint256 amount) external {
-        require(msg.sender == address(coreContract), "Only core contract can notify mint");
+        if (msg.sender != address(coreContract)) {
+            revert WAGACoffeeBatchOperations__OnlyCoreContractCanNotifyMint();
+        }
         s_batchInfo[batchId].mintedQuantity += amount;
     }
 
@@ -262,7 +271,9 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
      * @param amount Amount that was burned
      */
     function notifyBurn(uint256 batchId, uint256 amount) external {
-        require(msg.sender == address(coreContract), "Only core contract can notify burn");
+        if (msg.sender != address(coreContract)) {
+            revert WAGACoffeeBatchOperations__OnlyCoreContractCanNotifyBurn();
+        }
         BatchInfo storage batch = s_batchInfo[batchId];
         
         if (batch.mintedQuantity >= amount) {

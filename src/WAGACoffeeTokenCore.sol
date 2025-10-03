@@ -68,6 +68,10 @@ contract WAGACoffeeTokenCore is ERC1155Supply, IWAGACoffeeToken {
     error BatchDoesNotExist();
     error InvalidQuantity();
     error InsufficientBalance();
+    error OnlyBatchOperationsContract();
+    error BatchOperationsFailed(string operation);
+    error BatchCreationFailed();
+    error BatchRequestCreationFailed();
 
     /* -------------------------------------------------------------------------- */
     /*                                Constructor                                 */
@@ -86,7 +90,7 @@ contract WAGACoffeeTokenCore is ERC1155Supply, IWAGACoffeeToken {
     /*                                 Modifiers                                  */
     /* -------------------------------------------------------------------------- */
 
-    modifier onlyRole(bytes32 role) {
+    modifier callerHasRole(bytes32 role) {
         if (!authority.hasRole(role, msg.sender)) {
             revert CallerNotAuthorized();
         }
@@ -94,7 +98,9 @@ contract WAGACoffeeTokenCore is ERC1155Supply, IWAGACoffeeToken {
     }
 
     modifier onlyBatchOperations() {
-        require(msg.sender == batchOperations, "Only batch operations contract");
+        if (msg.sender != batchOperations) {
+            revert OnlyBatchOperationsContract();
+        }
         _;
     }
 
@@ -105,7 +111,7 @@ contract WAGACoffeeTokenCore is ERC1155Supply, IWAGACoffeeToken {
     /**
      * @dev Mint tokens - MINIMAL implementation
      */
-    function mintBatch(address to, uint256 batchId, uint256 amount) external onlyRole(keccak256("MINTER_ROLE")) {
+    function mintBatch(address to, uint256 batchId, uint256 amount) external callerHasRole(keccak256("MINTER_ROLE")) {
         if (!batchExists[batchId]) {
             revert BatchDoesNotExist();
         }
@@ -119,7 +125,9 @@ contract WAGACoffeeTokenCore is ERC1155Supply, IWAGACoffeeToken {
         (bool success,) = batchOperations.call(
             abi.encodeWithSignature("notifyMint(uint256,uint256)", batchId, amount)
         );
-        require(success, "Failed to notify batch operations");
+        if (!success) {
+            revert BatchOperationsFailed("notifyMint");
+        }
         
         emit BatchMinted(batchId, to, amount, totalSupply(batchId));
     }
@@ -127,7 +135,7 @@ contract WAGACoffeeTokenCore is ERC1155Supply, IWAGACoffeeToken {
     /**
      * @dev Burn tokens for redemption
      */
-    function burnForRedemption(address from, uint256 batchId, uint256 amount) external onlyRole(keccak256("REDEMPTION_ROLE")) {
+    function burnForRedemption(address from, uint256 batchId, uint256 amount) external callerHasRole(keccak256("REDEMPTION_ROLE")) {
         if (balanceOf(from, batchId) < amount) {
             revert InsufficientBalance();
         }
@@ -138,7 +146,9 @@ contract WAGACoffeeTokenCore is ERC1155Supply, IWAGACoffeeToken {
         (bool success,) = batchOperations.call(
             abi.encodeWithSignature("notifyBurn(uint256,uint256)", batchId, amount)
         );
-        require(success, "Failed to notify batch operations");
+        if (!success) {
+            revert BatchOperationsFailed("notifyBurn");
+        }
         
         emit BatchBurned(batchId, from, amount, totalSupply(batchId));
     }
@@ -174,7 +184,7 @@ contract WAGACoffeeTokenCore is ERC1155Supply, IWAGACoffeeToken {
     /**
      * @dev Update batch IPFS URI
      */
-    function updateBatchIPFS(uint256 batchId, string memory ipfsUri) external onlyRole(keccak256("ADMIN_ROLE")) {
+    function updateBatchIPFS(uint256 batchId, string memory ipfsUri) external callerHasRole(keccak256("ADMIN_ROLE")) {
         if (!batchExists[batchId]) {
             revert BatchDoesNotExist();
         }
@@ -204,7 +214,9 @@ contract WAGACoffeeTokenCore is ERC1155Supply, IWAGACoffeeToken {
                 productionDate, expiryDate, quantity, pricePerUnit, origin, packagingInfo, metadataURI
             )
         );
-        require(success, "Batch creation failed");
+        if (!success) {
+            revert BatchCreationFailed();
+        }
         return abi.decode(data, (uint256));
     }
 
@@ -222,7 +234,9 @@ contract WAGACoffeeTokenCore is ERC1155Supply, IWAGACoffeeToken {
                 batchId, requestedQuantity, requestDetails
             )
         );
-        require(success, "Batch request creation failed");
+        if (!success) {
+            revert BatchRequestCreationFailed();
+        }
         return abi.decode(data, (uint256));
     }
 

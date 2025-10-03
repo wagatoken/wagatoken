@@ -2,11 +2,23 @@
 pragma solidity ^0.8.19;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IWAGATreasury} from "./Interfaces/IWAGATreasury.sol";
 import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
-import {IWAGACDPIntegration} from "./Interfaces/IWAGACDPIntegration.sol";
+    /**
+     * @dev Set the USDC token address (admin only)
+     * @param newUSDCAddress The new USDC token address
+     */
+    function setUSDCAddress(address newUSDCAddress) external callerHasRole(ADMIN_ROLE) {
+        if (newUSDCAddress == address(0)) {
+            revert WAGATreasury__ZeroAddress_setUSDCAddress();
+        }
+        
+        address oldUSDCAddress = address(usdc);
+        usdc = IERC20(newUSDCAddress);
+        
+        emit USDCAddressUpdated(oldUSDCAddress, newUSDCAddress);
+    }
 
 /**
  * @title WAGATreasury
@@ -14,6 +26,35 @@ import {IWAGACDPIntegration} from "./Interfaces/IWAGACDPIntegration.sol";
  * Integrates with Coinbase Commerce for cross-border payments
  */
 contract WAGATreasury is IWAGATreasury, ReentrancyGuard {
+    /* -------------------------------------------------------------------------- */
+    /*                                   ERRORS                                   */
+    /* -------------------------------------------------------------------------- */
+
+    error WAGATreasury__InvalidOfframpPartnerAddress_transferToOfframpPartner();
+    error WAGATreasury__InvalidTransferAmount_transferToOfframpPartner();
+    error WAGATreasury__InsufficientTreasuryBalance_transferToOfframpPartner();
+    error WAGATreasury__TransferFailed_transferToOfframpPartner();
+    error WAGATreasury__UnauthorizedOfframpExecutor_transferToOfframpPartner();
+    error WAGATreasury__TransferAlreadyExecuted_transferToOfframpPartner();
+    error WAGATreasury__InvalidUSDCAddress_constructor();
+    error WAGATreasury__InvalidPaymentAmount_payForBatch();
+    error WAGATreasury__BatchPaymentNotRequired_payForBatch();
+    error WAGATreasury__IncorrectPaymentAmount_payForBatch();
+    error WAGATreasury__AlreadyPaidForBatch_payForBatch();
+    error WAGATreasury__InsufficientUSDCBalance_payForBatch();
+    error WAGATreasury__InsufficientUSDCAllowance_payForBatch();
+    error WAGATreasury__USDCTransferFailed_payForBatch();
+    error WAGATreasury__ChargeAlreadyProcessed_processChargePayment();
+    error WAGATreasury__InvalidPaymentAmount_processChargePayment();
+    error WAGATreasury__InvalidRecipientAddress_distributeFunds();
+    error WAGATreasury__InvalidDistributionAmount_distributeFunds();
+    error WAGATreasury__InsufficientTreasuryBalance_distributeFunds();
+    error WAGATreasury__USDCTransferFailed_distributeFunds();
+    error WAGATreasury__OnlyUSDCWithdrawalsAllowed_receive();
+    error WAGATreasury__InsufficientBalance_receive();
+    error WAGATreasury__TransferFailed_receive();
+    
+    // FIXED: Added specific error for admin authorization
     /* -------------------------------------------------------------------------- */
     /*                                  ERRORS                                    */
     /* -------------------------------------------------------------------------- */
@@ -33,77 +74,6 @@ contract WAGATreasury is IWAGATreasury, ReentrancyGuard {
     error WAGATreasury__ZeroAddress_setCDPIntegration();
     error WAGATreasury__InvalidOfframpPartner_transferToOfframpPartner();
     error WAGATreasury__InsufficientBalance_transferToOfframpPartner();
-    error WAGATreasury__InvalidOfframpPartnerAddress_transferToOfframpPartner();
-    error WAGATreasury__InvalidTransferAmount_transferToOfframpPartner();
-    error WAGATreasury__InsufficientTreasuryBalance_transferToOfframpPartner();
-    error WAGATreasury__TransferFailed_transferToOfframpPartner();
-    error WAGATreasury__UnauthorizedOfframpExecutor_transferToOfframpPartner();
-    error WAGATreasury__TransferAlreadyExecuted_transferToOfframpPartner();
-    error WAGATreasury__InvalidUSDCAddress_constructor();
-    error WAGATreasury__InvalidPaymentAmount_payForBatch();
-    error WAGATreasury__BatchPaymentNotRequired_payForBatch();
-    error WAGATreasury__IncorrectPaymentAmount_payForBatch();
-    error WAGATreasury__AlreadyPaidForBatch_payForBatch();
-    error WAGATreasury__InsufficientUSDCBalance_payForBatch();
-    error WAGATreasury__InsufficientUSDCAllowance_payForBatch();
-    error WAGATreasury__USDCTransferFailed_payForBatch();
-    error WAGATreasury__UnauthorizedPaymentProcessor_processCoinbasePayment();
-    error WAGATreasury__UnauthorizedAdmin_distributeFunds();
-    error WAGATreasury__OnlyUSDCWithdrawalsAllowed_receive();
-    error WAGATreasury__InsufficientBalance_receive();
-    error WAGATreasury__TransferFailed_receive();
-
-    /* -------------------------------------------------------------------------- */
-    /*                                   EVENTS                                   */
-    /* -------------------------------------------------------------------------- */
-
-    event USDCAddressUpdated(address indexed oldAddress, address indexed newAddress);
-    event FundsDistributed(uint256 indexed batchId, address indexed seller, uint256 sellerShare, address indexed processor, uint256 processorShare);
-    event OfframpTransfer(uint256 indexed batchId, address indexed offrampPartner, uint256 amount);
-
-    /* -------------------------------------------------------------------------- */
-    /*                                STATE VARIABLES                            */
-    /* -------------------------------------------------------------------------- */
-
-    // Role constants - use ConfigManager definitions instead of duplicating
-    bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 private constant PAYMENT_PROCESSOR_ROLE = keccak256("PAYMENT_PROCESSOR_ROLE");
-    bytes32 private constant OFFRAMP_EXECUTOR_ROLE = keccak256("OFFRAMP_EXECUTOR_ROLE");
-    
-    // Coffee token for role checks
-    IWAGACoffeeToken public coffeeToken;
-    IWAGACDPIntegration public cdpIntegration;
-    IERC20 public usdcToken;
-
-    // Treasury balance tracking
-    uint256 public totalCollected;
-    uint256 public totalDistributed;
-
-    // Payment tracking per batch
-    mapping(uint256 => uint256) public batchPaymentRequired;
-    mapping(uint256 => uint256) public batchPaymentCollected;
-
-    // User payment tracking
-    mapping(address => mapping(uint256 => bool)) public hasPaidForBatch;
-
-    // Coinbase Commerce integration
-    mapping(string => bool) public processedChargeIds; // Prevent double processing
-
-    // Offramp transfer tracking
-    mapping(uint256 => mapping(address => bool)) public offrampTransferExecuted; // batchId => buyer => executed
-    mapping(uint256 => mapping(address => address)) public offrampPartnerByBatchBuyer; // batchId => buyer => offrampPartner
-    mapping(uint256 => mapping(address => uint256)) public offrampTransferAmount; // batchId => buyer => amount
-
-    /* -------------------------------------------------------------------------- */
-    /*                                 MODIFIERS                                  */
-    /* -------------------------------------------------------------------------- */
-
-    modifier callerHasRole(bytes32 role) {
-        if (!coffeeToken.hasRole(role, msg.sender)) {
-            revert WAGATreasury__UnauthorizedAdmin_setBatchPayment(); // Generic unauthorized error
-        }
-        _;
-    }
 
     /* -------------------------------------------------------------------------- */
     /*                                 CONSTRUCTOR                                */
@@ -124,39 +94,75 @@ contract WAGATreasury is IWAGATreasury, ReentrancyGuard {
             revert WAGATreasury__ZeroAddress_setCDPIntegration();
         }
         
-        usdcToken = IERC20(_usdcAddress);
+        usdc = IERC20(_usdcAddress);
         coffeeToken = IWAGACoffeeToken(_coffeeTokenAddress);
         cdpIntegration = IWAGACDPIntegration(_cdpIntegrationAddress);
     }
+    error WAGATreasury__UnauthorizedPaymentProcessor_processCoinbasePayment();
+    error WAGATreasury__UnauthorizedAdmin_distributeFunds();
+
+    // Role constants - use ConfigManager definitions instead of duplicating
+    bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 private constant PAYMENT_PROCESSOR_ROLE = keccak256("PAYMENT_PROCESSOR_ROLE");
+    bytes32 private constant OFFRAMP_EXECUTOR_ROLE = keccak256("OFFRAMP_EXECUTOR_ROLE");
+    
+    // Coffee token for role checks
+    IWAGACoffeeToken public coffeeToken;
+    IWAGACDPIntegration public cdpIntegration;
+    IERC20 public immutable usdc;
 
     /* -------------------------------------------------------------------------- */
-    /*                              ADMIN FUNCTIONS                              */
+    /*                                 MODIFIERS                                  */
     /* -------------------------------------------------------------------------- */
 
+    modifier callerHasRole(bytes32 role) {
+        if (!coffeeToken.hasRole(role, msg.sender)) {
+            revert WAGATreasury__UnauthorizedAdmin_setBatchPayment(); // Generic unauthorized error
+        }
+        _;
+    }
+
+    // USDC token contract on Base network
+    ERC20 public usdcToken;
+
+    // Treasury balance tracking
+    uint256 public totalCollected;
+    uint256 public totalDistributed;
+
+    // Payment tracking per batch
+    mapping(uint256 => uint256) public batchPaymentRequired;
+    mapping(uint256 => uint256) public batchPaymentCollected;
+
+    // User payment tracking
+    mapping(address => mapping(uint256 => bool)) public hasPaidForBatch;
+
+    // Events are inherited from IWAGATreasury interface
+
+    // Coinbase Commerce integration
+    mapping(string => bool) public processedChargeIds; // Prevent double processing
+
+    // Offramp transfer tracking
+    mapping(uint256 => mapping(address => bool)) public offrampTransferExecuted; // batchId => buyer => executed
+    mapping(uint256 => mapping(address => address)) public offrampPartnerByBatchBuyer; // batchId => buyer => offrampPartner
+    mapping(uint256 => mapping(address => uint256)) public offrampTransferAmount; // batchId => buyer => amount
+
+    constructor(address _usdcTokenAddress) {
+        if (_usdcTokenAddress == address(0)) {
+            revert WAGATreasury__InvalidUSDCAddress_constructor();
+        }
+        usdcToken = ERC20(_usdcTokenAddress);
+        // No role initialization needed - roles managed by coffee token
+    }
+    
     /**
      * @dev Set the coffee token contract for role checks
      * @param _coffeeToken Address of the WAGACoffeeTokenCore contract
      */
-    function setCoffeeToken(address _coffeeToken) external callerHasRole(ADMIN_ROLE) {
+    function setCoffeeToken(address _coffeeToken) external {
         if (_coffeeToken == address(0)) {
-            revert WAGATreasury__ZeroAddress_setCoffeeToken();
+            revert WAGATreasury__InvalidUSDCAddress_constructor();
         }
         coffeeToken = IWAGACoffeeToken(_coffeeToken);
-    }
-
-    /**
-     * @dev Set the USDC token address (admin only)
-     * @param newUSDCAddress The new USDC token address
-     */
-    function setUSDCAddress(address newUSDCAddress) external callerHasRole(ADMIN_ROLE) {
-        if (newUSDCAddress == address(0)) {
-            revert WAGATreasury__ZeroAddress_setUSDCAddress();
-        }
-        
-        address oldUSDCAddress = address(usdcToken);
-        usdcToken = IERC20(newUSDCAddress);
-        
-        emit USDCAddressUpdated(oldUSDCAddress, newUSDCAddress);
     }
 
     /**
@@ -168,10 +174,6 @@ contract WAGATreasury is IWAGATreasury, ReentrancyGuard {
         batchPaymentRequired[batchId] = amount;
         emit BatchPaymentRequired(batchId, amount);
     }
-
-    /* -------------------------------------------------------------------------- */
-    /*                              PAYMENT FUNCTIONS                            */
-    /* -------------------------------------------------------------------------- */
 
     /**
      * @dev Process payment for batch redemption using direct USDC transfer
@@ -234,68 +236,46 @@ contract WAGATreasury is IWAGATreasury, ReentrancyGuard {
         if (processedChargeIds[chargeId]) {
             revert WAGATreasury__ChargeAlreadyProcessed_processChargePayment();
         }
-        if (amount == 0) {
-            revert WAGATreasury__InvalidPaymentAmount_processChargePayment();
-        }
-
-        // Mark charge as processed
-        processedChargeIds[chargeId] = true;
-
-        // Update payment tracking (no actual USDC transfer since Coinbase handles it)
-        batchPaymentCollected[batchId] += amount;
-        hasPaidForBatch[user][batchId] = true;
-        totalCollected += amount;
-
-        emit CoinbasePaymentProcessed(user, batchId, chargeId);
-        emit PaymentReceived(user, batchId, amount, block.timestamp);
-    }
-
-    /* -------------------------------------------------------------------------- */
-    /*                           DISTRIBUTION FUNCTIONS                          */
-    /* -------------------------------------------------------------------------- */
-
     /**
-     * @dev Distribute funds from treasury (admin only) - interface compatible version
-     * @param recipient The recipient address
-     * @param amount The amount to distribute
-     * @param reason The reason for distribution
+     * @dev Transfer funds to approved offramp partner
+     * @param batchId The batch ID for tracking
+     * @param offrampPartner The offramp partner address
+     * @param amount The amount to transfer
      */
-    function distributeFunds(
-        address recipient,
-        uint256 amount,
-        string calldata reason
-    ) external callerHasRole(ADMIN_ROLE) {
-        if (recipient == address(0)) {
-            revert WAGATreasury__InvalidRecipientAddress_distributeFunds();
+    function transferToOfframpPartner(
+        uint256 batchId,
+        address offrampPartner,
+        uint256 amount
+    ) external callerHasRole(OFFRAMP_EXECUTOR_ROLE) nonReentrant {
+        if (offrampPartner == address(0)) {
+            revert WAGATreasury__InvalidOfframpPartner_transferToOfframpPartner();
         }
         if (amount == 0) {
             revert WAGATreasury__InvalidDistributionAmount_distributeFunds();
         }
         
-        uint256 treasuryBalance = usdcToken.balanceOf(address(this));
+        uint256 treasuryBalance = usdc.balanceOf(address(this));
         if (treasuryBalance < amount) {
-            revert WAGATreasury__InsufficientTreasuryBalance_distributeFunds();
+            revert WAGATreasury__InsufficientBalance_transferToOfframpPartner();
         }
         
-        bool success = usdcToken.transfer(recipient, amount);
+        bool success = usdc.transfer(offrampPartner, amount);
         if (!success) {
             revert WAGATreasury__USDCTransferFailed_distributeFunds();
         }
         
-        totalDistributed += amount;
-        
-        emit PaymentDistributed(recipient, amount, reason);
+        emit OfframpTransfer(batchId, offrampPartner, amount);
     }
 
     /**
-     * @dev Distribute funds to both seller and processor (admin only) - extended version
+     * @dev Distribute funds from treasury (admin only)
      * @param batchId The batch ID for tracking
      * @param seller The seller address
      * @param sellerShare The amount to distribute to seller
      * @param processor The processor address
      * @param processorShare The amount to distribute to processor
      */
-    function distributeFundsDetailed(
+    function distributeFunds(
         uint256 batchId,
         address seller,
         uint256 sellerShare,
@@ -384,10 +364,6 @@ contract WAGATreasury is IWAGATreasury, ReentrancyGuard {
         emit OfframpTransferExecuted(batchId, buyer, offrampPartner, usdAmount, block.timestamp);
     }
 
-    /* -------------------------------------------------------------------------- */
-    /*                              VIEW FUNCTIONS                               */
-    /* -------------------------------------------------------------------------- */
-
     /**
      * @dev Check if offramp transfer has been executed for a batch/buyer
      * @param batchId The batch ID
@@ -449,9 +425,16 @@ contract WAGATreasury is IWAGATreasury, ReentrancyGuard {
         return (totalCollected, totalDistributed, currentBalance);
     }
 
-    /* -------------------------------------------------------------------------- */
-    /*                             EMERGENCY FUNCTIONS                           */
-    /* -------------------------------------------------------------------------- */
+    /**
+     * @dev Update USDC token address (admin only) - for testing purposes
+     * @param _usdcAddress New USDC token address
+     */
+    function updateUSDCAddress(address _usdcAddress) external {
+        if (!coffeeToken.hasRole(ADMIN_ROLE, msg.sender)) {
+            revert WAGATreasury__UnauthorizedOfframpExecutor_transferToOfframpPartner();
+        }
+        usdcToken = ERC20(_usdcAddress);
+    }
 
     /**
      * @dev Emergency withdrawal function (admin only)
@@ -463,12 +446,12 @@ contract WAGATreasury is IWAGATreasury, ReentrancyGuard {
             revert WAGATreasury__OnlyUSDCWithdrawalsAllowed_receive();
         }
 
-        uint256 balance = IERC20(token).balanceOf(address(this));
+        uint256 balance = ERC20(token).balanceOf(address(this));
         if (balance < amount) {
             revert WAGATreasury__InsufficientBalance_receive();
         }
 
-        bool success = IERC20(token).transfer(msg.sender, amount);
+        bool success = ERC20(token).transfer(msg.sender, amount);
         if (!success) {
             revert WAGATreasury__TransferFailed_receive();
         }

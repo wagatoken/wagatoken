@@ -68,4 +68,9 @@ interface IPrivacyLayer {
         string calldata dataType,
         string calldata dataHash
     ) external;
+
+    /**
+     * @dev Get privacy configuration for a batch
+     */
+    function getBatchPrivacyConfig(uint256 batchId) external view returns (PrivacyConfig memory);
 }

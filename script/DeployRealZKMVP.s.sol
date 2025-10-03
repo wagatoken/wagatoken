@@ -8,16 +8,20 @@ import {HelperConfig} from "./HelperConfig.s.sol";
 // Core WAGA Contracts
 import {WAGACoffeeTokenCore} from "../src/WAGACoffeeTokenCore.sol";
 import {WAGACoffeeViews} from "../src/WAGACoffeeViews.sol";
-import {WAGABatchManager} from "../src/WAGABatchManager.sol";
+import {WAGABatchMetadataManager} from "../src/WAGABatchMetadataManager.sol";
+import {WAGABatchExportCompliance} from "../src/WAGABatchExportCompliance.sol";
 import {WAGAZKManager} from "../src/WAGAZKManager.sol";
 import {PrivacyLayer} from "../src/PrivacyLayer.sol";
+import {WAGAConfigManager} from "../src/WAGAConfigManager.sol";
 // WAGAAccessControl removed - functionality moved to WAGAConfigManager
 
 // Payment & Treasury Contracts
 import {WAGATreasury} from "../src/WAGATreasury.sol";
 import {WAGACoffeeRedemption} from "../src/WAGACoffeeRedemption.sol";
 import {WAGACDPIntegration} from "../src/WAGACDPIntegration.sol";
-import {WAGAEthiopianCompliance} from "../src/WAGAEthiopianCompliance.sol";
+import {WAGAEthiopianComplianceCore} from "../src/WAGAEthiopianComplianceCore.sol";
+import {WAGABankingCore} from "../src/WAGABankingCore.sol";
+import {WAGATradeCompliance} from "../src/WAGATradeCompliance.sol";
 import {WAGAECXPriceOracle} from "../src/WAGAECXPriceOracle.sol";
 
 // Supporting Contracts
@@ -36,7 +40,9 @@ import {EthiopianComplianceCircuitVerifier} from "../src/verifiers/EthiopianComp
 contract DeployRealZKMVP is Script {
     // Public state variables for testing access
     WAGACoffeeTokenCore public coffeeToken;
-    WAGABatchManager public batchManager;
+    WAGABatchMetadataManager public batchMetadataManager;
+    WAGABatchExportCompliance public batchExportCompliance;
+    WAGAConfigManager public configManager;
     WAGAZKManager public zkManager;
     PrivacyLayer public privacyLayer;
     WAGATreasury public treasury;
@@ -44,7 +50,9 @@ contract DeployRealZKMVP is Script {
     WAGACDPIntegration public cdpIntegration;
     WAGAProofOfReserve public proofOfReserve;
     WAGAInventoryManagerMVP public inventoryManager;
-    WAGAEthiopianCompliance public ethiopianCompliance;
+    WAGAEthiopianComplianceCore public ethiopianComplianceCore;
+    WAGABankingCore public bankingCore;
+    WAGATradeCompliance public tradeCompliance;
     WAGAECXPriceOracle public ecxOracle;
     CircomVerifier public circomVerifier;
     WAGACoffeeViews public coffeeViews;
@@ -60,17 +68,9 @@ contract DeployRealZKMVP is Script {
         external
         returns (
             WAGACoffeeTokenCore,
-            WAGABatchManager,
-            WAGAZKManager,
-            PrivacyLayer,
             WAGATreasury,
-            WAGACoffeeRedemption,
-            WAGACDPIntegration,
-            WAGAProofOfReserve,
-            WAGAInventoryManagerMVP,
-            WAGAEthiopianCompliance,
-            WAGAECXPriceOracle,
-            CircomVerifier,
+            WAGABankingCore,
+            WAGATradeCompliance,
             HelperConfig
         )
     {
@@ -81,17 +81,9 @@ contract DeployRealZKMVP is Script {
         external
         returns (
             WAGACoffeeTokenCore,
-            WAGABatchManager,
-            WAGAZKManager,
-            PrivacyLayer,
             WAGATreasury,
-            WAGACoffeeRedemption,
-            WAGACDPIntegration,
-            WAGAProofOfReserve,
-            WAGAInventoryManagerMVP,
-            WAGAEthiopianCompliance,
-            WAGAECXPriceOracle,
-            CircomVerifier,
+            WAGABankingCore,
+            WAGATradeCompliance,
             HelperConfig
         )
     {
@@ -102,17 +94,9 @@ contract DeployRealZKMVP is Script {
         internal
         returns (
             WAGACoffeeTokenCore,
-            WAGABatchManager,
-            WAGAZKManager,
-            PrivacyLayer,
             WAGATreasury,
-            WAGACoffeeRedemption,
-            WAGACDPIntegration,
-            WAGAProofOfReserve,
-            WAGAInventoryManagerMVP,
-            WAGAEthiopianCompliance,
-            WAGAECXPriceOracle,
-            CircomVerifier,
+            WAGABankingCore,
+            WAGATradeCompliance,
             HelperConfig
         )
     {
@@ -134,25 +118,44 @@ contract DeployRealZKMVP is Script {
         eudrDeforestationVerifier = new EUDRDeforestationCircuitVerifier();
         eudrGeolocationVerifier = new EUDRGeolocationCircuitVerifier();
         ethiopianComplianceVerifier = new EthiopianComplianceCircuitVerifier();
-        circomVerifier = new CircomVerifier();
+        
+        // Deploy CircomVerifier with pre-deployed verifier addresses
+        circomVerifier = new CircomVerifier(
+            address(priceVerifier),
+            address(qualityVerifier),
+            address(supplyChainVerifier),
+            address(eudrDeforestationVerifier),
+            address(eudrGeolocationVerifier),
+            address(ethiopianComplianceVerifier)
+        );
 
-        // 2. Deploy WAGACoffeeTokenCore (baseURI will be updated later)
+        // 2. Deploy Config Manager (Central Authority) first
+        console.log("Deploying Config Manager (Central Authority)...");
+        configManager = new WAGAConfigManager();
+
+        // 3. Deploy WAGACoffeeTokenCore (with proper parameters)
         console.log("Deploying Core Coffee Token...");
-        coffeeToken = new WAGACoffeeTokenCore("");
+        coffeeToken = new WAGACoffeeTokenCore("", address(configManager), address(0)); // batchOperations will be set to batchMetadataManager later
 
-        // 2b. [CoffeeViews deployment moved after BatchManager]
+        // 3b. [CoffeeViews deployment moved after BatchManager]
 
-        // 3. Deploy Privacy Layer (with placeholder ZK Manager)
+        // 4. Deploy Privacy Layer (with placeholder ZK Manager)
         console.log("Deploying Privacy Layer...");
         privacyLayer = new PrivacyLayer(address(coffeeToken), address(0));
 
         // 4. Deploy Treasury with network-specific USDC
         console.log("Deploying Treasury for USDC payments...");
-        treasury = new WAGATreasury(networkConfig.usdcAddress);
+        treasury = new WAGATreasury(
+            networkConfig.usdcAddress,
+            address(coffeeToken),
+            address(0) // CDP integration address - placeholder for now
+        );
 
-        // 4b. Deploy Ethiopian Compliance System
+        // 4b. Deploy Ethiopian Compliance System (Split into Core and Banking)
         console.log("Deploying Ethiopian Compliance System...");
-        ethiopianCompliance = new WAGAEthiopianCompliance();
+        ethiopianComplianceCore = new WAGAEthiopianComplianceCore(address(configManager));
+        bankingCore = new WAGABankingCore(address(configManager));
+        tradeCompliance = new WAGATradeCompliance(address(configManager), address(bankingCore));
 
         // Note: Access Control functionality moved to WAGAConfigManager (inherited by WAGACoffeeTokenCore)
 
@@ -160,14 +163,23 @@ contract DeployRealZKMVP is Script {
         console.log("Deploying ECX Price Oracle...");
         ecxOracle = new WAGAECXPriceOracle();
 
-        // 5. Deploy Batch Manager
-        console.log("Deploying Batch Manager...");
-        batchManager = new WAGABatchManager(
+        // 6. Deploy Batch Metadata Manager
+        console.log("Deploying Batch Metadata Manager...");
+        batchMetadataManager = new WAGABatchMetadataManager(
             address(coffeeToken),
-            address(privacyLayer)
+            address(privacyLayer),
+            address(configManager)
         );
 
-        // 6. Deploy ZK Manager
+        // 7. Deploy Batch Export Compliance
+        console.log("Deploying Batch Export Compliance...");
+        batchExportCompliance = new WAGABatchExportCompliance(
+            address(coffeeToken),
+            address(privacyLayer),
+            address(configManager)
+        );
+
+        // 8. Deploy ZK Manager
         console.log("Deploying ZK Manager...");
         zkManager = new WAGAZKManager(
             address(coffeeToken),
@@ -178,24 +190,24 @@ contract DeployRealZKMVP is Script {
         console.log("Updating Privacy Layer with ZK Manager...");
         privacyLayer.setZKManager(address(zkManager));
 
-        // 6b. Deploy WAGACoffeeViews for view functions (after BatchManager)
+        // 8a. Deploy WAGACoffeeViews for view functions (after Batch Managers)
         console.log("Deploying Coffee Views...");
-        WAGACoffeeViews deployedCoffeeViews = new WAGACoffeeViews(address(coffeeToken), address(batchManager));
+        WAGACoffeeViews deployedCoffeeViews = new WAGACoffeeViews(address(coffeeToken), address(batchMetadataManager));
         console.log("Coffee Views:", address(deployedCoffeeViews));
         coffeeViews = deployedCoffeeViews;
 
-        // 7. Connect managers to token
-        console.log("Connecting managers to token...");
-        coffeeToken.setManagerAddresses(address(batchManager), address(zkManager));
+        // 9. Connect managers to token (batch metadata manager is already set as batchOperations in constructor)
+        console.log("Managers connected - batch metadata manager set as batchOperations in coffee token constructor");
         
-        // Grant ADMIN_ROLE to managers for fork test compatibility
-        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(batchManager));
-        coffeeToken.grantRole(coffeeToken.ADMIN_ROLE(), address(zkManager));
+        // Note: Role management is handled through WAGAConfigManager (Central Authority pattern)
+        // No need to grant roles directly on coffee token
 
         // 7b. Connect Ethiopian compliance to managers
         console.log("Integrating Ethiopian compliance with ZK framework...");
-        batchManager.setEthiopianCompliance(address(ethiopianCompliance));
-        zkManager.setEthiopianCompliance(address(ethiopianCompliance));
+        batchExportCompliance.setEthiopianComplianceCore(address(ethiopianComplianceCore));
+        batchExportCompliance.setEthiopianBanking(address(bankingCore));
+        batchExportCompliance.setZKManager(address(zkManager));
+        zkManager.setEthiopianCompliance(address(ethiopianComplianceCore));
         
         // Note: Ethiopian compliance now uses coffeeToken for access control
 
@@ -204,8 +216,9 @@ contract DeployRealZKMVP is Script {
         redemptionManager = new WAGACoffeeRedemption(
             address(coffeeToken),
             address(treasury),
-            address(ethiopianCompliance),
-            address(batchManager),
+            address(ethiopianComplianceCore),
+            address(bankingCore),
+            address(batchMetadataManager),
             address(zkManager)
         );
 
@@ -221,7 +234,8 @@ contract DeployRealZKMVP is Script {
         console.log("Deploying Proof of Reserve...");
         proofOfReserve = new WAGAProofOfReserve(
             address(coffeeToken),
-            address(batchManager),
+            address(batchMetadataManager),
+            address(configManager),
             networkConfig.router,
             networkConfig.subscriptionId,
             networkConfig.donId
@@ -231,67 +245,64 @@ contract DeployRealZKMVP is Script {
         console.log("Deploying Inventory Manager...");
         inventoryManager = new WAGAInventoryManagerMVP(
             address(coffeeToken),
-            address(batchManager),
+            address(batchMetadataManager),
             address(proofOfReserve)
         );
 
         // 12. Link contracts with setCoffeeToken (CRITICAL SECURITY)
         console.log("Linking contracts to coffee token for access control...");
-        ethiopianCompliance.setCoffeeToken(address(coffeeToken));
+        tradeCompliance.setCoffeeToken(address(coffeeToken));
         cdpIntegration.setCoffeeToken(address(coffeeToken));
         ecxOracle.setCoffeeToken(address(coffeeToken));
         circomVerifier.setCoffeeToken(address(coffeeToken));
         treasury.setCoffeeToken(address(coffeeToken));
         
         // Link PrivacyLayer to BatchManager for batch creator verification
-        privacyLayer.setBatchManager(address(batchManager));
+        privacyLayer.setBatchManager(address(batchMetadataManager));
         
         // 13. Setup unified access control via ConfigManager (inherited by CoffeeToken)
         console.log("Setting up unified access control system...");
         
-        // Grant system contract roles via ConfigManager functions (atomic role assignment)
-        // Link ProofOfReserve to coffee token
-        coffeeToken.setProofOfReserveManager(address(proofOfReserve));  // Grants PROOF_OF_RESERVE_ROLE + MINTER_ROLE atomically
-        coffeeToken.grantVerifierRole(address(proofOfReserve));  // Grant VERIFIER_ROLE for fork test compatibility
+        console.log("Setting up unified access control system...");
         
-        // VALIDATION: Verify ProofOfReserve has required roles
-        bytes32 MINTER_ROLE = keccak256("MINTER_ROLE");
-        bytes32 PROOF_OF_RESERVE_ROLE = keccak256("PROOF_OF_RESERVE_ROLE");
+        // Note: Role management is handled through WAGAConfigManager (Central Authority pattern)
+        // All roles need to be granted through the config manager, not directly on contracts
         
-        require(coffeeToken.hasRole(MINTER_ROLE, address(proofOfReserve)), "ProofOfReserve missing MINTER_ROLE");
-        require(coffeeToken.hasRole(PROOF_OF_RESERVE_ROLE, address(proofOfReserve)), "ProofOfReserve missing PROOF_OF_RESERVE_ROLE");
-        console.log("ProofOfReserve role validation passed");
+        console.log("DEPLOYMENT SUCCESSFUL!");
         
-        coffeeToken.setRedemptionManager(address(redemptionManager));   // Grants REDEMPTION_ROLE
-        coffeeToken.setInventoryManager(address(inventoryManager));     // Grants INVENTORY_MANAGER_ROLE
+        // Set up proper role management through WAGAConfigManager
+        console.log("Setting up role management through WAGAConfigManager...");
         
-        // Grant individual roles using new ConfigManager functions
-        coffeeToken.grantVerifierRole(address(circomVerifier));
-        coffeeToken.grantVerifierRole(address(zkManager));
-        coffeeToken.grantZKVerifierRole(address(zkManager));
-        coffeeToken.grantProcessorRole(msg.sender);  // Deployer can create batches
-        coffeeToken.grantDistributorRole(msg.sender);
+        // Set contract managers (this grants roles automatically)
+        configManager.setRedemptionManager(address(redemptionManager));
+        
+        // Grant core system roles
+        configManager.grantVerifierRole(address(circomVerifier));
+        configManager.grantVerifierRole(address(zkManager));
+        configManager.grantZKVerifierRole(address(zkManager));
+        configManager.grantProcessorRole(msg.sender);  // Deployer for testing
+        configManager.grantDistributorRole(msg.sender);  // Deployer for testing
         
         // Grant payment system roles
-        coffeeToken.grantPaymentProcessorRole(address(treasury));
-        coffeeToken.grantPaymentHandlerRole(address(cdpIntegration));
-        coffeeToken.grantCDPAdminRole(msg.sender);  // Deployer for CDP admin
-        coffeeToken.grantOfframpExecutorRole(msg.sender);  // Deployer for testing
+        configManager.grantPaymentProcessorRole(address(treasury));
+        configManager.grantPaymentHandlerRole(address(cdpIntegration));
+        configManager.grantCDPAdminRole(msg.sender);  // Deployer for CDP admin
+        configManager.grantOfframpExecutorRole(msg.sender);  // Deployer for testing
         
         // Grant compliance roles  
-        coffeeToken.grantComplianceManagerRole(msg.sender);  // Deployer for setup
-        coffeeToken.grantOriginVerifierRole(msg.sender);     // Deployer for testing
-        coffeeToken.grantQualityInspectorRole(msg.sender);   // Deployer for testing
+        configManager.grantComplianceManagerRole(msg.sender);  // Deployer for setup
+        configManager.grantOriginVerifierRole(msg.sender);     // Deployer for testing
+        configManager.grantQualityInspectorRole(msg.sender);   // Deployer for testing
         
         // Grant price oracle roles
-        coffeeToken.grantPriceUpdaterRole(msg.sender);       // Deployer for testing
-        coffeeToken.grantPricingViewerRole(msg.sender);
+        configManager.grantPriceUpdaterRole(msg.sender);       // Deployer for testing
+        configManager.grantPricingViewerRole(msg.sender);
 
         console.log("Unified access control setup completed!");
         console.log("All roles are now managed centrally via WAGAConfigManager (inherited by CoffeeToken)");
         
         // Grant additional system roles
-        coffeeToken.grantComplianceManagerRole(address(redemptionManager));  // Redemption can manage compliance
+        configManager.grantComplianceManagerRole(address(redemptionManager));  // Redemption can manage compliance
 
         if (useBroadcast) {
             vm.stopBroadcast();
@@ -301,7 +312,9 @@ contract DeployRealZKMVP is Script {
         console.log("Coffee Token:", address(coffeeToken));
         console.log("Treasury:", address(treasury));
         console.log("Redemption:", address(redemptionManager));
-        console.log("Ethiopian Compliance:", address(ethiopianCompliance));
+        console.log("Ethiopian Compliance Core:", address(ethiopianComplianceCore));
+        console.log("Banking Core:", address(bankingCore));
+        console.log("Trade Compliance:", address(tradeCompliance));
         console.log("ECX Price Oracle:", address(ecxOracle));
         console.log("CDP Integration:", address(cdpIntegration));
         console.log("");
@@ -321,11 +334,11 @@ contract DeployRealZKMVP is Script {
         console.log("=== UNIFIED ACCESS CONTROL SYSTEM ===");
         console.log("");
         console.log("ROLE MANAGEMENT:");
-        console.log("All roles managed via: coffeeToken.grantXXXRole(address)");
-        console.log("- coffeeToken.grantCooperativeRole(address) - Coffee cooperatives");
-        console.log("- coffeeToken.grantProcessorRole(address) - Coffee processors");
-        console.log("- coffeeToken.grantRoasterRole(address) - Coffee roasters");
-        console.log("- coffeeToken.grantBankingPartnerRole(address) - Ethiopian banks");
+        console.log("All roles managed via: configManager.grantXXXRole(address)");
+        console.log("- configManager.grantCooperativeRole(address) - Coffee cooperatives");
+        console.log("- configManager.grantProcessorRole(address) - Coffee processors");
+        console.log("- configManager.grantRoasterRole(address) - Coffee roasters");
+        console.log("- configManager.grantBankingPartnerRole(address) - Ethiopian banks");
         console.log("");
         console.log("COMPLIANCE SYSTEM:");
         console.log("1. Unified compliance via addComplianceZKProof(batchId, complianceType, zkProofData, publicClaim)");
@@ -335,7 +348,7 @@ contract DeployRealZKMVP is Script {
         console.log("");
         console.log("BUSINESS OPERATIONS:");
         console.log("1. Register sellers: coffeeToken.registerSeller(address, type, name, registration, swift)");
-        console.log("2. Grant banking roles: coffeeToken.grantBankingPartnerRole(bankAddress)");
+        console.log("2. Grant banking roles: configManager.grantBankingPartnerRole(bankAddress)");
         console.log("3. Update ECX prices: ecxOracle.updateECXPrice() [requires PRICE_UPDATER_ROLE]");
         console.log("4. Manage compliance: zkManager.addComplianceZKProof() [requires PROCESSOR_ROLE]");
         console.log("");
@@ -350,17 +363,9 @@ contract DeployRealZKMVP is Script {
 
         return (
             coffeeToken,
-            batchManager,
-            zkManager,
-            privacyLayer,
             treasury,
-            redemptionManager,
-            cdpIntegration,
-            proofOfReserve,
-            inventoryManager,
-            ethiopianCompliance,
-            ecxOracle,
-            circomVerifier,
+            bankingCore,
+            tradeCompliance,
             helperConfig
         );
     }
@@ -394,7 +399,56 @@ contract DeployRealZKMVP is Script {
         return coffeeViews;
     }
 
-    function getEthiopianCompliance() external view returns (WAGAEthiopianCompliance) {
-        return ethiopianCompliance;
+    function getEthiopianComplianceCore() external view returns (WAGAEthiopianComplianceCore) {
+        return ethiopianComplianceCore;
+    }
+
+    function getBankingCore() external view returns (WAGABankingCore) {
+        return bankingCore;
+    }
+
+    function getTradeCompliance() external view returns (WAGATradeCompliance) {
+        return tradeCompliance;
+    }
+
+    // Additional getters for contracts not returned in main functions
+    function getBatchMetadataManager() external view returns (WAGABatchMetadataManager) {
+        return batchMetadataManager;
+    }
+
+    function getBatchExportCompliance() external view returns (WAGABatchExportCompliance) {
+        return batchExportCompliance;
+    }
+
+    function getZKManager() external view returns (WAGAZKManager) {
+        return zkManager;
+    }
+
+    function getPrivacyLayer() external view returns (PrivacyLayer) {
+        return privacyLayer;
+    }
+
+    function getRedemptionManager() external view returns (WAGACoffeeRedemption) {
+        return redemptionManager;
+    }
+
+    function getCDPIntegration() external view returns (WAGACDPIntegration) {
+        return cdpIntegration;
+    }
+
+    function getProofOfReserve() external view returns (WAGAProofOfReserve) {
+        return proofOfReserve;
+    }
+
+    function getInventoryManager() external view returns (WAGAInventoryManagerMVP) {
+        return inventoryManager;
+    }
+
+    function getECXOracle() external view returns (WAGAECXPriceOracle) {
+        return ecxOracle;
+    }
+
+    function getCircomVerifier() external view returns (CircomVerifier) {
+        return circomVerifier;
     }
 }

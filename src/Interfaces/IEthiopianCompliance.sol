@@ -154,7 +154,6 @@ interface IEthiopianCompliance {
         address indexed buyer,
         address indexed seller,
         uint256 valueUSD,
-        uint256 valueETB,
         string buyerBankDetails,
         string ectaPermitNumber
     );

@@ -14,6 +14,27 @@ contract PrivacyLayer is IPrivacyLayer {
     IWAGACoffeeToken public coffeeToken;
     IWAGABatchManager public batchManager;
 
+    /* -------------------------------------------------------------------------- */
+    /*                                   ERRORS                                   */
+    /* -------------------------------------------------------------------------- */
+    
+    error PrivacyLayer__BatchManagerAlreadySet();
+    error PrivacyLayer__CallerNotAuthorized();
+    error PrivacyLayer__InvalidAddress();
+    error PrivacyLayer__BatchManagerNotSet();
+    error PrivacyLayer__OnlyBatchCreatorAllowed();
+    
+    /* -------------------------------------------------------------------------- */
+    /*                                 MODIFIERS                                  */
+    /* -------------------------------------------------------------------------- */
+    
+    modifier callerHasRole(bytes32 role) {
+        if (!coffeeToken.hasRole(role, msg.sender)) {
+            revert PrivacyLayer__CallerNotAuthorized();
+        }
+        _;
+    }
+
     constructor(address _coffeeToken, address _zkManager) {
         coffeeToken = IWAGACoffeeToken(_coffeeToken);
         zkManager = IWAGAZKManager(_zkManager);
@@ -22,17 +43,17 @@ contract PrivacyLayer is IPrivacyLayer {
     /**
      * @dev Set the batch manager address (called after deployment)
      */
-    function setBatchManager(address _batchManager) external {
-        require(address(batchManager) == address(0), "BatchManager already set");
-        require(coffeeToken.hasRole(keccak256("ADMIN_ROLE"), msg.sender), "Only admin can set batch manager");
+    function setBatchManager(address _batchManager) external callerHasRole(keccak256("ADMIN_ROLE")) {
+        if (address(batchManager) != address(0)) {
+            revert PrivacyLayer__BatchManagerAlreadySet();
+        }
         batchManager = IWAGABatchManager(_batchManager);
     }
 
     /**
      * @dev Set the ZK manager address (called after deployment)
      */
-    function setZKManager(address _zkManager) external {
-        require(coffeeToken.hasRole(keccak256("ADMIN_ROLE"), msg.sender), "Only admin can set ZK manager");
+    function setZKManager(address _zkManager) external callerHasRole(keccak256("ADMIN_ROLE")) {
         zkManager = IWAGAZKManager(_zkManager);
     }
 
@@ -40,9 +61,13 @@ contract PrivacyLayer is IPrivacyLayer {
      * @dev Modifier to check if caller is the creator of the batch
      */
     modifier onlyBatchCreator(uint256 batchId) {
-        require(address(batchManager) != address(0), "BatchManager not set");
+        if (address(batchManager) == address(0)) {
+            revert PrivacyLayer__BatchManagerNotSet();
+        }
         (, address creator, , , ) = batchManager.getBatchAdditionalInfo(batchId);
-        require(msg.sender == creator, "Only batch creator can perform this action");
+        if (msg.sender != creator) {
+            revert PrivacyLayer__OnlyBatchCreatorAllowed();
+        }
         _;
     }
     
@@ -598,5 +623,14 @@ contract PrivacyLayer is IPrivacyLayer {
      */
     function _stringsEqual(string memory a, string memory b) internal pure returns (bool equal) {
         return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
+    }
+
+    /**
+     * @notice Get privacy configuration for a batch (moved from WAGABatchManager)
+     * @param batchId The batch ID to query
+     * @return The privacy configuration
+     */
+    function getBatchPrivacyConfig(uint256 batchId) external view returns (IPrivacyLayer.PrivacyConfig memory) {
+        return batchPrivacyConfig[batchId];
     }
 }
