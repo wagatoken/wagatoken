@@ -6,7 +6,11 @@ import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
 import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
-import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
+import {WAGABatchExportCompliance} from "../../src/WAGABatchExportCompliance.sol";
+import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
+import {WAGATreasury} from "../../src/WAGATreasury.sol";
+import {WAGABankingCore} from "../../src/WAGABankingCore.sol";
+import {WAGATradeCompliance} from "../../src/WAGATradeCompliance.sol";
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
 import {IZKVerifier} from "../../src/Interfaces/IZKVerifier.sol";
 import {TestProofData} from "../fixtures/TestProofData.sol";
@@ -19,12 +23,16 @@ import {TestProofData} from "../fixtures/TestProofData.sol";
 contract RealCircomVerifierIntegration is Test {
     DeployRealZKMVP public deployer;
     WAGACoffeeTokenCore public coffeeToken;
+    WAGATreasury public treasury;
+    WAGABankingCore public bankingCore;
+    WAGATradeCompliance public tradeCompliance;
     WAGAZKManager public zkManager;
     CircomVerifier public realCircomVerifier;
     HelperConfig public helperConfig;
+    WAGAConfigManager public configManager;
 
     // Add batch manager variable
-    WAGABatchManager public batchManager;
+    WAGABatchExportCompliance public batchExportCompliance;
     address public admin;
     address public processor = makeAddr("processor");
     
@@ -39,45 +47,33 @@ contract RealCircomVerifierIntegration is Test {
         
         (
             coffeeToken,
-            batchManager, // Now capture batchManager
-            zkManager,
-            , // privacyLayer
-            , // treasury
-            , // redemption
-            , // cdpIntegration
-            , // proofOfReserve
-            , // inventoryManager
-            , // ethiopianCompliance
-            , // ecxOracle
-            realCircomVerifier,
+            treasury,
+            bankingCore,
+            tradeCompliance,
             helperConfig
-        ) = deployer.run();
+        ) = deployer.runForTesting();
 
         // Get admin address
         HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
         admin = vm.addr(config.deployerKey);
 
+        // Get additional contracts from deployer
+        batchExportCompliance = deployer.batchExportCompliance();
+        zkManager = deployer.zkManager();
+        realCircomVerifier = deployer.circomVerifier();
+        configManager = deployer.configManager();
+
         // Set up roles
         vm.startPrank(admin);
-        coffeeToken.grantProcessorRole(processor);
-        coffeeToken.grantProcessorRole(admin);
         
-        // Grant roles to both ZK Managers to ensure proper access
-        coffeeToken.grantRole(keccak256("ADMIN_ROLE"), address(zkManager));
-        coffeeToken.grantVerifierRole(address(zkManager));
+        // Grant roles via config manager
+        configManager.grantProcessorRole(processor);
+        configManager.grantProcessorRole(admin);
         
-        // Create a new ZKManager with real CircomVerifier for testing
-        WAGAZKManager realZkManager = new WAGAZKManager(
-            address(coffeeToken),
-            address(realCircomVerifier)
-        );
+        // Grant roles to ZK Manager to ensure proper access
+        configManager.grantZKAdminRole(address(zkManager));
+        configManager.grantVerifierRole(address(zkManager));
         
-        // Grant roles to real ZK Manager
-        coffeeToken.grantRole(keccak256("ADMIN_ROLE"), address(realZkManager));
-        coffeeToken.grantVerifierRole(address(realZkManager));
-        
-        // Replace zkManager with the real one for all tests
-        zkManager = realZkManager;
         vm.stopPrank();
     }
 

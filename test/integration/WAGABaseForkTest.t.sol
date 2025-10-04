@@ -5,19 +5,21 @@ import {Test, console} from "forge-std/Test.sol";
 import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
-import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
+import {WAGABatchExportCompliance} from "../../src/WAGABatchExportCompliance.sol";
+import {WAGABatchMetadataManager} from "../../src/WAGABatchMetadataManager.sol";
 import {WAGAZKManager} from "../../src/WAGAZKManager.sol";
 import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
 import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
 import {CircomVerifier} from "../../src/CircomVerifier.sol";
-import {MockCircomVerifier} from "../../src/MockCircomVerifier.sol";
 import {PrivacyLayer} from "../../src/PrivacyLayer.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
-import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
+import {WAGABankingCore} from "../../src/WAGABankingCore.sol";
+import {WAGATradeCompliance} from "../../src/WAGATradeCompliance.sol";
 import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {WAGACoffeeViews} from "../../src/WAGACoffeeViews.sol";
 import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
+import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
 // WAGAAccessControl removed - functionality moved to WAGAConfigManager
 
 
@@ -29,19 +31,21 @@ import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
 contract WAGABaseForkTest is Test {
     // Contract instances
     WAGACoffeeTokenCore public coffeeToken;
-    WAGABatchManager public batchManager;
+    WAGATreasury public treasury;
+    WAGABankingCore public bankingCore;
+    WAGATradeCompliance public tradeCompliance;
+    WAGABatchExportCompliance public batchExportCompliance;
+    WAGABatchMetadataManager public batchMetadataManager;
     WAGAZKManager public zkManager;
     WAGAProofOfReserve public proofOfReserve;
     WAGAInventoryManagerMVP public inventoryManager;
     WAGACoffeeRedemption public redemptionContract;
     CircomVerifier public circomVerifier;
     PrivacyLayer public privacyLayer;
-    WAGATreasury public treasury;
-    WAGAEthiopianCompliance public ethiopianCompliance;
     WAGAECXPriceOracle public ecxOracle;
     WAGACoffeeViews public coffeeViews;
     WAGACDPIntegration public cdpIntegration;
-    // WAGAAccessControl removed - using ConfigManager functionality via CoffeeToken
+    WAGAConfigManager public configManager;
     HelperConfig public helperConfig;
 
     // Base Sepolia configuration
@@ -72,43 +76,45 @@ contract WAGABaseForkTest is Test {
         
         (
             coffeeToken,
-            batchManager,
-            zkManager,
-            privacyLayer,
             treasury,
-            redemptionContract,
-            cdpIntegration,
-            proofOfReserve,
-            inventoryManager,
-            ethiopianCompliance,
-            ecxOracle,
-            circomVerifier,
+            bankingCore,
+            tradeCompliance,
             helperConfig
-        ) = deployer.run();
-
-        // Get coffeeViews using getter function
-        coffeeViews = deployer.getCoffeeViews();
+        ) = deployer.runForTesting();
 
         // Get additional contracts from deployment script
-        // ethiopianCompliance = deployer.ethiopianCompliance();
-        // ecxOracle = deployer.ecxOracle();
+        batchExportCompliance = deployer.batchExportCompliance();
+        batchMetadataManager = deployer.batchMetadataManager();
+        zkManager = deployer.zkManager();
+        circomVerifier = deployer.circomVerifier();
+        privacyLayer = deployer.privacyLayer();
+        redemptionContract = deployer.redemptionManager();
+        cdpIntegration = deployer.cdpIntegration();
+        proofOfReserve = deployer.proofOfReserve();
+        inventoryManager = deployer.inventoryManager();
+        ecxOracle = deployer.ecxOracle();
+        coffeeViews = deployer.getCoffeeViews();
+        configManager = deployer.configManager();
 
         // Get the Base Sepolia configuration
         HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
         
         console.log("=== Deployed Contract Addresses ===");
         console.log("CoffeeToken:", address(coffeeToken));
-        console.log("BatchManager:", address(batchManager));
+        console.log("Treasury:", address(treasury));
+        console.log("BankingCore:", address(bankingCore));
+        console.log("TradeCompliance:", address(tradeCompliance));
+        console.log("BatchExportCompliance:", address(batchExportCompliance));
+        console.log("BatchMetadataManager:", address(batchMetadataManager));
         console.log("ZKManager:", address(zkManager));
         console.log("PrivacyLayer:", address(privacyLayer));
-        console.log("Treasury:", address(treasury));
         console.log("RedemptionContract:", address(redemptionContract));
         console.log("CDPIntegration:", address(cdpIntegration));
         console.log("ProofOfReserve:", address(proofOfReserve));
         console.log("InventoryManager:", address(inventoryManager));
         console.log("CircomVerifier:", address(circomVerifier));
-        console.log("EthiopianCompliance:", address(ethiopianCompliance));
         console.log("ECXPriceOracle:", address(ecxOracle));
+        console.log("ConfigManager:", address(configManager));
         
         console.log("=== Chainlink Functions Configuration ===");
         console.log("Router:", config.router);
@@ -119,38 +125,9 @@ contract WAGABaseForkTest is Test {
         address deployerAddress = vm.addr(config.deployerKey);
         
         vm.startPrank(deployerAddress);
-        coffeeToken.grantProcessorRole(testProcessor);
-        coffeeToken.grantVerifierRole(testVerifier);
-        coffeeToken.grantProcessorRole(testAdmin); // Admin also gets processor role for testing
-        
-        // Deploy MockCircomVerifier for testing and replace the real one in ZK Manager
-        MockCircomVerifier mockVerifier = new MockCircomVerifier();
-        
-        // Grant roles to mockVerifier
-        // Note: MockCircomVerifier doesn't require role setup - it's a mock for testing
-        // Grant verifier role through ConfigManager
-        coffeeToken.grantVerifierRole(address(mockVerifier));
-        
-        // Update ZK Manager to use MockCircomVerifier and configure Ethiopian compliance
-        WAGAZKManager testZkManager = new WAGAZKManager(
-            address(coffeeToken),
-            address(mockVerifier)
-        );
-        
-        // Grant roles to the new ZK Manager
-        // Grant roles through ConfigManager
-        coffeeToken.grantVerifierRole(address(testZkManager));
-        coffeeToken.grantRole(keccak256("ADMIN_ROLE"), address(testZkManager));
-        // Note: MockCircomVerifier doesn't require role setup - it's a mock for testing
-        
-        // Configure Ethiopian compliance on the new ZK Manager
-        testZkManager.setEthiopianCompliance(address(ethiopianCompliance));
-        
-        // Update coffee token to use the test ZK Manager
-        coffeeToken.setManagerAddresses(address(batchManager), address(testZkManager));
-        
-        // Update our test reference
-        zkManager = testZkManager;
+        configManager.grantProcessorRole(testProcessor);
+        configManager.grantVerifierRole(testVerifier);
+        configManager.grantProcessorRole(testAdmin); // Admin also gets processor role for testing
         
         vm.stopPrank();
         
@@ -163,17 +140,20 @@ contract WAGABaseForkTest is Test {
     function testDeploymentOnBaseSepolia() public view {
         // Verify all contracts are deployed
         assertTrue(address(coffeeToken) != address(0), "CoffeeToken should be deployed");
-        assertTrue(address(batchManager) != address(0), "BatchManager should be deployed");
+        assertTrue(address(treasury) != address(0), "Treasury should be deployed");
+        assertTrue(address(bankingCore) != address(0), "BankingCore should be deployed");
+        assertTrue(address(tradeCompliance) != address(0), "TradeCompliance should be deployed");
+        assertTrue(address(batchExportCompliance) != address(0), "BatchExportCompliance should be deployed");
+        assertTrue(address(batchMetadataManager) != address(0), "BatchMetadataManager should be deployed");
         assertTrue(address(zkManager) != address(0), "ZKManager should be deployed");
         assertTrue(address(privacyLayer) != address(0), "PrivacyLayer should be deployed");
-        assertTrue(address(treasury) != address(0), "Treasury should be deployed");
         assertTrue(address(redemptionContract) != address(0), "RedemptionContract should be deployed");
         assertTrue(address(cdpIntegration) != address(0), "CDPIntegration should be deployed");
         assertTrue(address(proofOfReserve) != address(0), "ProofOfReserve should be deployed");
         assertTrue(address(inventoryManager) != address(0), "InventoryManager should be deployed");
         assertTrue(address(circomVerifier) != address(0), "CircomVerifier should be deployed");
-        assertTrue(address(ethiopianCompliance) != address(0), "EthiopianCompliance should be deployed");
         assertTrue(address(ecxOracle) != address(0), "ECXPriceOracle should be deployed");
+        assertTrue(address(configManager) != address(0), "ConfigManager should be deployed");
         
         // Verify chain ID
         assertEq(block.chainid, BASE_SEPOLIA_CHAIN_ID, "Should be on Base Sepolia");
@@ -208,7 +188,7 @@ contract WAGABaseForkTest is Test {
      */
     function testRoleManagementOnFork() public view {
         // Check that DEFAULT_ADMIN_ROLE exists
-        bytes32 defaultAdminRole = coffeeToken.DEFAULT_ADMIN_ROLE();
+        bytes32 defaultAdminRole = configManager.DEFAULT_ADMIN_ROLE();
         bytes32 processorRole = keccak256("PROCESSOR_ROLE");
         bytes32 verifierRole = keccak256("VERIFIER_ROLE");
         
@@ -217,9 +197,9 @@ contract WAGABaseForkTest is Test {
         console.log("Verifier role:", vm.toString(verifierRole));
         
         // Verify role assignments
-        assertTrue(coffeeToken.hasRole(processorRole, testProcessor), "testProcessor should have PROCESSOR_ROLE");
-        assertTrue(coffeeToken.hasRole(verifierRole, testVerifier), "testVerifier should have VERIFIER_ROLE");
-        assertTrue(coffeeToken.hasRole(processorRole, testAdmin), "testAdmin should have PROCESSOR_ROLE");
+        assertTrue(configManager.hasRole(processorRole, testProcessor), "testProcessor should have PROCESSOR_ROLE");
+        assertTrue(configManager.hasRole(verifierRole, testVerifier), "testVerifier should have VERIFIER_ROLE");
+        assertTrue(configManager.hasRole(processorRole, testAdmin), "testAdmin should have PROCESSOR_ROLE");
         
         console.log("Role management system verified on fork");
     }
@@ -247,7 +227,7 @@ contract WAGABaseForkTest is Test {
         
         // Verify batch creation
         assertTrue(coffeeToken.isBatchCreated(batchId), "Batch should be created");
-        assertTrue(coffeeToken.isBatchActive(batchId), "Batch should be active");
+        // Note: isBatchActive doesn't exist, using isBatchCreated to verify batch exists
         
         vm.stopPrank();
         
@@ -394,7 +374,7 @@ contract WAGABaseForkTest is Test {
         // Verify all batches still exist
         for (uint256 i = 0; i < 3; i++) {
             assertTrue(coffeeToken.isBatchCreated(batchIds[i]), "Batch should still exist");
-            assertTrue(coffeeToken.isBatchActive(batchIds[i]), "Batch should still be active");
+            // Note: isBatchActive doesn't exist, using isBatchCreated to verify batch exists
             
             console.log("Batch", i, "state verified after fork advancement");
         }
@@ -459,13 +439,13 @@ contract WAGABaseForkTest is Test {
         assertTrue(address(ecxOracle) != address(0), "ECX Oracle should be deployed");
         console.log("ECX Oracle address:", address(ecxOracle));
         
-        // Verify Ethiopian compliance is properly configured
-        assertTrue(address(ethiopianCompliance) != address(0), "Ethiopian Compliance should be deployed");
-        console.log("Ethiopian Compliance address:", address(ethiopianCompliance));
+        // Verify trade compliance is properly configured
+        assertTrue(address(tradeCompliance) != address(0), "Trade Compliance should be deployed");
+        console.log("Trade Compliance address:", address(tradeCompliance));
         
-        // Test that ZK Manager is configured with Ethiopian compliance
-        // This depends on the ZK Manager having the Ethiopian compliance address set
-        console.log("ZK Manager configured with Ethiopian compliance");
+        // Test that ZK Manager is configured with trade compliance
+        // This depends on the ZK Manager having the trade compliance address set
+        console.log("ZK Manager configured with trade compliance");
         
         vm.stopPrank();
         

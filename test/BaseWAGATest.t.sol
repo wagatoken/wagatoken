@@ -8,9 +8,12 @@ import {HelperConfig} from "../script/HelperConfig.s.sol";
 // Core contracts
 import {WAGACoffeeTokenCore} from "../src/WAGACoffeeTokenCore.sol";
 import {WAGAConfigManager} from "../src/WAGAConfigManager.sol";
-import {WAGABatchManager} from "../src/WAGABatchManager.sol";
+import {WAGABatchExportCompliance} from "../src/WAGABatchExportCompliance.sol";
+import {WAGABatchMetadataManager} from "../src/WAGABatchMetadataManager.sol";
 import {WAGAZKManager} from "../src/WAGAZKManager.sol";
-import {WAGAEthiopianCompliance} from "../src/WAGAEthiopianCompliance.sol";
+import {WAGAEthiopianComplianceCore} from "../src/WAGAEthiopianComplianceCore.sol";
+import {WAGABankingCore} from "../src/WAGABankingCore.sol";
+import {WAGATradeCompliance} from "../src/WAGATradeCompliance.sol";
 import {WAGACoffeeRedemption} from "../src/WAGACoffeeRedemption.sol";
 import {WAGATreasury} from "../src/WAGATreasury.sol";
 import {PrivacyLayer} from "../src/PrivacyLayer.sol";
@@ -48,7 +51,9 @@ abstract contract BaseWAGATest is Test {
 
     // Core contracts
     WAGACoffeeTokenCore public coffeeToken;
-    WAGABatchManager public batchManager;
+    WAGAConfigManager public configManager;
+    WAGABatchExportCompliance public batchExportCompliance;
+    WAGABatchMetadataManager public batchMetadataManager;
     WAGAZKManager public zkManager;
     PrivacyLayer public privacyLayer;
     WAGATreasury public treasury;
@@ -59,7 +64,9 @@ abstract contract BaseWAGATest is Test {
     WAGACDPIntegration public cdpIntegration;
     WAGAProofOfReserve public proofOfReserve;
     WAGAInventoryManagerMVP public inventoryManager;
-    WAGAEthiopianCompliance public ethiopianCompliance;
+    WAGAEthiopianComplianceCore public ethiopianComplianceCore;
+    WAGABankingCore public bankingCore;
+    WAGATradeCompliance public tradeCompliance;
     WAGAECXPriceOracle public ecxOracle;
 
     // Mock contracts
@@ -156,19 +163,25 @@ abstract contract BaseWAGATest is Test {
         
         (
             coffeeToken,
-            batchManager,
-            zkManager,
-            privacyLayer,
             treasury,
-            redemption,
-            cdpIntegration,
-            proofOfReserve,
-            inventoryManager,
-            ethiopianCompliance,
-            ecxOracle,
-            circomVerifier,
+            bankingCore,
+            tradeCompliance,
             helperConfig
-        ) = deployer.run();
+        ) = deployer.runForTesting();
+        
+        // Access other deployed contracts through deployer
+        configManager = deployer.configManager();
+        batchExportCompliance = deployer.batchExportCompliance();
+        batchMetadataManager = deployer.batchMetadataManager();
+        zkManager = deployer.zkManager();
+        privacyLayer = deployer.privacyLayer();
+        redemption = deployer.redemptionManager();
+        circomVerifier = deployer.circomVerifier();
+        cdpIntegration = deployer.cdpIntegration();
+        proofOfReserve = deployer.proofOfReserve();
+        inventoryManager = deployer.inventoryManager();
+        ethiopianComplianceCore = deployer.ethiopianComplianceCore();
+        ecxOracle = deployer.ecxOracle();
         
         console.log("BaseWAGATest: WAGA system deployed");
     }
@@ -186,38 +199,36 @@ abstract contract BaseWAGATest is Test {
     function _setupRoles() internal {
         vm.startPrank(admin);
         
-        // Core operational roles
-        coffeeToken.grantProcessorRole(processor);
-        coffeeToken.grantVerifierRole(verifier);
-        coffeeToken.grantProcessorRole(verifier); // Also grant processor role for ZK proof submission
-        coffeeToken.grantRole(keccak256("MINTER_ROLE"), minter);
-        coffeeToken.grantFulfillerRole(fulfiller);
-        coffeeToken.grantDistributorRole(distributor);
-        coffeeToken.grantProcessorRole(distributor); // Also grant processor role for batch creation
+        // Core operational roles via central authority (configManager)
+        configManager.grantProcessorRole(processor);
+        configManager.grantVerifierRole(verifier);
+        configManager.grantRole(keccak256("MINTER_ROLE"), minter);
+        configManager.grantFulfillerRole(fulfiller);
+        configManager.grantDistributorRole(distributor);
         
         // Product line roles
-        coffeeToken.grantRole(keccak256("COOPERATIVE_ROLE"), cooperative);
-        coffeeToken.grantProcessorRole(cooperative); // Also grant processor role for batch creation
-        coffeeToken.grantRole(keccak256("ROASTER_ROLE"), roaster);
-        coffeeToken.grantProcessorRole(roaster); // Also grant processor role for batch creation
+        configManager.grantRole(keccak256("COOPERATIVE_ROLE"), cooperative);
+        configManager.grantRole(keccak256("ROASTER_ROLE"), roaster);
+        configManager.grantProcessorRole(cooperative); // Also grant processor role for batch creation
+        configManager.grantProcessorRole(roaster); // Also grant processor role for batch creation
         
         // Compliance roles
-        coffeeToken.grantComplianceManagerRole(complianceManager);
-        coffeeToken.grantOriginVerifierRole(originVerifier);
-        coffeeToken.grantQualityInspectorRole(qualityInspector);
-        coffeeToken.grantBankingPartnerRole(bankingPartner);
+        configManager.grantComplianceManagerRole(complianceManager);
+        configManager.grantOriginVerifierRole(originVerifier);
+        configManager.grantQualityInspectorRole(qualityInspector);
+        configManager.grantBankingPartnerRole(bankingPartner);
         
         // Payment roles
-        coffeeToken.grantPaymentProcessorRole(paymentProcessor);
-        coffeeToken.grantOfframpExecutorRole(offrampExecutor);
+        configManager.grantPaymentProcessorRole(paymentProcessor);
+        configManager.grantOfframpExecutorRole(offrampExecutor);
         
         // ZK and privacy roles
-        coffeeToken.grantZKVerifierRole(verifier);
-        coffeeToken.grantZKAdminRole(admin);
-        coffeeToken.grantPrivacyAdminRole(admin);
+        configManager.grantZKVerifierRole(verifier);
+        configManager.grantZKAdminRole(admin);
+        configManager.grantPrivacyAdminRole(admin);
         
         // Price oracle role
-        coffeeToken.grantPriceUpdaterRole(admin);
+        configManager.grantPriceUpdaterRole(admin);
         
         // Grant necessary roles to contracts for internal operations
         _setupContractRoles();
@@ -228,48 +239,38 @@ abstract contract BaseWAGATest is Test {
     }
 
     function _setupContractRoles() internal {
-        // Grant roles to contracts for internal operations
-        coffeeToken.grantProcessorRole(address(batchManager));
-        coffeeToken.grantVerifierRole(address(batchManager));
-        coffeeToken.grantZKVerifierRole(address(batchManager));
-        coffeeToken.grantQualityInspectorRole(address(batchManager));
-        coffeeToken.grantOriginVerifierRole(address(batchManager));
-        coffeeToken.grantComplianceManagerRole(address(batchManager));
+        // Grant roles to contracts for internal operations via central authority
+        configManager.grantProcessorRole(address(batchExportCompliance));
+        configManager.grantVerifierRole(address(batchExportCompliance));
+        configManager.grantZKVerifierRole(address(batchExportCompliance));
+        configManager.grantQualityInspectorRole(address(batchExportCompliance));
+        configManager.grantOriginVerifierRole(address(batchExportCompliance));
+        configManager.grantComplianceManagerRole(address(batchExportCompliance));
         
         // Grant roles to Ethiopian compliance contract
-        coffeeToken.grantComplianceManagerRole(address(ethiopianCompliance));
-        coffeeToken.grantOriginVerifierRole(address(ethiopianCompliance));
-        coffeeToken.grantQualityInspectorRole(address(ethiopianCompliance));
+        configManager.grantComplianceManagerRole(address(ethiopianComplianceCore));
+        configManager.grantOriginVerifierRole(address(ethiopianComplianceCore));
+        configManager.grantQualityInspectorRole(address(ethiopianComplianceCore));
         
         // Grant roles to ZK Manager contract
-        coffeeToken.grantProcessorRole(address(zkManager));
-        coffeeToken.grantRole(keccak256("DEFAULT_ADMIN_ROLE"), address(zkManager));
+        configManager.grantProcessorRole(address(zkManager));
+        configManager.grantRole(keccak256("DEFAULT_ADMIN_ROLE"), address(zkManager));
         
         // Grant roles to test contracts (for direct calls)
-        coffeeToken.grantComplianceManagerRole(address(this));
-        coffeeToken.grantOriginVerifierRole(address(this));
+        configManager.grantComplianceManagerRole(address(this));
+        configManager.grantOriginVerifierRole(address(this));
+        configManager.grantQualityInspectorRole(address(this));
+        configManager.grantProcessorRole(address(this));
+        configManager.grantRole(keccak256("DEFAULT_ADMIN_ROLE"), address(this));
+        configManager.grantZKAdminRole(address(this));
         
-        // Link contracts with setCoffeeToken (CRITICAL SECURITY) - matching deploy script
-        ethiopianCompliance.setCoffeeToken(address(coffeeToken));
-        cdpIntegration.setCoffeeToken(address(coffeeToken));
-        ecxOracle.setCoffeeToken(address(coffeeToken));
-        circomVerifier.setCoffeeToken(address(coffeeToken));
-        treasury.setCoffeeToken(address(coffeeToken));
-        coffeeToken.grantQualityInspectorRole(address(this));
-        coffeeToken.grantProcessorRole(address(this));
-        coffeeToken.grantRole(keccak256("DEFAULT_ADMIN_ROLE"), address(this));
-        coffeeToken.grantZKAdminRole(address(this));
+        // Grant roles to redemption and treasury
+        configManager.grantRole(keccak256("MINTER_ROLE"), address(redemption));
+        configManager.grantPaymentProcessorRole(address(treasury));
+        configManager.grantOfframpExecutorRole(address(treasury));
         
-        coffeeToken.grantRole(keccak256("MINTER_ROLE"), address(redemption));
-        coffeeToken.grantPaymentProcessorRole(address(treasury));
-        coffeeToken.grantOfframpExecutorRole(address(treasury));
-        
-        // Link contracts with setCoffeeToken (CRITICAL SECURITY)
-        ethiopianCompliance.setCoffeeToken(address(coffeeToken));
-        cdpIntegration.setCoffeeToken(address(coffeeToken));
-        ecxOracle.setCoffeeToken(address(coffeeToken));
-        circomVerifier.setCoffeeToken(address(coffeeToken));
-        treasury.setCoffeeToken(address(coffeeToken));
+        // Note: setCoffeeToken calls are handled in the deployment script
+        // The deployed contracts are already properly linked
     }
 
     function _initializeTestData() internal {
@@ -398,19 +399,19 @@ abstract contract BaseWAGATest is Test {
     function addCompleteComplianceData(uint256 batchId) internal {
         // Use appropriate roles for each compliance function
         vm.prank(complianceManager);
-        ethiopianCompliance.addECTAPermit(batchId, testECTAPermit);
+        ethiopianComplianceCore.addECTAPermit(batchId, testECTAPermit);
         
         vm.prank(qualityInspector);
-        ethiopianCompliance.addQualityCertificate(batchId, testQualityCert);
+        ethiopianComplianceCore.addQualityCertificate(batchId, testQualityCert);
         
         vm.prank(originVerifier);
-        ethiopianCompliance.addOriginVerification(batchId, testOriginVerification);
+        ethiopianComplianceCore.addOriginVerification(batchId, testOriginVerification);
         
         vm.prank(complianceManager);
-        ethiopianCompliance.addEUDRCertificate(batchId, testEUDRCert);
+        ethiopianComplianceCore.addEUDRCertificate(batchId, testEUDRCert);
         
         vm.prank(originVerifier);
-        ethiopianCompliance.addGeolocationData(batchId, testGeoData);
+        ethiopianComplianceCore.addGeolocationData(batchId, testGeoData);
     }
 
     /**
@@ -448,7 +449,7 @@ abstract contract BaseWAGATest is Test {
     }
 
     function assertRoleGranted(bytes32 role, address account) internal view {
-        assertTrue(coffeeToken.hasRole(role, account), "Role should be granted");
+        assertTrue(configManager.hasRole(role, account), "Role should be granted");
     }
 
     function assertUSDCBalance(address account, uint256 expectedBalance) internal view {

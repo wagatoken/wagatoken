@@ -12,6 +12,10 @@ import {MockCoinbaseSDK} from "../mocks/MockCoinbaseSDK.sol";
 import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
 import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
 import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
+import {WAGATreasury} from "../../src/WAGATreasury.sol";
+import {WAGABankingCore} from "../../src/WAGABankingCore.sol";
+import {WAGATradeCompliance} from "../../src/WAGATradeCompliance.sol";
+import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
 
 contract WAGACDPIntegrationTest is Test {
     // Deployment
@@ -19,9 +23,13 @@ contract WAGACDPIntegrationTest is Test {
     HelperConfig public helperConfig;
     
     WAGACoffeeTokenCore public coffeeToken;
+    WAGATreasury public treasury;
+    WAGABankingCore public bankingCore;
+    WAGATradeCompliance public tradeCompliance;
     WAGACDPIntegration public cdpIntegration;
     MockUSDC public usdc;
     MockCoinbaseSDK public mockCoinbaseSDK;
+    WAGAConfigManager public configManager;
     
     // Additional contracts from deployment (not used in this test but needed for tuple)
     WAGAProofOfReserve public proofOfReserve;
@@ -42,19 +50,18 @@ contract WAGACDPIntegrationTest is Test {
         
         (
             coffeeToken,
-            , // batchManager
-            , // zkManager
-            , // privacyLayer
-            , // treasury
-            , // redemption
-            cdpIntegration,
-            proofOfReserve, // Now included in deployment
-            inventoryManager, // Now included in deployment
-            , // ethiopianCompliance
-            ecxOracle, // Now included in deployment
-            , // circomVerifier
+            treasury,
+            bankingCore,
+            tradeCompliance,
             helperConfig
-        ) = deployer.run();
+        ) = deployer.runForTesting();
+
+        // Get additional contracts from deployment script
+        cdpIntegration = deployer.cdpIntegration();
+        proofOfReserve = deployer.proofOfReserve();
+        inventoryManager = deployer.inventoryManager();
+        ecxOracle = deployer.ecxOracle();
+        configManager = deployer.configManager();
 
         // Get USDC address from helper config
         HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
@@ -69,9 +76,9 @@ contract WAGACDPIntegrationTest is Test {
 
         // Setup roles for test accounts
         vm.startPrank(admin);
-        // CDP Integration roles are managed through coffeeToken (unified access control)
-        coffeeToken.grantPaymentHandlerRole(paymentHandler);
-        coffeeToken.grantCDPAdminRole(admin);  // Grant CDP admin role to admin for testing
+        // CDP Integration roles are managed through configManager (unified access control)
+        configManager.grantPaymentHandlerRole(paymentHandler);
+        configManager.grantCDPAdminRole(admin);  // Grant CDP admin role to admin for testing
         // Setup roles for mock contracts
         mockCoinbaseSDK.grantRole(mockCoinbaseSDK.PAYMENT_HANDLER_ROLE(), paymentHandler);
         vm.stopPrank();
@@ -81,10 +88,10 @@ contract WAGACDPIntegrationTest is Test {
 
     function testDeployment() public view {
         assertEq(address(cdpIntegration.usdcToken()), address(usdc));
-        // Check role through coffeeToken (unified access control)
-        assertTrue(coffeeToken.hasRole(coffeeToken.CDP_ADMIN_ROLE(), admin));
-        // Check payment handler role through coffeeToken (unified access control)
-        assertTrue(coffeeToken.hasRole(coffeeToken.PAYMENT_HANDLER_ROLE(), paymentHandler));
+        // Check role through configManager (unified access control)
+        assertTrue(configManager.hasRole(configManager.CDP_ADMIN_ROLE(), admin));
+        // Check payment handler role through configManager (unified access control)
+        assertTrue(configManager.hasRole(configManager.PAYMENT_HANDLER_ROLE(), paymentHandler));
     }
 
     function testCreateSmartAccount() public {
