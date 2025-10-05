@@ -241,7 +241,7 @@ export const zkProofs = pgTable('zk_proofs', {
   batchId: bigint('batch_id', { mode: 'number' }).notNull(), // References blockchain batch ID
   
   // Proof Classification (matches IZKVerifier.ProofType)
-  proofType: varchar({ length: 30 }).notNull(), // 'PRICE_COMPETITIVENESS', 'QUALITY_STANDARDS', 'SUPPLY_CHAIN_PROVENANCE'
+  proofType: varchar({ length: 50 }).notNull(), // Extended to support longer type names like 'EUDR_DEFORESTATION_COMPLIANCE'
   
   // ZK Proof Data
   proofHash: varchar({ length: 64 }).notNull(), // keccak256 hash of the proof

@@ -106,7 +106,7 @@ contract WAGABankingCore is IWAGABankingCore, ReentrancyGuard {
         address bankAddress,
         string memory bankName,
         IEthiopianCompliance.BankingCapabilities memory capabilities
-    ) external override callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+    ) external override callerHasRole(keccak256("ADMIN_ROLE")) {
         if (bankAddress == address(0)) {
             revert InvalidBankAddress();
         }

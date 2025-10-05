@@ -103,21 +103,22 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
     }
 
     // Redemption request structure
+    // Optimized struct layout for better storage packing
     struct RedemptionRequest {
-        address consumer;
-        uint64 sellerId;              // Digital seller ID (8 bytes vs 20 bytes)
-        uint256 batchId;
-        uint256 quantity;
-        uint256 requestDate;
-        RedemptionStatus status;
-        uint256 fulfillmentDate;
-        string buyerBankDetails;
-        bool requiresEthiopianCompliance;
-        bool requiresEUDRCompliance;
-        bool fiatTransferCompleted;
-        bytes11 offrampBankSwift;     // SWIFT code for offramp partner
-        bytes11 receivingBankSwift;   // SWIFT code for receiving bank
-        string bankTransactionId;
+        address consumer;                     // 20 bytes (slot 0)
+        uint64 sellerId;                     // 8 bytes 
+        RedemptionStatus status;             // 1 byte 
+        bool requiresEthiopianCompliance;    // 1 byte
+        bool requiresEUDRCompliance;         // 1 byte
+        bool fiatTransferCompleted;          // 1 byte (slot 0 - 32 bytes total)
+        uint256 batchId;                     // 32 bytes (slot 1)
+        uint256 quantity;                    // 32 bytes (slot 2)
+        uint256 requestDate;                 // 32 bytes (slot 3)
+        uint256 fulfillmentDate;             // 32 bytes (slot 4)
+        bytes11 offrampBankSwift;            // 11 bytes (slot 5)
+        bytes11 receivingBankSwift;          // 11 bytes (slot 5 - 22 bytes total)
+        string buyerBankDetails;             // variable (slot 6+)
+        string bankTransactionId;            // variable
     }
 
     /* -------------------------------------------------------------------------- */
@@ -513,7 +514,7 @@ contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
         }
 
         // For Ethiopian batches requiring fiat transfer, check completion before fulfillment
-        if (request.requiresEthiopianCompliance && status == RedemptionStatus.Fulfilled) {
+        if (status == RedemptionStatus.Fulfilled && request.requiresEthiopianCompliance) {
             if (!request.fiatTransferCompleted) {
                 revert WAGACoffeeRedemption__FiatTransferNotCompleted_updateRedemptionStatus();
             }

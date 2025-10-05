@@ -9,6 +9,9 @@ import {IWAGACoffeeToken} from "./Interfaces/IWAGACoffeeToken.sol";
 import {WAGAConfigManager} from "./WAGAConfigManager.sol";
 import {TradeRegistrationLib} from "./libraries/TradeRegistrationLib.sol";
 
+// Import DEFAULT_ADMIN_ROLE constant
+bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
+
 /**
  * @title WAGATradeCompliance
  * @dev Ethiopian trade compliance and Bank of Ethiopia integration
@@ -113,7 +116,7 @@ contract WAGATradeCompliance is IWAGATradeCompliance, ReentrancyGuard {
     /**
      * @inheritdoc IWAGATradeCompliance
      */
-    function setBankingCore(address _bankingCore) external override callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+    function setBankingCore(address _bankingCore) external override callerHasRole(DEFAULT_ADMIN_ROLE) {
         if (_bankingCore == address(0)) {
             revert InvalidAccessControlAddress();
         }
@@ -123,7 +126,7 @@ contract WAGATradeCompliance is IWAGATradeCompliance, ReentrancyGuard {
     /**
      * @inheritdoc IWAGATradeCompliance
      */
-    function setCoffeeToken(address _coffeeToken) external override callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+    function setCoffeeToken(address _coffeeToken) external override callerHasRole(DEFAULT_ADMIN_ROLE) {
         if (_coffeeToken == address(0)) {
             revert InvalidAccessControlAddress();
         }
@@ -133,7 +136,7 @@ contract WAGATradeCompliance is IWAGATradeCompliance, ReentrancyGuard {
     /**
      * @inheritdoc IWAGATradeCompliance
      */
-    function setComplianceCore(address _complianceCore) external override callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+    function setComplianceCore(address _complianceCore) external override callerHasRole(DEFAULT_ADMIN_ROLE) {
         if (_complianceCore == address(0)) {
             revert InvalidAccessControlAddress();
         }

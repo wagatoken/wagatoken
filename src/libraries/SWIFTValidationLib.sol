@@ -120,9 +120,7 @@ library SWIFTValidationLib {
      */
     function extractCountryCode(bytes11 swiftCode) public pure returns (bytes2 countryCode) {
         // Country code is characters 5-6 (0-indexed: 4-5)
-        assembly {
-            countryCode := and(shl(192, swiftCode), 0xFFFF000000000000000000000000000000000000000000000000000000000000)
-        }
+        countryCode = bytes2(abi.encodePacked(swiftCode[4], swiftCode[5]));
     }
 
     /**
@@ -132,9 +130,7 @@ library SWIFTValidationLib {
      */
     function extractBankCode(bytes11 swiftCode) public pure returns (bytes4 bankCode) {
         // Bank code is characters 1-4 (0-indexed: 0-3)
-        assembly {
-            bankCode := and(swiftCode, 0xFFFFFFFF00000000000000000000000000000000000000000000000000000000)
-        }
+        bankCode = bytes4(abi.encodePacked(swiftCode[0], swiftCode[1], swiftCode[2], swiftCode[3]));
     }
 
     /**

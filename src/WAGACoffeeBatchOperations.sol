@@ -44,7 +44,8 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
 
     error CallerNotAuthorized();
     error WAGACoffeeBatchOperations__BatchDoesNotExist();
-    error WAGACoffeeBatchOperations__CallerMustHaveProcessorOrVerifierRole();
+    error WAGACoffeeBatchOperations__CallerMustHaveDistributorRole();
+    error WAGACoffeeBatchOperations__CallerMustBeCore();
     error WAGACoffeeBatchOperations__OnlyCoreContractCanNotifyMint();
     error WAGACoffeeBatchOperations__OnlyCoreContractCanNotifyBurn();
     error WAGACoffeeBatchOperations__FailedToRegisterBatchWithCore();
@@ -88,7 +89,7 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
     /* -------------------------------------------------------------------------- */
 
     /**
-     * @dev Creates a new batch with full business logic
+     * @dev Creates a new batch with full business logic - only callable by core contract
      */
     function createBatch(
         uint256 productionDate,
@@ -98,7 +99,10 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
         string memory origin,
         string memory packagingInfo,
         string memory metadataURI
-    ) external onlyBatchCreator returns (uint256) {
+    ) external returns (uint256) {
+        if (msg.sender != address(coreContract)) {
+            revert CallerNotAuthorized();
+        }
         if (quantity == 0 || pricePerUnit == 0) {
             revert InvalidQuantity();
         }
@@ -141,17 +145,19 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
         if (bytes(metadataURI).length > 0) {
             // Register batch with core and set metadata
             (bool success, ) = address(coreContract).call(
-                abi.encodeWithSignature("registerBatchCreation(uint256,address)", newBatchId, msg.sender)
+                abi.encodeWithSignature("registerBatch(uint256,string)", newBatchId, metadataURI)
             );
             if (!success) {
                 revert WAGACoffeeBatchOperations__FailedToRegisterBatchWithCore();
             }
         } else {
             // Register batch without metadata
-            (bool success,) = address(coreContract).call(
+            (bool success, ) = address(coreContract).call(
                 abi.encodeWithSignature("registerBatch(uint256,string)", newBatchId, "")
             );
-            require(success, "Failed to register batch with core");
+            if (!success) {
+                revert WAGACoffeeBatchOperations__FailedToRegisterBatchWithCore();
+            }
         }
 
         emit BatchCreated(newBatchId, msg.sender, quantity, pricePerUnit, metadataURI);
@@ -164,19 +170,20 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
     function createBatchRequest(
         uint256 batchId,
         uint256 requestedQuantity,
-        string memory requestDetails
+        string memory requestDetails,
+        address originalCaller
     ) external returns (uint256) {
+        // Only allow calls from the core contract
+        if (msg.sender != address(coreContract)) {
+            revert WAGACoffeeBatchOperations__CallerMustBeCore();
+        }
+        
         // Check if batch exists
         if (!isBatchCreated(batchId)) {
             revert WAGACoffeeBatchOperations__BatchDoesNotExist();
         }
         
-        // Check if requester has appropriate role (processor or verifier)
-        bytes32 processorRole = keccak256("PROCESSOR_ROLE");
-        bytes32 verifierRole = keccak256("VERIFIER_ROLE");
-        if (!authority.hasRole(processorRole, msg.sender) && !authority.hasRole(verifierRole, msg.sender)) {
-            revert WAGACoffeeBatchOperations__CallerMustHaveProcessorOrVerifierRole();
-        }
+        // Note: Role check is performed in WAGACoffeeTokenCore before delegation
         
         // Get the next request index for this batch
         uint256 requestIndex = s_batchRequestCount[batchId];
@@ -184,7 +191,7 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
         // Create the batch request
         batchRequestsByIndex[batchId][requestIndex] = BatchRequest({
             batchId: batchId,
-            requester: msg.sender,
+            requester: originalCaller,
             requestedQuantity: requestedQuantity,
             requestDetails: requestDetails,
             requestTimestamp: block.timestamp,
@@ -196,7 +203,7 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
         // Increment the request count
         s_batchRequestCount[batchId]++;
         
-        emit BatchRequestCreated(batchId, requestIndex, msg.sender, requestedQuantity);
+        emit BatchRequestCreated(batchId, requestIndex, originalCaller, requestedQuantity);
         return requestIndex;
     }
 

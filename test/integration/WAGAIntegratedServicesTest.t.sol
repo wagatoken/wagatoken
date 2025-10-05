@@ -71,8 +71,8 @@ contract WAGAIntegratedServicesTest is BaseWAGATest {
         verifyBatchWithZK(integrationBatchId);
         
         // Verify that compliance validation still works with ZK proofs
-        assertTrue(ethiopianCompliance.validateUpstreamCompliance(integrationBatchId));
-        assertTrue(ethiopianCompliance.validateEUDRCompliance(integrationBatchId));
+        assertTrue(ethiopianComplianceCore.validateUpstreamCompliance(integrationBatchId));
+        assertTrue(ethiopianComplianceCore.validateEUDRCompliance(integrationBatchId));
         
         console.log("ZK proof integration with compliance verified");
     }
@@ -104,7 +104,7 @@ contract WAGAIntegratedServicesTest is BaseWAGATest {
 
     function testFullServiceIntegration() public {
         // 1. Verify compliance
-        assertTrue(ethiopianCompliance.validateUpstreamCompliance(integrationBatchId));
+        assertTrue(ethiopianComplianceCore.validateUpstreamCompliance(integrationBatchId));
         
         // 2. Add ZK proofs
         verifyBatchWithZK(integrationBatchId);
@@ -138,7 +138,7 @@ contract WAGAIntegratedServicesTest is BaseWAGATest {
         
         // Verify batch exists and has compliance data
         assertTrue(coffeeToken.isBatchCreated(batchId));
-        assertTrue(ethiopianCompliance.validateUpstreamCompliance(batchId));
+        assertTrue(ethiopianComplianceCore.validateUpstreamCompliance(batchId));
         
         // Add ZK verification
         verifyBatchWithZK(batchId);
@@ -151,7 +151,7 @@ contract WAGAIntegratedServicesTest is BaseWAGATest {
     /* -------------------------------------------------------------------------- */
 
     function testIntegrationFailureScenarios() public {
-        uint256 testBatchId = createTestBatch(distributor); // Use distributor instead of exporter
+        uint256 testBatchId = createTestBatch(processor); // Use processor instead of distributor (distributors can't create batches)
         
         // Test payment without compliance (should work but not recommended)
         vm.prank(admin);
@@ -174,7 +174,7 @@ contract WAGAIntegratedServicesTest is BaseWAGATest {
         
         // System should still allow basic operations
         assertTrue(coffeeToken.isBatchCreated(recoveryBatchId));
-        assertTrue(ethiopianCompliance.validateUpstreamCompliance(recoveryBatchId));
+        assertTrue(ethiopianComplianceCore.validateUpstreamCompliance(recoveryBatchId));
         
         console.log("Service recovery test completed");
     }

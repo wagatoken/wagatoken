@@ -23,7 +23,7 @@ contract WAGAEthiopianComplianceStreamlinedTest is BaseWAGATest {
 
     function testAddECTAPermit_Success() public {
         vm.prank(complianceManager);
-        ethiopianCompliance.addECTAPermit(testBatchId, testECTAPermit);
+        ethiopianComplianceCore.addECTAPermit(testBatchId, testECTAPermit);
         
         // Verify permit was added (would need getter function)
         console.log("ECTA permit added successfully");
@@ -32,7 +32,7 @@ contract WAGAEthiopianComplianceStreamlinedTest is BaseWAGATest {
     function testAddECTAPermit_OnlyComplianceManager() public {
         vm.prank(unauthorized);
         vm.expectRevert();
-        ethiopianCompliance.addECTAPermit(testBatchId, testECTAPermit);
+        ethiopianComplianceCore.addECTAPermit(testBatchId, testECTAPermit);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -41,7 +41,7 @@ contract WAGAEthiopianComplianceStreamlinedTest is BaseWAGATest {
 
     function testAddQualityCertificate_Success() public {
         vm.prank(qualityInspector);
-        ethiopianCompliance.addQualityCertificate(testBatchId, testQualityCert);
+        ethiopianComplianceCore.addQualityCertificate(testBatchId, testQualityCert);
         
         console.log("Quality certificate added successfully");
     }
@@ -52,7 +52,7 @@ contract WAGAEthiopianComplianceStreamlinedTest is BaseWAGATest {
 
     function testAddOriginVerification_Success() public {
         vm.prank(originVerifier);
-        ethiopianCompliance.addOriginVerification(testBatchId, testOriginVerification);
+        ethiopianComplianceCore.addOriginVerification(testBatchId, testOriginVerification);
         
         console.log("Origin verification added successfully");
     }
@@ -60,7 +60,7 @@ contract WAGAEthiopianComplianceStreamlinedTest is BaseWAGATest {
     function testAddOriginVerification_OnlyOriginVerifier() public {
         vm.prank(unauthorized);
         vm.expectRevert();
-        ethiopianCompliance.addOriginVerification(testBatchId, testOriginVerification);
+        ethiopianComplianceCore.addOriginVerification(testBatchId, testOriginVerification);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -69,12 +69,12 @@ contract WAGAEthiopianComplianceStreamlinedTest is BaseWAGATest {
 
     function testEUDRCompliance_Complete() public {
         vm.prank(complianceManager);
-        ethiopianCompliance.addEUDRCertificate(testBatchId, testEUDRCert);
+        ethiopianComplianceCore.addEUDRCertificate(testBatchId, testEUDRCert);
         
         vm.prank(originVerifier);
-        ethiopianCompliance.addGeolocationData(testBatchId, testGeoData);
+        ethiopianComplianceCore.addGeolocationData(testBatchId, testGeoData);
         
-        bool isCompliant = ethiopianCompliance.validateEUDRCompliance(testBatchId);
+        bool isCompliant = ethiopianComplianceCore.validateEUDRCompliance(testBatchId);
         assertTrue(isCompliant);
     }
 
@@ -85,7 +85,7 @@ contract WAGAEthiopianComplianceStreamlinedTest is BaseWAGATest {
     function testUpstreamCompliance_Complete() public {
         addCompleteComplianceData(testBatchId);
         
-        bool isCompliant = ethiopianCompliance.validateUpstreamCompliance(testBatchId);
+        bool isCompliant = ethiopianComplianceCore.validateUpstreamCompliance(testBatchId);
         assertTrue(isCompliant);
     }
 
@@ -93,15 +93,15 @@ contract WAGAEthiopianComplianceStreamlinedTest is BaseWAGATest {
     /*                              ROLE-BASED ACCESS TESTS                     */
     /* -------------------------------------------------------------------------- */
 
-    function testComplianceManagerRole() public {
+    function testComplianceManagerRole() public view{
         assertRoleGranted(keccak256("COMPLIANCE_MANAGER_ROLE"), complianceManager);
     }
 
-    function testOriginVerifierRole() public {
+    function testOriginVerifierRole() public view{
         assertRoleGranted(keccak256("ORIGIN_VERIFIER_ROLE"), originVerifier);
     }
 
-    function testQualityInspectorRole() public {
+    function testQualityInspectorRole() public view {
         assertRoleGranted(keccak256("QUALITY_INSPECTOR_ROLE"), qualityInspector);
     }
 }

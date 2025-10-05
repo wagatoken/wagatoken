@@ -8,6 +8,7 @@ import {
   fetchMetadataFromIPFS, 
   CoffeeBatchMetadata 
 } from './ipfsMetadata';
+import { ProofType, CIRCUIT_VERIFIERS } from './types';
 
 // Contract addresses from environment - Base Sepolia Deployment
 const COFFEE_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS!;
@@ -454,6 +455,8 @@ export async function createBatchBlockchainFirst(batchData: BatchCreationData | 
   enablePricePrivacy?: boolean;
   enableQualityPrivacy?: boolean;
   enableSupplyChainPrivacy?: boolean;
+  enableEUDRCompliance?: boolean;
+  enableEthiopianCompliance?: boolean;
   pricingClaim?: string;
   qualityClaim?: string;
   supplyChainClaim?: string;
@@ -1331,7 +1334,7 @@ export async function getBatchUnitWeight(batchId: string): Promise<string> {
  * In production, this would integrate with actual ZK circuit compilation
  */
 async function generateZKProofHash(
-  proofType: 'pricing' | 'quality' | 'supplyChain',
+  proofType: 'pricing' | 'quality' | 'supplyChain' | 'eudrDeforestation' | 'eudrGeolocation' | 'ectaPermit' | 'qualityCertificate' | 'originVerification' | 'boeForex',
   batchData: any,
   sensitiveData: any
 ): Promise<string> {
@@ -1533,6 +1536,8 @@ async function configurePrivacyAndZKProofs(batchId: string, zkConfig: {
   enablePricePrivacy?: boolean;
   enableQualityPrivacy?: boolean;
   enableSupplyChainPrivacy?: boolean;
+  enableEUDRCompliance?: boolean;
+  enableEthiopianCompliance?: boolean;
   pricingClaim?: string;
   qualityClaim?: string;
   supplyChainClaim?: string;
@@ -1558,63 +1563,94 @@ async function configurePrivacyAndZKProofs(batchId: string, zkConfig: {
     console.log(`✅ Privacy config created for batch ${batchId}, transaction: ${privacyTx.hash}`);
     
     // Step 2: Generate ZK proofs for enabled privacy features
+    const proofsToGenerate = [];
+    
+    // Map ZK config to proof types
     if (zkConfig.enablePricePrivacy) {
-      console.log('🔒 Generating price privacy proof...');
-      try {
-        // In production, this would integrate with actual ZK circuits
-        // For now, we generate a proof hash and store the claim
-        const pricingProofHash = await generateZKProofHash(
-          'pricing',
-          { batchId, claim: zkConfig.pricingClaim },
-          { sensitiveData: 'price_competitiveness_proof' }
-        );
-        
-        // Store proof hash on blockchain via WAGAZKManager
-        const zkManagerContract = getContract(ZK_MANAGER_ADDRESS, ZK_MANAGER_ABI, signer);
-        await zkManagerContract.storeProofHash(batchId, 0, pricingProofHash); // 0 = PRICE_COMPETITIVENESS
-        
-        proofsGenerated.push(`PRICE_COMPETITIVENESS: ${pricingProofHash}`);
-        console.log(`✅ Price privacy proof generated: ${pricingProofHash}`);
-      } catch (error) {
-        console.warn('❌ Price privacy proof generation failed:', error);
-      }
+      proofsToGenerate.push({
+        type: ProofType.PRICE_COMPETITIVENESS,
+        claim: zkConfig.pricingClaim || 'Price Competitive',
+        category: 'pricing'
+      });
     }
     
     if (zkConfig.enableQualityPrivacy) {
-      console.log('🔒 Generating quality privacy proof...');
-      try {
-        const qualityProofHash = await generateZKProofHash(
-          'quality',
-          { batchId, claim: zkConfig.qualityClaim },
-          { sensitiveData: 'quality_standards_proof' }
-        );
-        
-        const zkManagerContract = getContract(ZK_MANAGER_ADDRESS, ZK_MANAGER_ABI, signer);
-        await zkManagerContract.storeProofHash(batchId, 1, qualityProofHash); // 1 = QUALITY_STANDARDS
-        
-        proofsGenerated.push(`QUALITY_STANDARDS: ${qualityProofHash}`);
-        console.log(`✅ Quality privacy proof generated: ${qualityProofHash}`);
-      } catch (error) {
-        console.warn('❌ Quality privacy proof generation failed:', error);
-      }
+      proofsToGenerate.push({
+        type: ProofType.QUALITY_STANDARDS,
+        claim: zkConfig.qualityClaim || 'Quality Verified',
+        category: 'quality'
+      });
     }
     
     if (zkConfig.enableSupplyChainPrivacy) {
-      console.log('🔒 Generating supply chain privacy proof...');
+      proofsToGenerate.push({
+        type: ProofType.SUPPLY_CHAIN_PROVENANCE,
+        claim: zkConfig.supplyChainClaim || 'Origin Verified',
+        category: 'supplyChain'
+      });
+    }
+
+    // EUDR Compliance proofs (always required for European markets)
+    if (zkConfig.enableEUDRCompliance !== false) {
+      proofsToGenerate.push(
+        {
+          type: ProofType.EUDR_DEFORESTATION_COMPLIANCE,
+          claim: 'Deforestation-free production verified',
+          category: 'eudrDeforestation'
+        },
+        {
+          type: ProofType.EUDR_GEOLOCATION_VERIFICATION,
+          claim: 'Geographic origin verified for EUDR compliance',
+          category: 'eudrGeolocation'
+        }
+      );
+    }
+
+    // Ethiopian compliance proofs (required for Ethiopian coffee exports)
+    if (zkConfig.enableEthiopianCompliance !== false) {
+      proofsToGenerate.push(
+        {
+          type: ProofType.ECTA_PERMIT_VALIDITY,
+          claim: 'ECTA export permit valid',
+          category: 'ectaPermit'
+        },
+        {
+          type: ProofType.QUALITY_CERTIFICATE_AUTHENTICITY,
+          claim: 'Quality certificate authenticated',
+          category: 'qualityCertificate'
+        },
+        {
+          type: ProofType.ORIGIN_VERIFICATION_PROOF,
+          claim: 'Ethiopian origin verified',
+          category: 'originVerification'
+        },
+        {
+          type: ProofType.BOE_FOREX_COMPLIANCE,
+          claim: 'Bank of Ethiopia forex compliance verified',
+          category: 'boeForex'
+        }
+      );
+    }
+
+    // Generate all required proofs
+    const zkManagerContract = getContract(ZK_MANAGER_ADDRESS, ZK_MANAGER_ABI, signer);
+    
+    for (const proofConfig of proofsToGenerate) {
+      console.log(`🔒 Generating ${ProofType[proofConfig.type]} proof...`);
       try {
-        const supplyChainProofHash = await generateZKProofHash(
-          'supplyChain',
-          { batchId, claim: zkConfig.supplyChainClaim },
-          { sensitiveData: 'supply_chain_provenance_proof' }
+        const proofHash = await generateZKProofHash(
+          proofConfig.category as 'pricing' | 'quality' | 'supplyChain' | 'eudrDeforestation' | 'eudrGeolocation' | 'ectaPermit' | 'qualityCertificate' | 'originVerification' | 'boeForex',
+          { batchId, claim: proofConfig.claim },
+          { sensitiveData: `${proofConfig.category}_proof` }
         );
         
-        const zkManagerContract = getContract(ZK_MANAGER_ADDRESS, ZK_MANAGER_ABI, signer);
-        await zkManagerContract.storeProofHash(batchId, 2, supplyChainProofHash); // 2 = SUPPLY_CHAIN_PROVENANCE
+        // Store proof hash on blockchain using the proof type as index
+        await zkManagerContract.storeProofHash(batchId, proofConfig.type, proofHash);
         
-        proofsGenerated.push(`SUPPLY_CHAIN_PROVENANCE: ${supplyChainProofHash}`);
-        console.log(`✅ Supply chain privacy proof generated: ${supplyChainProofHash}`);
+        proofsGenerated.push(`${ProofType[proofConfig.type]}: ${proofHash}`);
+        console.log(`✅ ${ProofType[proofConfig.type]} proof generated: ${proofHash}`);
       } catch (error) {
-        console.warn('❌ Supply chain privacy proof generation failed:', error);
+        console.warn(`❌ ${ProofType[proofConfig.type]} proof generation failed:`, error);
       }
     }
     

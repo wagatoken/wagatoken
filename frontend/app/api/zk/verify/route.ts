@@ -196,6 +196,28 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Helper function to get success rates for different proof types
+function getSuccessRateForProofType(proofType: string): number {
+  switch (proofType) {
+    case 'PRICE_COMPETITIVENESS':
+      return 0.9;
+    case 'QUALITY_STANDARDS':
+    case 'QUALITY_CERTIFICATE_AUTHENTICITY':
+      return 0.95;
+    case 'SUPPLY_CHAIN_PROVENANCE':
+    case 'ORIGIN_VERIFICATION_PROOF':
+      return 0.92;
+    case 'EUDR_DEFORESTATION_COMPLIANCE':
+    case 'EUDR_GEOLOCATION_VERIFICATION':
+      return 0.88; // Slightly lower for complex EUDR compliance
+    case 'ECTA_PERMIT_VALIDITY':
+    case 'BOE_FOREX_COMPLIANCE':
+      return 0.93; // Ethiopian compliance proofs
+    default:
+      return 0.9; // Default success rate
+  }
+}
+
 // Helper function to simulate ZK verification
 async function simulateZKVerification(proofData: any) {
   // Simulate verification latency
@@ -203,7 +225,7 @@ async function simulateZKVerification(proofData: any) {
 
   // For demonstration, randomly succeed/fail based on proof type
   // In reality, this would call the actual verifier contract
-  const successRate = proofData.proofType === 'PRICE_COMPETITIVENESS' ? 0.9 : 0.95;
+  const successRate = getSuccessRateForProofType(proofData.proofType);
   const success = Math.random() < successRate;
 
   if (success) {

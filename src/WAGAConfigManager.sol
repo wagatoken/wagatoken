@@ -447,6 +447,30 @@ contract WAGAConfigManager is AccessControl, Ownable {
         _grantRole(CERTIFICATION_VERIFIER_ROLE, verifier);
     }
 
+    /**
+     * @dev Grant MINTER_ROLE to an address
+     * @param minter The address to grant the MINTER_ROLE to
+     */
+    function grantMinterRole(address minter) external onlyAdmin {
+        _grantRole(MINTER_ROLE, minter);
+    }
+
+    /**
+     * @dev Grant COOPERATIVE_ROLE to an address
+     * @param cooperative The address to grant the COOPERATIVE_ROLE to
+     */
+    function grantCooperativeRole(address cooperative) external onlyAdmin {
+        _grantRole(COOPERATIVE_ROLE, cooperative);
+    }
+
+    /**
+     * @dev Grant ROASTER_ROLE to an address
+     * @param roaster The address to grant the ROASTER_ROLE to
+     */
+    function grantRoasterRole(address roaster) external onlyAdmin {
+        _grantRole(ROASTER_ROLE, roaster);
+    }
+
     /* -------------------------------------------------------------------------- */
     /*                         ROLE REVOCATION FUNCTIONS                          */
     /* -------------------------------------------------------------------------- */

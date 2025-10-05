@@ -54,8 +54,8 @@ contract WAGAEndToEndWorkflowTest is BaseWAGATest {
         
         // 7. Verify final state
         assertTrue(coffeeToken.isBatchCreated(workflowBatchId));
-        assertTrue(ethiopianCompliance.validateUpstreamCompliance(workflowBatchId));
-        assertTrue(ethiopianCompliance.validateEUDRCompliance(workflowBatchId));
+        assertTrue(ethiopianComplianceCore.validateUpstreamCompliance(workflowBatchId));
+        assertTrue(ethiopianComplianceCore.validateEUDRCompliance(workflowBatchId));
         assertTrue(treasury.checkPaymentStatus(buyer, workflowBatchId));
         assertUSDCBalance(cooperative, initialCooperativeBalance + TEST_PAYMENT_AMOUNT);
         

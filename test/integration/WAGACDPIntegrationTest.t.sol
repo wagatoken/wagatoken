@@ -54,7 +54,7 @@ contract WAGACDPIntegrationTest is Test {
             bankingCore,
             tradeCompliance,
             helperConfig
-        ) = deployer.runForTesting();
+        ) = deployer.run();
 
         // Get additional contracts from deployment script
         cdpIntegration = deployer.cdpIntegration();

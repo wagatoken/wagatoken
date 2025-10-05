@@ -165,17 +165,9 @@ async function syncZKDataToDatabase(
             proofHash,
             proofData: JSON.stringify({ type: proofType, hash: proofHash }),
             publicSignals: '[]', // Empty array for now
-            publicClaim: zkConfig ? (
-              proofType === 'PRICE_COMPETITIVENESS' ? zkConfig.pricingClaim || 'Price Competitive' :
-              proofType === 'QUALITY_STANDARDS' ? zkConfig.qualityClaim || 'Quality Verified' :
-              proofType === 'SUPPLY_CHAIN_PROVENANCE' ? zkConfig.supplyChainClaim || 'Origin Verified' :
-              'ZK Proof Generated'
-            ) : 'ZK Proof Generated',
+            publicClaim: getPublicClaimForProofType(proofType, zkConfig),
             isVerified: true, // Set to true since it was generated successfully
-            circuitName: proofType === 'PRICE_COMPETITIVENESS' ? 'PricePrivacyCircuit' :
-                        proofType === 'QUALITY_STANDARDS' ? 'QualityTierCircuit' :
-                        proofType === 'SUPPLY_CHAIN_PROVENANCE' ? 'SupplyChainPrivacyCircuit' :
-                        'UnknownCircuit',
+            circuitName: getCircuitNameForProofType(proofType),
             proofGeneratorAddress: 'system', // TODO: Get actual generator address
             verifiedAt: new Date()
           });
@@ -222,5 +214,53 @@ async function syncZKDataToDatabase(
       success: false,
       error: error instanceof Error ? error.message : 'ZK sync failed'
     };
+  }
+}
+
+// Helper functions for proof type mapping
+function getPublicClaimForProofType(proofType: string, zkConfig?: any): string {
+  switch (proofType) {
+    case 'PRICE_COMPETITIVENESS':
+      return zkConfig?.pricingClaim || 'Price Competitive';
+    case 'QUALITY_STANDARDS':
+      return zkConfig?.qualityClaim || 'Quality Verified';
+    case 'SUPPLY_CHAIN_PROVENANCE':
+      return zkConfig?.supplyChainClaim || 'Origin Verified';
+    case 'EUDR_DEFORESTATION_COMPLIANCE':
+      return 'Deforestation-free production verified';
+    case 'EUDR_GEOLOCATION_VERIFICATION':
+      return 'Geographic origin verified for EUDR compliance';
+    case 'ECTA_PERMIT_VALIDITY':
+      return 'ECTA export permit valid';
+    case 'QUALITY_CERTIFICATE_AUTHENTICITY':
+      return 'Quality certificate authenticated';
+    case 'ORIGIN_VERIFICATION_PROOF':
+      return 'Ethiopian origin verified';
+    case 'BOE_FOREX_COMPLIANCE':
+      return 'Bank of Ethiopia forex compliance verified';
+    default:
+      return 'ZK Proof Generated';
+  }
+}
+
+function getCircuitNameForProofType(proofType: string): string {
+  switch (proofType) {
+    case 'PRICE_COMPETITIVENESS':
+      return 'PricePrivacyCircuit';
+    case 'QUALITY_STANDARDS':
+      return 'QualityTierCircuit';
+    case 'SUPPLY_CHAIN_PROVENANCE':
+      return 'SupplyChainPrivacyCircuit';
+    case 'EUDR_DEFORESTATION_COMPLIANCE':
+      return 'EUDRDeforestationCircuit';
+    case 'EUDR_GEOLOCATION_VERIFICATION':
+      return 'EUDRGeolocationCircuit';
+    case 'ECTA_PERMIT_VALIDITY':
+    case 'QUALITY_CERTIFICATE_AUTHENTICITY':
+    case 'ORIGIN_VERIFICATION_PROOF':
+    case 'BOE_FOREX_COMPLIANCE':
+      return 'EthiopianComplianceCircuit';
+    default:
+      return 'UnknownCircuit';
   }
 }

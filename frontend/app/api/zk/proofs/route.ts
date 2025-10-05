@@ -95,8 +95,18 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Validate proof type
-    const validProofTypes = ['PRICE_COMPETITIVENESS', 'QUALITY_STANDARDS', 'SUPPLY_CHAIN_PROVENANCE'];
+    // Validate proof type - matches IZKVerifier.ProofType enum
+    const validProofTypes = [
+      'PRICE_COMPETITIVENESS', 
+      'QUALITY_STANDARDS', 
+      'SUPPLY_CHAIN_PROVENANCE',
+      'EUDR_DEFORESTATION_COMPLIANCE',
+      'EUDR_GEOLOCATION_VERIFICATION', 
+      'ECTA_PERMIT_VALIDITY',
+      'QUALITY_CERTIFICATE_AUTHENTICITY',
+      'ORIGIN_VERIFICATION_PROOF',
+      'BOE_FOREX_COMPLIANCE'
+    ];
     if (!validProofTypes.includes(proofType)) {
       return NextResponse.json({
         success: false,

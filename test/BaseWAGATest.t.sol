@@ -19,6 +19,7 @@ import {WAGATreasury} from "../src/WAGATreasury.sol";
 import {PrivacyLayer} from "../src/PrivacyLayer.sol";
 import {CircomVerifier} from "../src/CircomVerifier.sol";
 import {WAGACDPIntegration} from "../src/WAGACDPIntegration.sol";
+import {WAGACoffeeBatchOperations} from "../src/WAGACoffeeBatchOperations.sol";
 import {WAGAProofOfReserve} from "../src/WAGAProofOfReserve.sol";
 import {WAGAInventoryManagerMVP} from "../src/WAGAInventoryManagerMVP.sol";
 import {WAGAECXPriceOracle} from "../src/WAGAECXPriceOracle.sol";
@@ -62,6 +63,7 @@ abstract contract BaseWAGATest is Test {
 
     // Specialized contracts
     WAGACDPIntegration public cdpIntegration;
+    WAGACoffeeBatchOperations public coffeeBatchOperations;
     WAGAProofOfReserve public proofOfReserve;
     WAGAInventoryManagerMVP public inventoryManager;
     WAGAEthiopianComplianceCore public ethiopianComplianceCore;
@@ -129,7 +131,11 @@ abstract contract BaseWAGATest is Test {
     IEthiopianCompliance.QualityCertificate public testQualityCert;
     IEthiopianCompliance.OriginVerification public testOriginVerification;
 
-    bytes public constant MOCK_PROOF_DATA = hex"00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
+    // Mock Groth16 proof data: A[2] + B[4] + C[2] = 256 bytes total
+    // A (G1 point): 64 bytes (2 * 32 bytes)
+    // B (G2 point): 128 bytes (4 * 32 bytes) 
+    // C (G1 point): 64 bytes (2 * 32 bytes)
+    bytes public constant MOCK_PROOF_DATA = hex"00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 
     /* -------------------------------------------------------------------------- */
     /*                              SETUP FUNCTION                               */
@@ -167,7 +173,7 @@ abstract contract BaseWAGATest is Test {
             bankingCore,
             tradeCompliance,
             helperConfig
-        ) = deployer.runForTesting();
+        ) = deployer.run(); // Use actual deployment with broadcast
         
         // Access other deployed contracts through deployer
         configManager = deployer.configManager();
@@ -176,19 +182,22 @@ abstract contract BaseWAGATest is Test {
         zkManager = deployer.zkManager();
         privacyLayer = deployer.privacyLayer();
         redemption = deployer.redemptionManager();
-        circomVerifier = deployer.circomVerifier();
+        circomVerifier = deployer.getCircomVerifier();
         cdpIntegration = deployer.cdpIntegration();
+        coffeeBatchOperations = deployer.getCoffeeBatchOperations();
         proofOfReserve = deployer.proofOfReserve();
         inventoryManager = deployer.inventoryManager();
         ethiopianComplianceCore = deployer.ethiopianComplianceCore();
         ecxOracle = deployer.ecxOracle();
         
-        console.log("BaseWAGATest: WAGA system deployed");
+        console.log("BaseWAGATest: WAGA system deployed using actual deployment script with broadcast");
     }
 
     function _setupNetworkConfig() internal {
         networkConfig = helperConfig.getActiveNetworkConfig();
         usdc = MockUSDC(networkConfig.usdcAddress);
+        
+        // With broadcast deployment, the admin is the address derived from deployerKey
         admin = vm.addr(networkConfig.deployerKey);
         
         console.log("BaseWAGATest: Network config and admin setup completed");
@@ -202,13 +211,14 @@ abstract contract BaseWAGATest is Test {
         // Core operational roles via central authority (configManager)
         configManager.grantProcessorRole(processor);
         configManager.grantVerifierRole(verifier);
-        configManager.grantRole(keccak256("MINTER_ROLE"), minter);
+        configManager.grantProcessorRole(verifier); // Also grant processor role for ZK proof submission
+        configManager.grantMinterRole(minter);
         configManager.grantFulfillerRole(fulfiller);
         configManager.grantDistributorRole(distributor);
         
         // Product line roles
-        configManager.grantRole(keccak256("COOPERATIVE_ROLE"), cooperative);
-        configManager.grantRole(keccak256("ROASTER_ROLE"), roaster);
+        configManager.grantCooperativeRole(cooperative);
+        configManager.grantRoasterRole(roaster);
         configManager.grantProcessorRole(cooperative); // Also grant processor role for batch creation
         configManager.grantProcessorRole(roaster); // Also grant processor role for batch creation
         

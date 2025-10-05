@@ -8,6 +8,9 @@ import {IEthiopianCompliance} from "./Interfaces/IEthiopianCompliance.sol";
 import {IWAGAEthiopianBanking} from "./Interfaces/IWAGAEthiopianBanking.sol";
 import {IWAGAZKManager} from "./Interfaces/IWAGAZKManager.sol";
 
+// Import DEFAULT_ADMIN_ROLE constant
+bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
+
 /**
  * @title WAGABatchExportCompliance
  * @dev Manages Ethiopian and EUDR export compliance for WAGA Coffee batches
@@ -98,15 +101,15 @@ contract WAGABatchExportCompliance {
     /*                              Configuration                                 */
     /* -------------------------------------------------------------------------- */
 
-    function setEthiopianComplianceCore(address _ethiopianComplianceCore) external callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+    function setEthiopianComplianceCore(address _ethiopianComplianceCore) external callerHasRole(DEFAULT_ADMIN_ROLE) {
         ethiopianComplianceCore = _ethiopianComplianceCore;
     }
 
-    function setEthiopianBanking(address _ethiopianBanking) external callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+    function setEthiopianBanking(address _ethiopianBanking) external callerHasRole(DEFAULT_ADMIN_ROLE) {
         ethiopianBanking = _ethiopianBanking;
     }
 
-    function setZKManager(address _zkManager) external callerHasRole(keccak256("DEFAULT_ADMIN_ROLE")) {
+    function setZKManager(address _zkManager) external callerHasRole(DEFAULT_ADMIN_ROLE) {
         zkManager = IWAGAZKManager(_zkManager);
     }
 

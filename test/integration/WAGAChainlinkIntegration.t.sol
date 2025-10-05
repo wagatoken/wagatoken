@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import {Test, console} from "forge-std/Test.sol";
-import {DeployRealZKMVP} from "../../script/DeployRealZKMVP.s.sol";
-import {HelperConfig} from "../../script/HelperConfig.s.sol";
+import {BaseWAGATest} from "../BaseWAGATest.t.sol";
+import {console} from "forge-std/Test.sol";
 import {WAGACoffeeTokenCore} from "../../src/WAGACoffeeTokenCore.sol";
-import {WAGABatchManager} from "../../src/WAGABatchManager.sol";
+import {WAGAConfigManager} from "../../src/WAGAConfigManager.sol";
+import {WAGABatchMetadataManager} from "../../src/WAGABatchMetadataManager.sol";
 import {WAGAProofOfReserve} from "../../src/WAGAProofOfReserve.sol";
 import {WAGAInventoryManagerMVP} from "../../src/WAGAInventoryManagerMVP.sol";
 import {WAGACoffeeRedemption} from "../../src/WAGACoffeeRedemption.sol";
@@ -19,7 +19,9 @@ import {MockFunctionsClient} from "../mocks/MockFunctionsClient.sol";
 import {WAGACDPIntegration} from "../../src/WAGACDPIntegration.sol";
 import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 import {WAGATreasury} from "../../src/WAGATreasury.sol";
-import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
+import {WAGAEthiopianComplianceCore} from "../../src/WAGAEthiopianComplianceCore.sol";
+import {WAGABankingCore} from "../../src/WAGABankingCore.sol";
+import {WAGATradeCompliance} from "../../src/WAGATradeCompliance.sol";
 
 /**
  * @title WAGAChainlinkIntegration
@@ -27,83 +29,29 @@ import {WAGAEthiopianCompliance} from "../../src/WAGAEthiopianCompliance.sol";
  * This test focuses on the full Chainlink Functions integration with WAGAProofOfReserve
  * using mock contracts to simulate oracle responses
  */
-contract WAGAChainlinkIntegration is Test {
-    // Contract instances
-    DeployRealZKMVP public deployer;
-    HelperConfig public helperConfig;
-    WAGACoffeeTokenCore public coffeeToken;
-    WAGABatchManager public batchManager;
-    WAGAZKManager public zkManager;
-    WAGAProofOfReserve public proofOfReserve;
-    WAGAInventoryManagerMVP public inventoryManager;
-    WAGACoffeeRedemption public redemptionContract;
-    CircomVerifier public circomVerifier;
+contract WAGAChainlinkIntegration is BaseWAGATest {
+    // Additional contracts specific to this test (BaseWAGATest already provides most contracts)
     WAGACoffeeViews public coffeeViews;
-    PrivacyLayer public privacyLayer;
-    
-    // Additional contracts from deployment
-    WAGACDPIntegration public cdpIntegration;
-    WAGAECXPriceOracle public ecxOracle;
-    WAGATreasury public treasury;
-    WAGAEthiopianCompliance public ethiopianCompliance;
 
     // Mock contracts
     MockFunctionsRouter public mockRouter;
     MockFunctionsHelper public mockHelper;
     MockFunctionsClient public mockClient;
 
-    // Test addresses - following proper naming conventions
-    address public adminUser = makeAddr("admin");
-    address public processorUser = makeAddr("processor");
-    address public distributorUser = makeAddr("distributor");
-    address public verifierUser = makeAddr("verifier");
-    address public user1 = makeAddr("user1");
-
     // Test data
     uint256 public testBatchId;
     bytes32 public testRequestId;
 
-    function setUp() public {
-        // Deploy all contracts via the standard deployment script
-        deployer = new DeployRealZKMVP();
-        (
-            coffeeToken,
-            batchManager,
-            zkManager,
-            privacyLayer,
-            treasury,
-            redemptionContract,
-            cdpIntegration, // Now included in deployment
-            proofOfReserve,
-            inventoryManager,
-            ethiopianCompliance,
-            ecxOracle, // Now included in deployment
-            circomVerifier,
-            helperConfig
-        ) = deployer.run();
-
+    function setUp() public override {
+        super.setUp(); // This sets up all the base contracts
+        
         // Get coffeeViews using getter function
         coffeeViews = deployer.getCoffeeViews();
-
+        
         // Deploy mock contracts for testing
         mockRouter = new MockFunctionsRouter();
         mockHelper = new MockFunctionsHelper(address(mockRouter));
         mockClient = new MockFunctionsClient(address(mockRouter));
-
-        // Set up roles correctly using deployer who already has admin rights
-        HelperConfig.NetworkConfig memory config = helperConfig.getActiveNetworkConfig();
-        address deployerAddress = vm.addr(config.deployerKey);
-
-        // Grant roles using the deployer address which has DEFAULT_ADMIN_ROLE
-        vm.startPrank(deployerAddress);
-
-        // Grant roles using unified ConfigManager functions
-        coffeeToken.grantProcessorRole(processorUser);
-        coffeeToken.grantDistributorRole(distributorUser);
-        coffeeToken.grantVerifierRole(verifierUser);
-        coffeeToken.grantProcessorRole(adminUser); // Admin also gets processor role for testing
-
-        vm.stopPrank();
 
         console.log("Chainlink Integration test setup completed");
         console.log("MockRouter:", address(mockRouter));
@@ -116,7 +64,7 @@ contract WAGAChainlinkIntegration is Test {
         console.log("Creating batch for Chainlink testing...");
 
         // Create a batch as processor
-        vm.startPrank(processorUser);
+        vm.startPrank(processor);
 
         testBatchId = coffeeToken.createBatch(
             block.timestamp,         // productionDate
@@ -127,20 +75,14 @@ contract WAGAChainlinkIntegration is Test {
             "Standard",            // packagingInfo
             "ipfs://test-metadata" // metadataURI
         );
-
-        // Register additional batch info in batch manager
-        batchManager.registerBatchCreation(
-            testBatchId,
-            "Origin",
-            processorUser
-        );
+        // Note: Modern architecture handles batch registration automatically
 
         console.log("Created test batch ID:", testBatchId);
         console.log("Batch created:", coffeeToken.isBatchCreated(testBatchId));
-        console.log("Batch active:", coffeeToken.isBatchActive(testBatchId));
+        // Note: isBatchActive removed in new architecture
 
         assertTrue(coffeeToken.isBatchCreated(testBatchId), "Batch should be created");
-        assertTrue(coffeeToken.isBatchActive(testBatchId), "Batch should be active");
+        // Note: isBatchActive test removed
 
         vm.stopPrank();
 
@@ -372,7 +314,7 @@ contract WAGAChainlinkIntegration is Test {
 
         // Test that all contracts are properly deployed
         assertTrue(address(coffeeToken) != address(0), "CoffeeToken should be deployed");
-        assertTrue(address(batchManager) != address(0), "BatchManager should be deployed");
+        assertTrue(address(batchMetadataManager) != address(0), "BatchManager should be deployed");
         assertTrue(address(zkManager) != address(0), "ZKManager should be deployed");
         assertTrue(address(proofOfReserve) != address(0), "ProofOfReserve should be deployed");
         assertTrue(address(circomVerifier) != address(0), "CircomVerifier should be deployed");

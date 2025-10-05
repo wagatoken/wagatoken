@@ -25,9 +25,9 @@ contract WAGABatchManagerStreamlinedTest is BaseWAGATest {
     /*                              BATCH CREATION TESTS                         */
     /* -------------------------------------------------------------------------- */
 
-    function testBatchCreation_Success() public {
+    function testBatchCreation_Success() public view {
         // Verify batch info matches expected values
-        (uint256 productionDate, uint256 expiryDate, uint256 quantity, uint256 pricePerUnit, string memory packagingInfo, string memory metadataHash, uint256 lastVerifiedTimestamp) = 
+        (uint256 productionDate, uint256 expiryDate, uint256 quantity, uint256 pricePerUnit, , , ) = 
             coffeeToken.getBatchInfo(testBatchId);
             
         assertEq(productionDate, PRODUCTION_DATE);
@@ -54,14 +54,14 @@ contract WAGABatchManagerStreamlinedTest is BaseWAGATest {
     /*                              BATCH MANAGEMENT TESTS                       */
     /* -------------------------------------------------------------------------- */
 
-    function testBatchUpdate_Success() public {
+    function testBatchUpdate_Success() public view {
         // Basic batch exists and can be verified
         assertTrue(coffeeToken.isBatchCreated(testBatchId));
         
         console.log("Batch management operations verified");
     }
 
-    function testBatchQuery_Success() public {
+    function testBatchQuery_Success() public view {
         // Verify batch information can be queried
         (uint256 productionDate, uint256 expiryDate, uint256 quantity, uint256 pricePerUnit, , , ) = 
             coffeeToken.getBatchInfo(testBatchId);
@@ -79,9 +79,9 @@ contract WAGABatchManagerStreamlinedTest is BaseWAGATest {
     /* -------------------------------------------------------------------------- */
 
     function testAccessControl_AuthorizedUsers() public {
-        // Verify authorized users can create batches
-        uint256 distributorBatchId = createTestBatch(distributor);
-        assertTrue(coffeeToken.isBatchCreated(distributorBatchId));
+        // Verify authorized users can create batches (using cooperative instead of distributor)
+        uint256 cooperativeBatchId = createTestBatch(cooperative);
+        assertTrue(coffeeToken.isBatchCreated(cooperativeBatchId));
         
         console.log("Access control for authorized users verified");
     }
@@ -107,7 +107,7 @@ contract WAGABatchManagerStreamlinedTest is BaseWAGATest {
     /*                              BATCH VALIDATION TESTS                       */
     /* -------------------------------------------------------------------------- */
 
-    function testBatchValidation_ValidData() public {
+    function testBatchValidation_ValidData() public view {
         // Verify valid batch data passes validation
         assertTrue(coffeeToken.isBatchCreated(testBatchId));
         
@@ -120,7 +120,7 @@ contract WAGABatchManagerStreamlinedTest is BaseWAGATest {
         console.log("Batch validation for valid data verified");
     }
 
-    function testBatchValidation_EdgeCases() public {
+    function testBatchValidation_EdgeCases() public view {
         // Test edge cases that should still work
         assertTrue(coffeeToken.isBatchCreated(testBatchId));
         
@@ -136,7 +136,7 @@ contract WAGABatchManagerStreamlinedTest is BaseWAGATest {
         addCompleteComplianceData(testBatchId);
         
         // Verify compliance integration
-        assertTrue(ethiopianCompliance.validateUpstreamCompliance(testBatchId));
+        assertTrue(ethiopianComplianceCore.validateUpstreamCompliance(testBatchId));
         
         console.log("Batch Manager integration with compliance verified");
     }
@@ -170,7 +170,7 @@ contract WAGABatchManagerStreamlinedTest is BaseWAGATest {
         
         // Verify both compliance and ZK integration work together
         assertTrue(coffeeToken.isBatchCreated(testBatchId));
-        assertTrue(ethiopianCompliance.validateUpstreamCompliance(testBatchId));
+        assertTrue(ethiopianComplianceCore.validateUpstreamCompliance(testBatchId));
         
         console.log("ZK integration with compliance verified for batch ID:", testBatchId);
     }
@@ -179,14 +179,14 @@ contract WAGABatchManagerStreamlinedTest is BaseWAGATest {
     /*                              ERROR HANDLING TESTS                         */
     /* -------------------------------------------------------------------------- */
 
-    function testErrorHandling_InvalidBatchId() public {
+    function testErrorHandling_InvalidBatchId() public view {
         uint256 invalidBatchId = 99999;
         assertFalse(coffeeToken.isBatchCreated(invalidBatchId));
         
         console.log("Error handling for invalid batch ID verified");
     }
 
-    function testErrorHandling_DuplicateOperations() public {
+    function testErrorHandling_DuplicateOperations() public view {
         // Test system handles duplicate operations gracefully
         assertTrue(coffeeToken.isBatchCreated(testBatchId));
         
@@ -210,7 +210,7 @@ contract WAGABatchManagerStreamlinedTest is BaseWAGATest {
         assertLt(gasUsed, 500000); // Less than 500k gas
     }
 
-    function testPerformance_BatchQuery() public {
+    function testPerformance_BatchQuery() public view {
         uint256 startGas = gasleft();
         
         (, , uint256 quantity, , , , ) = coffeeToken.getBatchInfo(testBatchId);

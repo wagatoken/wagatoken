@@ -46,7 +46,7 @@ contract WAGACoffeeTokenCore is ERC1155Supply, IWAGACoffeeToken {
     WAGAConfigManager public immutable authority;
     
     // Operations contract that manages all business logic
-    address public immutable batchOperations;
+    address public batchOperations;
     
     // Minimal storage - only what's needed for tokens
     mapping(uint256 => string) public batchMetadata; // Token metadata URIs
@@ -83,6 +83,17 @@ contract WAGACoffeeTokenCore is ERC1155Supply, IWAGACoffeeToken {
         address _batchOperations
     ) ERC1155(baseURI) {
         authority = WAGAConfigManager(_authority);
+        batchOperations = _batchOperations;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              Admin Functions                              */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Set the batch operations contract - only admin
+     */
+    function setBatchOperations(address _batchOperations) external callerHasRole(keccak256("ADMIN_ROLE")) {
         batchOperations = _batchOperations;
     }
 
@@ -207,6 +218,18 @@ contract WAGACoffeeTokenCore is ERC1155Supply, IWAGACoffeeToken {
         string memory packagingInfo,
         string memory metadataURI
     ) external returns (uint256) {
+        // Check if caller has permission to create batches
+        bytes32 cooperativeRole = keccak256("COOPERATIVE_ROLE");
+        bytes32 processorRole = keccak256("PROCESSOR_ROLE");
+        bytes32 batchCreatorRole = keccak256("BATCH_CREATOR_ROLE");
+        bytes32 adminRole = keccak256("DEFAULT_ADMIN_ROLE");
+        
+        if (!(authority.hasRole(cooperativeRole, msg.sender) || 
+              authority.hasRole(processorRole, msg.sender) ||
+              authority.hasRole(batchCreatorRole, msg.sender) ||
+              authority.hasRole(adminRole, msg.sender))) {
+            revert CallerNotAuthorized();
+        }
         // Delegate to batch operations contract
         (bool success, bytes memory data) = batchOperations.call(
             abi.encodeWithSignature(
@@ -228,10 +251,16 @@ contract WAGACoffeeTokenCore is ERC1155Supply, IWAGACoffeeToken {
         uint256 requestedQuantity,
         string memory requestDetails
     ) external returns (uint256) {
+        // Check if caller has permission to request batches (only distributors)
+        bytes32 distributorRole = keccak256("DISTRIBUTOR_ROLE");
+        if (!authority.hasRole(distributorRole, msg.sender)) {
+            revert CallerNotAuthorized();
+        }
+        
         (bool success, bytes memory data) = batchOperations.call(
             abi.encodeWithSignature(
-                "createBatchRequest(uint256,uint256,string)",
-                batchId, requestedQuantity, requestDetails
+                "createBatchRequest(uint256,uint256,string,address)",
+                batchId, requestedQuantity, requestDetails, msg.sender
             )
         );
         if (!success) {

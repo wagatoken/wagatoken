@@ -40,13 +40,13 @@ contract WAGACoffeeRedemptionStreamlinedTest is BaseWAGATest {
         console.log("Redemption prerequisites satisfied");
     }
 
-    function testRedemption_ComplianceRequired() public {
+    function testRedemption_ComplianceRequired() public view {
         // Verify compliance data is required
-        assertTrue(ethiopianCompliance.validateUpstreamCompliance(testBatchId));
-        assertTrue(ethiopianCompliance.validateEUDRCompliance(testBatchId));
+        assertTrue(ethiopianComplianceCore.validateUpstreamCompliance(testBatchId));
+        assertTrue(ethiopianComplianceCore.validateEUDRCompliance(testBatchId));
     }
 
-    function testRedemption_ZKProofRequired() public {
+    function testRedemption_ZKProofRequired() public view {
                 // Verify ZK proof was processed (using correct interface)
         bool hasQualityProof = zkManager.hasComplianceProof(testBatchId, "QUALITY_STANDARDS");
         assertTrue(hasQualityProof);
@@ -74,11 +74,11 @@ contract WAGACoffeeRedemptionStreamlinedTest is BaseWAGATest {
     /*                              ROLE-BASED ACCESS TESTS                     */
     /* -------------------------------------------------------------------------- */
 
-    function testRedemptionRole() public {
+    function testRedemptionRole() public view {
         assertRoleGranted(keccak256("REDEMPTION_ROLE"), address(redemption));
     }
 
-    function testMinterRole() public {
+    function testMinterRole() public view {
         assertRoleGranted(keccak256("MINTER_ROLE"), minter);
     }
 }

@@ -40,6 +40,8 @@ interface IWAGACoffeeToken {
      * @param requestedQuantity Amount of tokens requested
      * @param requestDetails Additional details for the request
      * @return uint256 The request index for this batch
+     * Requirements:
+     * - Caller must have DISTRIBUTOR_ROLE
      */
     function createBatchRequest(
         uint256 batchId,

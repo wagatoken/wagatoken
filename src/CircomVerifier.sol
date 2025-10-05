@@ -26,14 +26,15 @@ contract CircomVerifier is IZKVerifier {
     /*                              Type Declarations                             */
     /* -------------------------------------------------------------------------- */
 
+    // Optimized struct layout for better storage packing
     struct ZKProofInternal {
-        bytes32 proofHash;
-        IZKVerifier.ProofType proofType;
-        bool isVerified;
-        uint256 timestamp;
-        string publicClaim;       // What we can publicly claim
-        bytes proofData;          // Raw ZK proof data
-        uint256[] publicSignals;  // Public inputs to the circuit
+        IZKVerifier.ProofType proofType;  // uint8 - 1 byte
+        bool isVerified;                  // bool - 1 byte
+        uint256 timestamp;                // uint256 - 32 bytes (slot 1)
+        bytes32 proofHash;                // bytes32 - 32 bytes (slot 2)
+        string publicClaim;               // string - variable length (slot 3+)
+        bytes proofData;                  // bytes - variable length
+        uint256[] publicSignals;          // uint256[] - variable length
     }
 
     /* -------------------------------------------------------------------------- */

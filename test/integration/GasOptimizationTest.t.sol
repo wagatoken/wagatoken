@@ -87,7 +87,7 @@ contract GasOptimizationTest is Test {
             bankingCore,
             tradeCompliance,
             helperConfig
-        ) = deployer.runForTesting();
+        ) = deployer.run();
         
         // Access other deployed contracts through deployer
         configManager = deployer.configManager();
@@ -175,10 +175,13 @@ contract GasOptimizationTest is Test {
         // Verify seller ID mappings work correctly
         address testSeller = makeAddr("testSeller");
         vm.startPrank(admin);
-        // Note: registerSeller functionality moved to WAGATradeCompliance
-        // For testing purposes, we simulate a seller ID
-        uint64 sellerId = 1; // Mock seller ID since registerSeller moved to tradeCompliance
-        // tradeCompliance.registerSeller(testSeller, ...);
+        uint64 sellerId = configManager.registerSeller(
+            testSeller,
+            WAGAConfigManager.SellerType.PROCESSOR,
+            "Test Seller",
+            "TEST123",
+            bytes11("CBETETAA")
+        );
         vm.stopPrank();
 
         assertEq(configManager.getSellerId(testSeller), sellerId, "Seller ID should be retrievable");
