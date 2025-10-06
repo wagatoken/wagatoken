@@ -4,6 +4,9 @@ pragma solidity ^0.8.19;
 import {BaseWAGATest} from "../BaseWAGATest.t.sol";
 import {console} from "forge-std/Test.sol";
 import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
+import {MockFunctionsRouter} from "../mocks/MockFunctionsRouter.sol";
+import {MockFunctionsHelper} from "../mocks/MockFunctionsHelper.sol";
+import {MockFunctionsClient} from "../mocks/MockFunctionsClient.sol";
 
 /**
  * @title WAGAIntegratedServicesTest
@@ -13,9 +16,20 @@ import {WAGAECXPriceOracle} from "../../src/WAGAECXPriceOracle.sol";
 contract WAGAIntegratedServicesTest is BaseWAGATest {
 
     uint256 private integrationBatchId;
+    
+    // Mock contracts for Chainlink Functions testing
+    MockFunctionsRouter public mockRouter;
+    MockFunctionsHelper public mockHelper;
+    MockFunctionsClient public mockClient;
+    bytes32 public testRequestId;
 
     function setUp() public override {
         super.setUp();
+        
+        // Deploy mock contracts for Chainlink Functions testing
+        mockRouter = new MockFunctionsRouter();
+        mockHelper = new MockFunctionsHelper(address(mockRouter));
+        mockClient = new MockFunctionsClient(address(mockRouter));
         
         // Create batch for integration testing
         integrationBatchId = createTestBatch(processor);
@@ -28,9 +42,39 @@ contract WAGAIntegratedServicesTest is BaseWAGATest {
     /* -------------------------------------------------------------------------- */
 
     function testChainlinkFunctionsIntegration() public {
-        // Skip if Chainlink Functions not available in test environment
-        vm.skip(true);
-        console.log("Chainlink Functions integration test skipped");
+        console.log("Testing Chainlink Functions integration with mocks...");
+        
+        // Reset mock client state
+        mockClient.resetState();
+        
+        // Simulate sending a request to Chainlink Functions via MockFunctionsClient
+        string memory sourceCode = "https://api.example.com/verify-batch";
+        
+        vm.prank(address(mockClient));
+        testRequestId = mockRouter.sendRequest(
+            1, // subscriptionId
+            abi.encode(sourceCode),
+            1, // dataVersion
+            300000, // callbackGasLimit
+            bytes32("test-don-id")
+        );
+        
+        assertFalse(testRequestId == bytes32(0), "Request ID should not be zero");
+        console.log("Chainlink Functions request sent with ID:", vm.toString(testRequestId));
+        
+        // Simulate successful response from oracle
+        mockRouter.mockResponse(
+            testRequestId,
+            abi.encode("verification_success"),
+            "",
+            address(mockClient)
+        );
+        
+        // Verify callback was received
+        assertTrue(mockClient.callbackReceived(), "Callback should have been received");
+        assertEq(mockClient.latestRequestId(), testRequestId, "Request ID should match");
+        
+        console.log("Chainlink Functions integration test completed successfully");
     }
 
     function testPriceIntegrationWithECX() public {

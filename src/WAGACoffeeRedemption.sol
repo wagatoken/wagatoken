@@ -11,7 +11,6 @@ import {IWAGAEthiopianBanking} from "./Interfaces/IWAGAEthiopianBanking.sol";
 import {IWAGABatchManager} from "./Interfaces/IWAGABatchManager.sol";
 import {IWAGAZKManager} from "./Interfaces/IWAGAZKManager.sol";
 import {IZKVerifier} from "./Interfaces/IZKVerifier.sol";
-import {RedemptionWorkflowLib} from "./libraries/RedemptionWorkflowLib.sol";
 
 contract WAGACoffeeRedemption is ReentrancyGuard, ERC1155Holder {
     /* -------------------------------------------------------------------------- */
