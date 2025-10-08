@@ -74,10 +74,14 @@ contract WAGACoffeeBatchOperations is WAGAViewFunctions {
     }
 
     modifier onlyBatchCreator() {
+        bytes32 cooperativeRole = keccak256("COOPERATIVE_ROLE");
+        bytes32 processorRole = keccak256("PROCESSOR_ROLE");
         bytes32 batchCreatorRole = keccak256("BATCH_CREATOR_ROLE");
         bytes32 adminRole = keccak256("DEFAULT_ADMIN_ROLE");
         
-        if (!(authority.hasRole(batchCreatorRole, msg.sender) || 
+        if (!(authority.hasRole(cooperativeRole, msg.sender) || 
+              authority.hasRole(processorRole, msg.sender) ||
+              authority.hasRole(batchCreatorRole, msg.sender) ||
               authority.hasRole(adminRole, msg.sender))) {
             revert CallerNotAuthorized();
         }

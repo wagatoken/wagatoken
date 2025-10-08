@@ -59,6 +59,14 @@ contract PrivacyLayer is IPrivacyLayer {
 
     /**
      * @dev Modifier to check if caller is the creator of the batch
+     * 
+     * PRIVACY ACCESS CONTROL STRATEGY:
+     * - Privacy configuration: Address-based (only actual batch creator can configure)
+     * - Privacy viewing: Role-based (different roles get different privacy levels)
+     * 
+     * This hybrid approach ensures that:
+     * 1. Only the actual batch creator can control their privacy settings
+     * 2. Viewing permissions follow role-based hierarchy for operational efficiency
      */
     modifier onlyBatchCreator(uint256 batchId) {
         if (address(batchManager) == address(0)) {

@@ -290,6 +290,7 @@ contract DeployRealZKMVP is Script {
         
         configManager.grantProcessorRole(msg.sender);  // Deployer for testing
         configManager.grantDistributorRole(msg.sender);  // Deployer for testing
+        configManager.grantBatchCreatorRole(msg.sender);  // Deployer for testing
         
         // Grant payment system roles
         configManager.grantPaymentProcessorRole(address(treasury));

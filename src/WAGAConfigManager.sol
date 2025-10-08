@@ -21,7 +21,9 @@ contract WAGAConfigManager is AccessControl, Ownable {
     error WAGAConfigManager__SellerNotFound_deactivateSeller();
     error WAGAConfigManager__SellerNotFound_getSellerProfile();
     error WAGAConfigManager__SellerNotFound_getSellerAddress();
-    error WAGAConfigManager__MustBeAdminOrProcessor_onlyBatchCreator();
+    error WAGAConfigManager__MustBeAuthorizedBatchCreator();
+    error WAGAConfigManager__RequiresBatchCreatorRole(address caller, bytes32[] requiredRoles);
+    error WAGAConfigManager__RequiresVerifierRole(address caller, bytes32 requiredRole);
     error WAGAConfigManager__MustHaveZKVerifierRole_onlyZKVerifier();
     error WAGAConfigManager__MustBeAdmin_onlyAdmin();
 
@@ -43,6 +45,7 @@ contract WAGAConfigManager is AccessControl, Ownable {
     bytes32 public constant FULFILLER_ROLE = keccak256("FULFILLER_ROLE");
     bytes32 public constant PROCESSOR_ROLE = keccak256("PROCESSOR_ROLE");
     bytes32 public constant DISTRIBUTOR_ROLE = keccak256("DISTRIBUTOR_ROLE");
+    bytes32 public constant BATCH_CREATOR_ROLE = keccak256("BATCH_CREATOR_ROLE");
 
     // New roles for expanded product lines
     bytes32 public constant COOPERATIVE_ROLE = keccak256("COOPERATIVE_ROLE");
@@ -83,6 +86,94 @@ contract WAGAConfigManager is AccessControl, Ownable {
     address private s_redemptionManager;
     address private s_proofOfReserveManager;
     address private immutable i_owner;
+
+    /* -------------------------------------------------------------------------- */
+    /*                           ROLE HIERARCHY DOCUMENTATION                    */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * ROLE HIERARCHY:
+     * 
+     * Production Roles (Can create batches):
+     * - COOPERATIVE_ROLE: Coffee cooperatives  
+     * - PROCESSOR_ROLE: Coffee processors
+     * - BATCH_CREATOR_ROLE: Generic batch creators
+     * 
+     * Distribution Roles:
+     * - DISTRIBUTOR_ROLE: Can request tokens from batches
+     * 
+     * Verification Roles:
+     * - VERIFIER_ROLE: General quality/inventory verification
+     * - ZK_VERIFIER_ROLE: Zero-knowledge proof verification
+     * - ORIGIN_VERIFIER_ROLE: Geographic origin verification
+     * - COMPLIANCE_VERIFIER_ROLE: Regulatory compliance
+     * 
+     * Operational Roles:
+     * - MINTER_ROLE: Automated token minting (typically contracts)
+     * - FULFILLER_ROLE: Physical delivery coordination
+     * - PAYMENT_PROCESSOR_ROLE: Financial transaction processing
+     * - REDEMPTION_ROLE: Token burning (redemption contract only)
+     * 
+     * Administrative Roles:
+     * - DEFAULT_ADMIN_ROLE: System administration (highest privilege)
+     * - ADMIN_ROLE: Operational administration
+     */
+
+    /* -------------------------------------------------------------------------- */
+    /*                           ROLE VALIDATION HELPERS                         */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * @dev Check if an account can create batches
+     * @param account Address to check
+     * @return bool True if account has batch creation privileges
+     */
+    function canCreateBatches(address account) external view returns (bool) {
+        return hasRole(COOPERATIVE_ROLE, account) ||
+               hasRole(PROCESSOR_ROLE, account) ||
+               hasRole(BATCH_CREATOR_ROLE, account) ||
+               hasRole(DEFAULT_ADMIN_ROLE, account);
+    }
+
+    /**
+     * @dev Check if an account can verify batches
+     * @param account Address to check
+     * @return bool True if account has verification privileges
+     */
+    function canVerifyBatches(address account) external view returns (bool) {
+        return hasRole(VERIFIER_ROLE, account) ||
+               hasRole(DEFAULT_ADMIN_ROLE, account);
+    }
+
+    /**
+     * @dev Check if an account can verify ZK proofs
+     * @param account Address to check
+     * @return bool True if account has ZK verification privileges
+     */
+    function canVerifyZKProofs(address account) external view returns (bool) {
+        return hasRole(ZK_VERIFIER_ROLE, account) ||
+               hasRole(DEFAULT_ADMIN_ROLE, account);
+    }
+
+    /**
+     * @dev Check if an account can distribute tokens
+     * @param account Address to check
+     * @return bool True if account has distribution privileges
+     */
+    function canDistributeTokens(address account) external view returns (bool) {
+        return hasRole(DISTRIBUTOR_ROLE, account) ||
+               hasRole(DEFAULT_ADMIN_ROLE, account);
+    }
+
+    /**
+     * @dev Check if an account can process payments
+     * @param account Address to check
+     * @return bool True if account has payment processing privileges
+     */
+    function canProcessPayments(address account) external view returns (bool) {
+        return hasRole(PAYMENT_PROCESSOR_ROLE, account) ||
+               hasRole(DEFAULT_ADMIN_ROLE, account);
+    }
 
     /* -------------------------------------------------------------------------- */
     /*                           SELLER REGISTRATION SYSTEM                       */
@@ -156,8 +247,11 @@ contract WAGAConfigManager is AccessControl, Ownable {
      * @dev Only WAGA admins or processors can create/modify batches
      */
     modifier onlyBatchCreator() virtual {
-        if (!(hasRole(ADMIN_ROLE, msg.sender) || hasRole(PROCESSOR_ROLE, msg.sender))) {
-            revert WAGAConfigManager__MustBeAdminOrProcessor_onlyBatchCreator();
+        if (!(hasRole(COOPERATIVE_ROLE, msg.sender) || 
+              hasRole(PROCESSOR_ROLE, msg.sender) ||
+              hasRole(BATCH_CREATOR_ROLE, msg.sender) ||
+              hasRole(DEFAULT_ADMIN_ROLE, msg.sender))) {
+            revert WAGAConfigManager__MustBeAuthorizedBatchCreator();
         }
         _;
     }
@@ -285,6 +379,13 @@ contract WAGAConfigManager is AccessControl, Ownable {
      */
     function grantDistributorRole(address distributor) external onlyAdmin {
         _grantRole(DISTRIBUTOR_ROLE, distributor);
+    }
+    
+    /**
+     * @dev Grant batch creator role for creating coffee batches
+     */
+    function grantBatchCreatorRole(address creator) external onlyAdmin {
+        _grantRole(BATCH_CREATOR_ROLE, creator);
     }
 
     /* -------------------------------------------------------------------------- */
