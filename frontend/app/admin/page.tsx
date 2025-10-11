@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { TokenETH, WalletMetamask, NetworkEthereum } from "@web3icons/react";
 import ZKConfigurationPanel, { ZKConfig } from "../../components/ZKConfigurationPanel";
+import TreasuryDashboard from "../components/admin/TreasuryDashboard";
+import CDPIntegrationDashboard from "../components/admin/CDPIntegrationDashboard";
+import EnhancedRoleManagement from "../components/admin/EnhancedRoleManagement";
 import {
   MdCheck,
   MdClose,
@@ -83,7 +86,7 @@ export default function AdminPage() {
   });
   const [fallbackMode, setFallbackMode] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "create" | "manage" | "verify" | "inventory" | "analytics" | "settings">(
+  const [activeTab, setActiveTab] = useState<"dashboard" | "create" | "manage" | "verify" | "inventory" | "analytics" | "settings" | "treasury" | "cdp" | "roles">(
     "dashboard"
   );
   const [loading, setLoading] = useState(false);
@@ -767,6 +770,9 @@ export default function AdminPage() {
                     { id: 'manage', label: 'Manage Batches', icon: <MdTimeline size={20} /> },
                     { id: 'verify', label: 'Verify & Mint', icon: <MdVerified size={20} /> },
                     { id: 'inventory', label: 'Inventory', icon: <MdStorage size={20} /> },
+                    { id: 'treasury', label: 'Treasury', icon: <MdSecurity size={20} /> },
+                    { id: 'cdp', label: 'CDP Integration', icon: <MdSecurity size={20} /> },
+                    { id: 'roles', label: 'Role Management', icon: <MdSettings size={20} /> },
                     { id: 'analytics', label: 'Analytics', icon: <MdAnalytics size={20} /> },
                     { id: 'settings', label: 'Settings', icon: <MdSettings size={20} /> }
                   ].map((tab) => (
@@ -1041,18 +1047,25 @@ export default function AdminPage() {
                         <span className="font-medium text-blue-800">Verify & Mint</span>
                       </button>
                       <button
-                        onClick={() => setActiveTab('inventory')}
-                        className="w-full flex items-center space-x-2 p-3 text-left bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
-                      >
-                        <MdStorage className="text-amber-600" />
-                        <span className="font-medium text-amber-800">Manage Inventory</span>
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('settings')}
+                        onClick={() => setActiveTab('treasury')}
                         className="w-full flex items-center space-x-2 p-3 text-left bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
                       >
-                        <MdSettings className="text-purple-600" />
-                        <span className="font-medium text-purple-800">Role Management</span>
+                        <MdSecurity className="text-purple-600" />
+                        <span className="font-medium text-purple-800">Treasury Operations</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('roles')}
+                        className="w-full flex items-center space-x-2 p-3 text-left bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+                      >
+                        <MdSettings className="text-amber-600" />
+                        <span className="font-medium text-amber-800">Role Management</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('cdp')}
+                        className="w-full flex items-center space-x-2 p-3 text-left bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                      >
+                        <MdSecurity className="text-indigo-600" />
+                        <span className="font-medium text-indigo-800">CDP Integration</span>
                       </button>
                     </div>
                   </div>
@@ -1686,6 +1699,15 @@ export default function AdminPage() {
                 <p className="text-gray-600">Track batch creation trends, verification rates, and system performance metrics.</p>
               </div>
             )}
+
+            {/* Treasury Management Tab */}
+            {activeTab === 'treasury' && <TreasuryDashboard />}
+
+            {/* CDP Integration Tab */}
+            {activeTab === 'cdp' && <CDPIntegrationDashboard />}
+
+            {/* Enhanced Role Management Tab */}
+            {activeTab === 'roles' && <EnhancedRoleManagement />}
 
             {activeTab === 'settings' && (
               <div className="space-y-8">

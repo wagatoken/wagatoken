@@ -11,6 +11,7 @@ import {
 import { ProofType, CIRCUIT_VERIFIERS } from './types';
 
 // Contract addresses from environment - Base Sepolia Deployment
+// Updated to match the actual deployed addresses from deployment summary
 const COFFEE_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS!;
 const COFFEE_VIEWS_ADDRESS = process.env.NEXT_PUBLIC_WAGA_COFFEE_VIEWS_ADDRESS!;
 const BATCH_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_WAGA_BATCH_MANAGER_ADDRESS!;
@@ -30,9 +31,13 @@ const PRICE_PRIVACY_VERIFIER_ADDRESS = process.env.NEXT_PUBLIC_PRICE_PRIVACY_VER
 const QUALITY_TIER_VERIFIER_ADDRESS = process.env.NEXT_PUBLIC_QUALITY_TIER_VERIFIER_ADDRESS!;
 const SUPPLY_CHAIN_VERIFIER_ADDRESS = process.env.NEXT_PUBLIC_SUPPLY_CHAIN_VERIFIER_ADDRESS!;
 
+// Ethiopian Compliance addresses
+const ETHIOPIAN_COMPLIANCE_CORE_ADDRESS = process.env.NEXT_PUBLIC_WAGA_ETHIOPIAN_COMPLIANCE_CORE_ADDRESS!;
+const BANKING_CORE_ADDRESS = process.env.NEXT_PUBLIC_WAGA_BANKING_CORE_ADDRESS!;
+
 // Chainlink Functions configuration - Base Sepolia
 const CHAINLINK_DON_ID = process.env.NEXT_PUBLIC_CHAINLINK_DON_ID!;
-const CHAINLINK_ROUTER_ADDRESS = process.env.NEXT_PUBLIC_CHAINLINK_ROUTER_ADDRESS!;
+const CHAINLINK_ROUTER_ADDRESS = process.env.NEXT_PUBLIC_CHAINLINK_ROUTER || process.env.NEXT_PUBLIC_CHAINLINK_ROUTER_ADDRESS!;
 const CHAINLINK_SUBSCRIPTION_ID = process.env.NEXT_PUBLIC_CHAINLINK_SUBSCRIPTION_ID!;
 const CHAINLINK_GAS_LIMIT = parseInt(process.env.NEXT_PUBLIC_CHAINLINK_GAS_LIMIT || '300000');
 
@@ -134,6 +139,254 @@ const REDEMPTION_CONTRACT_ABI = [
   "event RedemptionRequested(uint256 indexed redemptionId, address indexed consumer, uint256 batchId, uint256 quantity, string packagingInfo)",
   "event RedemptionFulfilled(uint256 indexed redemptionId, uint256 fulfillmentDate)",
   "event RedemptionStatusUpdated(uint256 indexed redemptionId, uint8 status)"
+];
+
+// Coffee Views ABI - for batch viewing and metadata functions
+const COFFEE_VIEWS_ABI = [
+  "function getBatchInfo(uint256 batchId) external view returns (uint256 productionDate, uint256 expiryDate, uint256 quantity, uint256 pricePerUnit, string memory packagingInfo, string memory metadataHash, uint256 lastVerifiedTimestamp)",
+  "function getBatchWithProductType(uint256 batchId) external view returns (uint256, uint256, uint256, uint256, string, string, address, uint256, uint8, string)",
+  "function getActiveBatchIds() external view returns (uint256[])",
+  "function getBatchProductType(uint256 batchId) external view returns (uint8)",
+  "function getBatchUnitWeight(uint256 batchId) external view returns (string)",
+  "function getBatchAdditionalInfo(uint256 batchId) external view returns (string memory origin, address creator, uint256 timestamp, bool isExpired, bool isMetadataVerified)",
+  "function isBatchMetadataVerified(uint256 batchId) external view returns (bool)",
+  "function isBatchVerified(uint256 batchId) external view returns (bool)"
+];
+
+// Batch Manager ABI - for batch management and metadata functions
+const BATCH_MANAGER_ABI = [
+  "function registerBatchCreation(uint256 batchId, string calldata origin, address creator) external",
+  "function resetBatchVerificationFlags(uint256 batchId) external",
+  "function markBatchExpired(uint256 batchId) external",
+  "function markBatchAsVerified(uint256 batchId) external",
+  "function updateBatchStatus(uint256 batchId, bool isActive) external",
+  "function updateInventory(uint256 batchId, uint256 verifiedQuantity) external",
+  "function verifyBatchMetadata(uint256 batchId, string calldata verifiedPackaging, string calldata verifiedMetadataHash) external",
+  "function getBatchAdditionalInfo(uint256 batchId) external view returns (string memory origin, address creator, uint256 timestamp, bool isExpired, bool isMetadataVerified)",
+  "function updateZKClaims(uint256 batchId, string calldata pricingClaim, string calldata qualityClaim, string calldata supplyChainClaim) external",
+  "function canViewPricingData(uint256 batchId, address caller) external view returns (bool)",
+  "function canViewSupplyChainData(uint256 batchId, address caller) external view returns (bool)"
+];
+
+// Inventory Manager ABI - for inventory tracking and auditing
+const INVENTORY_MANAGER_ABI = [
+  "function updateInventory(uint256 batchId, uint256 verifiedQuantity) external",
+  "function getAvailableQuantity(uint256 batchId) external view returns (uint256)",
+  "function getMintedQuantity(uint256 batchId) external view returns (uint256)",
+  "function getRemainingQuantity(uint256 batchId) external view returns (uint256)",
+  "function updateReservedQuantity(uint256 batchId, uint256 reservedAmount) external",
+  "function getReservedQuantity(uint256 batchId) external view returns (uint256)",
+  "function recordInventoryAudit(uint256 batchId, uint256 physicalQuantity, string calldata auditNotes) external",
+  "function getLastAuditInfo(uint256 batchId) external view returns (uint256 physicalQuantity, uint256 discrepancy, uint256 auditTimestamp, address auditor)"
+];
+
+// Treasury ABI - for payment and fund management
+const TREASURY_ABI = [
+  "function deposit() external payable",
+  "function withdraw(uint256 amount, address to) external",
+  "function getBalance() external view returns (uint256)",
+  "function processPayout(address recipient, uint256 amount, uint256 batchId) external",
+  "function emergencyWithdraw(address token, uint256 amount) external",
+  "function setPayoutPercentage(uint256 percentage) external",
+  "function getPayoutPercentage() external view returns (uint256)",
+  "function getTotalPayouts() external view returns (uint256)",
+  "function getBatchPayouts(uint256 batchId) external view returns (uint256)",
+  "event PayoutProcessed(address indexed recipient, uint256 amount, uint256 indexed batchId)",
+  "event EmergencyWithdrawal(address indexed token, uint256 amount, address indexed to)"
+];
+
+// CDP Integration ABI - for MakerDAO CDP management
+const CDP_INTEGRATION_ABI = [
+  "function openCDP(uint256 collateralAmount) external returns (uint256 cdpId)",
+  "function addCollateral(uint256 cdpId, uint256 amount) external",
+  "function drawDai(uint256 cdpId, uint256 amount) external",
+  "function repayDai(uint256 cdpId, uint256 amount) external",
+  "function freeCDP(uint256 cdpId) external",
+  "function getCDPInfo(uint256 cdpId) external view returns (uint256 collateral, uint256 debt, uint256 ratio)",
+  "function getLiquidationPrice(uint256 cdpId) external view returns (uint256)",
+  "function getAvailableToGenerate(uint256 cdpId) external view returns (uint256)",
+  "function getAvailableToFree(uint256 cdpId) external view returns (uint256)"
+];
+
+// Access Control ABI - for role and permission management
+const ACCESS_CONTROL_ABI = [
+  "function grantRole(bytes32 role, address account) external",
+  "function revokeRole(bytes32 role, address account) external",
+  "function hasRole(bytes32 role, address account) external view returns (bool)",
+  "function getRoleAdmin(bytes32 role) external view returns (bytes32)",
+  "function renounceRole(bytes32 role, address account) external",
+  "function getRoleMemberCount(bytes32 role) external view returns (uint256)",
+  "function getRoleMember(bytes32 role, uint256 index) external view returns (address)",
+  "function ADMIN_ROLE() external view returns (bytes32)",
+  "function MINTER_ROLE() external view returns (bytes32)",
+  "function VERIFIER_ROLE() external view returns (bytes32)",
+  "function PROCESSOR_ROLE() external view returns (bytes32)",
+  "function COOPERATIVE_ROLE() external view returns (bytes32)",
+  "function DISTRIBUTOR_ROLE() external view returns (bytes32)"
+];
+
+// Config Manager ABI - for system configuration and settings
+const CONFIG_MANAGER_ABI = [
+  // Role management functions
+  "function grantRole(bytes32 role, address account) external",
+  "function revokeRole(bytes32 role, address account) external",
+  "function hasRole(bytes32 role, address account) external view returns (bool)",
+  "function canCreateBatches(address account) external view returns (bool)",
+  "function getUserAccessLevel(address account) external view returns (string)",
+  
+  // Seller registration functions
+  "function registerSeller(uint64 sellerId, address sellerAddress, string calldata sellerName, string calldata contactInfo) external",
+  "function updateSellerContact(uint64 sellerId, string calldata newContactInfo) external",
+  "function deactivateSeller(uint64 sellerId) external",
+  "function getSellerProfile(uint64 sellerId) external view returns (address sellerAddress, string memory sellerName, string memory contactInfo, bool isActive, uint256 registrationTimestamp)",
+  "function getSellerAddress(uint64 sellerId) external view returns (address)",
+  "function getSellerId(address sellerAddress) external view returns (uint64)",
+  "function isRegisteredSeller(address account) external view returns (bool)",
+  
+  // System configuration functions
+  "function setInventoryManager(address newInventoryManager) external",
+  "function setRedemptionContract(address newRedemptionContract) external",
+  "function setProofOfReserveManager(address newProofOfReserveManager) external",
+  "function getInventoryManager() external view returns (address)",
+  "function getRedemptionContract() external view returns (address)",
+  "function getProofOfReserveManager() external view returns (address)",
+  
+  // Role constants
+  "function ADMIN_ROLE() external view returns (bytes32)",
+  "function INVENTORY_MANAGER_ROLE() external view returns (bytes32)",
+  "function REDEMPTION_ROLE() external view returns (bytes32)",
+  "function PROOF_OF_RESERVE_ROLE() external view returns (bytes32)",
+  "function MINTER_ROLE() external view returns (bytes32)",
+  "function VERIFIER_ROLE() external view returns (bytes32)",
+  "function FULFILLER_ROLE() external view returns (bytes32)",
+  "function PROCESSOR_ROLE() external view returns (bytes32)",
+  "function DISTRIBUTOR_ROLE() external view returns (bytes32)",
+  "function BATCH_CREATOR_ROLE() external view returns (bytes32)",
+  "function COOPERATIVE_ROLE() external view returns (bytes32)",
+  "function ROASTER_ROLE() external view returns (bytes32)",
+  "function ZK_ADMIN_ROLE() external view returns (bytes32)",
+  "function PRIVACY_ADMIN_ROLE() external view returns (bytes32)",
+  "function COMPLIANCE_MANAGER_ROLE() external view returns (bytes32)",
+  "function ORIGIN_VERIFIER_ROLE() external view returns (bytes32)",
+  "function QUALITY_INSPECTOR_ROLE() external view returns (bytes32)",
+  "function BANKING_PARTNER_ROLE() external view returns (bytes32)",
+  
+  // Events
+  "event SellerRegistered(uint64 indexed sellerId, address indexed sellerAddress, string sellerName)",
+  "event SellerContactUpdated(uint64 indexed sellerId, string newContactInfo)",
+  "event SellerDeactivated(uint64 indexed sellerId)",
+  "event InventoryManagerSet(address indexed oldManager, address indexed newManager)",
+  "event RedemptionContractSet(address indexed oldContract, address indexed newContract)",
+  "event ProofOfReserveManagerSet(address indexed oldManager, address indexed newManager)"
+];
+
+// Ethiopian Compliance Core ABI - for Ethiopian export compliance
+const ETHIOPIAN_COMPLIANCE_ABI = [
+  // ECTA Permit functions
+  "function addECTAPermit(uint256 batchId, tuple(string permitNumber, string exporterName, string exporterLicense, uint256 issueDate, uint256 expiryDate, bool isValid, string permitDocumentHash) permit) external",
+  "function getECTAPermit(uint256 batchId) external view returns (tuple(string permitNumber, string exporterName, string exporterLicense, uint256 issueDate, uint256 expiryDate, bool isValid, string permitDocumentHash))",
+  
+  // Quality Certificate functions
+  "function addQualityCertificate(uint256 batchId, tuple(string certificateNumber, string gradingResult, uint256 moistureContent, uint256 screenSize, bool scaeCompliant, uint256 issueDate, string certificateHash, string inspectorId) certificate) external",
+  "function getQualityCertificate(uint256 batchId) external view returns (tuple(string certificateNumber, string gradingResult, uint256 moistureContent, uint256 screenSize, bool scaeCompliant, uint256 issueDate, string certificateHash, string inspectorId))",
+  
+  // Origin Verification functions
+  "function addOriginVerification(uint256 batchId, tuple(string region, string woreda, string kebele, string cooperativeName, string cooperativeLicense, bool verified, uint256 verificationDate, string verificationDocumentHash) origin) external",
+  "function getOriginVerification(uint256 batchId) external view returns (tuple(string region, string woreda, string kebele, string cooperativeName, string cooperativeLicense, bool verified, uint256 verificationDate, string verificationDocumentHash))",
+  
+  // EUDR Compliance functions
+  "function addEUDRCertificate(uint256 batchId, tuple(string certificateId, string issuer, uint256 issueDate, uint256 expiryDate, bool isValid, string geoDataHash, string complianceLevel, string deforestationRisk) certificate) external",
+  "function addGeolocationData(uint256 batchId, tuple(string plotType, string coordinates, uint256 plotSize, string verificationMethod) geoData) external",
+  "function validateEUDRCompliance(uint256 batchId) external view returns (bool isCompliant)",
+  
+  // Banking and BoE functions
+  "function addBankingPartner(address bankAddress, string memory bankName) external",
+  "function removeBankingPartner(address bankAddress) external",
+  "function isAuthorizedBank(address bankAddress) external view returns (bool isAuthorized)",
+  "function registerTradeWithBoE(uint256 batchId, address buyer, address seller, uint256 quantity, uint256 valueUSD, string memory buyerBankDetails) external",
+  "function confirmFiatTransfer(uint256 batchId, address buyer, string memory bankTransactionId) external",
+  
+  // SWIFT Banking functions
+  "function registerBankingPartner(bytes11 swiftCode, address bankAddress, string memory bankName, tuple(bytes11 swiftCode, string bankName, bool canActAsOfframp, bool canHandleForexSurrender, uint8 partnerType, bytes11 connectedBankSwift, uint256 maxTransactionAmount, bool isActive) capabilities) external",
+  "function getBankingCapabilities(bytes11 swiftCode) external view returns (tuple(bytes11 swiftCode, string bankName, bool canActAsOfframp, bool canHandleForexSurrender, uint8 partnerType, bytes11 connectedBankSwift, uint256 maxTransactionAmount, bool isActive))",
+  "function getBankingPartner(address partner) external view returns (bytes11 swiftCode, string memory bankName, bool canOfframp)",
+  "function assignOfframpPartner(uint256 batchId) external returns (bytes11 offrampSwift, uint8 partnerType)",
+  
+  // Multi-stage transfer functions
+  "function confirmFiatTransferStage(uint256 batchId, address buyer, uint8 stage, string memory transactionId) external",
+  "function confirmSellerPayment(uint256 batchId, address buyer, uint256 usdAmountReceived, string memory sellerTransactionId) external",
+  "function recordOfframpTransferInitiated(uint256 batchId, address buyer, bytes11 offrampSwift, uint256 usdAmount) external",
+  
+  // Compliance status functions
+  "function validateUpstreamCompliance(uint256 batchId) external view returns (bool isCompliant)",
+  "function getComplianceStatus(uint256 batchId) external view returns (bool hasECTA, bool hasQuality, bool hasOrigin, bool isFullyCompliant)",
+  
+  // Utility functions
+  "function convertUSDToETB(uint256 usdAmount) external view returns (uint256 etbAmount)",
+  "function resolveBankAddress(bytes11 swiftCode) external view returns (address bankAddress)",
+  "function resolveSwiftCode(address bankAddress) external view returns (bytes11 swiftCode)",
+  
+  // Events
+  "event ECTAPermitAdded(uint256 indexed batchId, string permitNumber)",
+  "event QualityCertificateAdded(uint256 indexed batchId, string certificateNumber)",
+  "event OriginVerified(uint256 indexed batchId, string region, string cooperativeName)",
+  "event TradeRegisteredWithBoE(uint256 indexed batchId, address indexed buyer, uint256 tradeId)",
+  "event FiatTransferCompleted(uint256 indexed batchId, address indexed buyer, string bankTransactionId)",
+  "event BankingPartnerAdded(address indexed bankAddress, string bankName)",
+  "event EUDRCertificateAdded(uint256 indexed batchId, string certificateId, string issuer)",
+  "event BankingPartnerRegistered(bytes11 indexed swiftCode, address indexed bankAddress, string bankName)"
+];
+
+// Banking Core ABI - for core banking infrastructure
+const BANKING_CORE_ABI = [
+  // SWIFT Banking functions
+  "function registerBankingPartner(bytes11 swiftCode, address bankAddress, string memory bankName, tuple(bytes11 swiftCode, string bankName, bool canActAsOfframp, bool canHandleForexSurrender, uint8 partnerType, bytes11 connectedBankSwift, uint256 maxTransactionAmount, bool isActive) capabilities) external",
+  "function getBankingCapabilities(bytes11 swiftCode) external view returns (tuple(bytes11 swiftCode, string bankName, bool canActAsOfframp, bool canHandleForexSurrender, uint8 partnerType, bytes11 connectedBankSwift, uint256 maxTransactionAmount, bool isActive))",
+  "function getBankingPartner(address partner) external view returns (bytes11 swiftCode, string memory bankName, bool canOfframp)",
+  "function assignOfframpPartner(uint256 batchId) external returns (bytes11 offrampSwift, uint8 partnerType)",
+  
+  // Banking integration functions
+  "function addBankingPartner(address bankAddress, string memory bankName) external",
+  "function removeBankingPartner(address bankAddress) external",
+  "function isAuthorizedBank(address bankAddress) external view returns (bool isAuthorized)",
+  
+  // Exchange rate functions
+  "function convertUSDToETB(uint256 usdAmount) external view returns (uint256 etbAmount)",
+  "function updateUSDToETBRate(uint256 newRate) external",
+  "function getUSDToETBRate() external view returns (uint256 rate)",
+  
+  // Utility functions
+  "function getRegisteredBankingPartnersCount() external view returns (uint256 count)",
+  "function resolveBankAddress(bytes11 swiftCode) external view returns (address bankAddress)",
+  "function resolveSwiftCode(address bankAddress) external view returns (bytes11 swiftCode)",
+  
+  // SWIFT validation functions
+  "function addSupportedCountryCode(bytes2 countryCode) external",
+  "function removeSupportedCountryCode(bytes2 countryCode) external",
+  "function addRecognizedBankCode(bytes4 bankCode) external",
+  "function removeRecognizedBankCode(bytes4 bankCode) external",
+  "function validateAndCacheSWIFTCode(bytes11 swiftCode) external",
+  "function isCountryCodeSupported(bytes2 countryCode) external view returns (bool isSupported)",
+  "function isBankCodeRecognized(bytes4 bankCode) external view returns (bool isRecognized)",
+  "function isSWIFTCodeValidated(bytes11 swiftCode) external view returns (bool isValidated)",
+  "function extractCountryCode(bytes11 swiftCode) external pure returns (bytes2 countryCode)",
+  "function extractBankCode(bytes11 swiftCode) external pure returns (bytes4 bankCode)"
+];
+
+// Additional Verifier ABIs for ZK circuits
+const PRICE_PRIVACY_VERIFIER_ABI = [
+  "function verifyProof(uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[3] memory input) external view returns (bool)",
+  "function verifyProofWithOutputs(uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[] memory input) external view returns (bool)"
+];
+
+const QUALITY_TIER_VERIFIER_ABI = [
+  "function verifyProof(uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[3] memory input) external view returns (bool)",
+  "function verifyQualityTierProof(uint256[8] memory proof, uint256[3] memory publicSignals) external view returns (bool)"
+];
+
+const SUPPLY_CHAIN_VERIFIER_ABI = [
+  "function verifyProof(uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[3] memory input) external view returns (bool)",
+  "function verifySupplyChainProof(uint256[8] memory proof, uint256[4] memory publicSignals) external view returns (bool)"
 ];
 
 // Batch information interface
@@ -1676,49 +1929,52 @@ async function configurePrivacyAndZKProofs(batchId: string, zkConfig: {
 export async function grantUserRole(userAddress: string, roleName: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
   try {
     const signer = await getSigner();
-    const accessControlContract = new ethers.Contract(ACCESS_CONTROL_ADDRESS, COFFEE_TOKEN_ABI, signer);
+    
+    // Use the main coffee token contract which implements access control
+    // Based on the deployment summary, the WAGACoffeeTokenCore implements the central authority pattern
+    const coffeeTokenContract = new ethers.Contract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, signer);
     
     // Get the role hash
     let roleHash: string;
     switch (roleName.toUpperCase()) {
       case 'ADMIN':
-        roleHash = await accessControlContract.ADMIN_ROLE();
+        roleHash = await coffeeTokenContract.ADMIN_ROLE();
         break;
       case 'PROCESSOR':
-        roleHash = await accessControlContract.PROCESSOR_ROLE();
+        roleHash = await coffeeTokenContract.PROCESSOR_ROLE();
         break;
       case 'COOPERATIVE':
-        roleHash = await accessControlContract.COOPERATIVE_ROLE();
+        roleHash = await coffeeTokenContract.COOPERATIVE_ROLE();
         break;
       case 'DISTRIBUTOR':
-        roleHash = await accessControlContract.DISTRIBUTOR_ROLE();
+        roleHash = await coffeeTokenContract.DISTRIBUTOR_ROLE();
         break;
       case 'VERIFIER':
-        roleHash = await accessControlContract.VERIFIER_ROLE();
+        roleHash = await coffeeTokenContract.VERIFIER_ROLE();
         break;
       case 'MINTER':
-        roleHash = await accessControlContract.MINTER_ROLE();
+        roleHash = await coffeeTokenContract.MINTER_ROLE();
         break;
       case 'REDEMPTION':
-        roleHash = await accessControlContract.REDEMPTION_ROLE();
+        roleHash = await coffeeTokenContract.REDEMPTION_ROLE();
         break;
       case 'FULFILLER':
-        roleHash = await accessControlContract.FULFILLER_ROLE();
+        roleHash = await coffeeTokenContract.FULFILLER_ROLE();
         break;
       default:
         throw new Error(`Unknown role: ${roleName}`);
     }
 
     // Check if current user has admin role
-    const adminRole = await accessControlContract.ADMIN_ROLE();
-    const hasAdminRole = await accessControlContract.hasRole(adminRole, await signer.getAddress());
+    const adminRole = await coffeeTokenContract.ADMIN_ROLE();
+    const hasAdminRole = await coffeeTokenContract.hasRole(adminRole, await signer.getAddress());
     
     if (!hasAdminRole) {
       throw new Error('Only admins can grant roles');
     }
 
     // Grant the role
-    const tx = await accessControlContract.grantRole(roleHash, userAddress);
+    const tx = await coffeeTokenContract.grantRole(roleHash, userAddress);
     await tx.wait();
 
     return {
@@ -1738,49 +1994,51 @@ export async function grantUserRole(userAddress: string, roleName: string): Prom
 export async function revokeUserRole(userAddress: string, roleName: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
   try {
     const signer = await getSigner();
-    const accessControlContract = new ethers.Contract(ACCESS_CONTROL_ADDRESS, COFFEE_TOKEN_ABI, signer);
+    
+    // Use the main coffee token contract which implements access control
+    const coffeeTokenContract = new ethers.Contract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, signer);
     
     // Get the role hash
     let roleHash: string;
     switch (roleName.toUpperCase()) {
       case 'ADMIN':
-        roleHash = await accessControlContract.ADMIN_ROLE();
+        roleHash = await coffeeTokenContract.ADMIN_ROLE();
         break;
       case 'PROCESSOR':
-        roleHash = await accessControlContract.PROCESSOR_ROLE();
+        roleHash = await coffeeTokenContract.PROCESSOR_ROLE();
         break;
       case 'COOPERATIVE':
-        roleHash = await accessControlContract.COOPERATIVE_ROLE();
+        roleHash = await coffeeTokenContract.COOPERATIVE_ROLE();
         break;
       case 'DISTRIBUTOR':
-        roleHash = await accessControlContract.DISTRIBUTOR_ROLE();
+        roleHash = await coffeeTokenContract.DISTRIBUTOR_ROLE();
         break;
       case 'VERIFIER':
-        roleHash = await accessControlContract.VERIFIER_ROLE();
+        roleHash = await coffeeTokenContract.VERIFIER_ROLE();
         break;
       case 'MINTER':
-        roleHash = await accessControlContract.MINTER_ROLE();
+        roleHash = await coffeeTokenContract.MINTER_ROLE();
         break;
       case 'REDEMPTION':
-        roleHash = await accessControlContract.REDEMPTION_ROLE();
+        roleHash = await coffeeTokenContract.REDEMPTION_ROLE();
         break;
       case 'FULFILLER':
-        roleHash = await accessControlContract.FULFILLER_ROLE();
+        roleHash = await coffeeTokenContract.FULFILLER_ROLE();
         break;
       default:
         throw new Error(`Unknown role: ${roleName}`);
     }
 
     // Check if current user has admin role
-    const adminRole = await accessControlContract.ADMIN_ROLE();
-    const hasAdminRole = await accessControlContract.hasRole(adminRole, await signer.getAddress());
+    const adminRole = await coffeeTokenContract.ADMIN_ROLE();
+    const hasAdminRole = await coffeeTokenContract.hasRole(adminRole, await signer.getAddress());
     
     if (!hasAdminRole) {
       throw new Error('Only admins can revoke roles');
     }
 
     // Revoke the role
-    const tx = await accessControlContract.revokeRole(roleHash, userAddress);
+    const tx = await coffeeTokenContract.revokeRole(roleHash, userAddress);
     await tx.wait();
 
     return {
@@ -1800,40 +2058,40 @@ export async function revokeUserRole(userAddress: string, roleName: string): Pro
 export async function checkUserRole(userAddress: string, roleName: string): Promise<boolean> {
   try {
     const provider = new ethers.BrowserProvider(window.ethereum);
-    const accessControlContract = new ethers.Contract(ACCESS_CONTROL_ADDRESS, COFFEE_TOKEN_ABI, provider);
+    const coffeeTokenContract = new ethers.Contract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, provider);
     
     // Get the role hash
     let roleHash: string;
     switch (roleName.toUpperCase()) {
       case 'ADMIN':
-        roleHash = await accessControlContract.ADMIN_ROLE();
+        roleHash = await coffeeTokenContract.ADMIN_ROLE();
         break;
       case 'PROCESSOR':
-        roleHash = await accessControlContract.PROCESSOR_ROLE();
+        roleHash = await coffeeTokenContract.PROCESSOR_ROLE();
         break;
       case 'COOPERATIVE':
-        roleHash = await accessControlContract.COOPERATIVE_ROLE();
+        roleHash = await coffeeTokenContract.COOPERATIVE_ROLE();
         break;
       case 'DISTRIBUTOR':
-        roleHash = await accessControlContract.DISTRIBUTOR_ROLE();
+        roleHash = await coffeeTokenContract.DISTRIBUTOR_ROLE();
         break;
       case 'VERIFIER':
-        roleHash = await accessControlContract.VERIFIER_ROLE();
+        roleHash = await coffeeTokenContract.VERIFIER_ROLE();
         break;
       case 'MINTER':
-        roleHash = await accessControlContract.MINTER_ROLE();
+        roleHash = await coffeeTokenContract.MINTER_ROLE();
         break;
       case 'REDEMPTION':
-        roleHash = await accessControlContract.REDEMPTION_ROLE();
+        roleHash = await coffeeTokenContract.REDEMPTION_ROLE();
         break;
       case 'FULFILLER':
-        roleHash = await accessControlContract.FULFILLER_ROLE();
+        roleHash = await coffeeTokenContract.FULFILLER_ROLE();
         break;
       default:
         return false;
     }
 
-    return await accessControlContract.hasRole(roleHash, userAddress);
+    return await coffeeTokenContract.hasRole(roleHash, userAddress);
 
   } catch (error) {
     console.error('Error checking user role:', error);
@@ -1844,9 +2102,9 @@ export async function checkUserRole(userAddress: string, roleName: string): Prom
 export async function getUserAccessLevel(userAddress: string): Promise<string> {
   try {
     const provider = new ethers.BrowserProvider(window.ethereum);
-    const accessControlContract = new ethers.Contract(ACCESS_CONTROL_ADDRESS, COFFEE_TOKEN_ABI, provider);
+    const coffeeTokenContract = new ethers.Contract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, provider);
     
-    return await accessControlContract.getUserAccessLevel(userAddress);
+    return await coffeeTokenContract.getUserAccessLevel(userAddress);
 
   } catch (error) {
     console.error('Error getting user access level:', error);
@@ -1872,4 +2130,442 @@ export async function getAllUserRoles(userAddress: string): Promise<string[]> {
     console.error('Error getting all user roles:', error);
     return [];
   }
+}
+
+// ===========================
+// NEW CONTRACT HELPER FUNCTIONS
+// ===========================
+
+// ===========================
+// CONFIG MANAGER FUNCTIONS
+// ===========================
+
+/**
+ * Register a new seller in the system
+ */
+export async function registerSeller(
+  sellerId: string,
+  sellerAddress: string,
+  sellerName: string,
+  contactInfo: string
+): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
+  try {
+    console.log(`📝 Registering seller ${sellerName} with ID ${sellerId}...`);
+    
+    const signer = await getSigner();
+    const configManagerContract = getContract(CONFIG_MANAGER_ADDRESS, CONFIG_MANAGER_ABI, signer);
+    
+    const tx = await configManagerContract.registerSeller(
+      sellerId,
+      sellerAddress,
+      sellerName,
+      contactInfo
+    );
+    
+    console.log(`✅ Seller registration submitted: ${tx.hash}`);
+    await tx.wait();
+    
+    return {
+      success: true,
+      transactionHash: tx.hash
+    };
+    
+  } catch (error) {
+    console.error('Error registering seller:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Get seller profile information
+ */
+export async function getSellerProfile(sellerId: string): Promise<{
+  sellerAddress: string;
+  sellerName: string;
+  contactInfo: string;
+  isActive: boolean;
+  registrationTimestamp: number;
+} | null> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const configManagerContract = new ethers.Contract(CONFIG_MANAGER_ADDRESS, CONFIG_MANAGER_ABI, provider);
+    
+    const profile = await configManagerContract.getSellerProfile(sellerId);
+    
+    return {
+      sellerAddress: profile[0],
+      sellerName: profile[1],
+      contactInfo: profile[2],
+      isActive: profile[3],
+      registrationTimestamp: Number(profile[4])
+    };
+    
+  } catch (error) {
+    console.error('Error getting seller profile:', error);
+    return null;
+  }
+}
+
+/**
+ * Check if an address is a registered seller
+ */
+export async function isRegisteredSeller(address: string): Promise<boolean> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const configManagerContract = new ethers.Contract(CONFIG_MANAGER_ADDRESS, CONFIG_MANAGER_ABI, provider);
+    
+    return await configManagerContract.isRegisteredSeller(address);
+    
+  } catch (error) {
+    console.error('Error checking seller registration:', error);
+    return false;
+  }
+}
+
+// ===========================
+// ETHIOPIAN COMPLIANCE FUNCTIONS
+// ===========================
+
+/**
+ * Add ECTA permit for a batch
+ */
+export async function addECTAPermit(
+  batchId: string,
+  permit: {
+    permitNumber: string;
+    exporterName: string;
+    exporterLicense: string;
+    issueDate: number;
+    expiryDate: number;
+    isValid: boolean;
+    permitDocumentHash: string;
+  }
+): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
+  try {
+    console.log(`📜 Adding ECTA permit for batch ${batchId}...`);
+    
+    const signer = await getSigner();
+    const complianceContract = getContract(ETHIOPIAN_COMPLIANCE_CORE_ADDRESS, ETHIOPIAN_COMPLIANCE_ABI, signer);
+    
+    const tx = await complianceContract.addECTAPermit(batchId, permit);
+    
+    console.log(`✅ ECTA permit added: ${tx.hash}`);
+    await tx.wait();
+    
+    return {
+      success: true,
+      transactionHash: tx.hash
+    };
+    
+  } catch (error) {
+    console.error('Error adding ECTA permit:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Get compliance status for a batch
+ */
+export async function getComplianceStatus(batchId: string): Promise<{
+  hasECTA: boolean;
+  hasQuality: boolean;
+  hasOrigin: boolean;
+  isFullyCompliant: boolean;
+} | null> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const complianceContract = new ethers.Contract(ETHIOPIAN_COMPLIANCE_CORE_ADDRESS, ETHIOPIAN_COMPLIANCE_ABI, provider);
+    
+    const status = await complianceContract.getComplianceStatus(batchId);
+    
+    return {
+      hasECTA: status[0],
+      hasQuality: status[1],
+      hasOrigin: status[2],
+      isFullyCompliant: status[3]
+    };
+    
+  } catch (error) {
+    console.error('Error getting compliance status:', error);
+    return null;
+  }
+}
+
+/**
+ * Add quality certificate for a batch
+ */
+export async function addQualityCertificate(
+  batchId: string,
+  certificate: {
+    certificateNumber: string;
+    gradingResult: string;
+    moistureContent: number;
+    screenSize: number;
+    scaeCompliant: boolean;
+    issueDate: number;
+    certificateHash: string;
+    inspectorId: string;
+  }
+): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
+  try {
+    console.log(`🏆 Adding quality certificate for batch ${batchId}...`);
+    
+    const signer = await getSigner();
+    const complianceContract = getContract(ETHIOPIAN_COMPLIANCE_CORE_ADDRESS, ETHIOPIAN_COMPLIANCE_ABI, signer);
+    
+    const tx = await complianceContract.addQualityCertificate(batchId, certificate);
+    
+    console.log(`✅ Quality certificate added: ${tx.hash}`);
+    await tx.wait();
+    
+    return {
+      success: true,
+      transactionHash: tx.hash
+    };
+    
+  } catch (error) {
+    console.error('Error adding quality certificate:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Add origin verification for a batch
+ */
+export async function addOriginVerification(
+  batchId: string,
+  origin: {
+    region: string;
+    woreda: string;
+    kebele: string;
+    cooperativeName: string;
+    cooperativeLicense: string;
+    verified: boolean;
+    verificationDate: number;
+    verificationDocumentHash: string;
+  }
+): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
+  try {
+    console.log(`🌍 Adding origin verification for batch ${batchId}...`);
+    
+    const signer = await getSigner();
+    const complianceContract = getContract(ETHIOPIAN_COMPLIANCE_CORE_ADDRESS, ETHIOPIAN_COMPLIANCE_ABI, signer);
+    
+    const tx = await complianceContract.addOriginVerification(batchId, origin);
+    
+    console.log(`✅ Origin verification added: ${tx.hash}`);
+    await tx.wait();
+    
+    return {
+      success: true,
+      transactionHash: tx.hash
+    };
+    
+  } catch (error) {
+    console.error('Error adding origin verification:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+// ===========================
+// BANKING CORE FUNCTIONS
+// ===========================
+
+/**
+ * Get current USD to ETB exchange rate
+ */
+export async function getUSDToETBRate(): Promise<number | null> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const bankingContract = new ethers.Contract(BANKING_CORE_ADDRESS, BANKING_CORE_ABI, provider);
+    
+    const rate = await bankingContract.getUSDToETBRate();
+    return Number(rate) / 1e6; // Assuming 6 decimal precision
+    
+  } catch (error) {
+    console.error('Error getting USD to ETB rate:', error);
+    return null;
+  }
+}
+
+/**
+ * Convert USD amount to ETB
+ */
+export async function convertUSDToETB(usdAmount: number): Promise<number | null> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const bankingContract = new ethers.Contract(BANKING_CORE_ADDRESS, BANKING_CORE_ABI, provider);
+    
+    const etbAmount = await bankingContract.convertUSDToETB(
+      Math.floor(usdAmount * 1e6) // Convert to wei equivalent
+    );
+    
+    return Number(etbAmount) / 1e6; // Convert back to decimal
+    
+  } catch (error) {
+    console.error('Error converting USD to ETB:', error);
+    return null;
+  }
+}
+
+/**
+ * Register a banking partner
+ */
+export async function registerBankingPartner(
+  bankAddress: string,
+  bankName: string
+): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
+  try {
+    console.log(`🏦 Registering banking partner ${bankName}...`);
+    
+    const signer = await getSigner();
+    const bankingContract = getContract(BANKING_CORE_ADDRESS, BANKING_CORE_ABI, signer);
+    
+    const tx = await bankingContract.addBankingPartner(bankAddress, bankName);
+    
+    console.log(`✅ Banking partner registered: ${tx.hash}`);
+    await tx.wait();
+    
+    return {
+      success: true,
+      transactionHash: tx.hash
+    };
+    
+  } catch (error) {
+    console.error('Error registering banking partner:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Check if an address is an authorized bank
+ */
+export async function isAuthorizedBank(bankAddress: string): Promise<boolean> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const bankingContract = new ethers.Contract(BANKING_CORE_ADDRESS, BANKING_CORE_ABI, provider);
+    
+    return await bankingContract.isAuthorizedBank(bankAddress);
+    
+  } catch (error) {
+    console.error('Error checking bank authorization:', error);
+    return false;
+  }
+}
+
+// ===========================
+// ENHANCED CONTRACT GETTER FUNCTIONS
+// ===========================
+
+/**
+ * Get comprehensive batch information from multiple contracts
+ */
+export async function getEnhancedBatchInfo(batchId: string): Promise<{
+  coreInfo: any;
+  additionalInfo: any;
+  complianceStatus: any;
+  privacyConfig: any;
+} | null> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    
+    // Get core batch info
+    const coffeeTokenContract = new ethers.Contract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, provider);
+    const coreInfo = await coffeeTokenContract.getBatchInfo(batchId);
+    
+    // Get additional info from views contract
+    const viewsContract = new ethers.Contract(COFFEE_VIEWS_ADDRESS, COFFEE_VIEWS_ABI, provider);
+    const additionalInfo = await viewsContract.getBatchAdditionalInfo(batchId);
+    
+    // Get compliance status
+    const complianceContract = new ethers.Contract(ETHIOPIAN_COMPLIANCE_CORE_ADDRESS, ETHIOPIAN_COMPLIANCE_ABI, provider);
+    const complianceStatus = await complianceContract.getComplianceStatus(batchId);
+    
+    // Get privacy configuration
+    const privacyContract = new ethers.Contract(PRIVACY_LAYER_ADDRESS, PRIVACY_LAYER_ABI, provider);
+    const privacyConfig = await privacyContract.batchPrivacyConfig(batchId);
+    
+    return {
+      coreInfo,
+      additionalInfo,
+      complianceStatus: {
+        hasECTA: complianceStatus[0],
+        hasQuality: complianceStatus[1],
+        hasOrigin: complianceStatus[2],
+        isFullyCompliant: complianceStatus[3]
+      },
+      privacyConfig
+    };
+    
+  } catch (error) {
+    console.error('Error getting enhanced batch info:', error);
+    return null;
+  }
+}
+
+/**
+ * Get contract addresses mapping
+ */
+export function getContractAddresses(): Record<string, string> {
+  return {
+    COFFEE_TOKEN: COFFEE_TOKEN_ADDRESS,
+    COFFEE_VIEWS: COFFEE_VIEWS_ADDRESS,
+    BATCH_MANAGER: BATCH_MANAGER_ADDRESS,
+    PROOF_OF_RESERVE: PROOF_OF_RESERVE_ADDRESS,
+    INVENTORY_MANAGER: INVENTORY_MANAGER_ADDRESS,
+    REDEMPTION_CONTRACT: REDEMPTION_CONTRACT_ADDRESS,
+    TREASURY: TREASURY_ADDRESS,
+    CDP_INTEGRATION: CDP_INTEGRATION_ADDRESS,
+    ACCESS_CONTROL: ACCESS_CONTROL_ADDRESS,
+    CONFIG_MANAGER: CONFIG_MANAGER_ADDRESS,
+    ZK_MANAGER: ZK_MANAGER_ADDRESS,
+    PRIVACY_LAYER: PRIVACY_LAYER_ADDRESS,
+    CIRCOM_VERIFIER: CIRCOM_VERIFIER_ADDRESS,
+    PRICE_PRIVACY_VERIFIER: PRICE_PRIVACY_VERIFIER_ADDRESS,
+    QUALITY_TIER_VERIFIER: QUALITY_TIER_VERIFIER_ADDRESS,
+    SUPPLY_CHAIN_VERIFIER: SUPPLY_CHAIN_VERIFIER_ADDRESS,
+    ETHIOPIAN_COMPLIANCE_CORE: ETHIOPIAN_COMPLIANCE_CORE_ADDRESS,
+    BANKING_CORE: BANKING_CORE_ADDRESS
+  };
+}
+
+/**
+ * Get all contract ABIs mapping
+ */
+export function getContractABIs(): Record<string, string[]> {
+  return {
+    COFFEE_TOKEN: COFFEE_TOKEN_ABI,
+    COFFEE_VIEWS: COFFEE_VIEWS_ABI,
+    BATCH_MANAGER: BATCH_MANAGER_ABI,
+    PROOF_OF_RESERVE: PROOF_OF_RESERVE_ABI,
+    INVENTORY_MANAGER: INVENTORY_MANAGER_ABI,
+    REDEMPTION_CONTRACT: REDEMPTION_CONTRACT_ABI,
+    TREASURY: TREASURY_ABI,
+    CDP_INTEGRATION: CDP_INTEGRATION_ABI,
+    ACCESS_CONTROL: ACCESS_CONTROL_ABI,
+    CONFIG_MANAGER: CONFIG_MANAGER_ABI,
+    ZK_MANAGER: ZK_MANAGER_ABI,
+    PRIVACY_LAYER: PRIVACY_LAYER_ABI,
+    CIRCOM_VERIFIER: CIRCOM_VERIFIER_ABI,
+    PRICE_PRIVACY_VERIFIER: PRICE_PRIVACY_VERIFIER_ABI,
+    QUALITY_TIER_VERIFIER: QUALITY_TIER_VERIFIER_ABI,
+    SUPPLY_CHAIN_VERIFIER: SUPPLY_CHAIN_VERIFIER_ABI,
+    ETHIOPIAN_COMPLIANCE: ETHIOPIAN_COMPLIANCE_ABI,
+    BANKING_CORE: BANKING_CORE_ABI
+  };
 }

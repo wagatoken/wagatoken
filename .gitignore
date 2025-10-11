@@ -12,6 +12,7 @@ out/
 # Environment variables
 .env
 frontend/.env.local
+frontend/.env.netlify
 .env.development.local
 .env.test.local
 .env.production.local

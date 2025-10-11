@@ -231,8 +231,25 @@ export async function checkSystemStatus(): Promise<SystemStatus> {
     if (typeof window !== 'undefined' && window.ethereum) {
       try {
         const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-        // Check if we're on Base Sepolia (0x14a34)
+        // Check if we're on Base Sepolia (0x14a34 = 84532)
         status.blockchain = chainId === '0x14a34' || chainId === '0x14a33'; // Base Sepolia or Base Mainnet
+        
+        // If on correct network, verify contract deployment by checking a core contract
+        if (status.blockchain) {
+          try {
+            const provider = new (await import('ethers')).BrowserProvider(window.ethereum);
+            const coreTokenAddress = process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS;
+            
+            if (coreTokenAddress) {
+              const code = await provider.getCode(coreTokenAddress);
+              // Verify the contract is actually deployed (code length > 2 means contract exists)
+              status.blockchain = code.length > 2;
+            }
+          } catch (contractError) {
+            console.log('Contract verification failed:', contractError);
+            status.blockchain = false;
+          }
+        }
       } catch (e) {
         console.log('Blockchain not available or wrong network:', e);
       }
@@ -250,33 +267,89 @@ export async function checkSystemStatus(): Promise<SystemStatus> {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${pinataJWT}`
-          }
+          },
+          signal: AbortSignal.timeout(5000) // 5 second timeout
         });
-        status.ipfs = response.ok;
+        status.ipfs = response.ok && response.status === 200;
       } else {
         console.log('Pinata JWT not configured');
         status.ipfs = false;
       }
     } catch (e) {
       console.log('IPFS not available:', e);
+      status.ipfs = false;
     }
 
-        // Check database connection with proper validation
+    // Check database connection with proper validation
     try {
-      const response = await fetch('/api/test-db');
-      const data = await response.json();
-      // Consider healthy if connected to real database (even if not all tables exist yet)
-      status.database = data.success && data.connected && !data.usingMockData && data.coreTablesReady;
+      const response = await fetch('/api/test-db', {
+        signal: AbortSignal.timeout(8000) // 8 second timeout for database
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Consider healthy if connected to real database (even if not all tables exist yet)
+        status.database = data.success && data.connected && !data.usingMockData && data.coreTablesReady;
+      } else {
+        status.database = false;
+      }
     } catch (e) {
       console.log('Database not available:', e);
+      status.database = false;
     }
 
-    // Chainlink is dependent on blockchain being on correct network
-    status.chainlink = status.blockchain;
+    // Chainlink is dependent on blockchain being on correct network and having valid configuration
+    try {
+      const chainlinkDonId = process.env.NEXT_PUBLIC_CHAINLINK_DON_ID;
+      const chainlinkSubscriptionId = process.env.NEXT_PUBLIC_CHAINLINK_SUBSCRIPTION_ID;
+      
+      // Chainlink is considered available if blockchain is connected and configuration exists
+      status.chainlink = status.blockchain && !!chainlinkDonId && !!chainlinkSubscriptionId;
+      
+      // Additional validation: check if we can access the Chainlink router contract
+      if (status.chainlink && typeof window !== 'undefined' && window.ethereum) {
+        try {
+          const provider = new (await import('ethers')).BrowserProvider(window.ethereum);
+          const routerAddress = process.env.NEXT_PUBLIC_CHAINLINK_ROUTER;
+          
+          if (routerAddress) {
+            const code = await provider.getCode(routerAddress);
+            status.chainlink = status.chainlink && code.length > 2;
+          }
+        } catch (chainlinkError) {
+          console.log('Chainlink router validation failed:', chainlinkError);
+          status.chainlink = false;
+        }
+      }
+    } catch (e) {
+      console.log('Chainlink validation error:', e);
+      status.chainlink = false;
+    }
+
+    // Determine overall system health
+    const healthyComponents = [status.blockchain, status.ipfs, status.database, status.chainlink];
+    const healthyCount = healthyComponents.filter(Boolean).length;
+    
+    if (healthyCount === 4) {
+      status.overall = 'healthy';
+    } else if (healthyCount >= 2) {
+      status.overall = 'degraded';
+    } else {
+      status.overall = 'critical';
+    }
 
   } catch (error) {
     console.error('Error checking system status:', error);
+    status.overall = 'critical';
   }
+
+  console.log('System Status Check Result:', {
+    blockchain: status.blockchain,
+    ipfs: status.ipfs, 
+    database: status.database,
+    chainlink: status.chainlink,
+    overall: status.overall
+  });
 
   return status;
 }

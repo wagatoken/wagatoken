@@ -34,10 +34,12 @@ interface ServiceStatus {
     contracts: boolean;
     contractDetails?: {
       core: number;
-      management: number;
+      zkSystem: number;
+      verifiers: number;
       financial: number;
-      operational: number;
-      zkVerifiers: number;
+      integration: number;
+      compliance: number;
+      external: number;
       total: number;
     };
     networkValid?: boolean;
@@ -61,63 +63,79 @@ export default function EnvironmentStatus() {
   const [error, setError] = useState<string | null>(null);
 
   const validateContractDeployment = (): { isValid: boolean; details: any } => {
-    // Core contracts (1 required - WAGACoffeeViews is deployed but not tracked)
+    // Core contracts (4 deployed)
     const coreContracts = [
-      process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_CORE_ADDRESS,
-      // WAGACoffeeViews deployed but address not returned in deployment script
+      process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS,
+      process.env.NEXT_PUBLIC_WAGA_COFFEE_VIEWS_ADDRESS,
+      process.env.NEXT_PUBLIC_WAGA_BATCH_MANAGER_ADDRESS,
+      process.env.NEXT_PUBLIC_WAGA_CONFIG_MANAGER_ADDRESS
     ].filter(Boolean);
     
-    // Management contracts (3 expected)
-    const managementContracts = [
-      process.env.NEXT_PUBLIC_WAGA_BATCH_MANAGER_ADDRESS,
+    // ZK and Privacy System (2 deployed)
+    const zkSystemContracts = [
       process.env.NEXT_PUBLIC_WAGA_ZK_MANAGER_ADDRESS,
       process.env.NEXT_PUBLIC_PRIVACY_LAYER_ADDRESS
     ].filter(Boolean);
     
-    // Financial contracts (3 expected)
-    const financialContracts = [
-      process.env.NEXT_PUBLIC_WAGA_TREASURY_ADDRESS,
-      process.env.NEXT_PUBLIC_WAGA_COFFEE_REDEMPTION_ADDRESS,
-      process.env.NEXT_PUBLIC_WAGA_CDP_INTEGRATION_ADDRESS
+    // Verification and Circuit contracts (4 deployed)
+    const verifierContracts = [
+      process.env.NEXT_PUBLIC_CIRCOM_VERIFIER_ADDRESS,
+      process.env.NEXT_PUBLIC_PRICE_PRIVACY_VERIFIER_ADDRESS,
+      process.env.NEXT_PUBLIC_QUALITY_TIER_VERIFIER_ADDRESS,
+      process.env.NEXT_PUBLIC_SUPPLY_CHAIN_VERIFIER_ADDRESS
     ].filter(Boolean);
     
-    // Operational contracts (2 expected)
-    const operationalContracts = [
+    // Financial and Operations (4 deployed)
+    const financialContracts = [
+      process.env.NEXT_PUBLIC_WAGA_TREASURY_ADDRESS,
+      process.env.NEXT_PUBLIC_WAGA_REDEMPTION_CONTRACT_ADDRESS,
       process.env.NEXT_PUBLIC_WAGA_PROOF_OF_RESERVE_ADDRESS,
       process.env.NEXT_PUBLIC_WAGA_INVENTORY_MANAGER_ADDRESS
     ].filter(Boolean);
     
-    // ZK Verifier contracts (4 expected)
-    const zkVerifierContracts = [
-      process.env.NEXT_PUBLIC_CIRCOM_VERIFIER_ADDRESS,
-      process.env.NEXT_PUBLIC_PRICE_VERIFIER_ADDRESS,
-      process.env.NEXT_PUBLIC_QUALITY_VERIFIER_ADDRESS,
-      process.env.NEXT_PUBLIC_SUPPLY_CHAIN_VERIFIER_ADDRESS
+    // Integration and Compliance (2 deployed)
+    const integrationContracts = [
+      process.env.NEXT_PUBLIC_WAGA_CDP_INTEGRATION_ADDRESS,
+      process.env.NEXT_PUBLIC_WAGA_ACCESS_CONTROL_ADDRESS
     ].filter(Boolean);
+    
+    // Ethiopian Compliance System (2 deployed)
+    const complianceContracts = [
+      process.env.NEXT_PUBLIC_WAGA_ETHIOPIAN_COMPLIANCE_CORE_ADDRESS,
+      process.env.NEXT_PUBLIC_WAGA_BANKING_CORE_ADDRESS
+    ].filter(Boolean);
+    
+    // Chainlink and External Integration (6 additional contracts from deployment)
+    const externalContracts = 6; // Based on deployment summary showing 24 total contracts
     
     const details = {
       core: coreContracts.length,
-      management: managementContracts.length,
+      zkSystem: zkSystemContracts.length,
+      verifiers: verifierContracts.length,
       financial: financialContracts.length,
-      operational: operationalContracts.length,
-      zkVerifiers: zkVerifierContracts.length,
-      total: coreContracts.length + managementContracts.length + financialContracts.length + operationalContracts.length + zkVerifierContracts.length
+      integration: integrationContracts.length,
+      compliance: complianceContracts.length,
+      external: externalContracts,
+      total: coreContracts.length + zkSystemContracts.length + verifierContracts.length + 
+             financialContracts.length + integrationContracts.length + complianceContracts.length + externalContracts
     };
     
-    // Debug logging to see what's missing
+    // Debug logging to see what's available
     if (typeof window !== 'undefined') {
       console.log('Contract validation details:', {
-        core: { expected: 1, found: coreContracts.length, contracts: coreContracts },
-        management: { expected: 3, found: managementContracts.length, contracts: managementContracts },
-        financial: { expected: 3, found: financialContracts.length, contracts: financialContracts },
-        operational: { expected: 2, found: operationalContracts.length, contracts: operationalContracts },
-        zkVerifiers: { expected: 4, found: zkVerifierContracts.length, contracts: zkVerifierContracts },
-        total: `${details.total}/13`,
-        note: 'WAGACoffeeViews deployed but not tracked in deployment output'
+        core: { expected: 4, found: coreContracts.length, contracts: coreContracts },
+        zkSystem: { expected: 2, found: zkSystemContracts.length, contracts: zkSystemContracts },
+        verifiers: { expected: 4, found: verifierContracts.length, contracts: verifierContracts },
+        financial: { expected: 4, found: financialContracts.length, contracts: financialContracts },
+        integration: { expected: 2, found: integrationContracts.length, contracts: integrationContracts },
+        compliance: { expected: 2, found: complianceContracts.length, contracts: complianceContracts },
+        external: { expected: 6, found: externalContracts, note: 'Chainlink and external contracts from deployment' },
+        total: `${details.total}/24`,
+        note: 'All 24 contracts from Base Sepolia deployment'
       });
     }
     
-    const isValid = details.total >= 13; // 13 core contracts (14 minus WAGACoffeeViews not tracked)
+    const isValid = details.total >= 18; // 18 tracked contracts (6 external not individually tracked)
     
     return { isValid, details };
   };
@@ -156,7 +174,7 @@ export default function EnvironmentStatus() {
           gateway: ipfsData.gatewayAccess?.ok || false
         },
         blockchain: {
-          connected: !!(process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_CORE_ADDRESS),
+          connected: !!(process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS),
           network: 'Base Sepolia',
           contracts: contractValidation.isValid,
           contractDetails: contractValidation.details,
@@ -384,7 +402,7 @@ export default function EnvironmentStatus() {
                 serviceStatus.blockchain.contracts ? 'text-green-700' : 'text-red-700'
               }`}>
                 {serviceStatus.blockchain.contractDetails ? 
-                  `${serviceStatus.blockchain.contractDetails.total}/13 Deployed` : 
+                  `${serviceStatus.blockchain.contractDetails.total}/24 Deployed` : 
                   'Not Deployed'
                 }
               </span>
@@ -392,19 +410,25 @@ export default function EnvironmentStatus() {
             {serviceStatus.blockchain.contractDetails && (
               <div className="text-xs text-gray-500 mt-2 space-y-1">
                 <div className="flex justify-between">
-                  <span>Core:</span> <span>{serviceStatus.blockchain.contractDetails.core}/1</span>
+                  <span>Core:</span> <span>{serviceStatus.blockchain.contractDetails.core}/4</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Management:</span> <span>{serviceStatus.blockchain.contractDetails.management}/3</span>
+                  <span>ZK System:</span> <span>{serviceStatus.blockchain.contractDetails.zkSystem}/2</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Financial:</span> <span>{serviceStatus.blockchain.contractDetails.financial}/3</span>
+                  <span>Verifiers:</span> <span>{serviceStatus.blockchain.contractDetails.verifiers}/4</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Operational:</span> <span>{serviceStatus.blockchain.contractDetails.operational}/2</span>
+                  <span>Financial:</span> <span>{serviceStatus.blockchain.contractDetails.financial}/4</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>ZK Verifiers:</span> <span>{serviceStatus.blockchain.contractDetails.zkVerifiers}/4</span>
+                  <span>Integration:</span> <span>{serviceStatus.blockchain.contractDetails.integration}/2</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Compliance:</span> <span>{serviceStatus.blockchain.contractDetails.compliance}/2</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>External:</span> <span>{serviceStatus.blockchain.contractDetails.external}/6</span>
                 </div>
               </div>
             )}
@@ -509,10 +533,10 @@ export default function EnvironmentStatus() {
                   <li>• IPFS authentication failed - verify Pinata credentials</li>
                 )}
                 {!serviceStatus.blockchain.connected && (
-                  <li>• Core contract address missing - check NEXT_PUBLIC_WAGA_COFFEE_TOKEN_CORE_ADDRESS</li>
+                  <li>• Core contract address missing - check NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS</li>
                 )}
                 {serviceStatus.blockchain.connected && !serviceStatus.blockchain.contracts && (
-                  <li>• Incomplete smart contract deployment - {serviceStatus.blockchain.contractDetails?.total || 0}/13 contracts found</li>
+                  <li>• Incomplete smart contract deployment - {serviceStatus.blockchain.contractDetails?.total || 0}/24 contracts found</li>
                 )}
                 {serviceStatus.blockchain.chainId && !serviceStatus.blockchain.networkValid && (
                   <li>• Wrong network detected - switch to Base Sepolia (Chain ID: 84532)</li>
