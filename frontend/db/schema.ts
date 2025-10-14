@@ -23,9 +23,9 @@ export const wagaCoffeeBatches = pgTable('waga_coffee_batches', {
   price: decimal({ precision: 10, scale: 2 }).notNull(), // Price per unit in USD
 
   // Product Type & Packaging (Extended for multiple product lines)
-  productType: varchar({ length: 20 }).notNull().default('RETAIL_BAGS'), // 'RETAIL_BAGS', 'GREEN_BEANS', 'ROASTED_BEANS'
+  productType: varchar('product_type', { length: 20 }).notNull().default('RETAIL_BAGS'), // 'RETAIL_BAGS', 'GREEN_BEANS', 'ROASTED_BEANS'
   packaging: varchar({ length: 20 }).notNull(), // '250g', '500g', '60kg' (extended from original)
-  unitWeight: varchar({ length: 20 }), // Optional: specific weight per unit
+  unitWeight: varchar('unit_weight', { length: 20 }), // Optional: specific weight per unit
   
   // IPFS & Metadata (actual fields from code)
   metadataHash: varchar({ length: 64 }).notNull(), // IPFS CID
@@ -57,9 +57,9 @@ export const wagaCoffeeBatches = pgTable('waga_coffee_batches', {
   // Product-Specific Fields (conditional based on productType)
   roastProfile: varchar({ length: 100 }), // For RETAIL_BAGS only
   roastDate: varchar({ length: 50 }), // For RETAIL_BAGS only
-  moistureContent: decimal({ precision: 5, scale: 2 }), // For GREEN_BEANS/ROASTED_BEANS
+  moistureContent: decimal('moisture_content', { precision: 5, scale: 2 }), // For GREEN_BEANS/ROASTED_BEANS
   density: decimal({ precision: 5, scale: 2 }), // For GREEN_BEANS/ROASTED_BEANS
-  defectCount: integer(), // For GREEN_BEANS/ROASTED_BEANS
+  defectCount: integer('defect_count'), // For GREEN_BEANS/ROASTED_BEANS
 
   // Common Fields
   certifications: json(), // Array from IPFS properties
@@ -67,8 +67,8 @@ export const wagaCoffeeBatches = pgTable('waga_coffee_batches', {
   image: varchar({ length: 255 }), // Optional IPFS image hash
 
   // Cooperative/Processor Information (for GREEN_BEANS/ROASTED_BEANS)
-  cooperativeId: varchar({ length: 42 }), // Ethereum address of cooperative
-  processorId: varchar({ length: 42 }), // Ethereum address of processor/roaster
+  cooperativeId: varchar('cooperative_id', { length: 42 }), // Ethereum address of cooperative
+  processorId: varchar('processor_id', { length: 42 }), // Ethereum address of processor/roaster
   
   // Timestamps
   createdAt: timestamp().notNull().defaultNow(),

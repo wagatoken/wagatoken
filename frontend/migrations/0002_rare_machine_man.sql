@@ -1,0 +1,1 @@
+ALTER TABLE "zk_proofs" ALTER COLUMN "proofType" SET DATA TYPE varchar(50);

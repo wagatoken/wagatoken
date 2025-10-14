@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { UserTokenBalance } from "@/utils/types";
 import { pinata } from "@/utils/config";
 
+export const dynamic = 'force-dynamic'; // Disable static optimization for this route
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
