@@ -142,55 +142,121 @@ export default function DynamicPlatformStats() {
       
       {formattedStats && (
         <div className="space-y-3 text-sm">
-          <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-            <span className="text-gray-800 font-medium">Total Coffee Batches:</span>
-            <span className="text-emerald-600 font-bold">{formattedStats.totalBatches}</span>
+          {/* Core Platform Metrics */}
+          <div className="mb-4">
+            <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Coffee Platform</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
+                <span className="text-gray-800 font-medium">Total Coffee Batches:</span>
+                <span className="text-emerald-600 font-bold">{formattedStats.totalBatches}</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
+                <span className="text-gray-800 font-medium">Active Batches:</span>
+                <span className="text-emerald-600 font-bold">{formattedStats.activeBatches}</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
+                <span className="text-gray-800 font-medium">Verification Rate:</span>
+                <span className="text-emerald-600 font-bold">{formattedStats.verificationRate}</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
+                <span className="text-gray-800 font-medium">Total Volume:</span>
+                <span className="text-emerald-600 font-bold">{formattedStats.totalVolume}</span>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-            <span className="text-gray-800 font-medium">Active Batches:</span>
-            <span className="text-emerald-600 font-bold">{formattedStats.activeBatches}</span>
+
+          {/* Financial Metrics */}
+          <div className="mb-4">
+            <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Financial</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-2 bg-blue-50 rounded-lg">
+                <span className="text-gray-800 font-medium">Treasury Balance:</span>
+                <span className="text-blue-600 font-bold">{formattedStats.treasuryBalance}</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-blue-50 rounded-lg">
+                <span className="text-gray-800 font-medium">Total Transactions:</span>
+                <span className="text-blue-600 font-bold">{formattedStats.totalTransactions}</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-blue-50 rounded-lg">
+                <span className="text-gray-800 font-medium">Avg Transaction Fee:</span>
+                <span className="text-blue-600 font-bold">{formattedStats.averageTransactionFee}</span>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-            <span className="text-gray-800 font-medium">Verification Rate:</span>
-            <span className="text-emerald-600 font-bold">{formattedStats.verificationRate}</span>
+
+          {/* Technical Metrics */}
+          <div className="mb-4">
+            <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Technical</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-2 bg-purple-50 rounded-lg">
+                <span className="text-gray-800 font-medium">Smart Contracts:</span>
+                <span className="text-purple-600 font-bold">{formattedStats.totalContracts}</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-purple-50 rounded-lg">
+                <span className="text-gray-800 font-medium">ZK Proofs Generated:</span>
+                <span className="text-purple-600 font-bold">{formattedStats.zkProofsGenerated}</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-purple-50 rounded-lg">
+                <span className="text-gray-800 font-medium">IPFS Files Stored:</span>
+                <span className="text-purple-600 font-bold">{formattedStats.ipfsFilesStored}</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-purple-50 rounded-lg">
+                <span className="text-gray-800 font-medium">Block Height:</span>
+                <span className="text-purple-600 font-bold">{formattedStats.blockHeight}</span>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-            <span className="text-gray-800 font-medium">IPFS Files Stored:</span>
-            <span className="text-emerald-600 font-bold">{formattedStats.ipfsFilesStored}</span>
+
+          {/* Activity Metrics */}
+          <div className="mb-4">
+            <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Activity</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-2 bg-amber-50 rounded-lg">
+                <span className="text-gray-800 font-medium">Active Distributors:</span>
+                <span className="text-amber-600 font-bold">{formattedStats.activeDistributors}</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-amber-50 rounded-lg">
+                <span className="text-gray-800 font-medium">Active Users (24h):</span>
+                <span className="text-amber-600 font-bold">{formattedStats.activeUsers24h}</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-amber-50 rounded-lg">
+                <span className="text-gray-800 font-medium">Recent Activity:</span>
+                <span className="text-amber-600 font-bold">{formattedStats.recentActivity}</span>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-            <span className="text-gray-800 font-medium">ZK Proofs Generated:</span>
-            <span className="text-emerald-600 font-bold">{formattedStats.zkProofsGenerated}</span>
-          </div>
-          <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-            <span className="text-gray-800 font-medium">Total Volume:</span>
-            <span className="text-emerald-600 font-bold">{formattedStats.totalVolume}</span>
-          </div>
-          <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-            <span className="text-gray-800 font-medium">Active Distributors:</span>
-            <span className="text-emerald-600 font-bold">{formattedStats.activeDistributors}</span>
-          </div>
-          <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-            <span className="text-gray-800 font-medium">Recent Activity:</span>
-            <span className="text-emerald-600 font-bold">{formattedStats.recentActivity}</span>
-          </div>
-          <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-            <span className="text-gray-800 font-medium">Network Status:</span>
-            <span className="text-emerald-600 font-bold flex items-center space-x-1">
-              {stats && getNetworkStatusIcon(stats.networkStatus)}
-              <span>{stats ? getNetworkStatusText(stats.networkStatus) : 'Unknown'}</span>
-            </span>
-          </div>
-          <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-            <span className="text-gray-800 font-medium">IPFS Status:</span>
-            <span className="text-emerald-600 font-bold flex items-center space-x-1">
-              {stats && stats.ipfsStatus === 'Active' ? (
-                <MdCheckCircle className="text-green-600" />
-              ) : (
-                <MdError className="text-red-600" />
-              )}
-              <span>{stats?.ipfsStatus || 'Unknown'}</span>
-            </span>
+
+          {/* System Status */}
+          <div>
+            <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">System Status</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-2 bg-green-50 rounded-lg">
+                <span className="text-gray-800 font-medium">Network Status:</span>
+                <span className="text-green-600 font-bold flex items-center space-x-1">
+                  {stats && getNetworkStatusIcon(stats.networkStatus)}
+                  <span>{stats ? getNetworkStatusText(stats.networkStatus) : 'Unknown'}</span>
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-green-50 rounded-lg">
+                <span className="text-gray-800 font-medium">IPFS Status:</span>
+                <span className="text-green-600 font-bold flex items-center space-x-1">
+                  {stats && stats.ipfsStatus === 'Active' ? (
+                    <MdCheckCircle className="text-green-600" />
+                  ) : (
+                    <MdError className="text-red-600" />
+                  )}
+                  <span>{stats?.ipfsStatus || 'Unknown'}</span>
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-green-50 rounded-lg">
+                <span className="text-gray-800 font-medium">Network Uptime:</span>
+                <span className="text-green-600 font-bold">{formattedStats.networkUptime}</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-green-50 rounded-lg">
+                <span className="text-gray-800 font-medium">Gas Price:</span>
+                <span className="text-green-600 font-bold">{formattedStats.gasPrice}</span>
+              </div>
+            </div>
           </div>
         </div>
       )}

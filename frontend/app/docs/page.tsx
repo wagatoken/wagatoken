@@ -2,6 +2,7 @@ import Link from "next/link";
 import { MdRocket, MdAdminPanelSettings, MdBusiness, MdSecurity, MdStorage, MdCode, MdHandshake, MdSearch, MdLink, MdBarChart, MdCheckCircle, MdCoffee, MdLock, MdPublic } from 'react-icons/md';
 import { SiChainlink } from 'react-icons/si';
 import DynamicPlatformStats from '../components/DynamicPlatformStats';
+import RealTimeContractAddresses from '../components/RealTimeContractAddresses';
 
 export default function Docs() {
   return (
@@ -112,53 +113,7 @@ export default function Docs() {
               <span>Quick Reference</span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="web3-card">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                  <MdLink className="text-xl text-emerald-600" />
-                  <span>Smart Contract Addresses</span>
-                </h3>
-                <div className="space-y-3 text-sm">
-                  {/* Core Contracts */}
-                  <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">WAGA Coffee Token Core:</span>
-                    <a href="https://sepolia.basescan.org/address/0x440146a5B87f28ab901D6268139181e07fb36e05" target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-mono text-xs underline">0x440146a5B87f28ab901D6268139181e07fb36e05</a>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-emerald-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">Batch Manager:</span>
-                    <a href="https://sepolia.basescan.org/address/a215A65CD9565d1c1336a8cB0DF3B9994f4f471F" target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-mono text-xs underline">0xa215A65CD9565d1c1336a8cB0DF3B9994f4f471F</a>
-                  </div>
-                  {/* Financial Contracts */}
-                  <div className="flex justify-between items-center p-2 bg-amber-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">Treasury:</span>
-                    <a href="https://sepolia.basescan.org/address/75E2C46DF97cC53e8A31a1A564B987790D685177" target="_blank" rel="noopener noreferrer" className="text-amber-600 font-mono text-xs underline">0x75E2C46DF97cC53e8A31a1A564B987790D685177</a>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-amber-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">Proof of Reserve:</span>
-                    <a href="https://sepolia.basescan.org/address/E794464994fC1084346C1643354Bbf7d8e3c0Ad3" target="_blank" rel="noopener noreferrer" className="text-amber-600 font-mono text-xs underline">0xE794464994fC1084346C1643354Bbf7d8e3c0Ad3</a>
-                  </div>
-                  {/* Verifier Contracts */}
-                  <div className="flex justify-between items-center p-2 bg-blue-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">ZK Privacy Manager:</span>
-                    <a href="https://sepolia.basescan.org/address/0x0b2d83D75Cf2525d8C7D40476157ea0B3aE33776" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-mono text-xs underline">0x0b2d83D75Cf2525d8C7D40476157ea0B3aE33776</a>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-blue-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">Circom Verifier:</span>
-                    <a href="https://sepolia.basescan.org/address/0x0b2d83D75Cf2525d8C7D40476157ea0B3aE33776" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-mono text-xs underline">0x0b2d83D75Cf2525d8C7D40476157ea0B3aE33776</a>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-blue-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">Chainlink Router:</span>
-                    <a href="https://sepolia.basescan.org/address/f9B8fc078197181C841c296C876945aaa425B278" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-mono text-xs underline">0xf9B8fc078197181C841c296C876945aaa425B278</a>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-purple-50 rounded-lg">
-                    <span className="text-gray-800 font-medium">Privacy Layer:</span>
-                    <a href="https://sepolia.basescan.org/address/0x0b2d83D75Cf2525d8C7D40476157ea0B3aE33776" target="_blank" rel="noopener noreferrer" className="text-purple-600 font-mono text-xs underline">0x0b2d83D75Cf2525d8C7D40476157ea0B3aE33776</a>
-                  </div>
-                    <div className="flex justify-between items-center p-2 bg-amber-50 rounded-lg">
-                      <span className="text-gray-800 font-medium">Network:</span>
-                      <span className="text-amber-600 font-medium">Base Sepolia</span>
-                    </div>
-                </div>
-              </div>
+              <RealTimeContractAddresses />
               <DynamicPlatformStats />
             </div>
             
