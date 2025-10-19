@@ -14,13 +14,12 @@ import { ProofType, CIRCUIT_VERIFIERS } from './types';
 // Updated to match the actual deployed addresses from deployment summary
 const COFFEE_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS!;
 const COFFEE_VIEWS_ADDRESS = process.env.NEXT_PUBLIC_WAGA_COFFEE_VIEWS_ADDRESS!;
-const BATCH_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_WAGA_BATCH_MANAGER_ADDRESS!;
-const PROOF_OF_RESERVE_ADDRESS = process.env.NEXT_PUBLIC_WAGA_PROOF_OF_RESERVE_ADDRESS!;
+const BATCH_OPERATIONS_ADDRESS = process.env.NEXT_PUBLIC_WAGA_BATCH_OPERATIONS_ADDRESS!;
+export const PROOF_OF_RESERVE_ADDRESS = process.env.NEXT_PUBLIC_WAGA_PROOF_OF_RESERVE_ADDRESS!;
 const INVENTORY_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_WAGA_INVENTORY_MANAGER_ADDRESS!;
 const REDEMPTION_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_WAGA_REDEMPTION_CONTRACT_ADDRESS!;
 const TREASURY_ADDRESS = process.env.NEXT_PUBLIC_WAGA_TREASURY_ADDRESS!;
 const CDP_INTEGRATION_ADDRESS = process.env.NEXT_PUBLIC_WAGA_CDP_INTEGRATION_ADDRESS!;
-const ACCESS_CONTROL_ADDRESS = process.env.NEXT_PUBLIC_WAGA_ACCESS_CONTROL_ADDRESS!;
 const CONFIG_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_WAGA_CONFIG_MANAGER_ADDRESS!;
 
 // ZK Contract addresses
@@ -92,13 +91,18 @@ export const COFFEE_TOKEN_ABI = [
   "function revokeRole(bytes32 role, address account) external",
   "function getUserAccessLevel(address account) external view returns (string)",
   "function canCreateBatches(address account) external view returns (bool)",
+  // Batch Request Functions
+  "function createBatchRequest(uint256 batchId, uint256 requestedQuantity, string memory requestDetails) external returns (uint256)",
+  "function getBatchRequest(uint256 batchId, uint256 requestIndex) external view returns (uint256 batchId, address requester, uint256 requestedQuantity, string memory requestDetails, uint256 requestTimestamp, bool isFulfilled, uint256 fulfilledQuantity, uint256 fulfilledTimestamp)",
+  "function getBatchRequestCount(uint256 batchId) external view returns (uint256)",
+  "function getAllBatchRequests(uint256 batchId) external view returns (tuple(uint256,address,uint256,string,uint256,bool,uint256,uint256)[])",
   "event BatchCreated(uint256 indexed batchId, string ipfsUri)",
   "event BatchIPFSUpdated(uint256 indexed batchId, string newIpfsUri)",
   "event TokensMinted(address indexed to, uint256 indexed batchId, uint256 amount)",
   "function uri(uint256 tokenId) external view returns (string memory)"
 ];
 
-const PROOF_OF_RESERVE_ABI = [
+export const PROOF_OF_RESERVE_ABI = [
   "function requestReserveVerification(uint256 batchId, uint256 requestId, string calldata source) external returns (bytes32)",
   "function requestInventoryVerification(uint256 batchId, string calldata source) external returns (bytes32)",
   "function verificationRequests(bytes32 requestId) external view returns (uint256 batchId, uint256 batchQuantity, uint256 requestQuantity, uint256 verifiedQuantity, uint256 requestPrice, uint256 verifiedPrice, string memory expectedPackaging, string memory verifiedPackaging, string memory expectedMetadataHash, string memory verifiedMetadataHash, address recipient, bool completed, bool verified, uint256 lastVerifiedTimestamp, bool shouldMint)",
@@ -168,64 +172,101 @@ const BATCH_MANAGER_ABI = [
   "function canViewSupplyChainData(uint256 batchId, address caller) external view returns (bool)"
 ];
 
-// Inventory Manager ABI - for inventory tracking and auditing
+// Inventory Manager ABI - Based on actual WAGAInventoryManagerMVP.sol contract
 const INVENTORY_MANAGER_ABI = [
-  "function updateInventory(uint256 batchId, uint256 verifiedQuantity) external",
-  "function getAvailableQuantity(uint256 batchId) external view returns (uint256)",
-  "function getMintedQuantity(uint256 batchId) external view returns (uint256)",
-  "function getRemainingQuantity(uint256 batchId) external view returns (uint256)",
-  "function updateReservedQuantity(uint256 batchId, uint256 reservedAmount) external",
-  "function getReservedQuantity(uint256 batchId) external view returns (uint256)",
-  "function recordInventoryAudit(uint256 batchId, uint256 physicalQuantity, string calldata auditNotes) external",
-  "function getLastAuditInfo(uint256 batchId) external view returns (uint256 physicalQuantity, uint256 discrepancy, uint256 auditTimestamp, address auditor)"
+  // Batch checking functions (actual contract functions)
+  "function checkExpiredBatches(uint256[] calldata batchIds) external",
+  "function checkLowInventory(uint256[] calldata batchIds) external", 
+  "function checkBatchesNeedingVerification(uint256[] calldata batchIds) external",
+  "function performPeriodicChecks(uint256[] calldata batchIds) external",
+  
+  // Status functions (actual contract functions)
+  "function getBatchStatus(uint256 batchId) external view returns (bool isExpired, bool isLowInventory, bool needsVerif)",
+  "function needsVerification(uint256 batchId) external view returns (bool)",
+  "function getActiveBatches() external pure returns (uint256[] memory)",
+  
+  // Configuration functions (actual contract functions)
+  "function setLowInventoryThreshold(uint256 newThreshold) external",
+  "function setVerificationInterval(uint256 newInterval) external", 
+  "function setMaxBatchesPerCheck(uint256 newMaxBatches) external",
+  
+  // View functions (actual contract functions)
+  "function lowInventoryThreshold() external view returns (uint256)",
+  "function verificationInterval() external view returns (uint256)",
+  "function maxBatchesPerCheck() external view returns (uint256)",
+  "function lastVerificationTime(uint256) external view returns (uint256)",
+  
+  // Events (actual contract events)
+  "event BatchExpired(uint256 indexed batchId, uint256 expiryDate)",
+  "event LowInventoryWarning(uint256 indexed batchId, uint256 currentQuantity)",
+  "event VerificationRequested(uint256 indexed batchId, bytes32 requestId)",
+  "event ThresholdUpdated(string thresholdType, uint256 oldValue, uint256 newValue)",
+  "event BatchProcessed(uint256 indexed batchId, string checkType)"
 ];
 
-// Treasury ABI - for payment and fund management
+// Treasury ABI - Based on actual WAGATreasury.sol contract
 const TREASURY_ABI = [
-  "function deposit() external payable",
-  "function withdraw(uint256 amount, address to) external",
-  "function getBalance() external view returns (uint256)",
-  "function processPayout(address recipient, uint256 amount, uint256 batchId) external",
+  // Payment functions (actual contract functions)
+  "function payForBatch(uint256 batchId, uint256 amount) external",
+  "function processCoinbasePayment(address user, uint256 batchId, uint256 amount, string memory chargeId) external",
+  "function setBatchPayment(uint256 batchId, uint256 amount) external",
+  
+  // Distribution functions (actual contract functions)
+  "function distributeFunds(address recipient, uint256 amount, string calldata reason) external",
+  "function distributeFundsDetailed(uint256 batchId, address seller, uint256 sellerShare, address processor, uint256 processorShare) external",
+  "function transferToOfframpPartner(uint256 batchId, address buyer, address offrampPartner, uint256 usdAmount) external",
+  
+  // View functions (actual contract functions)
+  "function getTreasuryStats() external view returns (uint256 totalCollected, uint256 totalDistributed, uint256 currentBalance)",
+  "function getBatchPaymentInfo(uint256 batchId) external view returns (uint256 required, uint256 collected)",
+  "function checkPaymentStatus(address user, uint256 batchId) external view returns (bool)",
+  "function hasOfframpTransferExecuted(uint256 batchId, address buyer) external view returns (bool)",
+  "function getOfframpTransferDetails(uint256 batchId, address buyer) external view returns (address offrampPartner, uint256 usdAmount, bool executed)",
+  
+  // Admin functions (actual contract functions)
+  "function setUSDCAddress(address newUSDCAddress) external",
+  "function setCoffeeToken(address _coffeeToken) external",
   "function emergencyWithdraw(address token, uint256 amount) external",
-  "function setPayoutPercentage(uint256 percentage) external",
-  "function getPayoutPercentage() external view returns (uint256)",
-  "function getTotalPayouts() external view returns (uint256)",
-  "function getBatchPayouts(uint256 batchId) external view returns (uint256)",
-  "event PayoutProcessed(address indexed recipient, uint256 amount, uint256 indexed batchId)",
-  "event EmergencyWithdrawal(address indexed token, uint256 amount, address indexed to)"
+  
+  // Events (actual contract events)
+  "event PaymentReceived(address indexed user, uint256 indexed batchId, uint256 amount, uint256 timestamp)",
+  "event CoinbasePaymentProcessed(address indexed user, uint256 indexed batchId, string chargeId)",
+  "event PaymentDistributed(address indexed recipient, uint256 amount, string reason)",
+  "event FundsDistributed(uint256 indexed batchId, address indexed seller, uint256 sellerShare, address indexed processor, uint256 processorShare)",
+  "event OfframpTransferExecuted(uint256 indexed batchId, address indexed buyer, address indexed offrampPartner, uint256 usdAmount, uint256 timestamp)",
+  "event BatchPaymentRequired(uint256 indexed batchId, uint256 amount)",
+  "event USDCAddressUpdated(address indexed oldAddress, address indexed newAddress)"
 ];
 
-// CDP Integration ABI - for MakerDAO CDP management
+// CDP Integration ABI - Based on actual WAGACDPIntegration.sol contract
 const CDP_INTEGRATION_ABI = [
-  "function openCDP(uint256 collateralAmount) external returns (uint256 cdpId)",
-  "function addCollateral(uint256 cdpId, uint256 amount) external",
-  "function drawDai(uint256 cdpId, uint256 amount) external",
-  "function repayDai(uint256 cdpId, uint256 amount) external",
-  "function freeCDP(uint256 cdpId) external",
-  "function getCDPInfo(uint256 cdpId) external view returns (uint256 collateral, uint256 debt, uint256 ratio)",
-  "function getLiquidationPrice(uint256 cdpId) external view returns (uint256)",
-  "function getAvailableToGenerate(uint256 cdpId) external view returns (uint256)",
-  "function getAvailableToFree(uint256 cdpId) external view returns (uint256)"
+  // Smart Account Management (actual contract functions)
+  "function createSmartAccount(address user) external returns (address smartAccount)",
+  "function getUserSmartAccount(address user) external view returns (address)",
+  
+  // Payment Processing (actual contract functions)
+  "function initiateCDPPayment(address user, uint256 batchId, uint256 amount, string calldata chargeId) external",
+  "function confirmCDPPayment(string calldata chargeId, bool success) external",
+  "function processCDPWebhook(bytes32 webhookId, string calldata chargeId, bool success) external",
+  "function processCrossBorderPayment(address user, uint256 batchId, uint256 amount, string calldata chargeId, string calldata sourceCountry, string calldata targetCountry) external",
+  
+  // Configuration (actual contract functions)
+  "function setCoffeeToken(address _coffeeToken) external",
+  "function updateCDPConfig(address _cdpSmartAccountFactory, address _cdpPaymaster) external",
+  
+  // View functions (actual contract functions)
+  "function getCDPPayment(string calldata chargeId) external view returns (tuple(address user, uint256 batchId, uint256 amount, string chargeId, uint256 timestamp, uint8 status))",
+  
+  // Emergency functions (actual contract functions)
+  "function emergencyPause() external",
+  "function emergencyUnpause() external",
+  
+  // Events (actual contract events)
+  "event SmartAccountCreated(address indexed user, address indexed smartAccount)"
 ];
 
 // Access Control ABI - for role and permission management
-const ACCESS_CONTROL_ABI = [
-  "function grantRole(bytes32 role, address account) external",
-  "function revokeRole(bytes32 role, address account) external",
-  "function hasRole(bytes32 role, address account) external view returns (bool)",
-  "function getRoleAdmin(bytes32 role) external view returns (bytes32)",
-  "function renounceRole(bytes32 role, address account) external",
-  "function getRoleMemberCount(bytes32 role) external view returns (uint256)",
-  "function getRoleMember(bytes32 role, uint256 index) external view returns (address)",
-  "function ADMIN_ROLE() external view returns (bytes32)",
-  "function MINTER_ROLE() external view returns (bytes32)",
-  "function VERIFIER_ROLE() external view returns (bytes32)",
-  "function PROCESSOR_ROLE() external view returns (bytes32)",
-  "function COOPERATIVE_ROLE() external view returns (bytes32)",
-  "function DISTRIBUTOR_ROLE() external view returns (bytes32)"
-];
-
-// Config Manager ABI - for system configuration and settings
+// Config Manager ABI - Unified access control and system configuration
 const CONFIG_MANAGER_ABI = [
   // Role management functions
   "function grantRole(bytes32 role, address account) external",
@@ -2468,6 +2509,47 @@ export async function isAuthorizedBank(bankAddress: string): Promise<boolean> {
   }
 }
 
+/**
+ * Get banking capabilities for a SWIFT code
+ */
+export async function getBankingCapabilities(swiftCode: string): Promise<any | null> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const bankingContract = new ethers.Contract(BANKING_CORE_ADDRESS, BANKING_CORE_ABI, provider);
+    
+    return await bankingContract.getBankingCapabilities(swiftCode);
+    
+  } catch (error) {
+    console.error('Error getting banking capabilities:', error);
+    return null;
+  }
+}
+
+/**
+ * Get banking partner information
+ */
+export async function getBankingPartner(partnerAddress: string): Promise<{
+  swiftCode: string;
+  bankName: string;
+  canOfframp: boolean;
+} | null> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const bankingContract = new ethers.Contract(BANKING_CORE_ADDRESS, BANKING_CORE_ABI, provider);
+    
+    const result = await bankingContract.getBankingPartner(partnerAddress);
+    return {
+      swiftCode: result[0],
+      bankName: result[1],
+      canOfframp: result[2]
+    };
+    
+  } catch (error) {
+    console.error('Error getting banking partner:', error);
+    return null;
+  }
+}
+
 // ===========================
 // ENHANCED CONTRACT GETTER FUNCTIONS
 // ===========================
@@ -2525,13 +2607,12 @@ export function getContractAddresses(): Record<string, string> {
   return {
     COFFEE_TOKEN: COFFEE_TOKEN_ADDRESS,
     COFFEE_VIEWS: COFFEE_VIEWS_ADDRESS,
-    BATCH_MANAGER: BATCH_MANAGER_ADDRESS,
+    BATCH_OPERATIONS: BATCH_OPERATIONS_ADDRESS,
     PROOF_OF_RESERVE: PROOF_OF_RESERVE_ADDRESS,
     INVENTORY_MANAGER: INVENTORY_MANAGER_ADDRESS,
     REDEMPTION_CONTRACT: REDEMPTION_CONTRACT_ADDRESS,
     TREASURY: TREASURY_ADDRESS,
     CDP_INTEGRATION: CDP_INTEGRATION_ADDRESS,
-    ACCESS_CONTROL: ACCESS_CONTROL_ADDRESS,
     CONFIG_MANAGER: CONFIG_MANAGER_ADDRESS,
     ZK_MANAGER: ZK_MANAGER_ADDRESS,
     PRIVACY_LAYER: PRIVACY_LAYER_ADDRESS,
@@ -2551,13 +2632,12 @@ export function getContractABIs(): Record<string, string[]> {
   return {
     COFFEE_TOKEN: COFFEE_TOKEN_ABI,
     COFFEE_VIEWS: COFFEE_VIEWS_ABI,
-    BATCH_MANAGER: BATCH_MANAGER_ABI,
+    BATCH_OPERATIONS: BATCH_MANAGER_ABI,
     PROOF_OF_RESERVE: PROOF_OF_RESERVE_ABI,
     INVENTORY_MANAGER: INVENTORY_MANAGER_ABI,
     REDEMPTION_CONTRACT: REDEMPTION_CONTRACT_ABI,
     TREASURY: TREASURY_ABI,
     CDP_INTEGRATION: CDP_INTEGRATION_ABI,
-    ACCESS_CONTROL: ACCESS_CONTROL_ABI,
     CONFIG_MANAGER: CONFIG_MANAGER_ABI,
     ZK_MANAGER: ZK_MANAGER_ABI,
     PRIVACY_LAYER: PRIVACY_LAYER_ABI,
@@ -2568,4 +2648,405 @@ export function getContractABIs(): Record<string, string[]> {
     ETHIOPIAN_COMPLIANCE: ETHIOPIAN_COMPLIANCE_ABI,
     BANKING_CORE: BANKING_CORE_ABI
   };
+}
+
+// ===========================
+// TREASURY PAYMENT FUNCTIONS
+// ===========================
+
+/**
+ * Set payment requirement for a batch
+ */
+export async function setBatchPayment(
+  batchId: string,
+  paymentAmount: number
+): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
+  try {
+    console.log(`💰 Setting payment requirement for batch ${batchId}: ${paymentAmount} USDC`);
+    
+    const signer = await getSigner();
+    const treasuryContract = getContract(TREASURY_ADDRESS, TREASURY_ABI, signer);
+    
+    // Convert to 6 decimal USDC format
+    const paymentAmountWei = Math.floor(paymentAmount * 1e6);
+    
+    const tx = await treasuryContract.setBatchPayment(batchId, paymentAmountWei);
+    
+    console.log(`✅ Payment requirement set: ${tx.hash}`);
+    await tx.wait();
+    
+    return {
+      success: true,
+      transactionHash: tx.hash
+    };
+    
+  } catch (error) {
+    console.error('Error setting batch payment:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Pay for a batch (buyer pays the required amount)
+ */
+export async function payForBatch(
+  batchId: string,
+  paymentAmount: number
+): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
+  try {
+    console.log(`💳 Paying for batch ${batchId}: ${paymentAmount} USDC`);
+    
+    const signer = await getSigner();
+    const treasuryContract = getContract(TREASURY_ADDRESS, TREASURY_ABI, signer);
+    
+    // Convert to 6 decimal USDC format
+    const paymentAmountWei = Math.floor(paymentAmount * 1e6);
+    
+    const tx = await treasuryContract.payForBatch(batchId, paymentAmountWei);
+    
+    console.log(`✅ Payment completed: ${tx.hash}`);
+    await tx.wait();
+    
+    return {
+      success: true,
+      transactionHash: tx.hash
+    };
+    
+  } catch (error) {
+    console.error('Error paying for batch:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Transfer payment to offramp partner (banking transfer)
+ */
+export async function transferToOfframpPartner(
+  batchId: string,
+  buyer: string,
+  offrampPartner: string,
+  amount: number
+): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
+  try {
+    console.log(`🏦 Transferring ${amount} USDC to offramp partner for batch ${batchId}`);
+    
+    const signer = await getSigner();
+    const treasuryContract = getContract(TREASURY_ADDRESS, TREASURY_ABI, signer);
+    
+    // Convert to 6 decimal USDC format
+    const amountWei = Math.floor(amount * 1e6);
+    
+    const tx = await treasuryContract.transferToOfframpPartner(
+      batchId,
+      buyer,
+      offrampPartner,
+      amountWei
+    );
+    
+    console.log(`✅ Offramp transfer completed: ${tx.hash}`);
+    await tx.wait();
+    
+    return {
+      success: true,
+      transactionHash: tx.hash
+    };
+    
+  } catch (error) {
+    console.error('Error transferring to offramp partner:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Check payment status for a batch and buyer
+ */
+export async function checkPaymentStatus(
+  buyer: string,
+  batchId: string
+): Promise<boolean> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const treasuryContract = new ethers.Contract(TREASURY_ADDRESS, TREASURY_ABI, provider);
+    
+    return await treasuryContract.checkPaymentStatus(buyer, batchId);
+    
+  } catch (error) {
+    console.error('Error checking payment status:', error);
+    return false;
+  }
+}
+
+/**
+ * Get batch payment requirement
+ */
+export async function getBatchPaymentAmount(batchId: string): Promise<number | null> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const treasuryContract = new ethers.Contract(TREASURY_ADDRESS, TREASURY_ABI, provider);
+    
+    const paymentAmountWei = await treasuryContract.getBatchPaymentAmount(batchId);
+    return Number(paymentAmountWei) / 1e6; // Convert back to decimal USDC
+    
+  } catch (error) {
+    console.error('Error getting batch payment amount:', error);
+    return null;
+  }
+}
+
+/**
+ * Add EUDR certificate for a batch
+ */
+export async function addEUDRCertificate(
+  batchId: string,
+  certificate: {
+    certificateId: string;
+    issuer: string;
+    issueDate: number;
+    expiryDate: number;
+    isValid: boolean;
+    geoDataHash: string;
+    complianceLevel: string;
+    deforestationRisk: string;
+  }
+): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
+  try {
+    console.log(`🌍 Adding EUDR certificate for batch ${batchId}...`);
+    
+    const signer = await getSigner();
+    const complianceContract = getContract(ETHIOPIAN_COMPLIANCE_CORE_ADDRESS, ETHIOPIAN_COMPLIANCE_ABI, signer);
+    
+    const tx = await complianceContract.addEUDRCertificate(batchId, certificate);
+    
+    console.log(`✅ EUDR certificate added: ${tx.hash}`);
+    await tx.wait();
+    
+    return {
+      success: true,
+      transactionHash: tx.hash
+    };
+    
+  } catch (error) {
+    console.error('Error adding EUDR certificate:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Validate EUDR compliance for a batch
+ */
+export async function validateEUDRCompliance(batchId: string): Promise<boolean> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const complianceContract = new ethers.Contract(ETHIOPIAN_COMPLIANCE_CORE_ADDRESS, ETHIOPIAN_COMPLIANCE_ABI, provider);
+    
+    return await complianceContract.validateEUDRCompliance(batchId);
+    
+  } catch (error) {
+    console.error('Error validating EUDR compliance:', error);
+    return false;
+  }
+}
+
+// ============================================================================
+// BATCH REQUEST MANAGEMENT FUNCTIONS
+// ============================================================================
+
+/**
+ * Interface for batch request data
+ */
+export interface BatchRequestData {
+  batchId: string;
+  requester: string;
+  requestedQuantity: string;
+  requestDetails: string;
+  requestTimestamp: string;
+  isFulfilled: boolean;
+  fulfilledQuantity: string;
+  fulfilledTimestamp: string;
+  requestIndex: number;
+}
+
+/**
+ * Create a new batch request (for distributors)
+ */
+export async function createBatchRequest(
+  batchId: string,
+  requestedQuantity: string,
+  requestDetails: string
+): Promise<{ success: boolean; requestIndex?: number; transactionHash?: string; error?: string }> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const contract = new ethers.Contract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, signer);
+
+    const quantityWei = ethers.parseUnits(requestedQuantity, 18);
+    
+    const tx = await contract.createBatchRequest(batchId, quantityWei, requestDetails);
+    const receipt = await tx.wait();
+    
+    // Extract request index from events (assuming BatchRequestCreated event exists)
+    const requestIndex = receipt.logs?.length ? receipt.logs.length - 1 : 0;
+    
+    return {
+      success: true,
+      requestIndex,
+      transactionHash: tx.hash
+    };
+    
+  } catch (error) {
+    console.error('Error creating batch request:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Get a specific batch request
+ */
+export async function getBatchRequest(
+  batchId: string,
+  requestIndex: number
+): Promise<BatchRequestData | null> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const contract = new ethers.Contract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, provider);
+
+    const result = await contract.getBatchRequest(batchId, requestIndex);
+    
+    return {
+      batchId: result[0].toString(),
+      requester: result[1],
+      requestedQuantity: ethers.formatUnits(result[2], 18),
+      requestDetails: result[3],
+      requestTimestamp: result[4].toString(),
+      isFulfilled: result[5],
+      fulfilledQuantity: ethers.formatUnits(result[6], 18),
+      fulfilledTimestamp: result[7].toString(),
+      requestIndex
+    };
+    
+  } catch (error) {
+    console.error('Error getting batch request:', error);
+    return null;
+  }
+}
+
+/**
+ * Get all batch requests for a specific batch
+ */
+export async function getAllBatchRequests(batchId: string): Promise<BatchRequestData[]> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const contract = new ethers.Contract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, provider);
+
+    // First get the request count
+    const requestCount = await contract.getBatchRequestCount(batchId);
+    const count = parseInt(requestCount.toString());
+    
+    const requests: BatchRequestData[] = [];
+    
+    // Fetch each request individually
+    for (let i = 0; i < count; i++) {
+      const request = await getBatchRequest(batchId, i);
+      if (request) {
+        requests.push(request);
+      }
+    }
+    
+    return requests;
+    
+  } catch (error) {
+    console.error('Error getting all batch requests:', error);
+    return [];
+  }
+}
+
+/**
+ * Get all pending batch requests across all batches (for admin review)
+ */
+export async function getAllPendingBatchRequests(): Promise<BatchRequestData[]> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const contract = new ethers.Contract(COFFEE_TOKEN_ADDRESS, COFFEE_TOKEN_ABI, provider);
+
+    // Get all active batch IDs
+    const batchIds = await contract.getActiveBatchIds();
+    const allRequests: BatchRequestData[] = [];
+    
+    // For each batch, get all requests
+    for (const batchId of batchIds) {
+      const requests = await getAllBatchRequests(batchId.toString());
+      // Filter for pending (unfulfilled) requests
+      const pendingRequests = requests.filter(req => !req.isFulfilled);
+      allRequests.push(...pendingRequests);
+    }
+    
+    // Sort by timestamp (newest first)
+    return allRequests.sort((a, b) => parseInt(b.requestTimestamp) - parseInt(a.requestTimestamp));
+    
+  } catch (error) {
+    console.error('Error getting all pending batch requests:', error);
+    return [];
+  }
+}
+
+/**
+ * Approve a batch request and trigger verification (for WAGA admins with VERIFIER_ROLE)
+ */
+export async function approveBatchRequest(
+  batchId: string,
+  requestIndex: number,
+  chainlinkSource: string
+): Promise<{ success: boolean; verificationRequestId?: string; transactionHash?: string; error?: string }> {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const proofOfReserveContract = new ethers.Contract(PROOF_OF_RESERVE_ADDRESS, PROOF_OF_RESERVE_ABI, signer);
+
+    const tx = await proofOfReserveContract.requestReserveVerification(batchId, requestIndex, chainlinkSource);
+    const receipt = await tx.wait();
+    
+    // Extract verification request ID from events
+    const verificationEvent = receipt.logs?.find((log: any) => {
+      try {
+        const parsedLog = proofOfReserveContract.interface.parseLog(log);
+        return parsedLog?.name === 'ReserveVerificationRequested';
+      } catch {
+        return false;
+      }
+    });
+    
+    let verificationRequestId;
+    if (verificationEvent) {
+      const parsedLog = proofOfReserveContract.interface.parseLog(verificationEvent);
+      verificationRequestId = parsedLog?.args[0]; // First argument is requestId
+    }
+    
+    return {
+      success: true,
+      verificationRequestId,
+      transactionHash: tx.hash
+    };
+    
+  } catch (error) {
+    console.error('Error approving batch request:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
 }

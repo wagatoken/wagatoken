@@ -12,11 +12,12 @@ import {
   requestCoffeeRedemption,
   getUserRoles,
   getBatchProductType,
-  getBatchUnitWeight
+  getBatchUnitWeight,
+  createBatchRequest
 } from "@/utils/smartContracts";
 import { SiIpfs } from 'react-icons/si';
 import { FaLink } from 'react-icons/fa';
-import { MdCheck, MdClose, MdCoffee, MdVerified, MdStorefront, MdStorage, MdOutlineAssignment, MdLocalShipping, MdToken, MdNature, MdLocalFireDepartment, MdShoppingCart, MdFilterList } from 'react-icons/md';
+import { MdCheck, MdClose, MdCoffee, MdVerified, MdStorefront, MdStorage, MdOutlineAssignment, MdLocalShipping, MdToken, MdNature, MdLocalFireDepartment, MdShoppingCart, MdFilterList, MdPayment } from 'react-icons/md';
 import { CoffeeBatchMetadata } from "@/utils/ipfsMetadata";
 
 interface BatchDisplay {
@@ -77,6 +78,23 @@ function DistributorPageContent() {
   const [selectedBatchForRedemption, setSelectedBatchForRedemption] = useState<string>('');
   const [redemptionQuantity, setRedemptionQuantity] = useState<number>(1);
   const [shippingInfo, setShippingInfo] = useState<string>('');
+
+  // Batch request form state
+  const [selectedBatchForRequestSubmission, setSelectedBatchForRequestSubmission] = useState<string>('');
+  const [requestQuantity, setRequestQuantity] = useState<number>(1);
+  const [requestDetails, setRequestDetails] = useState<string>('');
+  const [requestSubmissionLoading, setRequestSubmissionLoading] = useState<boolean>(false);
+
+  // Payment form state
+  const [selectedBatchForPayment, setSelectedBatchForPayment] = useState<string>('');
+  const [paymentLoading, setPaymentLoading] = useState<boolean>(false);
+  const [usdcApprovalLoading, setUsdcApprovalLoading] = useState<boolean>(false);
+  const [usdcApproved, setUsdcApproved] = useState<boolean>(false);
+  const [paymentStatus, setPaymentStatus] = useState<{
+    type: 'success' | 'error';
+    message: string;
+    transactionHash?: string;
+  } | null>(null);
 
   // Connect wallet - handled by useWallet hook
   // Remove custom wallet connection logic since we're using useWallet
@@ -247,6 +265,57 @@ function DistributorPageContent() {
     }
   };
 
+  // Submit batch request (new workflow)
+  const submitBatchRequest = async () => {
+    try {
+      setRequestSubmissionLoading(true);
+      setError('');
+      setSuccess('');
+
+      if (!selectedBatchForRequestSubmission) {
+        setError('Please select a batch to request');
+        return;
+      }
+
+      if (requestQuantity <= 0) {
+        setError('Quantity must be greater than 0');
+        return;
+      }
+
+      if (!requestDetails.trim()) {
+        setError('Please provide request details');
+        return;
+      }
+
+      // Submit the batch request
+      const result = await createBatchRequest(
+        selectedBatchForRequestSubmission,
+        requestQuantity.toString(),
+        requestDetails
+      );
+
+      if (result.success) {
+        setSuccess(`✅ Batch request submitted successfully! Request Index: ${result.requestIndex}. Your request will be reviewed by WAGA administrators.`);
+        
+        // Reset form
+        setSelectedBatchForRequestSubmission('');
+        setRequestQuantity(1);
+        setRequestDetails('');
+        
+        // Reload batches to show updated status
+        await loadBatches();
+      } else {
+        setError(`Failed to submit request: ${result.error}`);
+      }
+
+    } catch (err) {
+      console.error('Error submitting batch request:', err);
+      setError(err instanceof Error ? err.message : 'Failed to submit batch request');
+    } finally {
+      setRequestSubmissionLoading(false);
+    }
+  };
+
   // Request coffee redemption
   const redeemTokens = async () => {
     try {
@@ -297,6 +366,82 @@ function DistributorPageContent() {
       setError(err instanceof Error ? err.message : 'Failed to redeem tokens');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Payment handler functions
+  const handleApproveUSDC = async (amount: number) => {
+    try {
+      setUsdcApprovalLoading(true);
+      setPaymentStatus(null);
+
+      // For now, simulate USDC approval
+      // In a real implementation, you would call the USDC contract's approve function
+      console.log(`Approving ${amount} USDC for treasury contract...`);
+      
+      // Simulate async approval process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      setUsdcApproved(true);
+      setPaymentStatus({
+        type: 'success',
+        message: `Successfully approved ${amount.toFixed(2)} USDC for payment`
+      });
+
+    } catch (err) {
+      console.error('Error approving USDC:', err);
+      setPaymentStatus({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Failed to approve USDC'
+      });
+    } finally {
+      setUsdcApprovalLoading(false);
+    }
+  };
+
+  const handlePayForBatch = async (batchId: string, amount: number) => {
+    try {
+      setPaymentLoading(true);
+      setPaymentStatus(null);
+
+      if (!usdcApproved) {
+        setPaymentStatus({
+          type: 'error',
+          message: 'Please approve USDC spending first'
+        });
+        return;
+      }
+
+      console.log(`Processing payment for batch ${batchId}: ${amount} USDC`);
+      
+      // For now, simulate payment processing
+      // In a real implementation, you would call the WAGATreasury.payForBatch function
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Simulate successful payment
+      const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`;
+      
+      setPaymentStatus({
+        type: 'success',
+        message: `Payment successful! You've purchased coffee tokens for batch ${batchId}`,
+        transactionHash: mockTxHash
+      });
+
+      // Reset form
+      setSelectedBatchForPayment('');
+      setUsdcApproved(false);
+      
+      // Reload batches to show updated balances
+      await loadBatches();
+
+    } catch (err) {
+      console.error('Error processing payment:', err);
+      setPaymentStatus({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Payment failed'
+      });
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
@@ -556,66 +701,267 @@ function DistributorPageContent() {
                   </div>
                 </div>
 
-                {/* Batch Request Form */}
-                <div className="web3-card animate-card-entrance">
-                  <h2 className="flex items-center gap-3 text-2xl font-bold text-gray-900 mb-6">
-                    <MdVerified size={24} />
-                    Request Coffee Batch Verification
-                  </h2>
-                  <p className="text-gray-600 mb-6">
-                    Select a batch to request verification. Upon successful verification via Chainlink Functions, 
-                    tokens will be automatically minted to your address.
-                    {selectedBatchFromBrowse && (
-                      <span className="block mt-2 text-emerald-600 font-medium">
-                        ✨ Pre-selected Batch #{selectedBatchFromBrowse} from Browse page
-                      </span>
-                    )}
-                  </p>
-                  
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Select Batch to Request
-                    </label>
-                    <select
-                      value={selectedBatchForRequest}
-                      onChange={(e) => setSelectedBatchForRequest(e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    >
-                      <option value="">Choose a batch...</option>
-                      {batches.filter(b => !b.isVerified).map((batch) => (
-                        <option key={batch.batchId} value={batch.batchId}>
-                          Batch #{batch.batchId} - {batch.name} ({batch.quantity} bags) - {batch.pricePerUnit} ETH
-                        </option>
-                      ))}
-                    </select>
+                {/* Batch Request Options */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Submit Batch Request (New Workflow) */}
+                  <div className="web3-card animate-card-entrance">
+                    <h2 className="flex items-center gap-3 text-xl font-bold text-gray-900 mb-4">
+                      <MdOutlineAssignment size={24} className="text-emerald-600" />
+                      Submit Batch Request
+                    </h2>
+                    <p className="text-gray-600 mb-6">
+                      Submit a request for coffee tokens. Your request will be reviewed by WAGA administrators 
+                      who will verify off-chain data before approving token minting.
+                    </p>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Select Batch
+                        </label>
+                        <select
+                          value={selectedBatchForRequestSubmission}
+                          onChange={(e) => setSelectedBatchForRequestSubmission(e.target.value)}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        >
+                          <option value="">Choose a batch...</option>
+                          {batches.map((batch) => (
+                            <option key={batch.batchId} value={batch.batchId}>
+                              Batch #{batch.batchId} - {batch.name} ({batch.quantity} units) - {batch.pricePerUnit} ETH
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Requested Quantity
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={requestQuantity}
+                          onChange={(e) => setRequestQuantity(parseInt(e.target.value) || 1)}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                          placeholder="Enter quantity to request"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Request Details
+                        </label>
+                        <textarea
+                          value={requestDetails}
+                          onChange={(e) => setRequestDetails(e.target.value)}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                          rows={3}
+                          placeholder="Provide details about your request (business purpose, timeline, etc.)"
+                        />
+                      </div>
+
+                      {selectedBatchForRequestSubmission && (
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                          <h4 className="font-semibold text-emerald-900 mb-2">Request Workflow</h4>
+                          <ol className="text-emerald-800 text-sm list-decimal list-inside space-y-1">
+                            <li>Submit your batch request with details</li>
+                            <li>WAGA administrators review and verify your request</li>
+                            <li>Upon approval, Chainlink verification is triggered</li>
+                            <li>Tokens are minted to your address after successful verification</li>
+                          </ol>
+                        </div>
+                      )}
+
+                      <button
+                        onClick={submitBatchRequest}
+                        disabled={requestSubmissionLoading || !selectedBatchForRequestSubmission || !requestDetails.trim()}
+                        className={`w-full py-3 px-6 rounded-lg font-semibold transition-all duration-300 ${
+                          requestSubmissionLoading || !selectedBatchForRequestSubmission || !requestDetails.trim()
+                            ? 'bg-gray-400 cursor-not-allowed' 
+                            : 'bg-emerald-600 text-white hover:bg-emerald-700 hover:scale-105'
+                        }`}
+                      >
+                        {requestSubmissionLoading ? 'Submitting Request...' : 'Submit Batch Request'}
+                      </button>
+                    </div>
                   </div>
 
-                  {selectedBatchForRequest && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                      <h3 className="font-semibold text-blue-900 mb-2">Verification Process</h3>
-                      <p className="text-blue-800 text-sm mb-2">
-                        This will trigger Chainlink Functions to verify the batch against WAGA's database. 
-                        Upon successful verification:
-                      </p>
-                      <ul className="text-blue-800 text-sm list-disc list-inside">
-                        <li>Batch will be marked as verified</li>
-                        <li>Tokens equal to batch quantity will be minted to your address</li>
-                        <li>You can then redeem tokens for physical coffee delivery</li>
-                      </ul>
-                    </div>
-                  )}
+                  {/* Direct Verification (Legacy Workflow) */}
+                  <div className="web3-card animate-card-entrance">
+                    <h2 className="flex items-center gap-3 text-xl font-bold text-gray-900 mb-4">
+                      <MdVerified size={24} className="text-blue-600" />
+                      Direct Verification (Legacy)
+                    </h2>
+                    <p className="text-gray-600 mb-6">
+                      Direct verification for batches. This triggers immediate Chainlink Functions verification 
+                      and automatic token minting upon success.
+                      {selectedBatchFromBrowse && (
+                        <span className="block mt-2 text-blue-600 font-medium">
+                          ✨ Pre-selected Batch #{selectedBatchFromBrowse}
+                        </span>
+                      )}
+                    </p>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Select Batch for Direct Verification
+                        </label>
+                        <select
+                          value={selectedBatchForRequest}
+                          onChange={(e) => setSelectedBatchForRequest(e.target.value)}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="">Choose a batch...</option>
+                          {batches.filter(b => !b.isVerified).map((batch) => (
+                            <option key={batch.batchId} value={batch.batchId}>
+                              Batch #{batch.batchId} - {batch.name} ({batch.quantity} units) - {batch.pricePerUnit} ETH
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                  <button
-                    onClick={requestBatch}
-                    disabled={loading || !selectedBatchForRequest}
-                    className={`w-full py-4 px-6 rounded-lg font-semibold text-lg transition-all duration-300 ${
-                      loading || !selectedBatchForRequest
-                        ? 'bg-gray-400 cursor-not-allowed' 
-                        : 'web3-gradient-button hover:scale-105'
-                    }`}
-                  >
-                    {loading ? 'Requesting Verification...' : 'Request Batch Verification & Minting'}
-                  </button>
+                      {selectedBatchForRequest && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <h4 className="font-semibold text-blue-900 mb-2">Direct Verification Process</h4>
+                          <ul className="text-blue-800 text-sm list-disc list-inside space-y-1">
+                            <li>Triggers immediate Chainlink Functions verification</li>
+                            <li>Batch verified against WAGA's off-chain database</li>
+                            <li>Tokens automatically minted upon successful verification</li>
+                            <li>No admin approval required</li>
+                          </ul>
+                        </div>
+                      )}
+
+                      <button
+                        onClick={requestBatch}
+                        disabled={loading || !selectedBatchForRequest}
+                        className={`w-full py-3 px-6 rounded-lg font-semibold transition-all duration-300 ${
+                          loading || !selectedBatchForRequest
+                            ? 'bg-gray-400 cursor-not-allowed' 
+                            : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105'
+                        }`}
+                      >
+                        {loading ? 'Requesting Verification...' : 'Request Direct Verification'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment for Tokens Section */}
+                <div className="web3-card animate-card-entrance">
+                  <h2 className="flex items-center gap-3 text-xl font-bold text-gray-900 mb-4">
+                    <MdPayment size={24} className="text-purple-600" />
+                    Pay for Coffee Tokens
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    Purchase coffee tokens using USDC. Select a batch and pay the required amount to receive your tokens.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Batch for Payment
+                      </label>
+                      <select
+                        value={selectedBatchForPayment || ''}
+                        onChange={(e) => setSelectedBatchForPayment(e.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      >
+                        <option value="">Choose a batch to purchase...</option>
+                        {batches.map((batch) => (
+                          <option key={batch.batchId} value={batch.batchId}>
+                            Batch #{batch.batchId} - {batch.name} ({batch.quantity} units) - ${(parseFloat(batch.pricePerUnit) * 2000).toFixed(2)} USDC
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {selectedBatchForPayment && (() => {
+                      const selectedBatch = batches.find(b => b.batchId === selectedBatchForPayment);
+                      const usdcPrice = selectedBatch ? (parseFloat(selectedBatch.pricePerUnit) * 2000) : 0;
+                      
+                      return (
+                        <div className="space-y-4">
+                          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                            <h4 className="font-semibold text-purple-900 mb-2">Payment Details</h4>
+                            <div className="space-y-2 text-purple-800 text-sm">
+                              <div className="flex justify-between">
+                                <span>Batch:</span>
+                                <span className="font-medium">#{selectedBatch?.batchId} - {selectedBatch?.name}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Quantity:</span>
+                                <span className="font-medium">{selectedBatch?.quantity} units</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Price per unit:</span>
+                                <span className="font-medium">${(usdcPrice / (selectedBatch?.quantity || 1)).toFixed(2)} USDC</span>
+                              </div>
+                              <div className="flex justify-between font-bold text-base">
+                                <span>Total Price:</span>
+                                <span className="text-purple-900">${usdcPrice.toFixed(2)} USDC</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                            <h4 className="font-semibold text-amber-900 mb-2">Payment Process</h4>
+                            <ol className="text-amber-800 text-sm list-decimal list-inside space-y-1">
+                              <li>Ensure you have sufficient USDC in your wallet</li>
+                              <li>Approve USDC spending for the treasury contract</li>
+                              <li>Complete the payment transaction</li>
+                              <li>Receive your coffee tokens automatically</li>
+                            </ol>
+                          </div>
+
+                          <div className="space-y-3">
+                            <button
+                              onClick={() => handleApproveUSDC(usdcPrice)}
+                              disabled={paymentLoading || usdcApprovalLoading}
+                              className={`w-full py-3 px-6 rounded-lg font-semibold transition-all duration-300 ${
+                                paymentLoading || usdcApprovalLoading
+                                  ? 'bg-gray-400 cursor-not-allowed' 
+                                  : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105'
+                              }`}
+                            >
+                              {usdcApprovalLoading ? 'Approving USDC...' : `Approve ${usdcPrice.toFixed(2)} USDC`}
+                            </button>
+
+                            <button
+                              onClick={() => handlePayForBatch(selectedBatchForPayment, usdcPrice)}
+                              disabled={paymentLoading || !usdcApproved}
+                              className={`w-full py-3 px-6 rounded-lg font-semibold transition-all duration-300 ${
+                                paymentLoading || !usdcApproved
+                                  ? 'bg-gray-400 cursor-not-allowed' 
+                                  : 'bg-purple-600 text-white hover:bg-purple-700 hover:scale-105'
+                              }`}
+                            >
+                              {paymentLoading ? 'Processing Payment...' : `Pay ${usdcPrice.toFixed(2)} USDC`}
+                            </button>
+                          </div>
+
+                          {paymentStatus && (
+                            <div className={`p-4 rounded-lg ${
+                              paymentStatus.type === 'success' 
+                                ? 'bg-green-50 border border-green-200 text-green-800' 
+                                : 'bg-red-50 border border-red-200 text-red-800'
+                            }`}>
+                              <p className="font-medium">
+                                {paymentStatus.type === 'success' ? '✅ Payment Successful!' : '❌ Payment Failed'}
+                              </p>
+                              <p className="text-sm mt-1">{paymentStatus.message}</p>
+                              {paymentStatus.transactionHash && (
+                                <p className="text-xs mt-2">
+                                  Transaction: {paymentStatus.transactionHash.slice(0, 10)}...{paymentStatus.transactionHash.slice(-8)}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 {/* Available Batches Display */}

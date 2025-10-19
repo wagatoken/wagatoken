@@ -3,9 +3,12 @@
 import { useState, useEffect } from "react";
 import { TokenETH, WalletMetamask, NetworkEthereum } from "@web3icons/react";
 import ZKConfigurationPanel, { ZKConfig } from "../../components/ZKConfigurationPanel";
-import TreasuryDashboard from "../components/admin/TreasuryDashboard";
+import ActualTreasuryDashboard from "../components/admin/ActualTreasuryDashboard";
 import CDPIntegrationDashboard from "../components/admin/CDPIntegrationDashboard";
 import EnhancedRoleManagement from "../components/admin/EnhancedRoleManagement";
+import InventoryOverviewCard from "../components/admin/InventoryOverviewCard";
+import InventoryManagementTab from "../components/admin/InventoryManagementTab";
+import EthiopianComplianceDashboard from "../../components/EthiopianComplianceDashboard";
 import {
   MdCheck,
   MdClose,
@@ -24,6 +27,8 @@ import {
   MdError,
   MdInfo,
   MdSecurity,
+  MdPayment,
+  MdAccountBalance,
 } from "react-icons/md";
 import {
   generateCoffeeMetadata,
@@ -40,7 +45,12 @@ import {
   grantUserRole,
   revokeUserRole,
   createPrivacyEnhancedBatch,
+  getAllPendingBatchRequests,
+  getBatchRequest,
+  approveBatchRequest,
+  BatchRequestData,
 } from "@/utils/smartContracts";
+import { verificationMonitor } from "@/utils/verificationMonitor";
 import { 
   SystemFallbacks, 
   ZKFallbacks, 
@@ -86,7 +96,7 @@ export default function AdminPage() {
   });
   const [fallbackMode, setFallbackMode] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "create" | "manage" | "verify" | "inventory" | "analytics" | "settings" | "treasury" | "cdp" | "roles">(
+  const [activeTab, setActiveTab] = useState<"dashboard" | "create" | "manage" | "verify" | "inventory" | "settings" | "treasury" | "cdp" | "roles" | "compliance" | "requests">(
     "dashboard"
   );
   const [loading, setLoading] = useState(false);
@@ -126,6 +136,20 @@ export default function AdminPage() {
     verificationInterval: 7 * 24 * 60 * 60, // 7 days in seconds
     maxBatchesPerCheck: 50
   });
+
+  // Batch Requests state
+  const [pendingRequests, setPendingRequests] = useState<BatchRequestData[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<BatchRequestData | null>(null);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [verificationChecklist, setVerificationChecklist] = useState({
+    distributorVerified: false,
+    commercialAgreement: false,
+    quantityValidated: false,
+    batchQualityConfirmed: false,
+    logisticsArranged: false
+  });
+  const [requestsError, setRequestsError] = useState<string>("");
+  const [requestsSuccess, setRequestsSuccess] = useState<string>("");
   
   // QR Code state
   const [generatedQRs, setGeneratedQRs] = useState<{
@@ -445,6 +469,129 @@ export default function AdminPage() {
     }
   };
 
+  // Load pending batch requests
+  const loadPendingRequests = async () => {
+    if (!isConnected || !address) return;
+    
+    try {
+      setRequestsLoading(true);
+      setRequestsError('');
+
+      // Get all pending batch requests
+      const requests = await getAllPendingBatchRequests();
+      setPendingRequests(requests);
+      
+      if (requests.length === 0) {
+        setRequestsSuccess('No pending batch requests found');
+      } else {
+        setRequestsSuccess(`${requests.length} pending request(s) loaded`);
+      }
+
+    } catch (err) {
+      console.error('Error loading pending requests:', err);
+      setRequestsError('Failed to load pending batch requests');
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
+
+  // Approve a batch request with verification checklist
+  const handleApproveRequest = async (request: BatchRequestData) => {
+    try {
+      setRequestsLoading(true);
+      setRequestsError('');
+
+      // Check verification checklist
+      const checklistItems = Object.values(verificationChecklist);
+      const allChecked = checklistItems.every(item => item === true);
+      
+      if (!allChecked) {
+        setRequestsError('Please complete all verification checklist items before approving');
+        return;
+      }
+
+      // Prepare Chainlink Functions source
+      const chainlinkSource = `
+        // Chainlink Functions verification script for WAGA Coffee
+        const batchId = args[0];
+        const expectedBatchQuantity = parseInt(args[1]);
+        const requestedQuantity = parseInt(args[2]);
+        const expectedPrice = args[3];
+        const expectedPackaging = args[4];
+        const expectedMetadataHash = args[5];
+
+        // In production, this would make an API call to verify batch data
+        // against the WAGA coffee database
+        console.log('Verifying batch:', batchId);
+        console.log('Expected batch quantity:', expectedBatchQuantity);
+        console.log('Requested quantity:', requestedQuantity);
+        console.log('Expected price:', expectedPrice);
+        console.log('Expected packaging:', expectedPackaging);
+        console.log('Expected metadata hash:', expectedMetadataHash);
+
+        // Simulate verification success
+        const verificationResult = {
+          quantity: expectedBatchQuantity, // Total verified quantity in off-chain system
+          price: expectedPrice,
+          packaging: expectedPackaging,
+          metadataHash: expectedMetadataHash
+        };
+
+        return Functions.encodeString(JSON.stringify(verificationResult));
+      `;
+
+      // Approve the request by triggering verification
+      const result = await approveBatchRequest(request.batchId, request.requestIndex, chainlinkSource);
+      
+      if (result.success) {
+        setRequestsSuccess(`✅ Batch request approved! Verification ID: ${result.verificationRequestId}`);
+        
+        // Reset checklist and refresh requests
+        setVerificationChecklist({
+          distributorVerified: false,
+          commercialAgreement: false,
+          quantityValidated: false,
+          batchQualityConfirmed: false,
+          logisticsArranged: false
+        });
+        setSelectedRequest(null);
+        
+        // Reload requests to show updated status
+        await loadPendingRequests();
+      } else {
+        setRequestsError(`Failed to approve request: ${result.error}`);
+      }
+
+    } catch (err) {
+      console.error('Error approving request:', err);
+      setRequestsError(err instanceof Error ? err.message : 'Failed to approve request');
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
+
+  // Reject a batch request
+  const handleRejectRequest = async (request: BatchRequestData) => {
+    try {
+      setRequestsLoading(true);
+      setRequestsError('');
+
+      // For now, we'll just remove it from the UI
+      // In production, you might want to mark it as rejected in the smart contract
+      setPendingRequests(prev => prev.filter(r => 
+        r.batchId !== request.batchId || r.requestIndex !== request.requestIndex
+      ));
+      
+      setSelectedRequest(null);
+      setRequestsSuccess('Request rejected successfully');
+
+    } catch (err) {
+      console.error('Error rejecting request:', err);
+      setRequestsError('Failed to reject request');
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
 
 
   // Handle form input changes
@@ -666,6 +813,14 @@ export default function AdminPage() {
   // Initialize system status on mount
   useEffect(() => {
     checkAndSetSystemStatus();
+    
+    // Initialize verification monitoring
+    verificationMonitor.startListening();
+    
+    // Cleanup on unmount
+    return () => {
+      verificationMonitor.stopListening();
+    };
   }, []);
 
   useEffect(() => {
@@ -674,9 +829,15 @@ export default function AdminPage() {
     }
   }, [isConnected, address, systemStatus]);
 
+  useEffect(() => {
+    if (isConnected && address && activeTab === 'requests') {
+      loadPendingRequests();
+    }
+  }, [isConnected, address, activeTab]);
+
   return (
     <div className="min-h-screen web3-section">
-      <div className="max-w-7xl mx-auto web3-page-spacing relative z-10">
+      <div className="max-w-6xl mx-auto web3-page-spacing relative z-10 px-4">
         {/* Environment Status Check */}
         <EnvironmentStatus />
         
@@ -696,7 +857,7 @@ export default function AdminPage() {
           </div>
 
           {/* Enhanced Quick Stats */}
-          <div className="web3-stats-grid">
+          <div className="web3-stats-grid justify-center">
             <div className="web3-enhanced-stat-card web3-blockchain-pulse group">
               <div className="text-4xl font-bold web3-gradient-text mb-2">{batches.length}</div>
               <div className="text-gray-600 font-semibold">Total Batches</div>
@@ -763,23 +924,29 @@ export default function AdminPage() {
             {/* Tab Navigation */}
             <div className="mb-8">
               <div className="border-b border-gray-200">
-                <nav className="-mb-px flex space-x-8">
+                <nav className="-mb-px flex flex-wrap justify-center gap-x-8 gap-y-2">
                   {[
+                    // Core Operations (Row 1)
                     { id: 'dashboard', label: 'Dashboard', icon: <MdDashboard size={20} /> },
+                    { id: 'requests', label: 'Batch Requests', icon: <MdStorefront size={20} /> },
                     { id: 'create', label: 'Create Batch', icon: <MdCreate size={20} /> },
                     { id: 'manage', label: 'Manage Batches', icon: <MdTimeline size={20} /> },
                     { id: 'verify', label: 'Verify & Mint', icon: <MdVerified size={20} /> },
                     { id: 'inventory', label: 'Inventory', icon: <MdStorage size={20} /> },
+                    
+                    // Financial Operations (Row 2)
                     { id: 'treasury', label: 'Treasury', icon: <MdSecurity size={20} /> },
-                    { id: 'cdp', label: 'CDP Integration', icon: <MdSecurity size={20} /> },
+                    { id: 'compliance', label: 'Ethiopian Compliance', icon: <MdVerified size={20} /> },
+                    { id: 'cdp', label: 'CDP Integration', icon: <MdAccountBalance size={20} /> },
+                    
+                    // System Management (Row 3)
                     { id: 'roles', label: 'Role Management', icon: <MdSettings size={20} /> },
-                    { id: 'analytics', label: 'Analytics', icon: <MdAnalytics size={20} /> },
                     { id: 'settings', label: 'Settings', icon: <MdSettings size={20} /> }
                   ].map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      className={`flex items-center gap-2 py-4 px-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                         activeTab === tab.id
                           ? 'border-purple-500 text-purple-600'
                           : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -813,26 +980,27 @@ export default function AdminPage() {
             )}
 
             {/* Tab Content */}
-            {activeTab === 'dashboard' && (
-              <div className="space-y-8">
-                {/* System Status */}
-                <div className="web3-card animate-card-entrance">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                    <MdSecurity size={24} className="text-purple-600" />
-                    System Status
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                    {/* Blockchain Status */}
-                    <div className={`p-4 rounded-lg border-2 transition-colors ${
-                      systemStatus.blockchain 
-                        ? 'bg-green-50 border-green-200 text-green-800' 
-                        : 'bg-red-50 border-red-200 text-red-800'
-                    }`}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <NetworkEthereum size={20} />
-                        <span className="font-semibold">Blockchain</span>
-                      </div>
+            <div className="max-w-5xl mx-auto">
+              {activeTab === 'dashboard' && (
+                <div className="space-y-8">
+                  {/* System Status */}
+                  <div className="web3-card animate-card-entrance">
+                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                      <MdSecurity size={24} className="text-purple-600" />
+                      System Status
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                      {/* Blockchain Status */}
+                      <div className={`p-4 rounded-lg border-2 transition-colors ${
+                        systemStatus.blockchain 
+                          ? 'bg-green-50 border-green-200 text-green-800' 
+                          : 'bg-red-50 border-red-200 text-red-800'
+                      }`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <NetworkEthereum size={20} />
+                          <span className="font-semibold">Blockchain</span>
+                        </div>
                       <div className="flex items-center gap-2">
                         {systemStatus.blockchain ? (
                           <>
@@ -1021,6 +1189,9 @@ export default function AdminPage() {
                   </div>
                 </div>
 
+                {/* Inventory Overview Card */}
+                <InventoryOverviewCard />
+
                 {/* Real-Time Platform Statistics */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2">
@@ -1054,6 +1225,20 @@ export default function AdminPage() {
                         <span className="font-medium text-purple-800">Treasury Operations</span>
                       </button>
                       <button
+                        onClick={() => setActiveTab('compliance')}
+                        className="w-full flex items-center space-x-2 p-3 text-left bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                      >
+                        <MdVerified className="text-green-600" />
+                        <span className="font-medium text-green-800">Ethiopian Compliance</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('cdp')}
+                        className="w-full flex items-center space-x-2 p-3 text-left bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                      >
+                        <MdAccountBalance className="text-blue-600" />
+                        <span className="font-medium text-blue-800">CDP Integration</span>
+                      </button>
+                      <button
                         onClick={() => setActiveTab('roles')}
                         className="w-full flex items-center space-x-2 p-3 text-left bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
                       >
@@ -1061,11 +1246,11 @@ export default function AdminPage() {
                         <span className="font-medium text-amber-800">Role Management</span>
                       </button>
                       <button
-                        onClick={() => setActiveTab('cdp')}
+                        onClick={() => setActiveTab('inventory')}
                         className="w-full flex items-center space-x-2 p-3 text-left bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
                       >
-                        <MdSecurity className="text-indigo-600" />
-                        <span className="font-medium text-indigo-800">CDP Integration</span>
+                        <MdStorage className="text-indigo-600" />
+                        <span className="font-medium text-indigo-800">Inventory Management</span>
                       </button>
                     </div>
                   </div>
@@ -1106,6 +1291,228 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'requests' && (
+              <div className="space-y-8">
+                {/* Batch Requests Header */}
+                <div className="web3-card animate-card-entrance">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <MdStorefront className="text-emerald-600" />
+                    Batch Requests Management
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    Review and approve batch requests from distributors. Complete the verification checklist before approving requests.
+                  </p>
+                  
+                  {/* Requests Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600">{pendingRequests.length}</div>
+                      <div className="text-blue-600 font-semibold">Pending Requests</div>
+                    </div>
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">
+                        {pendingRequests.reduce((sum, req) => sum + parseFloat(req.requestedQuantity), 0).toFixed(2)}
+                      </div>
+                      <div className="text-green-600 font-semibold">Total Requested</div>
+                    </div>
+                    <div className="bg-purple-50 p-4 rounded-lg">
+                      <div className="text-2xl font-bold text-purple-600">
+                        {new Set(pendingRequests.map(req => req.batchId)).size}
+                      </div>
+                      <div className="text-purple-600 font-semibold">Unique Batches</div>
+                    </div>
+                  </div>
+
+                  {/* Refresh Button */}
+                  <button
+                    onClick={loadPendingRequests}
+                    disabled={requestsLoading}
+                    className="web3-button web3-button-secondary mb-6 disabled:opacity-50"
+                  >
+                    {requestsLoading ? 'Loading...' : 'Refresh Requests'}
+                  </button>
+
+                  {/* Error/Success Messages */}
+                  {requestsError && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6">
+                      {requestsError}
+                    </div>
+                  )}
+                  {requestsSuccess && (
+                    <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg mb-6">
+                      {requestsSuccess}
+                    </div>
+                  )}
+                </div>
+
+                {/* Pending Requests List */}
+                <div className="web3-card animate-card-entrance" style={{ animationDelay: '100ms' }}>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Pending Requests</h3>
+                  
+                  {requestsLoading ? (
+                    <div className="text-center py-8 text-gray-500">Loading pending requests...</div>
+                  ) : pendingRequests.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">No pending batch requests found</div>
+                  ) : (
+                    <div className="space-y-4">
+                      {pendingRequests.map((request, index) => (
+                        <div key={`${request.batchId}-${request.requestIndex}`} className="border border-gray-200 rounded-lg p-6 hover:border-emerald-300 transition-colors">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <h4 className="text-lg font-semibold text-gray-900">Batch #{request.batchId}</h4>
+                              <p className="text-gray-600">Request #{request.requestIndex}</p>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-semibold text-emerald-600">{request.requestedQuantity} units</div>
+                              <div className="text-sm text-gray-500">
+                                {new Date(parseInt(request.requestTimestamp) * 1000).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                              <span className="text-sm font-medium text-gray-500">Requester:</span>
+                              <p className="text-sm text-gray-900 font-mono">{request.requester}</p>
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-gray-500">Details:</span>
+                              <p className="text-sm text-gray-900">{request.requestDetails || 'No details provided'}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setSelectedRequest(request)}
+                              className="web3-button web3-button-primary text-sm"
+                            >
+                              Review & Approve
+                            </button>
+                            <button
+                              onClick={() => handleRejectRequest(request)}
+                              disabled={requestsLoading}
+                              className="web3-button web3-button-secondary text-sm disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Request Review Modal */}
+                {selectedRequest && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                      <div className="p-6">
+                        <div className="flex justify-between items-start mb-6">
+                          <h3 className="text-xl font-semibold text-gray-900">
+                            Review Request: Batch #{selectedRequest.batchId}
+                          </h3>
+                          <button
+                            onClick={() => setSelectedRequest(null)}
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <MdClose size={24} />
+                          </button>
+                        </div>
+
+                        {/* Request Details */}
+                        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                          <h4 className="font-semibold text-gray-900 mb-3">Request Details</h4>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="font-medium text-gray-500">Batch ID:</span>
+                              <p className="text-gray-900">#{selectedRequest.batchId}</p>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-500">Request Index:</span>
+                              <p className="text-gray-900">#{selectedRequest.requestIndex}</p>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-500">Requested Quantity:</span>
+                              <p className="text-gray-900">{selectedRequest.requestedQuantity} units</p>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-500">Request Date:</span>
+                              <p className="text-gray-900">
+                                {new Date(parseInt(selectedRequest.requestTimestamp) * 1000).toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="col-span-2">
+                              <span className="font-medium text-gray-500">Requester Address:</span>
+                              <p className="text-gray-900 font-mono text-xs break-all">{selectedRequest.requester}</p>
+                            </div>
+                            <div className="col-span-2">
+                              <span className="font-medium text-gray-500">Request Details:</span>
+                              <p className="text-gray-900">{selectedRequest.requestDetails || 'No details provided'}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Verification Checklist */}
+                        <div className="mb-6">
+                          <h4 className="font-semibold text-gray-900 mb-3">WAGA Admin Verification Checklist</h4>
+                          <p className="text-sm text-gray-600 mb-4">
+                            Complete all verification steps before approving the request:
+                          </p>
+                          
+                          <div className="space-y-3">
+                            {[
+                              { key: 'distributorVerified', label: 'Distributor identity and credentials verified' },
+                              { key: 'commercialAgreement', label: 'Commercial agreement exists and is valid' },
+                              { key: 'quantityValidated', label: 'Requested quantity is reasonable and available' },
+                              { key: 'batchQualityConfirmed', label: 'Batch quality and specifications confirmed' },
+                              { key: 'logisticsArranged', label: 'Shipping and logistics arrangements confirmed' }
+                            ].map((item) => (
+                              <label key={item.key} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
+                                <input
+                                  type="checkbox"
+                                  checked={verificationChecklist[item.key as keyof typeof verificationChecklist]}
+                                  onChange={(e) => setVerificationChecklist(prev => ({
+                                    ...prev,
+                                    [item.key]: e.target.checked
+                                  }))}
+                                  className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                                />
+                                <span className="text-sm text-gray-700">{item.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => handleApproveRequest(selectedRequest)}
+                            disabled={requestsLoading || !Object.values(verificationChecklist).every(item => item)}
+                            className="web3-button web3-button-primary disabled:opacity-50"
+                          >
+                            {requestsLoading ? 'Processing...' : 'Approve & Trigger Verification'}
+                          </button>
+                          <button
+                            onClick={() => handleRejectRequest(selectedRequest)}
+                            disabled={requestsLoading}
+                            className="web3-button web3-button-secondary disabled:opacity-50"
+                          >
+                            Reject Request
+                          </button>
+                          <button
+                            onClick={() => setSelectedRequest(null)}
+                            className="web3-button web3-button-outline"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1623,27 +2030,7 @@ export default function AdminPage() {
             )}
 
             {/* Inventory Management Tab */}
-            {activeTab === 'inventory' && (
-              <div className="web3-card animate-card-entrance">
-                <h2 className="flex items-center gap-3 text-2xl font-bold text-gray-900 mb-6">
-                  <MdStorage size={24} />
-                  Inventory Management
-                </h2>
-                <p className="text-gray-600 mb-6">
-                  Monitor and control periodic inventory verifications, configure automation parameters, 
-                  and view verification history.
-                </p>
-                <div className="text-center">
-                  <a 
-                    href="/admin/inventory" 
-                    className="web3-gradient-button inline-flex items-center gap-2 px-6 py-3 text-lg"
-                  >
-                    <MdStorage size={20} />
-                    Open Inventory Dashboard
-                  </a>
-                </div>
-              </div>
-            )}
+            {activeTab === 'inventory' && <InventoryManagementTab />}
 
             {/* QR Codes Display */}
             {generatedQRs && (
@@ -1693,21 +2080,17 @@ export default function AdminPage() {
               </div>
             )}
 
-            {activeTab === 'analytics' && (
-              <div className="web3-card">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">System Analytics</h3>
-                <p className="text-gray-600">Track batch creation trends, verification rates, and system performance metrics.</p>
-              </div>
-            )}
-
             {/* Treasury Management Tab */}
-            {activeTab === 'treasury' && <TreasuryDashboard />}
+            {activeTab === 'treasury' && <ActualTreasuryDashboard />}
 
             {/* CDP Integration Tab */}
             {activeTab === 'cdp' && <CDPIntegrationDashboard />}
 
             {/* Enhanced Role Management Tab */}
             {activeTab === 'roles' && <EnhancedRoleManagement />}
+
+            {/* Ethiopian Compliance Tab */}
+            {activeTab === 'compliance' && <EthiopianComplianceDashboard />}
 
             {activeTab === 'settings' && (
               <div className="space-y-8">
@@ -1924,6 +2307,7 @@ export default function AdminPage() {
                 </div>
               </div>
             )}
+            </div>
           </>
         )}
       </div>

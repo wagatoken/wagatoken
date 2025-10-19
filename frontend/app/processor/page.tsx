@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 // import { useAccount } from 'wagmi';
-import { MdDashboard, MdBuild, MdInventory, MdAnalytics, MdSettings, MdAdd, MdSearch, MdFilterList, MdFileDownload, MdCoffee, MdLocationOn, MdGrade, MdVerified, MdRefresh, MdInfo, MdQrCode, MdSecurity } from 'react-icons/md';
+import { MdDashboard, MdBuild, MdInventory, MdAnalytics, MdSettings, MdAdd, MdSearch, MdFilterList, MdFileDownload, MdCoffee, MdLocationOn, MdGrade, MdVerified, MdRefresh, MdInfo, MdQrCode, MdSecurity, MdOutlineAssignment } from 'react-icons/md';
 import { ethers } from 'ethers';
 import { useWallet } from '../components/WalletProvider';
-import { createBatchBlockchainFirst } from '../../utils/smartContracts';
+import { createBatchBlockchainFirst, getAllBatchRequests, getAllPendingBatchRequests, BatchRequestData, getActiveBatchIds } from '../../utils/smartContracts';
 import { generateBatchQRCode, generateSimpleVerificationQR, CoffeeBatchMetadata } from '../../utils/ipfsMetadata';
 import ZKConfigurationPanel, { ZKConfig } from '../../components/ZKConfigurationPanel';
 import PrivacyEnhancedBatchForm from '../components/PrivacyEnhancedBatchForm';
@@ -47,6 +47,11 @@ export default function ProcessorPortal() {
   const [roleChecking, setRoleChecking] = useState(true);
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
   const [showBatchModal, setShowBatchModal] = useState(false);
+
+  // Batch requests state (for creator/processor visibility)
+  const [batchRequests, setBatchRequests] = useState<BatchRequestData[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [userBatchIds, setUserBatchIds] = useState<string[]>([]);
 
   // Batch creation form
   const [batchForm, setBatchForm] = useState<ProcessorBatchData>({
@@ -94,6 +99,7 @@ export default function ProcessorPortal() {
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: MdDashboard },
+    { id: 'requests', label: 'Batch Requests', icon: MdOutlineAssignment },
     { id: 'process', label: 'Processing', icon: MdBuild },
     { id: 'inventory', label: 'Inventory', icon: MdInventory },
     { id: 'qr-codes', label: 'QR Codes', icon: MdQrCode },
@@ -111,6 +117,13 @@ export default function ProcessorPortal() {
     }
     loadPlatformStats();
   }, [address, isConnected]);
+
+  // Load batch requests when requests tab is active
+  useEffect(() => {
+    if (isConnected && address && activeTab === 'requests') {
+      loadBatchRequests();
+    }
+  }, [isConnected, address, activeTab]);
 
   const loadPlatformStats = async () => {
     try {
@@ -168,6 +181,38 @@ export default function ProcessorPortal() {
       setError('Failed to verify processor permissions');
     } finally {
       setRoleChecking(false);
+    }
+  };
+
+  // Load batch requests for the user's batches
+  const loadBatchRequests = async () => {
+    if (!isConnected || !address) return;
+    
+    try {
+      setRequestsLoading(true);
+      setError(null);
+
+      // Get all batch IDs
+      const allBatchIds = await getActiveBatchIds();
+      
+      // For a real implementation, you'd filter batches created by this user
+      // For now, we'll simulate this by getting requests for all batches
+      // and showing them as if they were created by this user
+      const allRequests: BatchRequestData[] = [];
+      
+      for (const batchId of allBatchIds) {
+        const requests = await getAllBatchRequests(batchId.toString());
+        allRequests.push(...requests);
+      }
+      
+      setBatchRequests(allRequests);
+      setUserBatchIds(allBatchIds.map(id => id.toString()));
+
+    } catch (err) {
+      console.error('Error loading batch requests:', err);
+      setError('Failed to load batch requests');
+    } finally {
+      setRequestsLoading(false);
     }
   };
 
@@ -637,6 +682,205 @@ export default function ProcessorPortal() {
                     </tr>
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Batch Requests Tab */}
+        {activeTab === 'requests' && (
+          <div className="space-y-8">
+            {/* Batch Requests Header */}
+            <div className="bg-white rounded-xl shadow-lg p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <MdOutlineAssignment className="text-amber-600" />
+                Batch Requests Overview
+              </h2>
+              <p className="text-gray-600 mb-6">
+                View requests made against your coffee batches by distributors. Track the status of requests and see when tokens are minted.
+              </p>
+              
+              {/* Requests Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">{batchRequests.length}</div>
+                  <div className="text-blue-600 font-semibold">Total Requests</div>
+                </div>
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-yellow-600">
+                    {batchRequests.filter(req => !req.isFulfilled).length}
+                  </div>
+                  <div className="text-yellow-600 font-semibold">Pending</div>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">
+                    {batchRequests.filter(req => req.isFulfilled).length}
+                  </div>
+                  <div className="text-green-600 font-semibold">Fulfilled</div>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {batchRequests.reduce((sum, req) => sum + parseFloat(req.requestedQuantity), 0).toFixed(2)}
+                  </div>
+                  <div className="text-purple-600 font-semibold">Total Requested</div>
+                </div>
+              </div>
+
+              {/* Refresh Button */}
+              <button
+                onClick={loadBatchRequests}
+                disabled={requestsLoading}
+                className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 disabled:opacity-50 mb-6"
+              >
+                {requestsLoading ? 'Loading...' : 'Refresh Requests'}
+              </button>
+
+              {/* Error/Success Messages */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6">
+                  {error}
+                </div>
+              )}
+            </div>
+
+            {/* Requests List */}
+            <div className="bg-white rounded-xl shadow-lg p-8">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">Batch Requests</h3>
+              
+              {requestsLoading ? (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+                  Loading batch requests...
+                </div>
+              ) : batchRequests.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="text-6xl mb-4">📋</div>
+                  <p>No batch requests found</p>
+                  <p className="text-sm text-gray-400 mt-2">
+                    Requests from distributors will appear here
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {batchRequests.map((request, index) => (
+                    <div key={`${request.batchId}-${request.requestIndex}`} className="border border-gray-200 rounded-lg p-6 hover:border-amber-300 transition-colors">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                            <MdCoffee className="text-amber-600" />
+                            Batch #{request.batchId}
+                          </h4>
+                          <p className="text-gray-600">Request #{request.requestIndex}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-semibold text-amber-600">{request.requestedQuantity} units</div>
+                          <div className={`text-sm px-2 py-1 rounded-full ${
+                            request.isFulfilled 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {request.isFulfilled ? 'Fulfilled' : 'Pending'}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                        <div>
+                          <span className="text-sm font-medium text-gray-500">Requester:</span>
+                          <p className="text-sm text-gray-900 font-mono break-all">{request.requester}</p>
+                        </div>
+                        <div>
+                          <span className="text-sm font-medium text-gray-500">Request Date:</span>
+                          <p className="text-sm text-gray-900">
+                            {new Date(parseInt(request.requestTimestamp) * 1000).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-sm font-medium text-gray-500">Details:</span>
+                          <p className="text-sm text-gray-900">{request.requestDetails || 'No details provided'}</p>
+                        </div>
+                      </div>
+                      
+                      {request.isFulfilled && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="font-medium text-green-700">Fulfilled Quantity:</span>
+                              <p className="text-green-900">{request.fulfilledQuantity} units</p>
+                            </div>
+                            <div>
+                              <span className="font-medium text-green-700">Fulfillment Date:</span>
+                              <p className="text-green-900">
+                                {new Date(parseInt(request.fulfilledTimestamp) * 1000).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Request Analytics */}
+            <div className="bg-white rounded-xl shadow-lg p-8">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">Request Analytics</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Popular Batches */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-4">Most Requested Batches</h4>
+                  {userBatchIds.length > 0 ? (
+                    <div className="space-y-2">
+                      {userBatchIds.slice(0, 5).map(batchId => {
+                        const batchRequestsForBatch = batchRequests.filter(req => req.batchId === batchId);
+                        const totalRequested = batchRequestsForBatch.reduce((sum, req) => sum + parseFloat(req.requestedQuantity), 0);
+                        return (
+                          <div key={batchId} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                            <span className="font-medium">Batch #{batchId}</span>
+                            <div className="text-right">
+                              <div className="font-semibold text-amber-600">{totalRequested.toFixed(2)} units</div>
+                              <div className="text-sm text-gray-500">{batchRequestsForBatch.length} requests</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">No batch data available</p>
+                  )}
+                </div>
+
+                {/* Recent Activity */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-4">Recent Activity</h4>
+                  {batchRequests.length > 0 ? (
+                    <div className="space-y-2">
+                      {batchRequests
+                        .sort((a, b) => parseInt(b.requestTimestamp) - parseInt(a.requestTimestamp))
+                        .slice(0, 5)
+                        .map((request, index) => (
+                          <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                            <div>
+                              <div className="font-medium">Batch #{request.batchId}</div>
+                              <div className="text-sm text-gray-500">
+                                {new Date(parseInt(request.requestTimestamp) * 1000).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold">{request.requestedQuantity} units</div>
+                              <div className={`text-sm ${request.isFulfilled ? 'text-green-600' : 'text-yellow-600'}`}>
+                                {request.isFulfilled ? 'Fulfilled' : 'Pending'}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">No recent activity</p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
