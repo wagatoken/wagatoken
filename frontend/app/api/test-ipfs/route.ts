@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   try {
     // Check if JWT is available
-    const pinataJWT = process.env.NEXT_PUBLIC_PINATA_JWT || process.env.PINATA_JWT;
+    const pinataJWT = process.env.NEXT_PUBLIC_PINATA_JWT;
     
     if (!pinataJWT) {
       return NextResponse.json({
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
         error: 'Pinata JWT not configured',
         available_vars: {
           NEXT_PUBLIC_PINATA_JWT: !!process.env.NEXT_PUBLIC_PINATA_JWT,
-          PINATA_JWT: !!process.env.PINATA_JWT,
+          PINATA_JWT: !!process.env.NEXT_PUBLIC_PINATA_JWT,
           NODE_ENV: process.env.NODE_ENV
         }
       });

@@ -257,10 +257,7 @@ export async function checkSystemStatus(): Promise<SystemStatus> {
 
     // Check IPFS (via Pinata) with JWT authentication
     try {
-      const pinataJWT = process.env.NEXT_PUBLIC_PINATA_JWT || 
-                       (typeof window !== 'undefined' ? 
-                         (window as any).PINATA_JWT : 
-                         process.env.PINATA_JWT);
+      const pinataJWT = process.env.NEXT_PUBLIC_PINATA_JWT;
       
       if (pinataJWT) {
         const response = await fetch('https://api.pinata.cloud/data/testAuthentication', {
@@ -310,7 +307,7 @@ export async function checkSystemStatus(): Promise<SystemStatus> {
       if (status.chainlink && typeof window !== 'undefined' && window.ethereum) {
         try {
           const provider = new (await import('ethers')).BrowserProvider(window.ethereum);
-          const routerAddress = process.env.NEXT_PUBLIC_CHAINLINK_ROUTER;
+          const routerAddress = process.env.NEXT_PUBLIC_CHAINLINK_ROUTER_ADDRESS;
           
           if (routerAddress) {
             const code = await provider.getCode(routerAddress);

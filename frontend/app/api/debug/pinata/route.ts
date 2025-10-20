@@ -4,8 +4,8 @@ export async function GET() {
   try {
     // Basic environment check without external dependencies
     const envCheck = {
-      hasJWT: !!process.env.PINATA_JWT,
-      jwtLength: process.env.PINATA_JWT ? process.env.PINATA_JWT.length : 0,
+      hasJWT: !!process.env.NEXT_PUBLIC_PINATA_JWT,
+      jwtLength: process.env.NEXT_PUBLIC_PINATA_JWT ? process.env.NEXT_PUBLIC_PINATA_JWT.length : 0,
       gatewayUrl: process.env.NEXT_PUBLIC_GATEWAY_URL,
       nodeEnv: process.env.NODE_ENV,
       platform: process.env.NETLIFY ? 'netlify' : 'local',
@@ -15,13 +15,13 @@ export async function GET() {
 
     // Only test Pinata if we have the JWT
     let pinataTest = null;
-    if (process.env.PINATA_JWT) {
+    if (process.env.NEXT_PUBLIC_PINATA_JWT) {
       try {
         // Use native fetch instead of Pinata SDK
         const response = await fetch('https://api.pinata.cloud/data/testAuthentication', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${process.env.PINATA_JWT}`,
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_PINATA_JWT}`,
             'Content-Type': 'application/json'
           }
         });

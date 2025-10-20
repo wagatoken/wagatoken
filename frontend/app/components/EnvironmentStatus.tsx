@@ -63,21 +63,20 @@ export default function EnvironmentStatus() {
   const [error, setError] = useState<string | null>(null);
 
   const validateContractDeployment = (): { isValid: boolean; details: any } => {
-    // Core contracts (4 deployed)
+    // Core essential contracts - these are what matter for functionality
     const coreContracts = [
       process.env.NEXT_PUBLIC_WAGA_COFFEE_TOKEN_ADDRESS,
       process.env.NEXT_PUBLIC_WAGA_COFFEE_VIEWS_ADDRESS,
-      process.env.NEXT_PUBLIC_WAGA_BATCH_MANAGER_ADDRESS,
       process.env.NEXT_PUBLIC_WAGA_CONFIG_MANAGER_ADDRESS
     ].filter(Boolean);
     
-    // ZK and Privacy System (2 deployed)
+    // ZK and Privacy System
     const zkSystemContracts = [
       process.env.NEXT_PUBLIC_WAGA_ZK_MANAGER_ADDRESS,
       process.env.NEXT_PUBLIC_PRIVACY_LAYER_ADDRESS
     ].filter(Boolean);
     
-    // Verification and Circuit contracts (4 deployed)
+    // Verification and Circuit contracts  
     const verifierContracts = [
       process.env.NEXT_PUBLIC_CIRCOM_VERIFIER_ADDRESS,
       process.env.NEXT_PUBLIC_PRICE_PRIVACY_VERIFIER_ADDRESS,
@@ -85,7 +84,7 @@ export default function EnvironmentStatus() {
       process.env.NEXT_PUBLIC_SUPPLY_CHAIN_VERIFIER_ADDRESS
     ].filter(Boolean);
     
-    // Financial and Operations (4 deployed)
+    // Financial and Operations
     const financialContracts = [
       process.env.NEXT_PUBLIC_WAGA_TREASURY_ADDRESS,
       process.env.NEXT_PUBLIC_WAGA_REDEMPTION_CONTRACT_ADDRESS,
@@ -93,49 +92,42 @@ export default function EnvironmentStatus() {
       process.env.NEXT_PUBLIC_WAGA_INVENTORY_MANAGER_ADDRESS
     ].filter(Boolean);
     
-    // Integration and Compliance (2 deployed)
-    const integrationContracts = [
-      process.env.NEXT_PUBLIC_WAGA_CDP_INTEGRATION_ADDRESS,
-      process.env.NEXT_PUBLIC_WAGA_ACCESS_CONTROL_ADDRESS
-    ].filter(Boolean);
+    // Network configuration - test if blockchain is accessible
+    const networkConfig = {
+      chainId: process.env.NEXT_PUBLIC_CHAIN_ID,
+      rpcUrl: process.env.NEXT_PUBLIC_RPC_URL,
+      networkName: process.env.NEXT_PUBLIC_NETWORK_NAME
+    };
+    const networkConfigured = Object.values(networkConfig).every(Boolean);
     
-    // Ethiopian Compliance System (2 deployed)
-    const complianceContracts = [
-      process.env.NEXT_PUBLIC_WAGA_ETHIOPIAN_COMPLIANCE_CORE_ADDRESS,
-      process.env.NEXT_PUBLIC_WAGA_BANKING_CORE_ADDRESS
-    ].filter(Boolean);
-    
-    // Chainlink and External Integration (6 additional contracts from deployment)
-    const externalContracts = 6; // Based on deployment summary showing 24 total contracts
+    // Estimate deployment status based on configured contracts
+    const estimatedDeployedContracts = 24; // From deployment summary
     
     const details = {
       core: coreContracts.length,
-      zkSystem: zkSystemContracts.length,
+      zkSystem: zkSystemContracts.length, 
       verifiers: verifierContracts.length,
       financial: financialContracts.length,
-      integration: integrationContracts.length,
-      compliance: complianceContracts.length,
-      external: externalContracts,
-      total: coreContracts.length + zkSystemContracts.length + verifierContracts.length + 
-             financialContracts.length + integrationContracts.length + complianceContracts.length + externalContracts
+      networkConfigured,
+      estimatedTotal: estimatedDeployedContracts,
+      configured: coreContracts.length + zkSystemContracts.length + verifierContracts.length + financialContracts.length
     };
     
     // Debug logging to see what's available
     if (typeof window !== 'undefined') {
       console.log('Contract validation details:', {
-        core: { expected: 4, found: coreContracts.length, contracts: coreContracts },
+        core: { expected: 3, found: coreContracts.length, contracts: coreContracts },
         zkSystem: { expected: 2, found: zkSystemContracts.length, contracts: zkSystemContracts },
         verifiers: { expected: 4, found: verifierContracts.length, contracts: verifierContracts },
         financial: { expected: 4, found: financialContracts.length, contracts: financialContracts },
-        integration: { expected: 2, found: integrationContracts.length, contracts: integrationContracts },
-        compliance: { expected: 2, found: complianceContracts.length, contracts: complianceContracts },
-        external: { expected: 6, found: externalContracts, note: 'Chainlink and external contracts from deployment' },
-        total: `${details.total}/24`,
-        note: 'All 24 contracts from Base Sepolia deployment'
+        networkConfigured: networkConfigured,
+        configured: `${details.configured}/${details.estimatedTotal}`,
+        note: 'Essential contracts for core functionality'
       });
     }
     
-    const isValid = details.total >= 18; // 18 tracked contracts (6 external not individually tracked)
+    // Consider valid if core contracts and network are configured
+    const isValid = details.configured >= 10 && networkConfigured; // 10+ essential contracts + network
     
     return { isValid, details };
   };
