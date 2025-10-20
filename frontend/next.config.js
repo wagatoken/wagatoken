@@ -23,6 +23,16 @@ const nextConfig = {
       'react-native': false,
     };
     
+    // Suppress pino-pretty warning in browser builds
+    if (!isServer) {
+      config.ignoreWarnings = [
+        {
+          module: /node_modules\/pino\/lib\/tools\.js/,
+          message: /Can't resolve 'pino-pretty'/,
+        },
+      ];
+    }
+    
     // Ensure styled-jsx is properly handled
     if (!isServer) {
       config.resolve.alias = {

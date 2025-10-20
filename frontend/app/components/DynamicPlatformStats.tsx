@@ -9,6 +9,7 @@ export default function DynamicPlatformStats() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   const loadStats = async () => {
     try {
@@ -29,6 +30,7 @@ export default function DynamicPlatformStats() {
   };
 
   useEffect(() => {
+    setIsClient(true);
     loadStats();
     
     // Refresh stats every 30 seconds
@@ -261,7 +263,7 @@ export default function DynamicPlatformStats() {
         </div>
       )}
       
-      {lastUpdated && (
+      {isClient && lastUpdated && (
         <div className="mt-4 pt-3 border-t border-gray-200">
           <p className="text-xs text-gray-500 text-center">
             Last updated: {lastUpdated.toLocaleTimeString()}

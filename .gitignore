@@ -3,6 +3,11 @@ node_modules/
 frontend/node_modules/
 **/node_modules/
 
+# Package files should only be in frontend/
+/package.json
+/package-lock.json
+/yarn.lock
+
 # Production
 build/
 dist/
