@@ -1,4 +1,4 @@
-# ☕ WAGA Coffee Platform - Complete Coffee Value Chain on Blockchain
+# ☕ WAGA Coffee Platform - A Coffee Value Chain on the Blockchain 
 
 *Onchain Coffee - OffChain Impact*
 
