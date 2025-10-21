@@ -14,15 +14,63 @@ dist/
 out/
 .next/
 
-# Environment variables
-.env
-frontend/.env.local
-frontend/.env.netlify
-frontend/.env.optimized
-frontend/.env.local.backup
-.env.development.local
-.env.test.local
-.env.production.local
+# Environment variables (ALL FILES WITH SENSITIVE DATA)
+.env*
+frontend/.env*
+**/.env*
+*.env
+*.env.local
+*.env.development
+*.env.test
+*.env.production
+*.env.staging
+*.env.netlify
+*.env.optimized
+*.env.backup
+*.env.sync
+*-env.json
+*-env.js
+*-env.ts
+frontend/.env.netlify-sync
+frontend/netlify-env-*.sh
+frontend/REQUIRED_ENV_VARIABLES.md
+
+# Temporary environment/config files and optimization artifacts
+netlify-env-variables.json
+.env.netlify-sync
+*-env-variables.json
+env-variables-*.json
+environment-*.json
+temp-env-*
+temp-environment-*
+*.env.temp
+*.env.tmp
+*-environment-variables*
+
+# Environment and deployment scripts
+netlify-env-*.sh
+*-env-*.sh
+*-environment-*.sh
+deploy-env-*.sh
+env-optimization-*.sh
+netlify-env-4kb-optimized.sh
+*-4kb-optimized*.sh
+**/*env*.sh
+optimization-scripts/
+deployment-scripts/
+
+# Sensitive configuration and key files
+**/config/*.env*
+**/config/keys/*
+**/*keys.json
+**/*credentials.json
+**/*secrets.json
+**/private-keys/*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/wallet-*.json
 
 # IDE
 .vscode/

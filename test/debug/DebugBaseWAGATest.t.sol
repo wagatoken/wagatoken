@@ -41,7 +41,7 @@ contract DebugBaseWAGATest is BaseWAGATest {
         console.log("DEBUG: All steps completed successfully");
     }
     
-    function testBasicSetup() public view {
+    function testBasicSetup() public pure {
         console.log("DEBUG: Basic setup test passed");
     }
 }

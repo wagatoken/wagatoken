@@ -10,7 +10,7 @@ import {console} from "forge-std/Test.sol";
  */
 contract SetupComparisonTest is BaseWAGATest {
 
-    function testMinimalSetup() public {
+    function testMinimalSetup() public view {
         console.log("=== MINIMAL SETUP TEST ===");
         console.log("Just calling super.setUp() - no extra work");
         console.log("Gas remaining after setup:", gasleft());
