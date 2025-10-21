@@ -15,49 +15,66 @@ out/
 .next/
 
 # Environment variables (ALL FILES WITH SENSITIVE DATA)
-.env*
-frontend/.env*
-**/.env*
+# Root level environment files
+.env
+.env.*
 *.env
 *.env.local
 *.env.development
 *.env.test
 *.env.production
 *.env.staging
-*.env.netlify
-*.env.optimized
-*.env.backup
-*.env.sync
-*-env.json
-*-env.js
-*-env.ts
+netlify-env-variables.json
+*-env-variables.json
+*-environment-variables*
+
+# Frontend environment files
+frontend/.env*
+frontend/*.env
+frontend/*.env.local
+frontend/*.env.development
+frontend/*.env.test
+frontend/*.env.production
+frontend/*.env.staging
+frontend/*.env.netlify
+frontend/*.env.optimized
+frontend/*.env.backup
+frontend/*.env.sync
+frontend/*-env.json
+frontend/*-env.js
+frontend/*-env.ts
 frontend/.env.netlify-sync
 frontend/netlify-env-*.sh
 frontend/REQUIRED_ENV_VARIABLES.md
 
 # Temporary environment/config files and optimization artifacts
-netlify-env-variables.json
-.env.netlify-sync
-*-env-variables.json
-env-variables-*.json
-environment-*.json
-temp-env-*
-temp-environment-*
-*.env.temp
-*.env.tmp
-*-environment-variables*
+frontend/netlify-env-variables.json
+frontend/.env.netlify-sync
+frontend/*-env-variables.json
+frontend/env-variables-*.json
+frontend/environment-*.json
+frontend/temp-env-*
+frontend/temp-environment-*
+frontend/*.env.temp
+frontend/*.env.tmp
+frontend/*-environment-variables*
 
-# Environment and deployment scripts
+# Environment and deployment scripts (root and frontend)
 netlify-env-*.sh
 *-env-*.sh
 *-environment-*.sh
 deploy-env-*.sh
 env-optimization-*.sh
-netlify-env-4kb-optimized.sh
-*-4kb-optimized*.sh
-**/*env*.sh
-optimization-scripts/
-deployment-scripts/
+frontend/netlify-env-*.sh
+frontend/*-env-*.sh
+frontend/*-environment-*.sh
+frontend/deploy-env-*.sh
+frontend/env-optimization-*.sh
+frontend/netlify-env-4kb-optimized.sh
+frontend/*-4kb-optimized*.sh
+frontend/*env*.sh
+frontend/optimization-scripts/
+frontend/deployment-scripts/
 
 # Sensitive configuration and key files
 **/config/*.env*
@@ -71,6 +88,17 @@ deployment-scripts/
 **/*.p12
 **/*.pfx
 **/wallet-*.json
+
+# Root level sensitive files
+private-keys/
+*.keystore
+wallet-*.json
+credentials.json
+secrets.json
+config.json
+*-secrets.*
+*-credentials.*
+*-keys.*
 
 # IDE
 .vscode/
@@ -94,6 +122,17 @@ lerna-debug.log*
 .cache/
 .parcel-cache/
 .eslintcache
+.turbo/
+.swc/
+
+# Root level temporary and build files
+temp/
+tmp/
+*.tmp
+*.temp
+.temp/
+build-temp/
+deploy-temp/
 
 # Foundry/Solidity files (ADD THESE LINES)
 #src/ 
