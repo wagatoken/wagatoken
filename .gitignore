@@ -158,6 +158,7 @@ coverage/
 *.tar.gz
 documentation/
 # Ignore root docs but keep frontend app docs
-/docs/
+docs/
+!/frontend/app/docs/
 # Local Netlify folder
 .netlify
